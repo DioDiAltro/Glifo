@@ -182,8 +182,7 @@ kbd {
 .app {
   display: grid;
   grid-template-rows: var(--topbar-h) minmax(0, 1fr);
-  height: 100vh;
-  height: 100dvh;
+  height: 100%;
 }
 
 /* ——— Barra in alto ——— */
@@ -904,6 +903,16 @@ kbd {
   background: var(--accent-hover);
 }
 
+.btn-danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+
+.btn-danger:hover {
+  filter: brightness(1.08);
+}
+
 .btn-ai {
   width: 100%;
   justify-content: flex-start;
@@ -1598,6 +1607,27 @@ kbd {
   flex-wrap: wrap;
   gap: 8px;
   margin: 8px 0;
+}
+
+.dialog-confirm {
+  width: min(420px, calc(100vw - 32px));
+}
+
+.confirm-message {
+  margin: 8px 0 16px;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.field-note {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
 }
 
 .shortcuts {

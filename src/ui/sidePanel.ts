@@ -246,14 +246,6 @@ export class SidePanel {
     const question = this.query.trim()
     if (!question) return
     const settings = this.deps.settings()
-    if (!settings.apiKey && !settings.apiBaseUrl) {
-      this.setAi({
-        status: 'error',
-        question,
-        message: 'Per usare l\'assistente AI serve una chiave API di Anthropic (resta salvata solo in questo browser).',
-      })
-      return
-    }
     if (this.ai.status === 'loading') this.ai.controller.abort()
     const controller = new AbortController()
     this.setAi({ status: 'loading', question, controller })

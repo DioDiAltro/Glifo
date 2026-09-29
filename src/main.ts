@@ -8,7 +8,8 @@ import { loadSettings, saveSettings, type Settings, type ViewMode } from './stor
 import { downloadText, fileNameFor, openMarkdownFiles, saveMarkdownFile } from './store/files'
 import { storageAvailable } from './store/storage'
 import { ICONS, h, icon } from './ui/dom'
-import { openHelpDialog, openSettingsDialog } from './ui/dialogs'
+import { confirmDialog, openHelpDialog, openSettingsDialog } from './ui/dialogs'
+import { inClaudeViewer } from './host'
 import { NotesPanel } from './ui/notesPanel'
 import { Preview } from './ui/preview'
 import { SidePanel } from './ui/sidePanel'
@@ -104,7 +105,13 @@ const topbar = h(
     ),
     h(
       'button',
-      { class: 'icon-button hide-narrow', title: 'Stampa o salva in PDF', attrs: { type: 'button', 'aria-label': 'Stampa o salva in PDF' }, on: { click: () => printNote() } },
+      {
+        class: 'icon-button hide-narrow',
+        title: 'Stampa o salva in PDF',
+        // Dentro claude.ai la stampa non è disponibile.
+        attrs: { type: 'button', 'aria-label': 'Stampa o salva in PDF', hidden: inClaudeViewer() },
+        on: { click: () => printNote() },
+      },
       icon(ICONS.print),
     ),
     themeButton,
@@ -163,7 +170,7 @@ const notesPanel = new NotesPanel({
   store,
   onSelect: (id) => switchTo(id),
   onCreate: () => createNote(),
-  onDelete: (id) => deleteNote(id),
+  onDelete: (id) => void deleteNote(id),
   onOpenFiles: () => void openFiles(),
   onSaveFile: () => void saveToFile(),
 })
@@ -319,10 +326,16 @@ function createNote(content = '# Nuovi appunti\n\n'): void {
   }
 }
 
-function deleteNote(id: string): void {
+async function deleteNote(id: string): Promise<void> {
   const note = store.get(id)
   if (!note) return
-  if (!confirm(`Eliminare «${note.title}»? L'operazione non si può annullare.`)) return
+  const ok = await confirmDialog({
+    title: 'Eliminare la nota?',
+    message: `«${note.title}» verrà eliminata da questo browser. L'operazione non si può annullare.`,
+    confirmLabel: 'Elimina',
+    danger: true,
+  })
+  if (!ok) return
   if (id === active.id) {
     // Annulla un eventuale salvataggio in sospeso della nota eliminata.
     if (saveTimer) clearTimeout(saveTimer)
@@ -394,7 +407,7 @@ function backup(): void {
   flushSave()
   const data = JSON.stringify({ app: 'matherdown', version: 1, exportedAt: new Date().toISOString(), notes: store.exportAll() }, null, 2)
   const date = new Date().toISOString().slice(0, 10)
-  downloadText(`matherdown-backup-${date}.json`, data, 'application/json')
+  void downloadText(`matherdown-backup-${date}.json`, data, 'application/json')
 }
 
 async function restore(): Promise<void> {

@@ -1,3 +1,4 @@
+import { hostSample, isHostError } from '../host'
 import { renderTex } from '../render/katex'
 
 /**
@@ -69,9 +70,66 @@ function stripDelimiters(latex: string): string {
   return (m ? m[1] : t).trim()
 }
 
+function toResult(parsed: { answers: { latex: string; description: string }[]; note: string }): AiResult {
+  return {
+    note: parsed.note,
+    answers: parsed.answers
+      .filter((a) => a.latex.trim())
+      .map((a) => {
+        const latex = stripDelimiters(a.latex)
+        return { latex, description: a.description, error: renderTex(latex).error }
+      }),
+  }
+}
+
+/** Controlla la forma della risposta (quando non è garantita dall'API). */
+function checkShape(data: unknown): { answers: { latex: string; description: string }[]; note: string } {
+  const d = data as { answers?: unknown; note?: unknown } | null
+  const answers = Array.isArray(d?.answers) ? d.answers : []
+  return {
+    note: typeof d?.note === 'string' ? d.note : '',
+    answers: answers
+      .map((a) => a as { latex?: unknown; description?: unknown })
+      .filter((a) => typeof a.latex === 'string')
+      .map((a) => ({ latex: String(a.latex), description: typeof a.description === 'string' ? a.description : '' })),
+  }
+}
+
+/**
+ * Nella demo pubblicata su claude.ai si usa l'account Claude di chi la
+ * apre (con il suo consenso), senza bisogno di una chiave API.
+ */
+async function askThroughHost(question: string, signal?: AbortSignal): Promise<AiResult | null> {
+  const sample = await hostSample()
+  if (!sample) return null
+  const prompt = `${SYSTEM_PROMPT}
+
+Rispondi solo con un oggetto JSON di questa forma, senza altro testo:
+{"answers": [{"latex": "\\\\infty", "description": "Il simbolo di infinito."}], "note": ""}
+
+Domanda dello studente:
+${question}`
+  try {
+    return toResult(checkShape(await sample.json(prompt, { modelTier: 'quick', signal })))
+  } catch (err) {
+    const code = isHostError(err) ? err.code : ''
+    if (code === 'cancelled') throw new AiError('Richiesta annullata.')
+    if (code === 'not_granted') throw new AiError('Hai scelto di non permettere a questa pagina di usare Claude.')
+    if (code === 'rate_limited') throw new AiError('Troppe richieste in poco tempo: riprova tra qualche secondo.')
+    if (code === 'refused') throw new AiError('L\'assistente non può rispondere a questa richiesta. Prova a riformularla.')
+    if (code === 'invalid_json') throw new AiError('Risposta non valida dall\'assistente. Riprova.')
+    if (code === 'sampling_disabled') throw new AiError('Claude non è disponibile per questo account.')
+    throw new AiError('Impossibile contattare l\'assistente in questo momento. Riprova più tardi.')
+  }
+}
+
 export async function askAi(question: string, settings: AiSettings, signal?: AbortSignal): Promise<AiResult> {
   if (!settings.apiKey && !settings.baseUrl) {
-    throw new AiError('Per usare l\'assistente AI inserisci la tua chiave API nelle impostazioni.')
+    const viaHost = await askThroughHost(question, signal)
+    if (viaHost) return viaHost
+    throw new AiError(
+      'Per usare l\'assistente AI serve una chiave API di Anthropic: inseriscila nelle impostazioni (resta salvata solo in questo browser).',
+    )
   }
   const [{ default: Anthropic }, { betaJSONSchemaOutputFormat }] = await Promise.all([
     import('@anthropic-ai/sdk'),
@@ -112,16 +170,7 @@ export async function askAi(question: string, settings: AiSettings, signal?: Abo
     }
     const parsed = response.parsed_output
     if (!parsed) throw new AiError('Risposta non valida dall\'assistente. Riprova.')
-
-    return {
-      note: parsed.note,
-      answers: parsed.answers
-        .filter((a) => a.latex.trim())
-        .map((a) => {
-          const latex = stripDelimiters(a.latex)
-          return { latex, description: a.description, error: renderTex(latex).error }
-        }),
-    }
+    return toResult(parsed)
   } catch (err) {
     if (err instanceof AiError) throw err
     if (err instanceof Anthropic.APIUserAbortError) throw new AiError('Richiesta annullata.')

@@ -147,6 +147,7 @@ src/
   ui/                     pannello dei simboli, anteprima, elenco appunti, finestre
   store/                  salvataggio nel browser, file .md, impostazioni
   ai/assistant.ts         assistente AI
+  host.ts                 integrazione facoltativa con claude.ai (per la demo pubblicata lì)
 tests/                    test automatici (Vitest)
 scripts/smoke-test.mjs    prova nel browser del flusso principale
 ```

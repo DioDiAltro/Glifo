@@ -1,3 +1,4 @@
+import { inClaudeViewer } from '../host'
 import { AI_MODELS, type Settings, type Theme } from '../store/settings'
 import { ICONS, h, icon } from './dom'
 
@@ -101,6 +102,13 @@ export function openSettingsDialog(deps: SettingsDialogDeps): void {
       'fieldset',
       {},
       h('legend', {}, 'Assistente AI (facoltativo)'),
+      inClaudeViewer()
+        ? h(
+            'p',
+            { class: 'field-help field-note' },
+            'In questa demo su claude.ai la chiave non serve: «Chiedi all\'AI» usa il tuo account Claude (la prima volta ti viene chiesto il permesso).',
+          )
+        : null,
       h(
         'p',
         { class: 'field-help' },
@@ -175,6 +183,41 @@ export function openSettingsDialog(deps: SettingsDialogDeps): void {
     ),
   ]
   dialogShell('Impostazioni', body, 'dialog-settings').showModal()
+}
+
+/** Conferma dentro la pagina (i `confirm()` del browser non sempre sono disponibili). */
+export function confirmDialog(opts: { title: string; message: string; confirmLabel: string; danger?: boolean }): Promise<boolean> {
+  return new Promise((resolve) => {
+    let confirmed = false
+    const dialog = dialogShell(
+      opts.title,
+      [
+        h('p', { class: 'confirm-message' }, opts.message),
+        h(
+          'div',
+          { class: 'dialog-actions' },
+          h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => dialog.close() } }, 'Annulla'),
+          h(
+            'button',
+            {
+              class: `btn ${opts.danger ? 'btn-danger' : 'btn-primary'}`,
+              attrs: { type: 'button', autofocus: true },
+              on: {
+                click: () => {
+                  confirmed = true
+                  dialog.close()
+                },
+              },
+            },
+            opts.confirmLabel,
+          ),
+        ),
+      ],
+      'dialog-confirm',
+    )
+    dialog.addEventListener('close', () => resolve(confirmed))
+    dialog.showModal()
+  })
 }
 
 export function openHelpDialog(): void {

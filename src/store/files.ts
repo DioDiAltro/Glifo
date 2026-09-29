@@ -1,3 +1,5 @@
+import { hostDownloads, inClaudeViewer } from '../host'
+
 /**
  * Apertura e salvataggio di file .md. Su Chrome/Edge usa la File System
  * Access API (si può risalvare sullo stesso file, come in VS Code); sugli
@@ -29,7 +31,7 @@ function fsWindow(): FsWindow {
 }
 
 export function canWriteFilesDirectly(): boolean {
-  return typeof fsWindow().showSaveFilePicker === 'function'
+  return typeof fsWindow().showSaveFilePicker === 'function' && !inClaudeViewer()
 }
 
 function isAbort(err: unknown): boolean {
@@ -38,7 +40,7 @@ function isAbort(err: unknown): boolean {
 
 export async function openMarkdownFiles(): Promise<OpenedFile[]> {
   const w = fsWindow()
-  if (w.showOpenFilePicker) {
+  if (w.showOpenFilePicker && !inClaudeViewer()) {
     try {
       const handles = await w.showOpenFilePicker({ multiple: true, types: MD_TYPES })
       return Promise.all(
@@ -92,6 +94,7 @@ export async function saveMarkdownFile(
   handle?: FileSystemFileHandle,
 ): Promise<FileSystemFileHandle | undefined | null> {
   const w = fsWindow()
+  if (inClaudeViewer()) return (await downloadText(name, content, 'text/markdown')) ? undefined : null
   try {
     if (handle && typeof handle.createWritable === 'function') {
       await writeTo(handle, content)
@@ -106,8 +109,7 @@ export async function saveMarkdownFile(
     if (isAbort(err)) return null
     // In caso di errore si ripiega sul download.
   }
-  downloadText(name, content, 'text/markdown')
-  return undefined
+  return (await downloadText(name, content, 'text/markdown')) ? undefined : null
 }
 
 async function writeTo(handle: FileSystemFileHandle, content: string): Promise<void> {
@@ -116,7 +118,17 @@ async function writeTo(handle: FileSystemFileHandle, content: string): Promise<v
   await writable.close()
 }
 
-export function downloadText(name: string, content: string, type = 'text/plain'): void {
+/** Scarica un file di testo; restituisce false se chi guarda rifiuta il salvataggio. */
+export async function downloadText(name: string, content: string, type = 'text/plain'): Promise<boolean> {
+  const host = await hostDownloads()
+  if (host) {
+    try {
+      await host.save({ filename: name, data: content })
+      return true
+    } catch {
+      return false
+    }
+  }
   const blob = new Blob([content], { type: `${type};charset=utf-8` })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -126,4 +138,5 @@ export function downloadText(name: string, content: string, type = 'text/plain')
   a.click()
   a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
+  return true
 }

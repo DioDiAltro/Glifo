@@ -21,7 +21,6 @@ try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
   const errors = []
   page.on('pageerror', (e) => errors.push(e.message))
-  page.on('dialog', (d) => d.accept())
   await page.goto(url)
   await page.waitForSelector('.cm-editor')
 
@@ -64,6 +63,15 @@ try {
   // Anteprima Markdown
   await page.waitForTimeout(300)
   check((await page.locator('.markdown-body .katex').count()) >= 2, 'l\'anteprima Markdown disegna le formule')
+
+  // Eliminazione della nota, con conferma dentro la pagina
+  await page.keyboard.press('Escape')
+  const before = await page.locator('.note-item').count()
+  await page.locator('.note-item', { hasText: 'Prova' }).hover()
+  await page.locator('.note-item', { hasText: 'Prova' }).locator('.note-delete').click()
+  await page.locator('dialog.dialog-confirm .btn-danger').click()
+  await page.waitForTimeout(200)
+  check((await page.locator('.note-item').count()) === before - 1, 'la nota viene eliminata dopo la conferma')
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)
 } finally {
   await browser.close()
