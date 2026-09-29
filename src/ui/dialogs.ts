@@ -157,7 +157,7 @@ export function openSettingsDialog(deps: SettingsDialogDeps): void {
         h(
           'p',
           { class: 'field-help' },
-          'Se pubblichi Matherdown per altri studenti, puoi mettere la chiave in un piccolo server (es. un Cloudflare Worker) e indicarne qui l\'indirizzo: così nessuno deve inserire la propria chiave.',
+          'Se pubblichi Glifo per altri studenti, puoi mettere la chiave in un piccolo server (es. un Cloudflare Worker) e indicarne qui l\'indirizzo: così nessuno deve inserire la propria chiave.',
         ),
         h('input', {
           attrs: { type: 'url', value: s.apiBaseUrl, placeholder: 'https://mio-proxy.example.workers.dev' },

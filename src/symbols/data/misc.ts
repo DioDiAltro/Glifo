@@ -52,7 +52,7 @@ export const misc = [
 export const chemistry = [
   ch(r`\ce{#}`, 'formula chimica', 'formula chimica, chimica, molecola, composto, mhchem, ce', {
     w: 5,
-    note: 'Usa l\'estensione mhchem: funziona in Matherdown ma non nell\'anteprima standard di VS Code.',
+    note: 'Usa l\'estensione mhchem: funziona in Glifo ma non nell\'anteprima standard di VS Code.',
     f: [[r`\ce{#}`, 'formula', r`\ce{H2SO4}`], [r`\ce{#^{#}}`, 'ione', r`\ce{SO4^{2-}}`]],
   }),
   ch(r`\ce{# -> #}`, 'reazione chimica', 'reazione, reazione chimica, freccia di reazione, reagenti prodotti', {

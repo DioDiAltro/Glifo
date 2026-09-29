@@ -1,8 +1,8 @@
 {
-  "name": "matherdown",
+  "name": "glifo",
   "private": true,
   "version": "0.1.0",
-  "description": "Editor Markdown per appunti universitari con anteprima e suggerimenti dei simboli LaTeX",
+  "description": "Appunti universitari in Markdown per ogni materia, con anteprima e suggerimenti dei simboli LaTeX",
   "type": "module",
   "scripts": {
     "dev": "vite",

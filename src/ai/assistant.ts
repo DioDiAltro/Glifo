@@ -28,7 +28,7 @@ export interface AiResult {
 
 export class AiError extends Error {}
 
-const SYSTEM_PROMPT = `Sei l'assistente di Matherdown, un editor di appunti universitari in Markdown in cui le formule si scrivono in LaTeX tra $…$ e vengono disegnate con KaTeX.
+const SYSTEM_PROMPT = `Sei l'assistente di Glifo, un editor di appunti universitari in Markdown in cui le formule si scrivono in LaTeX tra $…$ e vengono disegnate con KaTeX.
 
 Lo studente ti chiede come scrivere un simbolo, una notazione o una formula. Rispondi con il codice LaTeX da inserire dentro la formula, senza i delimitatori $.
 

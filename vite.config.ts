@@ -3,13 +3,13 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 declare const process: { env: Record<string, string | undefined> }
 
-// MATHERDOWN_NO_PWA=1 crea una build senza service worker (utile per
+// GLIFO_NO_PWA=1 crea una build senza service worker (utile per
 // pubblicare una demo dentro un'altra pagina, dove i service worker non sono ammessi).
-const withPwa = !process.env.VITEST && !process.env.MATHERDOWN_NO_PWA
+const withPwa = !process.env.VITEST && !process.env.GLIFO_NO_PWA
 
 export default defineConfig({
   // Percorsi relativi: il sito funziona anche da una sottocartella
-  // (es. GitHub Pages su /matherdown/) o aprendo la build da un altro host.
+  // (es. GitHub Pages su /glifo/) o aprendo la build da un altro host.
   base: './',
   build: {
     target: 'es2022',
@@ -22,9 +22,9 @@ export default defineConfig({
           registerType: 'autoUpdate',
           includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
           manifest: {
-            name: 'Matherdown – appunti con formule',
-            short_name: 'Matherdown',
-            description: 'Appunti in Markdown con formule LaTeX: anteprima dei simboli, suggerimenti e ricerca in italiano.',
+            name: 'Glifo – appunti universitari',
+            short_name: 'Glifo',
+            description: 'Appunti in Markdown per ogni materia: formule LaTeX con anteprima dei simboli, codice, tabelle.',
             lang: 'it',
             start_url: '.',
             scope: '.',

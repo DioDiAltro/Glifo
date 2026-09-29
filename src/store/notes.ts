@@ -11,9 +11,9 @@ export interface Note extends NoteMeta {
   content: string
 }
 
-const INDEX_KEY = 'matherdown.notes.v1'
-const NOTE_PREFIX = 'matherdown.note.v1.'
-const ACTIVE_KEY = 'matherdown.active.v1'
+const INDEX_KEY = 'glifo.notes.v1'
+const NOTE_PREFIX = 'glifo.note.v1.'
+const ACTIVE_KEY = 'glifo.active.v1'
 
 /** Titolo della nota: il primo titolo Markdown, altrimenti la prima riga. */
 export function deriveTitle(content: string): string {

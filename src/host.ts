@@ -1,6 +1,6 @@
 /**
  * Integrazione facoltativa con il visualizzatore di claude.ai, per quando
- * Matherdown è pubblicato come demo (Artifact). Fuori da claude.ai
+ * Glifo è pubblicato come demo (Artifact). Fuori da claude.ai
  * `window.claude` non esiste e tutte queste funzioni restituiscono null:
  * l'app usa i suoi percorsi normali.
  */

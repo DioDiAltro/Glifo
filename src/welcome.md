@@ -1,6 +1,6 @@
-# Benvenuto in Matherdown
+# Benvenuto in Glifo
 
-Matherdown è un editor di appunti in **Markdown** con le formule in **LaTeX**, come in VS Code, ma con un aiuto in più: il **pannello dei simboli** qui a destra.
+Glifo è un editor di appunti in **Markdown** per qualsiasi materia: formule in **LaTeX** (come in VS Code), codice, tabelle, liste. In più c'è il **pannello dei simboli** qui a destra, che ti mostra l'anteprima dei simboli mentre li scrivi.
 
 ## Prova subito
 
@@ -23,8 +23,9 @@ $$
 
 ## Qualche esempio
 
-- Limite notevole: $\lim_{x \to 0} \frac{\sin x}{x} = 1$
-- Insiemi: $A \cup B = \{ x \mid x \in A \lor x \in B \}$
+- Analisi: $\lim_{x \to 0} \frac{\sin x}{x} = 1$
+- Statistica: $\bar{x} = \frac{1}{n} \sum_{i=1}^{n} x_i$, con $X \sim \mathcal{N}(\mu, \sigma^2)$
+- Fisica: $\vec{F} = m \vec{a}$ e $\nabla \cdot \vec{E} = \frac{\rho}{\varepsilon_0}$
 - Logica: $\forall \varepsilon > 0 \; \exists \delta > 0 : |x - x_0| < \delta \implies |f(x) - \ell| < \varepsilon$
 - Matrice e sistema:
 
@@ -33,6 +34,18 @@ A = \begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}
 \qquad
 \begin{cases} x + y = 3 \\ x - y = 1 \end{cases}
 $$
+
+## Anche per programmare
+
+Il codice tra tre apici inversi viene colorato (Java, Python, C, SQL…):
+
+```java
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("Ciao da Glifo!");
+    }
+}
+```
 
 ## Scorciatoie utili
 

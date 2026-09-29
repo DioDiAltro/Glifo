@@ -1,10 +1,11 @@
-# Matherdown
+# Glifo
 
-**Appunti universitari in Markdown, con le formule LaTeX che si scrivono da sole.**
+**Appunti universitari in Markdown, per ogni materia. Le formule LaTeX si scrivono quasi da sole.**
 
-Matherdown è un editor di appunti che funziona nel browser (e si può installare come app).
-Si scrive in Markdown come in VS Code, con le formule in LaTeX tra `$ … $`, ma con un
-**pannello laterale** che mostra l'anteprima dei simboli mentre li scrivi:
+Glifo è un editor di appunti che funziona nel browser (e si può installare come app).
+Si scrive in Markdown come in VS Code (formule in LaTeX tra `$ … $`, codice colorato,
+tabelle, liste), ma con un **pannello laterale** che mostra l'anteprima dei simboli mentre
+li scrivi:
 
 - scrivi `\su` → a destra compaiono `\sum`, `\sum_{}^{}`, `\sum_{}`… con l'anteprima
   (la sommatoria con i puntini sopra e sotto, per far capire dove vanno gli estremi);
@@ -12,18 +13,18 @@ Si scrive in Markdown come in VS Code, con le formule in LaTeX tra `$ … $`, ma
 - con **Tab** salti da un segnaposto all'altro: `\sum_{n=0}^{\infty}` si scrive in pochi tasti;
 - non ricordi il comando? Lo **cerchi a parole**: «come faccio il simbolo dell'infinito» → `\infty`.
 
-**Usala subito: <https://diodialtro.github.io/matherdown/>**
+**Usala subito: <https://diodialtro.github.io/glifo/>**
 
 ![Suggerimenti mentre si scrive \su](docs/suggerimenti.png)
 
 ## Usarla tutti i giorni
 
-Non serve installare nulla: basta aprire <https://diodialtro.github.io/matherdown/> dal
+Non serve installare nulla: basta aprire <https://diodialtro.github.io/glifo/> dal
 browser. Per averla come un'app vera, con la sua icona e funzionante anche senza internet:
 
 | Dispositivo | Come installarla |
 | --- | --- |
-| Computer (Chrome o Edge) | icona **Installa** a destra nella barra degli indirizzi (oppure, nel menu del browser, la voce *Installa Matherdown*) |
+| Computer (Chrome o Edge) | icona **Installa** a destra nella barra degli indirizzi (oppure, nel menu del browser, la voce *Installa Glifo*) |
 | Android (Chrome) | menu ⋮ → **Installa app** (o *Aggiungi a schermata Home*) |
 | iPhone / iPad (Safari) | pulsante Condividi → **Aggiungi alla schermata Home** |
 | Mac (Safari) | menu *File* → **Aggiungi al Dock** |
@@ -111,7 +112,7 @@ La ricerca dei simboli è locale: funziona sempre, anche senza internet, ed è g
 L'assistente AI serve solo per le domande che la ricerca non capisce e usa l'API di Claude:
 
 1. crea una chiave API su <https://console.anthropic.com/settings/keys>;
-2. in Matherdown apri **Impostazioni → Assistente AI** e incollala;
+2. in Glifo apri **Impostazioni → Assistente AI** e incollala;
 3. nel pannello dei simboli scrivi la domanda e premi **Chiedi all'AI** (o Ctrl+Invio).
 
 La chiave resta salvata **solo nel tuo browser** e viene inviata soltanto all'API di
@@ -120,7 +121,7 @@ in fretta); nelle impostazioni puoi scegliere Sonnet 5.5 o Haiku 4.5, più econo
 richiesta viene rifiutata dai filtri di sicurezza, l'app chiede all'API di riprovare in
 automatico con un altro modello (`fallbacks: "default"`).
 
-Se pubblichi Matherdown per altri studenti e non vuoi che ognuno usi la propria chiave, puoi
+Se pubblichi Glifo per altri studenti e non vuoi che ognuno usi la propria chiave, puoi
 mettere la chiave in un piccolo server "proxy" (per esempio un Cloudflare Worker) e indicarne
 l'indirizzo in **Impostazioni → Avanzate**.
 
@@ -129,7 +130,7 @@ l'indirizzo in **Impostazioni → Avanzate**.
 Gli appunti sono normali file `.md`: puoi aprirli in VS Code, Obsidian o su GitHub.
 Il riconoscimento di `$ … $` e `$$ … $$` ricalca quello dell'anteprima Markdown di VS Code
 (stesso motore, KaTeX). Unica eccezione: la chimica con `\ce{…}` (estensione mhchem) funziona
-in Matherdown ma non nell'anteprima standard di VS Code.
+in Glifo ma non nell'anteprima standard di VS Code.
 
 ## Com'è fatto
 

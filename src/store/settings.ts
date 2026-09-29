@@ -24,7 +24,7 @@ export const AI_MODELS = [
   { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5 (il più economico)' },
 ] as const
 
-const KEY = 'matherdown.settings.v1'
+const KEY = 'glifo.settings.v1'
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'auto',

@@ -6,7 +6,7 @@ import { MarkdownEditor } from './editor/editor'
 import { deriveTitle, NotesStore, type Note } from './store/notes'
 import { loadSettings, saveSettings, type Settings, type ViewMode } from './store/settings'
 import { downloadText, fileNameFor, openMarkdownFiles, saveMarkdownFile } from './store/files'
-import { storageAvailable } from './store/storage'
+import { migrateKeyPrefix, storageAvailable } from './store/storage'
 import { ICONS, h, icon } from './ui/dom'
 import { confirmDialog, openHelpDialog, openSettingsDialog } from './ui/dialogs'
 import { inClaudeViewer } from './host'
@@ -15,6 +15,9 @@ import { Preview } from './ui/preview'
 import { SidePanel } from './ui/sidePanel'
 import { toast } from './ui/toast'
 import { createToolbar } from './ui/toolbar'
+
+// Il progetto si chiamava Matherdown: recupera gli appunti salvati con il vecchio nome.
+migrateKeyPrefix('matherdown.', 'glifo.')
 
 const settings: Settings = loadSettings()
 const store = new NotesStore()
@@ -90,7 +93,7 @@ const topbar = h(
     'div',
     { class: 'brand' },
     h('span', { class: 'brand-mark', attrs: { 'aria-hidden': 'true' } }, 'Σ'),
-    h('span', { class: 'brand-name' }, 'Matherdown'),
+    h('span', { class: 'brand-name' }, 'Glifo'),
   ),
   h('div', { class: 'doc-info' }, titleEl, statusEl),
   h('div', { class: 'topbar-spacer' }),
@@ -270,7 +273,7 @@ function flushSave(): void {
   const ok = store.save(active.id, content)
   active.title = deriveTitle(content)
   titleEl.textContent = active.title
-  document.title = `${active.title} · Matherdown`
+  document.title = `${active.title} · Glifo`
   statusEl.textContent = ok ? 'Salvato' : 'Non salvato!'
   if (!ok && !saveWarningShown) {
     saveWarningShown = true
@@ -309,7 +312,7 @@ function loadNote(id: string): void {
   editor.setDoc(note.content)
   preview.update(note.content, true)
   titleEl.textContent = note.title
-  document.title = `${note.title} · Matherdown`
+  document.title = `${note.title} · Glifo`
   statusEl.textContent = 'Salvato'
   notesPanel.refresh(id)
   if (notesOverlay.matches) setPanels({ notesOpen: false })
@@ -405,9 +408,9 @@ function printNote(): void {
 
 function backup(): void {
   flushSave()
-  const data = JSON.stringify({ app: 'matherdown', version: 1, exportedAt: new Date().toISOString(), notes: store.exportAll() }, null, 2)
+  const data = JSON.stringify({ app: 'glifo', version: 1, exportedAt: new Date().toISOString(), notes: store.exportAll() }, null, 2)
   const date = new Date().toISOString().slice(0, 10)
-  void downloadText(`matherdown-backup-${date}.json`, data, 'application/json')
+  void downloadText(`glifo-backup-${date}.json`, data, 'application/json')
 }
 
 async function restore(): Promise<void> {
@@ -424,7 +427,7 @@ async function restore(): Promise<void> {
       notesPanel.refresh(active.id)
       toast(`Ripristinati ${notes.length} appunti`)
     } catch {
-      toast('Il file non sembra un backup di Matherdown.', 'error')
+      toast('Il file non sembra un backup di Glifo.', 'error')
     }
   })
   input.click()
@@ -445,6 +448,6 @@ window.addEventListener('keydown', (ev) => {
   }
 })
 
-document.title = `${active.title} · Matherdown`
+document.title = `${active.title} · Glifo`
 // Su telefoni e tablet non apriamo la tastiera appena si carica la pagina.
 if (window.matchMedia('(pointer: fine)').matches) editor.focus()
