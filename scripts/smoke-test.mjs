@@ -1,0 +1,77 @@
+/**
+ * Prova il flusso principale in un browser vero:
+ *   npm run build && npm run test:e2e
+ *
+ * Serve Chromium: `npx playwright-core install chromium`, oppure indica un
+ * Chromium già installato con la variabile CHROMIUM_PATH.
+ */
+import { chromium } from 'playwright-core'
+import { preview } from 'vite'
+
+const server = await preview({ preview: { port: 4174, strictPort: true }, logLevel: 'error' })
+const url = server.resolvedUrls.local[0]
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined })
+let failures = 0
+const check = (ok, msg) => {
+  console.log(`${ok ? '✓' : '✗'} ${msg}`)
+  if (!ok) failures++
+}
+
+try {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+  const errors = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  page.on('dialog', (d) => d.accept())
+  await page.goto(url)
+  await page.waitForSelector('.cm-editor')
+
+  // Nuova nota vuota su cui lavorare
+  await page.locator('.notes-head .icon-button').click()
+  await page.keyboard.type('Prova\n\n')
+  // L'ultima riga che contiene una formula
+  const line = () => page.locator('.cm-line', { hasText: '$' }).last()
+
+  // \su → suggerimenti con anteprima → clic su \sum_{}^{}
+  await page.keyboard.type('$\\su')
+  await page.waitForSelector('.sug-list')
+  check((await page.locator('.sug-title').first().innerText()).toLowerCase().includes('sommatoria'), 'i suggerimenti propongono la sommatoria')
+  await page
+    .locator('.sug-list .sym-card', { has: page.locator('code.sym-code', { hasText: /^\\sum_\{\}\^\{\}$/ }) })
+    .first()
+    .click()
+  await page.keyboard.type('n=0')
+  await page.keyboard.press('Tab')
+  await page.keyboard.type('\\infty')
+  await page.keyboard.press('Tab')
+  await page.keyboard.type(' a_n')
+  check((await line().innerText()) === '$\\sum_{n=0}^{\\infty} a_n$', 'segnaposto e Tab compongono la formula')
+  check((await page.locator('.formula-render .katex').count()) > 0, 'l\'anteprima della formula è disegnata')
+
+  // Parola italiana dopo la barra
+  await page.keyboard.press('End')
+  await page.keyboard.type('\n\n$\\radice')
+  await page.waitForSelector('.sug-list')
+  await page.keyboard.press('Tab')
+  await page.keyboard.type('2')
+  check((await line().innerText()) === '$\\sqrt{2}$', '\\radice + Tab inserisce \\sqrt{}')
+
+  // Ricerca a parole
+  await page.keyboard.press('Control+k')
+  await page.keyboard.type("come faccio il simbolo dell'infinito")
+  await page.waitForSelector('.answer-card')
+  check((await page.locator('.answer-card code').first().innerText()) === '\\infty', 'la ricerca risponde \\infty')
+
+  // Anteprima Markdown
+  await page.waitForTimeout(300)
+  check((await page.locator('.markdown-body .katex').count()) >= 2, 'l\'anteprima Markdown disegna le formule')
+  check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)
+} finally {
+  await browser.close()
+  await new Promise((resolve) => server.httpServer.close(resolve))
+}
+
+if (failures) {
+  console.log(`\n${failures} controlli falliti`)
+  process.exit(1)
+}
+console.log('\nTutto ok')

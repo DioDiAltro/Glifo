@@ -1,0 +1,252 @@
+import { category, r } from '../define'
+
+const b = category('bigops')
+const c = category('calculus')
+const fn = category('functions')
+const fr = category('fractions')
+
+export const bigops = [
+  b(r`\sum`, 'sommatoria', 'sommatoria, somma, serie, sigma, sigma grande, somma di termini, summation, sum', {
+    u: '∑',
+    w: 10,
+    note: r`In una formula in linea gli estremi vanno di lato: usa \limits per metterli sopra e sotto.`,
+    t: 1,
+    f: [
+      r`\sum`,
+      [r`\sum_{#}^{#}`, 'con estremi'],
+      [r`\sum_{#}`, 'con pedice'],
+      [r`\sum_{#=#}^{#}`, 'da … a …'],
+      [r`\sum_{n=0}^{\infty}`, 'serie da 0 a ∞'],
+      [r`\sum\limits_{#}^{#}`, 'estremi sopra e sotto (in linea)'],
+    ],
+  }),
+  b(r`\prod`, 'produttoria', 'produttoria, prodotto, prodotto di termini, pi grande, product', {
+    u: '∏',
+    w: 7,
+    t: 1,
+    f: [r`\prod`, [r`\prod_{#}^{#}`, 'con estremi'], [r`\prod_{#}`, 'con pedice'], [r`\prod_{#=#}^{#}`, 'da … a …']],
+  }),
+  b(r`\coprod`, 'coprodotto', 'coprodotto, coproduct', { u: '∐', w: 1, f: [r`\coprod`, [r`\coprod_{#}`, 'con pedice']] }),
+  b(r`\bigoplus`, 'somma diretta (grande)', 'somma diretta, somma diretta grande, big oplus', { u: '⨁', w: 3, f: [r`\bigoplus`, [r`\bigoplus_{#}^{#}`, 'con estremi']] }),
+  b(r`\bigotimes`, 'prodotto tensoriale (grande)', 'prodotto tensoriale grande, big otimes', { u: '⨂', w: 2, f: [r`\bigotimes`, [r`\bigotimes_{#}^{#}`, 'con estremi']] }),
+  b(r`\bigodot`, 'prodotto cerchiato (grande)', 'big odot', { u: '⨀', w: 1, f: [r`\bigodot`, [r`\bigodot_{#}`, 'con pedice']] }),
+  b(r`\biguplus`, 'unione di multiinsiemi (grande)', 'big uplus', { u: '⨄', w: 1 }),
+  b(r`\bigvee`, 'disgiunzione estesa (or grande)', 'or grande, disgiunzione estesa, big vee', { u: '⋁', w: 2, f: [r`\bigvee`, [r`\bigvee_{#}^{#}`, 'con estremi']] }),
+  b(r`\bigwedge`, 'congiunzione estesa (and grande)', 'and grande, congiunzione estesa, big wedge', { u: '⋀', w: 2, f: [r`\bigwedge`, [r`\bigwedge_{#}^{#}`, 'con estremi']] }),
+]
+
+export const calculus = [
+  c(r`\infty`, 'infinito', 'infinito, infinity, inf, otto sdraiato, illimitato', {
+    u: '∞',
+    w: 10,
+    f: [r`\infty`, [r`+\infty`, 'più infinito'], [r`-\infty`, 'meno infinito'], [r`\pm\infty`, 'più o meno infinito']],
+  }),
+  c(r`\lim`, 'limite', 'limite, lim, tende a, per x che tende, limit', {
+    w: 10,
+    f: [
+      [r`\lim_{# \to #}`, 'limite'],
+      [r`\lim_{x \to #}`, 'per x →'],
+      [r`\lim_{n \to \infty}`, 'successione (n → ∞)'],
+      [r`\lim_{x \to #^{+}}`, 'limite destro'],
+      [r`\lim_{x \to #^{-}}`, 'limite sinistro'],
+      [r`\lim`, 'solo lim'],
+    ],
+  }),
+  c(r`\limsup`, 'limite superiore', 'limite superiore, massimo limite, limsup, lim sup', { w: 3, f: [[r`\limsup_{# \to #}`, 'con pedice'], r`\limsup`] }),
+  c(r`\liminf`, 'limite inferiore', 'limite inferiore, minimo limite, liminf, lim inf', { w: 3, f: [[r`\liminf_{# \to #}`, 'con pedice'], r`\liminf`] }),
+  c(r`\int`, 'integrale', 'integrale, integrare, primitiva, integral, esse allungata', {
+    u: '∫',
+    w: 10,
+    t: 1,
+    f: [
+      r`\int`,
+      [r`\int_{#}^{#}`, 'definito'],
+      [r`\int # \, d#`, 'indefinito con dx'],
+      [r`\int_{#}^{#} # \, d#`, 'definito con dx'],
+      [r`\int_{-\infty}^{+\infty}`, 'su tutta la retta'],
+      [r`\int\limits_{#}^{#}`, 'estremi sopra e sotto'],
+    ],
+  }),
+  c(r`\iint`, 'integrale doppio', 'integrale doppio, doppio integrale, integrale di superficie, double integral', {
+    u: '∬',
+    w: 5,
+    t: 1,
+    f: [r`\iint`, [r`\iint_{#}`, 'su un dominio'], [r`\iint_{#} # \, d# \, d#`, 'con dx dy']],
+  }),
+  c(r`\iiint`, 'integrale triplo', 'integrale triplo, triplo integrale, integrale di volume, triple integral', {
+    u: '∭',
+    w: 4,
+    t: 1,
+    f: [r`\iiint`, [r`\iiint_{#}`, 'su un dominio'], [r`\iiint_{#} # \, d# \, d# \, d#`, 'con dx dy dz']],
+  }),
+  c(r`\oint`, 'integrale di linea chiuso', 'integrale di linea, integrale curvilineo, circuitazione, integrale chiuso, contour integral', {
+    u: '∮',
+    w: 4,
+    t: 1,
+    f: [r`\oint`, [r`\oint_{#}`, 'su una curva'], [r`\oint_{#} # \cdot d#`, 'circuitazione']],
+  }),
+  c(r`\oiint`, 'integrale di superficie chiusa', 'flusso, integrale di superficie chiusa, integrale doppio chiuso', { u: '∯', w: 2, f: [r`\oiint`, [r`\oiint_{#}`, 'su una superficie']] }),
+  c(r`\partial`, 'derivata parziale (∂)', 'derivata parziale, d tondo, d rotondo, partial, parziale, bordo, frontiera', { u: '∂', w: 9 }),
+  c(r`\frac{d#}{d#}`, 'derivata (Leibniz)', 'derivata, derivare, dy/dx, df/dx, leibniz, rapporto incrementale, derivative', {
+    id: 'deriv',
+    w: 9,
+    f: [
+      [r`\frac{d#}{d#}`, 'dy/dx'],
+      [r`\frac{d}{d#}`, 'operatore d/dx'],
+      [r`\frac{d^{2}#}{d#^{2}}`, 'derivata seconda'],
+      [r`\frac{d^{#}#}{d#^{#}}`, 'derivata n-esima'],
+      [r`\frac{\mathrm{d}#}{\mathrm{d}#}`, 'con d dritta'],
+    ],
+  }),
+  c(r`\frac{\partial #}{\partial #}`, 'derivata parziale', 'derivata parziale, derivare parzialmente, partial derivative, df/dx parziale', {
+    id: 'pderiv',
+    w: 8,
+    f: [
+      [r`\frac{\partial #}{\partial #}`, '∂f/∂x'],
+      [r`\frac{\partial}{\partial #}`, 'operatore ∂/∂x'],
+      [r`\frac{\partial^{2} #}{\partial #^{2}}`, 'seconda'],
+      [r`\frac{\partial^{2} #}{\partial # \, \partial #}`, 'mista'],
+    ],
+  }),
+  c(`#'`, 'derivata (apice)', "derivata, derivata prima, apice, primo, f primo, f', lagrange", {
+    id: 'prime-deriv',
+    w: 7,
+    f: [
+      [`#'(#)`, "f'(x)", `f'(x)`],
+      [`#''(#)`, "f''(x)", `f''(x)`],
+      [r`#^{(#)}(#)`, 'derivata n-esima', r`f^{(n)}(x)`],
+      [`'`, 'solo apice', `f'`],
+    ],
+  }),
+  c(r`\, d#`, 'differenziale (dx)', 'differenziale, dx, dt, d x, dy, spazio prima del dx, misura', {
+    id: 'dx',
+    w: 7,
+    f: [
+      [r`\, d#`, 'd corsiva', r`\int f(x)\, dx`],
+      [r`\, \mathrm{d}#`, 'd dritta', r`\int f(x)\, \mathrm{d}x`],
+    ],
+  }),
+  c(r`\nabla`, 'nabla (gradiente)', 'nabla, gradiente, del, divergenza, rotore, laplaciano, operatore nabla, gradient', {
+    u: '∇',
+    w: 7,
+    f: [
+      r`\nabla`,
+      [r`\nabla #`, 'gradiente', r`\nabla f`],
+      [r`\nabla \cdot #`, 'divergenza', r`\nabla \cdot \vec{F}`],
+      [r`\nabla \times #`, 'rotore', r`\nabla \times \vec{F}`],
+      [r`\nabla^{2} #`, 'laplaciano', r`\nabla^{2} f`],
+    ],
+  }),
+  c(r`\left. # \right|_{#}^{#}`, 'barra di valutazione', 'valutazione, calcolato tra, barra verticale, primitiva valutata, valutato in, sostituzione estremi', {
+    id: 'evalbar',
+    w: 5,
+    f: [[r`\left. # \right|_{#}^{#}`, 'barra'], [r`\Big[ # \Big]_{#}^{#}`, 'parentesi quadre']],
+  }),
+  c(r`O(#)`, 'O grande', 'o grande, big o, ordine di infinito, complessità, landau, trascurabile', {
+    id: 'bigO',
+    w: 5,
+    f: [[r`O(#)`, 'O grande', r`O(n^2)`], [r`\mathcal{O}(#)`, 'O calligrafica', r`\mathcal{O}(n \log n)`], [r`o(#)`, 'o piccolo', r`o(x)`]],
+  }),
+  c(r`\mathcal{L}\{#\}`, 'trasformata di Laplace', 'trasformata di laplace, laplace, l calligrafica', { id: 'laplace', w: 2, f: [[r`\mathcal{L}\{#\}`, 'trasformata', r`\mathcal{L}\{f(t)\}`], [r`\mathcal{L}^{-1}\{#\}`, 'antitrasformata']] }),
+  c(r`\mathcal{F}\{#\}`, 'trasformata di Fourier', 'trasformata di fourier, fourier, f calligrafica', { id: 'fourier', w: 2, f: [[r`\mathcal{F}\{#\}`, 'trasformata', r`\mathcal{F}\{f(t)\}`], [r`\hat{#}(#)`, 'con cappello', r`\hat{f}(\xi)`]] }),
+]
+
+export const functions = [
+  fn(r`\sin`, 'seno', 'seno, sin, sen, funzione seno, trigonometria, sine', { w: 9, f: [r`\sin`, [r`\sin(#)`, 'con parentesi'], [r`\sin^{2}`, 'al quadrato']] }),
+  fn(r`\cos`, 'coseno', 'coseno, cos, funzione coseno, trigonometria, cosine', { w: 9, f: [r`\cos`, [r`\cos(#)`, 'con parentesi'], [r`\cos^{2}`, 'al quadrato']] }),
+  fn(r`\tan`, 'tangente', 'tangente, tan, tg, trigonometria, tangent', { w: 8, f: [r`\tan`, [r`\tan(#)`, 'con parentesi']] }),
+  fn(r`\cot`, 'cotangente', 'cotangente, cot, cotg, ctg', { w: 4 }),
+  fn(r`\sec`, 'secante', 'secante, sec', { w: 2 }),
+  fn(r`\csc`, 'cosecante', 'cosecante, csc, cosec', { w: 2 }),
+  fn(r`\operatorname{sen}`, 'seno (notazione italiana)', 'seno, sen, notazione italiana, sin', { id: 'sen', w: 5, f: [r`\operatorname{sen}`, [r`\operatorname{sen}(#)`, 'con parentesi']] }),
+  fn(r`\operatorname{tg}`, 'tangente (notazione italiana)', 'tangente, tg, notazione italiana, tan', { id: 'tg', w: 4 }),
+  fn(r`\operatorname{cotg}`, 'cotangente (notazione italiana)', 'cotangente, cotg, notazione italiana', { id: 'cotg', w: 2 }),
+  fn(r`\arcsin`, 'arcoseno', 'arcoseno, arcsin, arcsen, seno inverso, inversa del seno', { w: 5 }),
+  fn(r`\arccos`, 'arcocoseno', 'arcocoseno, arccos, coseno inverso, inversa del coseno', { w: 5 }),
+  fn(r`\arctan`, 'arcotangente', 'arcotangente, arctan, arctg, tangente inversa, inversa della tangente', { w: 5 }),
+  fn(r`\operatorname{arcsen}`, 'arcoseno (notazione italiana)', 'arcoseno, arcsen, notazione italiana', { id: 'arcsen', w: 2 }),
+  fn(r`\operatorname{arctg}`, 'arcotangente (notazione italiana)', 'arcotangente, arctg, notazione italiana', { id: 'arctg', w: 2 }),
+  fn(r`\sinh`, 'seno iperbolico', 'seno iperbolico, sinh, senh, sh', { w: 4 }),
+  fn(r`\cosh`, 'coseno iperbolico', 'coseno iperbolico, cosh, ch', { w: 4 }),
+  fn(r`\tanh`, 'tangente iperbolica', 'tangente iperbolica, tanh, th', { w: 3 }),
+  fn(r`\coth`, 'cotangente iperbolica', 'cotangente iperbolica, coth', { w: 1 }),
+  fn(r`\log`, 'logaritmo', 'logaritmo, log, logaritmo in base, logarithm', {
+    w: 9,
+    f: [r`\log`, [r`\log_{#}`, 'in base'], [r`\log_{#}(#)`, 'in base, con argomento'], [r`\log_{2}`, 'in base 2'], [r`\log_{10}`, 'in base 10']],
+  }),
+  fn(r`\ln`, 'logaritmo naturale', 'logaritmo naturale, ln, logaritmo in base e, logaritmo neperiano, natural log', { w: 8, f: [r`\ln`, [r`\ln(#)`, 'con parentesi']] }),
+  fn(r`\lg`, 'logaritmo (lg)', 'lg, logaritmo decimale', { w: 1 }),
+  fn(r`\exp`, 'esponenziale', 'esponenziale, exp, e alla, e elevato, numero di nepero, exponential', {
+    w: 7,
+    f: [[r`e^{#}`, 'e elevato'], r`\exp`, [r`\exp\left( # \right)`, 'exp( … )']],
+  }),
+  fn(r`\max`, 'massimo', 'massimo, max, maximum', { w: 6, f: [r`\max`, [r`\max_{#}`, 'con pedice'], [r`\max\{#, #\}`, 'tra due valori']] }),
+  fn(r`\min`, 'minimo', 'minimo, min, minimum', { w: 6, f: [r`\min`, [r`\min_{#}`, 'con pedice'], [r`\min\{#, #\}`, 'tra due valori']] }),
+  fn(r`\sup`, 'estremo superiore', 'estremo superiore, sup, supremo, supremum', { w: 6, f: [r`\sup`, [r`\sup_{#}`, 'con pedice']] }),
+  fn(r`\inf`, 'estremo inferiore', 'estremo inferiore, inf, infimo, infimum', { w: 6, f: [r`\inf`, [r`\inf_{#}`, 'con pedice']] }),
+  fn(r`\operatorname*{arg\,max}`, 'argmax', 'argmax, arg max, argomento del massimo, punto di massimo', { id: 'argmax', w: 3, f: [[r`\operatorname*{arg\,max}_{#}`, 'con pedice'], r`\operatorname*{arg\,max}`] }),
+  fn(r`\operatorname*{arg\,min}`, 'argmin', 'argmin, arg min, argomento del minimo, punto di minimo', { id: 'argmin', w: 2, f: [[r`\operatorname*{arg\,min}_{#}`, 'con pedice'], r`\operatorname*{arg\,min}`] }),
+  fn(r`\arg`, 'argomento', 'argomento, arg, argomento di un numero complesso, fase', { w: 3 }),
+  fn(r`\det`, 'determinante', 'determinante, det, determinant', { w: 5, f: [r`\det`, [r`\det(#)`, 'con parentesi']] }),
+  fn(r`\dim`, 'dimensione', 'dimensione, dim, dimension', { w: 4 }),
+  fn(r`\ker`, 'nucleo', 'nucleo, kernel, ker, ker f', { w: 4 }),
+  fn(r`\operatorname{Im}`, 'immagine', 'immagine, im, immagine di una funzione, image', { id: 'image', w: 3 }),
+  fn(r`\operatorname{rank}`, 'rango', 'rango, rank, rk, rango di una matrice', { id: 'rank', w: 3, f: [r`\operatorname{rank}`, [r`\operatorname{rk}`, 'rk']] }),
+  fn(r`\operatorname{tr}`, 'traccia', 'traccia, tr, trace, traccia di una matrice', { id: 'trace', w: 3 }),
+  fn(r`\operatorname{sgn}`, 'segno', 'segno, sgn, funzione segno, sign', { id: 'sgn', w: 3 }),
+  fn(r`\operatorname{dom}`, 'dominio', 'dominio, dom, insieme di definizione', { id: 'dom', w: 2 }),
+  fn(r`\deg`, 'grado', 'grado di un polinomio, deg, degree', { w: 3 }),
+  fn(r`\gcd`, 'massimo comune divisore', 'massimo comune divisore, mcd, gcd, m.c.d.', { w: 4 }),
+  fn(r`\operatorname{mcm}`, 'minimo comune multiplo', 'minimo comune multiplo, mcm, m.c.m., lcm', { id: 'mcm', w: 3, f: [r`\operatorname{mcm}`, [r`\operatorname{lcm}`, 'lcm (inglese)']] }),
+  fn(r`\hom`, 'omomorfismi (hom)', 'hom, omomorfismi, morfismi', { w: 1 }),
+  fn(r`\Pr`, 'probabilità (Pr)', 'probabilità, pr, probability', { w: 2 }),
+  fn(r`\mathbb{P}(#)`, 'probabilità ℙ', 'probabilità, p grassetto, probabilità di un evento, probability', { id: 'probP', w: 4, f: [[r`\mathbb{P}(#)`, 'ℙ(A)'], [r`\mathbb{P}(# \mid #)`, 'condizionata']] }),
+  fn(r`\mathbb{E}[#]`, 'valore atteso', 'valore atteso, speranza, media, attesa, expected value, e grassetto', { id: 'expect', w: 4, f: [[r`\mathbb{E}[#]`, '𝔼[X]'], [r`\mathbb{E}[# \mid #]`, 'condizionato']] }),
+  fn(r`\operatorname{Var}(#)`, 'varianza', 'varianza, var, variance', { id: 'var', w: 3 }),
+  fn(r`\operatorname{Cov}(#, #)`, 'covarianza', 'covarianza, cov, covariance', { id: 'cov', w: 2 }),
+  fn(r`\mathcal{N}(#, #)`, 'distribuzione normale', 'normale, gaussiana, distribuzione normale, n calligrafica, gaussian', { id: 'normal', w: 3, f: [[r`\mathcal{N}(#, #)`, 'N(μ, σ²)', r`\mathcal{N}(\mu, \sigma^2)`], [r`\sim \mathcal{N}(#, #)`, 'distribuita come']] }),
+  fn(r`\operatorname{#}`, 'operatore personalizzato', 'operatore, nome di funzione, funzione con nome, operatorname, testo dritto funzione', {
+    id: 'operatorname',
+    w: 4,
+    f: [[r`\operatorname{#}`, 'nome', r`\operatorname{nome}`], [r`\operatorname*{#}_{#}`, 'con pedice sotto', r`\operatorname*{nome}_{x}`]],
+  }),
+  fn(r`#\colon # \to #`, 'funzione f: A → B', 'funzione, definizione di funzione, f da a in b, dominio e codominio, f due punti, mappa, applicazione', {
+    id: 'funcdef',
+    w: 6,
+    f: [
+      [r`#\colon # \to #`, 'f: A → B', r`f\colon A \to B`],
+      [r`#\colon # \to #, \quad # \mapsto #`, 'con legge', r`f\colon A \to B, \quad x \mapsto f(x)`],
+    ],
+  }),
+  fn(r`#^{-1}`, 'inversa', 'inversa, funzione inversa, matrice inversa, reciproco, elevato alla meno uno', { id: 'inverse', w: 5, p: r`f^{-1}` }),
+]
+
+export const fractions = [
+  fr(r`\frac`, 'frazione', 'frazione, fratto, diviso, rapporto, numeratore, denominatore, fraction', {
+    w: 10,
+    a: 'dfrac,tfrac',
+    f: [[r`\frac{#}{#}`, 'frazione'], [r`\dfrac{#}{#}`, 'grande (display)'], [r`\tfrac{#}{#}`, 'piccola'], [r`\frac{1}{#}`, 'reciproco']],
+  }),
+  fr(r`\cfrac`, 'frazione continua', 'frazione continua, cfrac, continued fraction', { w: 1, f: [[r`\cfrac{#}{# + \cfrac{#}{#}}`, 'a due livelli']] }),
+  fr(r`\sqrt`, 'radice quadrata', 'radice, radice quadrata, radicale, square root, sqrt', {
+    u: '√',
+    w: 10,
+    f: [[r`\sqrt{#}`, 'quadrata'], [r`\sqrt[#]{#}`, 'n-esima'], [r`\sqrt[3]{#}`, 'cubica']],
+  }),
+  fr('^{#}', 'potenza (esponente)', 'potenza, esponente, elevato, elevato alla, apice, al quadrato, al cubo, power, superscript', {
+    id: 'pow',
+    w: 10,
+    f: [['^{#}', 'esponente', 'x^{#}'], ['^{2}', 'al quadrato', 'x^{2}'], ['^{3}', 'al cubo', 'x^{3}'], ['^{-1}', 'alla −1', 'x^{-1}']],
+  }),
+  fr('_{#}', 'pedice (indice)', 'pedice, indice, deponente, a con indice, subscript, index', { id: 'sub', w: 10, f: [['_{#}', 'pedice', 'x_{#}']] }),
+  fr('_{#}^{#}', 'pedice e apice', 'pedice e apice, indice ed esponente, sotto e sopra', { id: 'subsup', w: 5, f: [['_{#}^{#}', 'pedice e apice', 'x_{#}^{#}']] }),
+  fr('{}^{#}_{#}#', 'apice e pedice a sinistra', 'isotopo, apice a sinistra, pedice a sinistra, numero di massa, numero atomico', { id: 'presub', w: 1, p: '{}^{14}_{6}C' }),
+  fr(r`\binom`, 'coefficiente binomiale', 'coefficiente binomiale, binomiale, n su k, combinazioni, binomial', {
+    w: 6,
+    a: 'dbinom,tbinom',
+    f: [[r`\binom{#}{#}`, 'binomiale'], [r`\dbinom{#}{#}`, 'grande'], [r`\tbinom{#}{#}`, 'piccolo']],
+  }),
+  fr('#!', 'fattoriale', 'fattoriale, punto esclamativo, n fattoriale, factorial', { id: 'factorial', w: 5, p: 'n!' }),
+  fr(r`# \times 10^{#}`, 'notazione scientifica', 'notazione scientifica, per dieci alla, potenza di dieci, scientific notation', { id: 'sci', w: 3, p: r`6{,}02 \times 10^{23}` }),
+  fr('{,}', 'virgola decimale', 'virgola decimale, numero decimale, virgola senza spazio, decimali', { id: 'decimal-comma', w: 3, p: '3{,}14', note: 'In LaTeX la virgola aggiunge uno spazio: scrivi 3{,}14 per i numeri decimali.' }),
+]
