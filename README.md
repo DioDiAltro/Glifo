@@ -190,9 +190,5 @@ per KaTeX e che la ricerca continui a trovare le risposte giuste.
 
 ## Idee per il futuro
 
-- Sincronizzazione degli appunti tra dispositivi (oggi restano nel browser o nei file `.md`).
-- Aprire direttamente una cartella di appunti, con le immagini.
-- Riconoscere un simbolo **disegnato a mano** (come Detexify).
-- Anteprima delle formule direttamente dentro l'editor, alla Typora/Obsidian.
-- Scorciatoie personali (es. `//` → `\frac{}{}`) e macro personalizzate.
-- App desktop (Tauri) o estensione per VS Code con lo stesso pannello.
+In programma: il **controllo dell'ortografia** e gli **account** per ritrovare gli stessi
+appunti su ogni dispositivo. I dettagli, con le altre idee, sono in [ROADMAP.md](ROADMAP.md).
