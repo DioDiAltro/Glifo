@@ -12,7 +12,30 @@ Si scrive in Markdown come in VS Code, con le formule in LaTeX tra `$ … $`, ma
 - con **Tab** salti da un segnaposto all'altro: `\sum_{n=0}^{\infty}` si scrive in pochi tasti;
 - non ricordi il comando? Lo **cerchi a parole**: «come faccio il simbolo dell'infinito» → `\infty`.
 
+**Usala subito: <https://diodialtro.github.io/matherdown/>**
+
 ![Suggerimenti mentre si scrive \su](docs/suggerimenti.png)
+
+## Usarla tutti i giorni
+
+Non serve installare nulla: basta aprire <https://diodialtro.github.io/matherdown/> dal
+browser. Per averla come un'app vera, con la sua icona e funzionante anche senza internet:
+
+| Dispositivo | Come installarla |
+| --- | --- |
+| Computer (Chrome o Edge) | icona **Installa** a destra nella barra degli indirizzi (oppure, nel menu del browser, la voce *Installa Matherdown*) |
+| Android (Chrome) | menu ⋮ → **Installa app** (o *Aggiungi a schermata Home*) |
+| iPhone / iPad (Safari) | pulsante Condividi → **Aggiungi alla schermata Home** |
+| Mac (Safari) | menu *File* → **Aggiungi al Dock** |
+
+Cose da sapere:
+
+- Gli appunti sono salvati **nel browser del dispositivo** che stai usando: quelli scritti sul
+  computer non compaiono da soli sul telefono.
+- Per spostarli o tenerli al sicuro usa **Salva .md** (anche dentro una cartella di OneDrive,
+  Google Drive o iCloud) e **Apri .md** sull'altro dispositivo. In *Impostazioni* c'è anche
+  **Scarica backup**, con tutti gli appunti in un solo file.
+- Quando esce una nuova versione, l'app si aggiorna da sola alla riapertura.
 
 ## Funzionalità
 
@@ -72,18 +95,15 @@ Poi apri l'indirizzo che compare nel terminale (di solito <http://localhost:5173
 Per `npm run test:e2e` serve Chromium: `npx playwright-core install chromium`
 (oppure indica un Chromium già installato con la variabile `CHROMIUM_PATH`).
 
-## Metterlo online
+## Come viene pubblicata
 
-`npm run build` produce un sito statico nella cartella `dist/`: non serve un server,
-basta un qualunque hosting gratuito per siti statici, per esempio:
+Il sito online è su **GitHub Pages** e si aggiorna da solo: ogni volta che cambia il branch
+principale del repository, l'automazione `.github/workflows/deploy.yml` esegue i test,
+compila l'app (`npm run build`) e copia la cartella `dist/` nel branch `gh-pages`, che è
+quello pubblicato da GitHub Pages. Si può anche rilanciare a mano dalla scheda *Actions*.
 
-- **GitHub Pages**: carica `dist/` (anche con una GitHub Action) e attiva Pages nelle
-  impostazioni del repository. I percorsi sono relativi, quindi funziona anche su
-  `https://utente.github.io/matherdown/`.
-- **Cloudflare Pages** o **Netlify**: comando di build `npm run build`, cartella `dist`.
-
-Una volta online, dal browser si può **installare** (icona "Installa app" su Chrome/Edge,
-"Aggiungi a Home" su iPhone/Android): si apre in una finestra sua e funziona anche offline.
+`dist/` è un normale sito statico, quindi funziona anche su altri hosting gratuiti come
+**Cloudflare Pages** o **Netlify** (comando di build `npm run build`, cartella `dist`).
 
 ## Assistente AI
 
