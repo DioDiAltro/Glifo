@@ -4,12 +4,15 @@ import { EditorSelection } from '@codemirror/state'
 import welcomeNote from './welcome.md?raw'
 import { MarkdownEditor } from './editor/editor'
 import { deriveTitle, NotesStore, type Note } from './store/notes'
+import { addPersonalWord, loadPersonalWords, savePersonalWords } from './store/dictionary'
 import { loadSettings, saveSettings, type Settings, type ViewMode } from './store/settings'
 import { downloadText, fileNameFor, openMarkdownFiles, saveMarkdownFile } from './store/files'
 import { migrateKeyPrefix, storageAvailable } from './store/storage'
 import { ICONS, h, icon } from './ui/dom'
 import { confirmDialog, openHelpDialog, openSettingsDialog } from './ui/dialogs'
 import { inClaudeViewer } from './host'
+import { SpellClient } from './spell/client'
+import type { SpellLanguage } from './spell/engine'
 import { NotesPanel } from './ui/notesPanel'
 import { Preview } from './ui/preview'
 import { SidePanel } from './ui/sidePanel'
@@ -162,6 +165,38 @@ const editor = new MarkdownEditor(editorHost, active.content, {
 })
 editor.setAutoWrap(settings.autoWrap)
 
+// ——— Controllo ortografico ———
+
+let spell: SpellClient | null = null
+let spellKey = ''
+
+/** Avvia, riavvia (se cambiano le lingue) o spegne il correttore secondo le impostazioni. */
+function applySpellcheck(): void {
+  const key = settings.spellcheck ? settings.spellLanguages : ''
+  if (key === spellKey) return
+  spellKey = key
+  spell?.dispose()
+  spell = null
+  if (!settings.spellcheck) {
+    editor.setSpellcheck(null)
+    return
+  }
+  const languages: SpellLanguage[] = settings.spellLanguages === 'it+en' ? ['it', 'en'] : [settings.spellLanguages]
+  const client = new SpellClient({
+    languages,
+    personal: loadPersonalWords(),
+    onError: () => toast('Controllo ortografico non disponibile: non è stato possibile caricare il dizionario.', 'error'),
+  })
+  spell = client
+  editor.setSpellcheck({ client, addWord: (word) => client.setPersonalWords(addPersonalWord(word)) })
+}
+
+function setPersonalWords(words: string[]): string[] {
+  const saved = savePersonalWords(words)
+  spell?.setPersonalWords(saved)
+  return saved
+}
+
 const sidePanel = new SidePanel({
   editor,
   settings: () => settings,
@@ -208,6 +243,7 @@ function updateSettings(next: Partial<Settings>): void {
   saveSettings(settings)
   applyTheme()
   editor.setAutoWrap(settings.autoWrap)
+  applySpellcheck()
 }
 
 function setView(mode: ViewMode, focus = true): void {
@@ -239,6 +275,8 @@ function openSettings(): void {
   openSettingsDialog({
     settings,
     onChange: (next) => updateSettings(next),
+    personalWords: loadPersonalWords(),
+    onPersonalWordsChange: (words) => setPersonalWords(words),
     onBackup: () => backup(),
     onRestore: () => void restore(),
   })
@@ -408,7 +446,11 @@ function printNote(): void {
 
 function backup(): void {
   flushSave()
-  const data = JSON.stringify({ app: 'glifo', version: 1, exportedAt: new Date().toISOString(), notes: store.exportAll() }, null, 2)
+  const data = JSON.stringify(
+    { app: 'glifo', version: 1, exportedAt: new Date().toISOString(), notes: store.exportAll(), dictionary: loadPersonalWords() },
+    null,
+    2,
+  )
   const date = new Date().toISOString().slice(0, 10)
   void downloadText(`glifo-backup-${date}.json`, data, 'application/json')
 }
@@ -419,11 +461,14 @@ async function restore(): Promise<void> {
     const file = input.files?.[0]
     if (!file) return
     try {
-      const data = JSON.parse(await file.text()) as { notes?: { content?: unknown }[] }
+      const data = JSON.parse(await file.text()) as { notes?: { content?: unknown }[]; dictionary?: unknown }
       const notes = (data.notes ?? []).filter((n): n is { content: string } => typeof n.content === 'string')
       if (!notes.length) throw new Error('nessuna nota')
       flushSave()
       for (const n of notes) store.create(n.content)
+      if (Array.isArray(data.dictionary)) {
+        setPersonalWords([...loadPersonalWords(), ...data.dictionary.filter((w): w is string => typeof w === 'string')])
+      }
       notesPanel.refresh(active.id)
       toast(`Ripristinati ${notes.length} appunti`)
     } catch {

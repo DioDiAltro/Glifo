@@ -24,7 +24,9 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
 - `src/symbols/`: catalogo dei simboli; per aggiungerne uno vedi «Aggiungere un
   simbolo» nel README.
 - `src/search/`: ricerca a parole in italiano e suggerimenti mentre si scrive `\…`.
-- `src/editor/`: editor CodeMirror 6 (formule, segnaposto, suggerimenti).
+- `src/editor/`: editor CodeMirror 6 (formule, segnaposto, suggerimenti, `spellcheck.ts`).
+- `src/spell/`: controllo ortografico (Hunspell in WebAssembly in un worker, dizionari
+  `dictionary-it` e `dictionary-en`, glossario tecnico in `glossary.ts`).
 - `src/render/`: KaTeX e anteprima Markdown, con le stesse regole di VS Code per `$…$`.
 - `src/ui/`: interfaccia. `src/store/`: note e impostazioni nel browser (chiavi `glifo.*`).
 - `src/ai/`: assistente AI. `src/host.ts`: funzioni della demo dentro claude.ai.

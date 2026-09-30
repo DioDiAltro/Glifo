@@ -1,34 +1,11 @@
 # Idee per il futuro
 
-Le cose da aggiungere a Glifo. Le prime due sono quelle in programma; quando si
-riprende il lavoro si parte da qui, e quando una voce è fatta si toglie.
+Le cose da aggiungere a Glifo. Quella «in programma» è la prossima; quando si riprende
+il lavoro si parte da qui, e quando una voce è fatta si toglie.
 
 ## In programma
 
-### 1. Controllo dell'ortografia
-
-**Cosa:** sottolineare le parole scritte male negli appunti, come in Word o Google
-Docs, con i suggerimenti per correggerle. Deve funzionare in italiano (e volendo in
-inglese) e **non** segnalare come errori i comandi LaTeX dentro le formule
-(`\frac`, `\alpha`…), il codice e i link.
-
-**Come si potrebbe fare:**
-
-- **Primo passo, semplice:** usare il correttore che il browser ha già. L'editor
-  (CodeMirror) lo attiva con l'attributo `spellcheck`; formule e codice si
-  escludono marcandoli con `spellcheck="false"` (da verificare su Chrome, Safari e
-  Firefox). Non pesa nulla, ma la lingua dipende dalle impostazioni del browser e
-  non si possono aggiungere parole a un dizionario personale.
-- **Se non basta:** un dizionario dentro l'app (Hunspell italiano letto da una
-  libreria come `nspell`, in un Web Worker), caricato solo quando il controllo è
-  attivo. Permette «Aggiungi al dizionario» e i termini tecnici delle materie, ma
-  pesa qualche MB: da misurare. Controllare la licenza del dizionario.
-- **Anche la grammatica:** LanguageTool supporta l'italiano, ma il testo viene
-  mandato ai suoi server e l'uso gratuito ha dei limiti.
-- Un interruttore «Controllo ortografico» nelle impostazioni. Da decidere se
-  attivo di default.
-
-### 2. Account: gli stessi appunti su ogni dispositivo
+### Account: gli stessi appunti su ogni dispositivo
 
 **Cosa:** accedere con un account da PC, tablet e telefono e ritrovare sempre gli
 stessi appunti, aggiornati.
@@ -64,7 +41,8 @@ useranno anche altri studenti servono gli account veri.
 - Le note eliminate vanno ricordate come «eliminate», altrimenti ricompaiono
   dall'altro dispositivo.
 - Al primo accesso chiedere se caricare gli appunti già presenti nel browser.
-- La chiave API di Anthropic resta sul dispositivo: non va sincronizzata.
+- Sincronizzare anche le impostazioni e le parole aggiunte al dizionario del controllo
+  ortografico; la chiave API di Anthropic invece resta sul dispositivo.
 - Il browser dà circa 5 MB di spazio (localStorage): con tanti appunti conviene
   passare a IndexedDB, utile anche senza account.
 - Facoltativo: crittografia end-to-end (gli appunti partono già cifrati con una
@@ -75,6 +53,8 @@ useranno anche altri studenti servono gli account veri.
 
 ## Altre idee
 
+- Controllo della **grammatica**, oltre all'ortografia (es. LanguageTool, che supporta
+  l'italiano: però il testo verrebbe mandato ai suoi server).
 - Aprire direttamente una cartella di appunti, con le immagini.
 - Riconoscere un simbolo **disegnato a mano** (come Detexify).
 - Anteprima delle formule direttamente dentro l'editor, alla Typora/Obsidian.

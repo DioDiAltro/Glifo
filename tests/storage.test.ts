@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest'
 import { migrateKeyPrefix } from '../src/store/storage'
+import { addPersonalWord, loadPersonalWords, savePersonalWords } from '../src/store/dictionary'
 
 beforeEach(() => localStorage.clear())
 
@@ -30,5 +31,18 @@ describe('cambio di nome (Matherdown → Glifo)', () => {
   it('senza vecchi dati non fa nulla', () => {
     migrateKeyPrefix('matherdown.', 'glifo.')
     expect(localStorage.length).toBe(0)
+  })
+})
+
+describe('dizionario personale', () => {
+  it('salva le parole ripulite, senza doppioni e in ordine', () => {
+    expect(savePersonalWords([' zeta ', 'Alfa', 'alfa', '', 'due parole', 'beta'])).toEqual(['Alfa', 'beta', 'zeta'])
+    expect(loadPersonalWords()).toEqual(['Alfa', 'beta', 'zeta'])
+    expect(addPersonalWord('Cauchy')).toEqual(['Alfa', 'beta', 'Cauchy', 'zeta'])
+  })
+
+  it('ignora dati salvati male', () => {
+    localStorage.setItem('glifo.dictionary.v1', '{"non":"una lista"}')
+    expect(loadPersonalWords()).toEqual([])
   })
 })

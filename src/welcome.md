@@ -47,6 +47,10 @@ public class Main {
 }
 ```
 
+## Controllo ortografico
+
+Le parole scritte male vengono sottolineate in rosso; formule, codice e link non vengono controllati. Clicca su una parola sottolineata (o premi **Ctrl**+**.**) per correggerla o aggiungerla al tuo dizionario. Prova con questa: perchè.
+
 ## Scorciatoie utili
 
 | Tasti | Cosa fanno |
@@ -57,6 +61,7 @@ public class Main {
 | **Ctrl**+**K** | cerca un simbolo a parole |
 | **Ctrl**+**M** | nuova formula `$…$` |
 | **Ctrl**+**S** | salva la nota come file `.md` |
+| **Ctrl**+**.** | corregge la parola sottolineata in rosso |
 
 - [x] Prova i suggerimenti
 - [ ] Crea la tua prima nota con il pulsante **+**

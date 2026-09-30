@@ -2,12 +2,17 @@ import { readJson, writeJson } from './storage'
 
 export type Theme = 'auto' | 'light' | 'dark'
 export type ViewMode = 'editor' | 'split' | 'preview'
+/** Lingue del controllo ortografico: la prima è quella principale. */
+export type SpellLanguages = 'it+en' | 'it' | 'en'
 
 export interface Settings {
   theme: Theme
   view: ViewMode
   /** Aggiunge i `$` quando si inserisce un simbolo fuori da una formula. */
   autoWrap: boolean
+  /** Sottolinea le parole scritte male. */
+  spellcheck: boolean
+  spellLanguages: SpellLanguages
   fontSize: number
   notesOpen: boolean
   symbolsOpen: boolean
@@ -17,6 +22,12 @@ export interface Settings {
   /** URL di un proxy compatibile con l'API di Anthropic (facoltativo). */
   apiBaseUrl: string
 }
+
+export const SPELL_LANGUAGES: { id: SpellLanguages; label: string }[] = [
+  { id: 'it+en', label: 'Italiano e inglese' },
+  { id: 'it', label: 'Solo italiano' },
+  { id: 'en', label: 'Solo inglese' },
+]
 
 export const AI_MODELS = [
   { id: 'claude-opus-5-5', label: 'Claude Opus 5.5 (predefinito)' },
@@ -30,6 +41,8 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'auto',
   view: 'split',
   autoWrap: true,
+  spellcheck: true,
+  spellLanguages: 'it+en',
   fontSize: 16,
   notesOpen: true,
   symbolsOpen: true,

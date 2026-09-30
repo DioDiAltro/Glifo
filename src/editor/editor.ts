@@ -4,7 +4,7 @@ import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
 import { HighlightStyle, bracketMatching, indentOnInput, syntaxHighlighting, syntaxTree } from '@codemirror/language'
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search'
-import { EditorSelection, EditorState, Prec, type Extension } from '@codemirror/state'
+import { Compartment, EditorSelection, EditorState, Prec, type Extension } from '@codemirror/state'
 import {
   EditorView,
   drawSelection,
@@ -21,6 +21,7 @@ import { mathContextAt, mathRegionAt, type EditorMathContext } from './mathConte
 import { mathHighlighter } from './mathHighlight'
 import { mathDelimTag, mathMarkdown, mathTag } from './mathSyntax'
 import { clearAllPlaceholders, jumpPlaceholder, placeholderField } from './placeholders'
+import { spellcheck, type SpellcheckOptions } from './spellcheck'
 import { SuggestionController } from './suggestions'
 
 export interface EditorCallbacks {
@@ -121,6 +122,7 @@ export class MarkdownEditor {
   private autoWrap = true
   private suppressDocEvents = false
   private contextFrame = 0
+  private readonly spelling = new Compartment()
 
   constructor(parent: HTMLElement, doc: string, private readonly cb: EditorCallbacks) {
     this.suggestions = new SuggestionController(
@@ -176,7 +178,9 @@ export class MarkdownEditor {
       editingKeys,
       keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...searchKeymap, ...historyKeymap, indentWithTab]),
       EditorView.updateListener.of((u) => this.onUpdate(u)),
+      // Il controllo del browser resta spento: quello di Glifo salta formule e codice.
       EditorView.contentAttributes.of({ spellcheck: 'false', lang: 'it', 'aria-label': 'Editor degli appunti' }),
+      this.spelling.of([]),
     ]
 
     this.view = new EditorView({
@@ -189,6 +193,11 @@ export class MarkdownEditor {
 
   setAutoWrap(on: boolean): void {
     this.autoWrap = on
+  }
+
+  /** Accende (con il correttore indicato) o spegne il controllo ortografico. */
+  setSpellcheck(options: SpellcheckOptions | null): void {
+    this.view.dispatch({ effects: this.spelling.reconfigure(options ? spellcheck(options) : []) })
   }
 
   private onUpdate(u: ViewUpdate): void {

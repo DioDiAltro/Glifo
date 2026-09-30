@@ -11,7 +11,8 @@ li scrivi:
   (la sommatoria con i puntini sopra e sotto, per far capire dove vanno gli estremi);
 - clicchi su quello giusto (o premi **Tab**) e il comando viene completato;
 - con **Tab** salti da un segnaposto all'altro: `\sum_{n=0}^{\infty}` si scrive in pochi tasti;
-- non ricordi il comando? Lo **cerchi a parole**: «come faccio il simbolo dell'infinito» → `\infty`.
+- non ricordi il comando? Lo **cerchi a parole**: «come faccio il simbolo dell'infinito» → `\infty`;
+- le parole scritte male vengono **sottolineate in rosso** (formule e codice no): un clic e le correggi.
 
 **Usala subito: <https://diodialtro.github.io/glifo/>**
 
@@ -47,6 +48,12 @@ Cose da sapere:
   dell'anteprima di VS Code**: i file restano compatibili (anche i blocchi ` ```math ` di GitHub).
 - Colori per il TeX dentro le formule, `$`, graffe e parentesi che si chiudono da sole.
 - Barra di formattazione e scorciatoie (Ctrl+B, Ctrl+I, Ctrl+M per una formula…).
+- **Controllo ortografico** in italiano e inglese con [Hunspell](https://hunspell.github.io), lo
+  stesso correttore di LibreOffice e Firefox. Non controlla formule, codice e link, conosce i
+  termini tecnici (iniettiva, jacobiano, bayesiano, eteroschedasticità…), i cognomi degli
+  scienziati (Cauchy, Weierstrass, Schrödinger…) e le parole dell'informatica (array, thread,
+  override…). Clic sulla parola sottolineata (o **Ctrl+.**) per le correzioni; le parole che
+  aggiungi al tuo dizionario si possono rivedere in *Impostazioni*. Funziona anche offline.
 
 **Pannello dei simboli**
 - **Anteprima della formula** sotto il cursore, aggiornata mentre scrivi: mostra già il
@@ -76,7 +83,8 @@ Cose da sapere:
 
 ## Provarlo sul tuo computer
 
-Serve [Node.js](https://nodejs.org) (versione 20.19 o successiva, oppure 22.12 o successiva).
+Serve [Node.js](https://nodejs.org) 24 o successivo (il 22 funziona, ma `npm install` avvisa che il correttore
+ortografico chiede il 24).
 
 ```bash
 npm install
@@ -141,6 +149,7 @@ Web app in **TypeScript** con [Vite](https://vite.dev), senza framework e senza 
 | Editor | [CodeMirror 6](https://codemirror.net) con un'estensione per le formule |
 | Formule | [KaTeX](https://katex.org) (+ mhchem per la chimica) |
 | Anteprima Markdown | [markdown-it](https://github.com/markdown-it/markdown-it), highlight.js, DOMPurify |
+| Controllo ortografico | [Hunspell](https://hunspell.github.io) in WebAssembly ([@farscrl/hunspell-wasm](https://github.com/farscrl/hunspell-wasm)) in un worker, dizionari [dictionary-it e dictionary-en](https://github.com/wooorm/dictionaries) |
 | Assistente AI | SDK ufficiale di Anthropic (caricato solo quando serve) |
 | App installabile | vite-plugin-pwa |
 
@@ -160,7 +169,13 @@ src/
     placeholders.ts       i segnaposto raggiungibili con Tab
     insert.ts             inserimento dei simboli (aggiunge i $, usa la selezione…)
     suggestions.ts        stato dei suggerimenti (↑ ↓ Tab Esc)
+    spellcheck.ts         sottolineatura delle parole sbagliate e correzioni
     editor.ts             configurazione di CodeMirror
+  spell/
+    words.ts              divide il testo in parole (salta indirizzi, codice, sigle…)
+    engine.ts             Hunspell con i dizionari, glossario e dizionario personale
+    glossary.ts           termini tecnici e cognomi che i dizionari non conoscono
+    worker.ts, client.ts  il correttore gira in un worker, fuori dalla pagina
   render/
     mathDelims.ts         regole dei delimitatori (condivise da editor e anteprima)
     markdown.ts           Markdown → HTML sicuro
@@ -188,7 +203,15 @@ c(r`\iint`, 'integrale doppio', 'integrale doppio, doppio integrale, double inte
 `npm test` controlla automaticamente che ogni simbolo e ogni variante siano formule valide
 per KaTeX e che la ricerca continui a trovare le risposte giuste.
 
+## Licenze
+
+Il controllo ortografico usa [Hunspell](https://github.com/hunspell/hunspell) (MPL 1.1 / GPL 2 /
+LGPL 2.1), il dizionario italiano di Andrea Pescetti e altri
+([GPL 3](public/licenze/dizionario-italiano.txt), dal pacchetto `dictionary-it`) e quello
+inglese di SCOWL ([MIT e BSD](public/licenze/dizionario-inglese.txt), dal pacchetto
+`dictionary-en`). I testi delle licenze sono pubblicati anche insieme all'app, in `licenze/`.
+
 ## Idee per il futuro
 
-In programma: il **controllo dell'ortografia** e gli **account** per ritrovare gli stessi
-appunti su ogni dispositivo. I dettagli, con le altre idee, sono in [ROADMAP.md](ROADMAP.md).
+In programma: gli **account** per ritrovare gli stessi appunti su ogni dispositivo. I dettagli,
+con le altre idee, sono in [ROADMAP.md](ROADMAP.md).

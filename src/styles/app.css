@@ -529,6 +529,76 @@ kbd {
   border-bottom: 1.5px dotted var(--accent);
 }
 
+/* Controllo ortografico */
+.cm-misspelled {
+  text-decoration: underline wavy var(--danger);
+  text-decoration-thickness: 1px;
+  text-decoration-skip-ink: none;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.editor-host .cm-tooltip.spell-tooltip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  font: 14px/1.4 var(--font-ui);
+}
+
+.spell-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.spell-suggestion {
+  padding: 3px 9px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.spell-suggestion:hover,
+.spell-suggestion:focus-visible {
+  background: var(--accent);
+  color: var(--on-accent);
+  outline: none;
+}
+
+.spell-note {
+  padding: 3px 2px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.spell-add {
+  padding: 6px 2px 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.spell-add:hover,
+.spell-add:focus-visible {
+  color: var(--accent-text);
+  outline: none;
+  text-decoration: underline;
+}
+
 /* ——— Anteprima ——— */
 
 .markdown-body {
@@ -1539,6 +1609,17 @@ kbd {
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   background: var(--surface-2);
+}
+
+.dialog textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: 13px/1.5 var(--font-mono);
+  resize: vertical;
 }
 
 .input-row {

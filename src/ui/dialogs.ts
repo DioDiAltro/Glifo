@@ -1,10 +1,14 @@
 import { inClaudeViewer } from '../host'
-import { AI_MODELS, type Settings, type Theme } from '../store/settings'
+import { AI_MODELS, SPELL_LANGUAGES, type Settings, type SpellLanguages, type Theme } from '../store/settings'
 import { ICONS, h, icon } from './dom'
 
 export interface SettingsDialogDeps {
   settings: Settings
   onChange(next: Partial<Settings>): void
+  /** Parole aggiunte al dizionario del controllo ortografico. */
+  personalWords: string[]
+  /** Salva il nuovo elenco e restituisce la versione ripulita. */
+  onPersonalWordsChange(words: string[]): string[]
   onBackup(): void
   onRestore(): void
 }
@@ -42,6 +46,18 @@ export function openSettingsDialog(deps: SettingsDialogDeps): void {
     ['dark', 'Scuro'],
   ]
   const fontValue = h('span', { class: 'field-value' }, `${s.fontSize}px`)
+  const wordsCount = h('span', {}, String(deps.personalWords.length))
+  const wordsInput = h('textarea', {
+    attrs: { rows: 6, spellcheck: 'false', autocomplete: 'off', 'aria-label': 'Parole aggiunte al dizionario, una per riga' },
+    on: {
+      change: () => {
+        const words = deps.onPersonalWordsChange(wordsInput.value.split('\n'))
+        wordsInput.value = words.join('\n')
+        wordsCount.textContent = String(words.length)
+      },
+    },
+  })
+  wordsInput.value = deps.personalWords.join('\n')
   const keyInput = h('input', {
     attrs: { type: 'password', value: s.apiKey, placeholder: 'sk-ant-…', autocomplete: 'off', spellcheck: 'false', id: 'api-key' },
     on: { change: () => deps.onChange({ apiKey: keyInput.value.trim() }) },
@@ -96,6 +112,46 @@ export function openSettingsDialog(deps: SettingsDialogDeps): void {
           on: { change: (ev) => deps.onChange({ autoWrap: (ev.target as HTMLInputElement).checked }) },
         }),
         h('span', {}, 'Quando inserisco un simbolo fuori da una formula, aggiungi automaticamente i ', h('code', {}, '$ … $')),
+      ),
+    ),
+    h(
+      'fieldset',
+      {},
+      h('legend', {}, 'Controllo ortografico'),
+      h(
+        'label',
+        { class: 'check' },
+        h('input', {
+          attrs: { type: 'checkbox', checked: s.spellcheck },
+          on: { change: (ev) => deps.onChange({ spellcheck: (ev.target as HTMLInputElement).checked }) },
+        }),
+        h('span', {}, 'Sottolinea in rosso le parole scritte male. Formule, codice e link non vengono controllati.'),
+      ),
+      h(
+        'label',
+        { class: 'field field-column' },
+        h('span', {}, 'Lingue'),
+        h(
+          'select',
+          { on: { change: (ev) => deps.onChange({ spellLanguages: (ev.target as HTMLSelectElement).value as SpellLanguages }) } },
+          SPELL_LANGUAGES.map((l) => h('option', { attrs: { value: l.id, selected: l.id === s.spellLanguages } }, l.label)),
+        ),
+      ),
+      h(
+        'p',
+        { class: 'field-help' },
+        'Clicca su una parola sottolineata (o premi ',
+        h('kbd', {}, 'Ctrl'),
+        ' ',
+        h('kbd', {}, '.'),
+        ') per vedere le correzioni o aggiungerla al tuo dizionario.',
+      ),
+      h(
+        'details',
+        { class: 'advanced' },
+        h('summary', {}, 'Parole aggiunte al dizionario (', wordsCount, ')'),
+        h('p', { class: 'field-help' }, 'Una parola per riga: puoi correggerle o cancellarle.'),
+        wordsInput,
       ),
     ),
     h(
@@ -257,6 +313,7 @@ export function openHelpDialog(): void {
         row(['Ctrl', 'B'], 'grassetto'),
         row(['Ctrl', 'I'], 'corsivo'),
         row(['Ctrl', 'S'], 'salva la nota come file .md'),
+        row(['Ctrl', '.'], 'correzioni per la parola sottolineata in rosso (oppure cliccaci sopra)'),
         row(['Ctrl', 'F'], 'trova e sostituisci'),
       ),
     ),
@@ -270,6 +327,15 @@ export function openHelpDialog(): void {
       ', ',
       h('code', {}, '\\freccia'),
       ' — e ti verrà proposto il comando giusto. Su Mac usa ⌘ al posto di Ctrl.',
+    ),
+    h(
+      'p',
+      { class: 'field-help' },
+      'Il controllo ortografico usa Hunspell con il dizionario italiano di Andrea Pescetti e altri (',
+      h('a', { attrs: { href: 'licenze/dizionario-italiano.txt', target: '_blank', rel: 'noopener' } }, 'licenza GPL 3'),
+      ') e quello inglese di SCOWL (',
+      h('a', { attrs: { href: 'licenze/dizionario-inglese.txt', target: '_blank', rel: 'noopener' } }, 'licenza'),
+      ').',
     ),
   ]
   dialogShell('Come si usa', body, 'dialog-help').showModal()
