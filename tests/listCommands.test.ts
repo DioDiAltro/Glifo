@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { EditorSelection, EditorState, type TransactionSpec } from '@codemirror/state'
-import { ensureSyntaxTree } from '@codemirror/language'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
+import { fullyParsed } from './support/editorState'
 import { mathMarkdown } from '../src/editor/mathSyntax'
 import { wordsToCheck } from '../src/editor/spellcheck'
 import {
@@ -29,12 +29,13 @@ function setup(src: string): CommandTarget {
     anchor = head = Math.max(0, src.indexOf('|'))
     doc = src.replace('|', '')
   }
-  let state = EditorState.create({
-    doc,
-    selection: EditorSelection.single(anchor, head),
-    extensions: [markdown({ base: markdownLanguage, extensions: [mathMarkdown, noIndentedCode] })],
-  })
-  ensureSyntaxTree(state, state.doc.length, 5000)
+  let state = fullyParsed(
+    EditorState.create({
+      doc,
+      selection: EditorSelection.single(anchor, head),
+      extensions: [markdown({ base: markdownLanguage, extensions: [mathMarkdown, noIndentedCode] })],
+    }),
+  )
   return {
     get state() {
       return state

@@ -1,6 +1,5 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { EditorState } from '@codemirror/state'
-import { ensureSyntaxTree } from '@codemirror/language'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { mathMarkdown } from '../src/editor/mathSyntax'
 import { wordsToCheck } from '../src/editor/spellcheck'
@@ -12,6 +11,7 @@ import itDic from '../node_modules/dictionary-it/index.dic?raw'
 import enAff from '../node_modules/dictionary-en/index.aff?raw'
 import enDic from '../node_modules/dictionary-en/index.dic?raw'
 import welcomeNote from '../src/welcome.md?raw'
+import { fullyParsed } from './support/editorState'
 
 const r = String.raw
 
@@ -73,8 +73,7 @@ describe('parole da controllare', () => {
 
 describe('parti del Markdown escluse', () => {
   function checked(doc: string): string[] {
-    const state = EditorState.create({ doc, extensions: [markdown({ base: markdownLanguage, extensions: [mathMarkdown] })] })
-    ensureSyntaxTree(state, state.doc.length, 5000)
+    const state = fullyParsed(EditorState.create({ doc, extensions: [markdown({ base: markdownLanguage, extensions: [mathMarkdown] })] }))
     return wordsToCheck(state, 0, state.doc.length).map((w) => w.word)
   }
 
@@ -152,8 +151,13 @@ describe('correttore (Hunspell con i dizionari veri)', () => {
   })
 
   it('nella nota di benvenuto è sottolineato solo l\'esempio da correggere', () => {
-    const state = EditorState.create({ doc: welcomeNote, extensions: [markdown({ base: markdownLanguage, extensions: [mathMarkdown] })] })
-    ensureSyntaxTree(state, state.doc.length, 5000)
+    // Come su un computer lento: la prima analisi del Markdown ha pochi millisecondi e si ferma
+    // prima del codice e delle formule (così falliva la pubblicazione su GitHub).
+    let clock = 0
+    const now = vi.spyOn(Date, 'now').mockImplementation(() => (clock += 1000))
+    const created = EditorState.create({ doc: welcomeNote, extensions: [markdown({ base: markdownLanguage, extensions: [mathMarkdown] })] })
+    now.mockRestore()
+    const state = fullyParsed(created)
     const found = wordsToCheck(state, 0, state.doc.length).map((w) => w.word)
     expect(found.length).toBeGreaterThan(100)
     expect(both.misspelled(found)).toEqual(['perchè'])

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { EditorState, type TransactionSpec } from '@codemirror/state'
-import { ensureSyntaxTree } from '@codemirror/language'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
+import { fullyParsed } from './support/editorState'
 import { mathMarkdown } from '../src/editor/mathSyntax'
 import { commandTokenAt, mathContextAt, mathRegionAt, openMathBefore } from '../src/editor/mathContext'
 import { templateInsertion } from '../src/editor/insert'
@@ -12,13 +12,13 @@ import type { EditorView } from '@codemirror/view'
 const r = String.raw
 
 function makeState(doc: string, cursor = doc.length): EditorState {
-  const state = EditorState.create({
-    doc,
-    selection: { anchor: cursor },
-    extensions: [markdown({ base: markdownLanguage, extensions: [mathMarkdown] }), placeholderField],
-  })
-  ensureSyntaxTree(state, state.doc.length, 5000)
-  return state
+  return fullyParsed(
+    EditorState.create({
+      doc,
+      selection: { anchor: cursor },
+      extensions: [markdown({ base: markdownLanguage, extensions: [mathMarkdown] }), placeholderField],
+    }),
+  )
 }
 
 /** Posizione del segnaposto "|" nel testo, che viene rimosso. */
@@ -132,12 +132,13 @@ describe('inserimento di simboli e segnaposto', () => {
   })
 
   it('mette il testo selezionato nel primo segnaposto', () => {
-    const state = EditorState.create({
-      doc: '$x+1$',
-      selection: { anchor: 1, head: 4 },
-      extensions: [markdown({ base: markdownLanguage, extensions: [mathMarkdown] }), placeholderField],
-    })
-    ensureSyntaxTree(state, state.doc.length, 5000)
+    const state = fullyParsed(
+      EditorState.create({
+        doc: '$x+1$',
+        selection: { anchor: 1, head: 4 },
+        extensions: [markdown({ base: markdownLanguage, extensions: [mathMarkdown] }), placeholderField],
+      }),
+    )
     const h = new Harness(state)
     h.insert(r`\frac{#}{#}`)
     expect(h.doc).toBe(r`$\frac{x+1}{}$`)
