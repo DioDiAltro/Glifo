@@ -15,7 +15,8 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
 - `npm run dev`: server di sviluppo.
 - `npm test`: test con Vitest. `npm run build`: controllo dei tipi e build in `dist/`.
 - `npm run test:e2e`: prova nel browser sulla build in `dist/` (esegui prima
-  `npm run build`). Serve Chromium: indica il percorso con `CHROMIUM_PATH`
+  `npm run build`): il flusso principale e poi l'account, con un Supabase finto
+  (`scripts/fake-supabase.mjs`). Serve Chromium: indica il percorso con `CHROMIUM_PATH`
   (nelle sessioni cloud `/opt/pw-browsers/chromium`).
 - `GLIFO_NO_PWA=1 npx vite build`: build senza service worker (per la demo su claude.ai).
 
@@ -36,9 +37,16 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   Glifo può essere aperto in più schede: ogni modifica parte da quello salvato, non dalla copia
   in memoria, e `main.ts` ascolta l'evento `storage` per aggiornare le altre schede.
 - `src/ai/`: assistente AI. `src/host.ts`: funzioni della demo dentro claude.ai.
+- `src/account/`: account e sincronizzazione. `sync.ts` è il motore (manda, scarica, nei
+  conflitti tiene tutte e due le versioni), `controller.ts` decide quando sincronizzare,
+  `space.ts` tiene le note di ogni account in uno spazio a parte del browser (`glifo.u.<id>.…`),
+  `supabase.ts` fa l'accesso con il codice via email. Il client di Supabase si carica solo
+  se si accede.
 - `supabase/`: il database degli account (progetto Supabase `glifo`, Francoforte, piano
   gratuito): tabelle e regole di accesso in `migrations/`, test in `tests/`. Il README spiega
   indirizzo, chiave pubblica, sincronizzazione (`sync_pull`/`sync_push`) e come si cambia.
+  `npm test` prova le migrazioni in un Postgres in memoria (PGlite, con
+  `supabase/tests/supabase-stub.sql` al posto di Supabase).
 
 ## Regole
 

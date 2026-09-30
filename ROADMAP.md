@@ -14,9 +14,10 @@ il lavoro si parte da qui, e quando una voce è fatta si toglie.
 Gli appunti si possono mandare a un'altra persona o tenere in una cartella condivisa. Più
 avanti l'account servirà anche per l'abbonamento (vedi «Più avanti»).
 
-**Oggi:** gli appunti restano nel browser del dispositivo dove li scrivi. Per spostarli si
-usano i file `.md` oppure Impostazioni → «Scarica backup» e «Ripristina backup». Anche con
-gli account, chi non accede continua a usare Glifo così.
+**Oggi:** l'account c'è, in prova. Si entra con il codice via email e gli appunti si
+sincronizzano tra i dispositivi (passi 1-3 qui sotto). I codici però arrivano solo ai membri
+del team Supabase, quindi per ora lo può usare solo il proprietario del progetto. Chi non
+accede continua a usare Glifo come prima, con gli appunti nel browser.
 
 **Servizio scelto: Supabase**, sul piano gratuito (progetto `glifo`, vedi
 [supabase/README.md](supabase/README.md)). Dà già pronti database (Postgres), login e
@@ -40,7 +41,8 @@ Da sapere (dati controllati il 30/09/2026):
 - Con utenti veri serve il piano Pro, 25 dollari al mese per progetto, che non va in pausa.
 - Per mandare le email di accesso agli utenti servono un servizio di posta (SMTP, es.
   Resend) e un dominio (es. glifo.app, circa 10-20 € l'anno), che può ospitare anche il
-  sito. Per le prove basta l'email del proprietario, a cui Supabase scrive da solo.
+  sito. Per le prove basta l'email del proprietario, a cui Supabase scrive da solo. Senza
+  spendere si può aprire l'accesso con Google (vedi il passo 4).
 
 Perché non gli altri:
 
@@ -59,9 +61,9 @@ Perché non gli altri:
      aggiornano a vicenda;
    - fatto: le **cartelle** (un livello, niente cartelle dentro cartelle), e gli id di note e
      cartelle sono unici anche tra dispositivi diversi;
-   - ogni nota ricorda l'ultima versione sincronizzata, e le note eliminate restano
-     segnate come «eliminate», altrimenti ricompaiono dall'altro dispositivo (si fa insieme
-     alla sincronizzazione, al passo 3).
+   - fatto: ogni nota ricorda l'ultima versione sincronizzata, e le note eliminate restano
+     segnate come «eliminate» finché l'account non lo sa, altrimenti ricompaiono dall'altro
+     dispositivo.
 2. **Il progetto Supabase**, fatto: il progetto `glifo` a Francoforte, sul piano gratuito.
    Contiene:
    - cartelle, note e impostazioni di ogni account, con le regole di accesso;
@@ -70,33 +72,35 @@ Perché non gli altri:
 
    I test in `supabase/tests` (47 controlli) provano, tra l'altro, che nessuno legge o
    cambia le note degli altri. Profili e membri delle cartelle arrivano con la
-   condivisione (passo 4).
-3. **Accesso e sincronizzazione** delle proprie note (il prossimo):
-   - prima, dalla dashboard di Supabase (Authentication):
-     - nei modelli delle email «Magic Link» e «Confirm signup» il codice `{{ .Token }}` al
-       posto del link;
-     - come indirizzo del sito (Site URL) quello di Glifo;
-   - per provarlo dalle sessioni cloud di Claude serve `*.supabase.co` tra i domini
-     permessi dell'ambiente;
-   - accesso con il codice via email: finché non c'è un servizio di posta (SMTP), i codici
-     arrivano solo ai membri del team Supabase;
-   - con la rete manda e scarica le modifiche da sola; senza rete l'app funziona come oggi
-     e sincronizza quando la rete torna;
-   - se la stessa nota cambia su due dispositivi tiene tutte e due le versioni, così non si
-     perde testo;
-   - al primo accesso chiede se caricare gli appunti già presenti nel browser;
-   - porta con sé impostazioni e dizionario personale; la chiave API di Anthropic resta sul
-     dispositivo;
-   - le note create prima delle cartelle hanno id corti: al primo caricamento ne ricevono
-     uno nuovo (UUID).
-4. **Condivisione:**
+   condivisione (passo 5).
+3. **Accesso e sincronizzazione**, fatto (in prova):
+   - si entra con il codice via email (o con il link, se l'email ha quello), e le note di
+     ogni account stanno in uno spazio a parte del browser;
+   - con la rete Glifo manda e scarica le modifiche da solo: all'avvio, tornando su Glifo,
+     quando torna la rete, poco dopo ogni modifica e ogni minuto. Senza rete funziona come
+     prima;
+   - se la stessa nota cambia su due dispositivi restano tutte e due le versioni, e una nota
+     eliminata qui ma cambiata altrove torna;
+   - al primo accesso chiede se aggiungere all'account gli appunti già nel browser;
+   - porta con sé impostazioni e dizionario personale; la chiave API resta sul dispositivo;
+   - uscendo, le note dell'account vengono tolte dal browser;
+   - i test usano le vere migrazioni in un Postgres in memoria (PGlite), anche nella prova
+     nel browser con un Supabase finto (`scripts/fake-supabase.mjs`).
+4. **Aprire l'account a tutti** (il prossimo, gratis):
+   - accesso con Google: niente email da mandare, quindi niente servizio di posta né
+     dominio. Serve un progetto Google Cloud, gratuito, da creare con il tuo account Google;
+     poi l'ID cliente va in Supabase (Authentication → Providers → Google);
+   - informativa sulla privacy (GDPR), «Elimina account» e «Scarica i miei dati», che
+     servono prima di far entrare altre persone;
+   - CAPTCHA contro le iscrizioni automatiche (Cloudflare Turnstile, gratis) e limiti di
+     spazio da rivedere (oggi 20 MB di note per account);
+   - per chi non ha Google: codice via email con un servizio di posta (serve un dominio).
+5. **Condivisione:**
    - profili (il nome che vedono gli altri) e membri di ogni cartella;
    - mandare una copia di una nota a un'altra persona, che la trova tra i «Ricevuti»;
    - cartelle condivise con persone scelte, che possono solo leggere o anche modificare;
    - se due persone cambiano la stessa nota insieme restano tutte e due le versioni.
      Scrivere insieme in tempo reale, come in Google Docs, è un passo successivo.
-5. **Privacy:** informativa (GDPR), «Elimina account» che cancella tutto, «Scarica i miei
-   dati».
 
 **Da tenere a mente:**
 
@@ -108,8 +112,6 @@ Perché non gli altri:
   `createdAt` e `updatedAt`, e ogni modifica all'elenco parte da quello salvato.
 - Le note eliminate restano nel database come segno per gli altri dispositivi: dopo qualche
   mese si potranno togliere con un lavoro programmato (`pg_cron`).
-- Prima di aprire le iscrizioni a tutti: un servizio di posta (SMTP), un CAPTCHA contro le
-  iscrizioni automatiche e i limiti di spazio da rivedere (oggi 20 MB di note per account).
 
 ## Più avanti
 

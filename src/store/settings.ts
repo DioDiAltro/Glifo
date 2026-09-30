@@ -72,6 +72,35 @@ export function saveSettings(changes: Partial<Settings>): void {
   writeJson(SETTINGS_KEY, { ...stored(), ...changes })
 }
 
+/**
+ * Le impostazioni che vanno con l'account, su ogni dispositivo. Le altre dipendono dallo
+ * schermo (vista e pannelli), e la chiave API con il proxy restano in questo browser.
+ */
+export const ACCOUNT_SETTINGS = ['theme', 'autoWrap', 'spellcheck', 'spellLanguages', 'fontSize', 'model'] as const satisfies readonly (keyof Settings)[]
+
+export function isAccountSetting(key: string): boolean {
+  return (ACCOUNT_SETTINGS as readonly string[]).includes(key)
+}
+
+export function accountSettings(s: Settings): Record<string, unknown> {
+  return Object.fromEntries(ACCOUNT_SETTINGS.map((key) => [key, s[key]]))
+}
+
+/** Le impostazioni arrivate dall'account, tenendo solo i valori che questa versione di Glifo conosce. */
+export function validAccountSettings(values: Record<string, unknown>): Partial<Settings> {
+  const out: Partial<Settings> = {}
+  const { theme, autoWrap, spellcheck, spellLanguages, fontSize, model } = values
+  if (theme === 'auto' || theme === 'light' || theme === 'dark') out.theme = theme
+  if (typeof autoWrap === 'boolean') out.autoWrap = autoWrap
+  if (typeof spellcheck === 'boolean') out.spellcheck = spellcheck
+  const language = SPELL_LANGUAGES.find((l) => l.id === spellLanguages)
+  if (language) out.spellLanguages = language.id
+  if (typeof fontSize === 'number' && fontSize >= 13 && fontSize <= 22) out.fontSize = Math.round(fontSize)
+  const aiModel = AI_MODELS.find((m) => m.id === model)
+  if (aiModel) out.model = aiModel.id
+  return out
+}
+
 /** Le impostazioni da prendere quando cambiano in un'altra scheda (tema, correttore, chiave API…). */
 export function sharedSettings(s: Settings): Partial<Settings> {
   const shared: Partial<Settings> = { ...s }

@@ -18,6 +18,7 @@
   --link: #4338ca;
   --danger: #c62845;
   --danger-soft: #fdecef;
+  --ok: #16a34a;
   --selection: #d7dcff;
   --shadow: 0 10px 30px rgba(20, 24, 40, 0.14);
 
@@ -63,6 +64,7 @@
     --link: #a9b1ff;
     --danger: #ff7a90;
     --danger-soft: rgba(255, 122, 144, 0.12);
+    --ok: #4ade80;
     --selection: rgba(139, 140, 248, 0.32);
     --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     --code-bg: #1d2130;
@@ -100,6 +102,7 @@
   --link: #a9b1ff;
   --danger: #ff7a90;
   --danger-soft: rgba(255, 122, 144, 0.12);
+  --ok: #4ade80;
   --selection: rgba(139, 140, 248, 0.32);
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   --code-bg: #1d2130;
@@ -1982,6 +1985,129 @@ kbd {
   white-space: nowrap;
   width: 1%;
   padding-right: 14px;
+}
+
+/* ——— Account ——— */
+
+.account-button {
+  position: relative;
+}
+
+.account-button.is-guest {
+  color: var(--accent-text);
+}
+
+.account-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Pallino dello stato: verde se è tutto sincronizzato, grigio senza rete, rosso se c'è un problema. */
+.account-dot {
+  position: absolute;
+  top: 6px;
+  right: 5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+.account-button.is-syncing .account-dot {
+  background: var(--accent);
+  animation: account-pulse 1s ease-in-out infinite;
+}
+
+.account-button.is-offline .account-dot {
+  background: var(--muted);
+}
+
+.account-button.is-auth .account-dot,
+.account-button.is-quota .account-dot,
+.account-button.is-error .account-dot {
+  background: var(--danger);
+}
+
+@keyframes account-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-button.is-syncing .account-dot {
+    animation: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .account-label {
+    display: none;
+  }
+}
+
+.dialog-login,
+.dialog-account {
+  width: min(440px, calc(100vw - 32px));
+}
+
+.login-intro {
+  margin: 4px 0 2px;
+}
+
+.login-code {
+  font: 600 22px/1.2 var(--font-mono);
+  letter-spacing: 0.3em;
+  text-align: center;
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--link);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-button:disabled {
+  color: var(--muted);
+  text-decoration: none;
+  cursor: default;
+}
+
+.account-email {
+  margin: 4px 0;
+}
+
+.account-status {
+  margin: 6px 0;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+.account-status[data-kind='auth'],
+.account-status[data-kind='quota'],
+.account-status[data-kind='error'] {
+  color: var(--danger);
+}
+
+.confirm-note {
+  margin: -8px 0 16px;
+}
+
+.note-badge {
+  display: inline-block;
+  white-space: nowrap;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 11px;
+  font-weight: 600;
 }
 
 /* ——— Notifiche ——— */

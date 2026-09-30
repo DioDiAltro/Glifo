@@ -3,10 +3,21 @@ import './styles/app.css'
 import { EditorSelection } from '@codemirror/state'
 import welcomeNote from './welcome.md?raw'
 import { MarkdownEditor } from './editor/editor'
-import { deriveTitle, isNotesKey, noteIdOfKey, NotesStore, type Note } from './store/notes'
-import { cleanFolderName, FOLDER_NAME_MAX, FoldersStore, isFoldersKey } from './store/folders'
+import { deriveTitle, NotesStore, type Note } from './store/notes'
+import { cleanFolderName, FOLDER_NAME_MAX, FoldersStore } from './store/folders'
 import { addPersonalWord, DICTIONARY_KEY, loadPersonalWords, savePersonalWords } from './store/dictionary'
-import { loadSettings, saveSettings, SETTINGS_KEY, sharedSettings, type Settings, type ViewMode } from './store/settings'
+import {
+  ACCOUNT_SETTINGS,
+  accountSettings,
+  isAccountSetting,
+  loadSettings,
+  saveSettings,
+  SETTINGS_KEY,
+  sharedSettings,
+  validAccountSettings,
+  type Settings,
+  type ViewMode,
+} from './store/settings'
 import { downloadText, fileNameFor, openMarkdownFiles, saveMarkdownFile } from './store/files'
 import { migrateKeyPrefix, storageAvailable } from './store/storage'
 import { ICONS, h, icon } from './ui/dom'
@@ -14,6 +25,19 @@ import { confirmDialog, openHelpDialog, openSettingsDialog, promptDialog } from 
 import { inClaudeViewer } from './host'
 import { SpellClient } from './spell/client'
 import type { SpellLanguage } from './spell/engine'
+import { AccountSync } from './account/controller'
+import {
+  accountSpace,
+  adoptGuestNotes,
+  currentAccount,
+  forgetAccount,
+  guestNoteCount,
+  knowsAccount,
+  setCurrentAccount,
+} from './account/space'
+import { currentSession, sendCode, signOut, verifyCode } from './account/supabase'
+import type { LocalChange } from './account/sync'
+import { AccountButton, openAccountDialog, openLoginDialog, type SignedIn } from './ui/account'
 import { NotesPanel } from './ui/notesPanel'
 import { Preview } from './ui/preview'
 import { SidePanel } from './ui/sidePanel'
@@ -24,8 +48,28 @@ import { createToolbar } from './ui/toolbar'
 migrateKeyPrefix('matherdown.', 'glifo.')
 
 const settings: Settings = loadSettings()
-const store = new NotesStore()
-const folders = new FoldersStore()
+// Con l'account le note stanno in uno spazio a parte, e gli appunti di prima restano dove sono.
+const account = currentAccount()
+const space = account ? accountSpace(account.userId) : null
+const store = space?.notes ?? new NotesStore()
+const folders = space?.folders ?? new FoldersStore()
+const sync =
+  account && space
+    ? new AccountSync(account, {
+        notes: store,
+        folders,
+        state: space.state,
+        prefs: {
+          read: () => accountSettings(settings),
+          apply: (values) => updateSettings(validAccountSettings(values), true),
+          words: () => loadPersonalWords(),
+          applyWords: (words) => setPersonalWords(words, true),
+        },
+        hooks: { flush: () => flushSave(), changed: (change) => applyAccountChange(change) },
+      })
+    : null
+/** La pagina si sta ricaricando (si entra o si esce dall'account): non si salva più niente. */
+let unloading = false
 const fileHandles = new Map<string, FileSystemFileHandle>()
 const narrow = window.matchMedia('(max-width: 900px)')
 /** Sotto questa larghezza l'elenco degli appunti si apre sopra l'editor. */
@@ -33,8 +77,11 @@ const notesOverlay = window.matchMedia('(max-width: 1250px)')
 
 // ——— Nota attiva ———
 
+/** Nell'account appena aperto: una nota vuota, che va all'account solo se la si scrive. */
+const STARTER = '# Nuovi appunti\n\n'
+
 function initialNote(): Note {
-  if (!store.list().length) return store.create(welcomeNote)
+  if (!store.list().length) return account ? store.create(STARTER, null, { local: true }) : store.create(welcomeNote)
   const id = store.activeId
   return (id && store.get(id)) || store.get(store.list()[0].id)!
 }
@@ -73,6 +120,8 @@ const viewSwitch = h(
     return b
   }),
 )
+
+const accountButton = new AccountButton(() => openAccount())
 
 const themeButton = h('button', {
   class: 'icon-button',
@@ -128,6 +177,7 @@ const topbar = h(
       { class: 'icon-button', title: 'Come si usa', attrs: { type: 'button', 'aria-label': 'Guida' }, on: { click: () => openHelpDialog() } },
       icon(ICONS.help),
     ),
+    accountButton.el,
     h(
       'button',
       { class: 'icon-button', title: 'Impostazioni', attrs: { type: 'button', 'aria-label': 'Impostazioni' }, on: { click: () => openSettings() } },
@@ -190,13 +240,27 @@ function applySpellcheck(): void {
     onError: () => toast('Controllo ortografico non disponibile: non è stato possibile caricare il dizionario.', 'error'),
   })
   spell = client
-  editor.setSpellcheck({ client, addWord: (word) => client.setPersonalWords(addPersonalWord(word)) })
+  editor.setSpellcheck({
+    client,
+    addWord: (word) => {
+      client.setPersonalWords(addPersonalWord(word))
+      wordsChangedHere()
+    },
+  })
 }
 
-function setPersonalWords(words: string[]): string[] {
+/** `fromAccount`: arrivate dall'account, quindi non vanno rimandate. */
+function setPersonalWords(words: string[], fromAccount = false): string[] {
   const saved = savePersonalWords(words)
   spell?.setPersonalWords(saved)
+  if (!fromAccount) wordsChangedHere()
   return saved
+}
+
+function wordsChangedHere(): void {
+  if (!space || !sync) return
+  space.state.wordsChanged()
+  sync.schedule()
 }
 
 const sidePanel = new SidePanel({
@@ -252,12 +316,19 @@ function toggleTheme(): void {
   updateSettings({ theme: dark ? 'light' : 'dark' })
 }
 
-function updateSettings(next: Partial<Settings>): void {
+/** `fromAccount`: arrivate dall'account, quindi non vanno rimandate. */
+function updateSettings(next: Partial<Settings>, fromAccount = false): void {
+  const changed = (Object.keys(next) as (keyof Settings)[]).filter((key) => settings[key] !== next[key])
   Object.assign(settings, next)
   saveSettings(next)
   applyTheme()
   editor.setAutoWrap(settings.autoWrap)
   applySpellcheck()
+  const forAccount = changed.filter(isAccountSetting)
+  if (!fromAccount && space && sync && forAccount.length) {
+    space.state.settingsChanged(forAccount)
+    sync.schedule()
+  }
 }
 
 function setView(mode: ViewMode, focus = true): void {
@@ -293,6 +364,7 @@ function openSettings(): void {
     onPersonalWordsChange: (words) => setPersonalWords(words),
     onBackup: () => backup(),
     onRestore: () => void restore(),
+    accountEmail: account?.email,
   })
 }
 
@@ -316,6 +388,7 @@ function scheduleSave(): void {
 function flushSave(): void {
   if (saveTimer) clearTimeout(saveTimer)
   saveTimer = 0
+  if (unloading) return
   const content = editor.getDoc()
   if (content === active.content) {
     statusEl.textContent = 'Salvato'
@@ -327,6 +400,7 @@ function flushSave(): void {
   titleEl.textContent = active.title
   document.title = `${active.title} · Glifo`
   statusEl.textContent = ok ? 'Salvato' : 'Non salvato!'
+  changedHere()
   if (!ok && !saveWarningShown) {
     saveWarningShown = true
     toast(
@@ -355,8 +429,13 @@ function switchTo(id: string): void {
   loadNote(id)
 }
 
+/** Dopo una modifica fatta qui: con l'account, fra poco si sincronizza. */
+function changedHere(): void {
+  sync?.schedule()
+}
+
 /** Carica una nota nell'editor (senza salvare quella precedente). */
-function loadNote(id: string): void {
+function loadNote(id: string, focus = true): void {
   const note = store.get(id)
   if (!note) return
   active = note
@@ -367,6 +446,7 @@ function loadNote(id: string): void {
   document.title = `${note.title} · Glifo`
   statusEl.textContent = 'Salvato'
   notesPanel.refresh(id)
+  if (!focus) return
   if (notesOverlay.matches) setPanels({ notesOpen: false })
   editor.focus()
 }
@@ -379,6 +459,7 @@ function currentFolderId(): string | null {
 function createNote(content = '# Nuovi appunti\n\n', folderId = currentFolderId()): void {
   flushSave()
   const note = store.create(content, folderId)
+  changedHere()
   switchTo(note.id)
   // Seleziona il titolo, così si può scrivere subito quello vero.
   if (content.startsWith('# Nuovi appunti')) {
@@ -391,7 +472,9 @@ async function deleteNote(id: string): Promise<void> {
   if (!note) return
   const ok = await confirmDialog({
     title: 'Eliminare la nota?',
-    message: `«${note.title}» verrà eliminata da questo browser. L'operazione non si può annullare.`,
+    message: account
+      ? `«${note.title}» verrà eliminata da tutti i tuoi dispositivi. L'operazione non si può annullare.`
+      : `«${note.title}» verrà eliminata da questo browser. L'operazione non si può annullare.`,
     confirmLabel: 'Elimina',
     danger: true,
   })
@@ -405,6 +488,7 @@ async function deleteNote(id: string): Promise<void> {
   }
   store.remove(id)
   fileHandles.delete(id)
+  changedHere()
   if (id === active.id) {
     const next = store.list()[0] ?? store.create('# Nuovi appunti\n\n')
     loadNote(next.id)
@@ -416,6 +500,7 @@ async function deleteNote(id: string): Promise<void> {
 
 function moveNote(id: string, folderId: string | null): void {
   store.move(id, folderId)
+  changedHere()
   notesPanel.refresh(active.id)
 }
 
@@ -442,6 +527,7 @@ async function createFolder(moveNoteId?: string): Promise<void> {
     return
   }
   if (moveNoteId) store.move(moveNoteId, folder.id)
+  changedHere()
   notesPanel.refresh(active.id)
 }
 
@@ -458,6 +544,7 @@ async function renameFolder(id: string): Promise<void> {
   })
   if (name === null) return
   if (!folders.rename(id, name)) toast('C\'è già una cartella con questo nome.', 'error')
+  changedHere()
   notesPanel.refresh(active.id)
 }
 
@@ -478,6 +565,7 @@ async function deleteFolder(id: string): Promise<void> {
   // Prima si spostano le note e poi si toglie la cartella: nessuna nota resta in una cartella che non c'è.
   store.moveAll(id, null)
   folders.remove(id)
+  changedHere()
   notesPanel.refresh(active.id)
 }
 
@@ -487,10 +575,20 @@ async function deleteFolder(id: string): Promise<void> {
 
 if (storageAvailable()) {
   window.addEventListener('storage', (ev) => {
+    if (unloading) return
+    // Un'altra scheda è entrata o uscita dall'account: si riparte con le note giuste. Si
+    // controlla a ogni cambiamento, perché le note dell'account che si lascia spariscono
+    // una alla volta, e qui non si deve ricreare niente al loro posto. Uscendo, quello che
+    // non era ancora salvato qui resta fuori dall'account che si lascia.
+    if (currentAccount()?.userId !== account?.userId) {
+      if (!account) flushSave()
+      reloadPage()
+      return
+    }
     // Senza chiave: un'altra scheda ha svuotato tutto.
     const key = ev.key
-    if (key === null || isNotesKey(key)) notesChangedElsewhere(key && noteIdOfKey(key), ev.newValue)
-    if (key === null || isFoldersKey(key)) {
+    if (key === null || store.ownsKey(key)) notesChangedElsewhere(key && store.noteIdOfKey(key), ev.newValue)
+    if (key === null || folders.ownsKey(key)) {
       folders.reload()
       notesPanel.refresh(active.id)
     }
@@ -561,6 +659,7 @@ async function openFiles(): Promise<void> {
     last = store.create(f.content, folderId)
     if (f.handle) fileHandles.set(last.id, f.handle)
   }
+  changedHere()
   if (last) switchTo(last.id)
   toast(files.length === 1 ? `Aperto «${files[0].name}»` : `Aperti ${files.length} file`)
 }
@@ -622,6 +721,7 @@ async function restore(): Promise<void> {
       if (Array.isArray(data.dictionary)) {
         setPersonalWords([...loadPersonalWords(), ...data.dictionary.filter((w): w is string => typeof w === 'string')])
       }
+      changedHere()
       notesPanel.refresh(active.id)
       toast(`Ripristinati ${notes.length} appunti`)
     } catch {
@@ -629,6 +729,174 @@ async function restore(): Promise<void> {
     }
   })
   input.click()
+}
+
+// ——— Account ———
+
+/** Cambiamenti arrivati dall'account (o nati da un conflitto): si aggiornano elenco e nota aperta. */
+function applyAccountChange(change: LocalChange): void {
+  folders.reload()
+  for (const r of change.replaced) {
+    const handle = fileHandles.get(r.from)
+    if (handle) {
+      fileHandles.set(r.to, handle)
+      fileHandles.delete(r.from)
+    }
+    // Chi stava scrivendo continua sulla sua versione, che ora è una nota a parte.
+    if (r.from === active.id) {
+      const note = store.get(r.to)
+      if (note) {
+        active = note
+        store.activeId = note.id
+      }
+    }
+    if (r.conflict) {
+      toast(`«${store.meta(r.to)?.title ?? 'Una nota'}» è cambiata anche su un altro dispositivo: ora ci sono tutte e due le versioni.`)
+    }
+  }
+  for (const id of change.restored) {
+    toast(`«${store.meta(id)?.title ?? 'Una nota'}» era stata eliminata qui, ma su un altro dispositivo è cambiata: è tornata tra gli appunti.`)
+  }
+  if (change.removed.includes(active.id)) {
+    const title = active.title
+    fileHandles.delete(active.id)
+    loadNote((store.list()[0] ?? store.create(STARTER, null, { local: true })).id, false)
+    toast(`«${title}» è stata eliminata su un altro dispositivo`)
+  } else if (change.updated.includes(active.id) || change.restored.includes(active.id)) {
+    // Prima di cambiare le note si è salvato quello che c'era nell'editor: qui non c'è niente da perdere.
+    const note = store.get(active.id)
+    if (note && note.content !== active.content && editor.getDoc() === active.content) {
+      active = note
+      editor.applyExternalDoc(note.content)
+      preview.update(note.content)
+      titleEl.textContent = note.title
+      document.title = `${note.title} · Glifo`
+    }
+  }
+  dropStarter()
+  notesPanel.refresh(active.id)
+}
+
+/** La nota vuota di partenza non serve più, se dall'account sono arrivate le altre. */
+function dropStarter(): void {
+  const meta = store.meta(active.id)
+  if (!meta || meta.rev !== undefined || meta.dirty || editor.getDoc() !== STARTER || store.list().length < 2) return
+  store.removeRemote(active.id)
+  loadNote(store.list()[0].id, false)
+}
+
+function openAccount(): void {
+  if (!account || !sync) {
+    openLoginDialog({ sendCode, verifyCode, onSignedIn: (user) => completeSignIn(user) })
+    return
+  }
+  openAccountDialog({
+    email: account.email,
+    status: sync.status,
+    onStatus: (listener) => sync.onStatus(listener),
+    syncNow: () => {
+      flushSave()
+      void sync.syncNow()
+    },
+    guestCount: guestNoteCount(welcomeNote),
+    onAdoptGuest: () => {
+      flushSave()
+      const moved = adoptGuestNotes(account.userId, welcomeNote)
+      store.reload()
+      folders.reload()
+      notesPanel.refresh(active.id)
+      void sync.syncNow()
+      return moved
+    },
+    onRelogin: () =>
+      openLoginDialog({ email: account.email, lockEmail: true, sendCode, verifyCode, onSignedIn: (user) => completeSignIn(user) }),
+    onSignOut: () => void signOutAccount(),
+  })
+}
+
+/** Accesso fatto: la prima volta in questo browser si chiede se portare nell'account gli appunti che ci sono. */
+async function completeSignIn(user: SignedIn): Promise<void> {
+  if (account?.userId === user.userId) {
+    // Accesso rinnovato: si riprende a sincronizzare.
+    void sync?.syncNow()
+    return
+  }
+  flushSave()
+  if (!knowsAccount(user.userId)) {
+    const count = guestNoteCount(welcomeNote)
+    const add =
+      count > 0 &&
+      (await confirmDialog({
+        title: 'Aggiungere gli appunti di questo browser?',
+        message:
+          count === 1
+            ? 'In questo browser c\'è un appunto. Vuoi aggiungerlo al tuo account? Così lo ritrovi anche sugli altri dispositivi.'
+            : `In questo browser ci sono ${count} appunti. Vuoi aggiungerli al tuo account? Così li ritrovi anche sugli altri dispositivi.`,
+        note: count === 1 ? 'Se lo lasci qui, lo ritrovi quando esci dall\'account.' : 'Se li lasci qui, li ritrovi quando esci dall\'account.',
+        confirmLabel: count === 1 ? 'Aggiungilo all\'account' : 'Aggiungili all\'account',
+        cancelLabel: 'No, lasciali qui',
+      }))
+    // Da qui la pagina si ricarica: niente deve tornare tra gli appunti di questo browser.
+    unloading = true
+    if (add) adoptGuestNotes(user.userId, welcomeNote)
+    // Se l'account ha già delle impostazioni valgono quelle, altrimenti vanno all'account quelle di qui.
+    accountSpace(user.userId).state.update(() => ({
+      adopt: true,
+      settingsDirty: [...ACCOUNT_SETTINGS],
+      wordsDirty: loadPersonalWords().length > 0,
+    }))
+  }
+  setCurrentAccount({ userId: user.userId, email: user.email })
+  reloadPage()
+}
+
+async function signOutAccount(): Promise<void> {
+  if (!account || !sync) return
+  flushSave()
+  await sync.syncNow()
+  if (sync.hasPending()) {
+    const ok = await confirmDialog({
+      title: 'Uscire lo stesso?',
+      message:
+        'Alcune modifiche non sono ancora arrivate nell\'account, per esempio perché manca la connessione. Se esci ora, da questo browser si perdono.',
+      confirmLabel: 'Esci lo stesso',
+      cancelLabel: 'Resta',
+      danger: true,
+    })
+    if (!ok) return
+  }
+  unloading = true
+  sync.stop()
+  await signOut()
+  // Prima si esce e poi si tolgono le note: le altre schede se ne accorgono subito.
+  setCurrentAccount(null)
+  forgetAccount(account.userId)
+  reloadPage()
+}
+
+/** Ricarica la pagina senza salvare più niente: le note giuste si caricano all'avvio. */
+function reloadPage(): void {
+  unloading = true
+  sync?.stop()
+  location.reload()
+}
+
+if (sync && account) {
+  sync.onStatus((status) => accountButton.show({ email: account.email, status }))
+  accountButton.show({ email: account.email, status: sync.status })
+  sync.start()
+}
+
+// Ritorno dal link nell'email (se al posto del codice c'era un link).
+if (/[?&#](code|access_token|error_description)=/.test(location.search + location.hash)) {
+  const hadError = /error_description=/.test(location.search + location.hash)
+  void currentSession()
+    .then((user) => {
+      history.replaceState(null, '', location.pathname)
+      if (user && !account) return completeSignIn(user)
+      if (!user && hadError) toast('Il link per accedere non è valido o è scaduto: prova con il codice.', 'error')
+    })
+    .catch(() => toast('Non è stato possibile completare l\'accesso: riprova con il codice.', 'error'))
 }
 
 // ——— Scorciatoie globali ———

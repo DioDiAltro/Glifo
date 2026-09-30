@@ -11,9 +11,11 @@ export interface SettingsDialogDeps {
   onPersonalWordsChange(words: string[]): string[]
   onBackup(): void
   onRestore(): void
+  /** L'account con cui si è entrati, se c'è. */
+  accountEmail?: string
 }
 
-function dialogShell(title: string, body: HTMLElement[], extraClass = ''): HTMLDialogElement {
+export function dialogShell(title: string, body: (HTMLElement | null)[], extraClass = ''): HTMLDialogElement {
   const dialog: HTMLDialogElement = h(
     'dialog',
     { class: `dialog ${extraClass}`.trim(), attrs: { 'aria-label': title } },
@@ -228,7 +230,9 @@ export function openSettingsDialog(deps: SettingsDialogDeps): void {
       h(
         'p',
         { class: 'field-help' },
-        'Gli appunti sono salvati nel browser. Se cancelli i dati di navigazione li perdi: scarica ogni tanto un backup, o salva le note come file .md.',
+        deps.accountEmail
+          ? `Gli appunti sono salvati nel tuo account (${deps.accountEmail}) e in questo browser. Il backup resta utile per averne una copia tutta tua.`
+          : 'Gli appunti sono salvati nel browser. Se cancelli i dati di navigazione li perdi: scarica ogni tanto un backup, o salva le note come file .md. Con l\'account (in alto, «Accedi») li ritrovi su ogni dispositivo.',
       ),
       h(
         'div',
@@ -242,17 +246,26 @@ export function openSettingsDialog(deps: SettingsDialogDeps): void {
 }
 
 /** Conferma dentro la pagina (i `confirm()` del browser non sempre sono disponibili). */
-export function confirmDialog(opts: { title: string; message: string; confirmLabel: string; danger?: boolean }): Promise<boolean> {
+export function confirmDialog(opts: {
+  title: string
+  message: string
+  confirmLabel: string
+  cancelLabel?: string
+  /** Una riga in più, più piccola, sotto il messaggio. */
+  note?: string
+  danger?: boolean
+}): Promise<boolean> {
   return new Promise((resolve) => {
     let confirmed = false
     const dialog = dialogShell(
       opts.title,
       [
         h('p', { class: 'confirm-message' }, opts.message),
+        opts.note ? h('p', { class: 'field-help confirm-note' }, opts.note) : null,
         h(
           'div',
           { class: 'dialog-actions' },
-          h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => dialog.close() } }, 'Annulla'),
+          h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => dialog.close() } }, opts.cancelLabel ?? 'Annulla'),
           h(
             'button',
             {

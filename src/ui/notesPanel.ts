@@ -175,7 +175,18 @@ export class NotesPanel {
           on: { click: () => this.deps.onSelect(n.id) },
         },
         h('span', { class: 'note-title' }, n.title),
-        h('span', { class: 'note-date' }, formatDate(n.updatedAt)),
+        h(
+          'span',
+          { class: 'note-date' },
+          formatDate(n.updatedAt),
+          n.conflict
+            ? h(
+                'span',
+                { class: 'note-badge', title: 'La versione di questo dispositivo, tenuta quando la nota è cambiata anche su un altro' },
+                'copia in conflitto',
+              )
+            : null,
+        ),
       ),
       moveButton,
       h(

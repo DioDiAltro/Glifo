@@ -77,13 +77,25 @@ Due funzioni, da chiamare dopo l'accesso con `supabase.rpc(...)`.
   - `rejected`: l'id appartiene a un altro account.
 - Una nota in una cartella che sul server non c'è resta fuori dalle cartelle.
 
+## Nell'app
+
+- `src/account/sync.ts` usa queste due funzioni: manda le modifiche, poi scarica le novità.
+- `src/account/space.ts` tiene le note di ogni account in uno spazio a parte del browser.
+- `src/account/supabase.ts` si occupa dell'accesso con il codice via email.
+
+Perché l'email contenga il codice e non solo il link, nella dashboard (Authentication →
+Emails) i modelli «Magic Link» e «Confirm signup» devono contenere `{{ .Token }}`. Il link
+funziona comunque, se lo si apre dallo stesso browser. Come Site URL va l'indirizzo di Glifo.
+
 ## Cambiare il database
 
 1. Ogni modifica è un file nuovo in `migrations/`. Quelli già applicati non si toccano.
 2. Si applica con il connettore Supabase (`apply_migration`), poi si rinomina il file con
    la versione che dà `list_migrations`. Con la CLI: `supabase db push`.
-3. Si eseguono i test di `tests/database.test.sql`: dal SQL editor di Supabase, con `psql`
-   o con `execute_sql` del connettore. Tutto viene annullato alla fine, e il risultato
-   giusto è l'errore «TEST OK: N controlli».
+3. Si eseguono i test di `tests/database.test.sql`. `npm test` li esegue già in un Postgres
+   in memoria (PGlite), con `tests/supabase-stub.sql` al posto delle parti di Supabase. Sul
+   progetto vero si eseguono dal SQL editor di Supabase, con `psql` o con `execute_sql` del
+   connettore. Tutto viene annullato alla fine, e il risultato giusto è l'errore
+   «TEST OK: N controlli».
 4. Si controllano gli avvisi di sicurezza e prestazioni (Advisors nella dashboard, oppure
    `get_advisors`).

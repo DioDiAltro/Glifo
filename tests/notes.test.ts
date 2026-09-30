@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { NotesStore, isNotesKey, noteIdOfKey } from '../src/store/notes'
+import { NotesStore } from '../src/store/notes'
 
 beforeEach(() => localStorage.clear())
 afterEach(() => {
@@ -90,11 +90,24 @@ describe('note rimaste fuori dall\'elenco', () => {
 
 describe('chiavi delle note', () => {
   it('riconosce elenco e testi delle note', () => {
-    expect(isNotesKey('glifo.notes.v1')).toBe(true)
-    expect(isNotesKey('glifo.note.v1.abc')).toBe(true)
-    expect(isNotesKey('glifo.settings.v1')).toBe(false)
-    expect(noteIdOfKey('glifo.note.v1.abc')).toBe('abc')
-    expect(noteIdOfKey('glifo.notes.v1')).toBeNull()
+    const store = new NotesStore()
+    expect(store.ownsKey('glifo.notes.v1')).toBe(true)
+    expect(store.ownsKey('glifo.note.v1.abc')).toBe(true)
+    expect(store.ownsKey('glifo.settings.v1')).toBe(false)
+    expect(store.noteIdOfKey('glifo.note.v1.abc')).toBe('abc')
+    expect(store.noteIdOfKey('glifo.notes.v1')).toBeNull()
+  })
+
+  it('le note di un account stanno a parte da quelle senza account', () => {
+    const ospite = new NotesStore()
+    const account = new NotesStore({ space: 'u.123.' })
+    ospite.create('# Di questo browser')
+    const nota = account.create('# Dell\'account')
+    expect(new NotesStore().list().map((n) => n.title)).toEqual(['Di questo browser'])
+    expect(new NotesStore({ space: 'u.123.' }).list().map((n) => n.title)).toEqual(['Dell\'account'])
+    expect(account.ownsKey(`glifo.u.123.note.v1.${nota.id}`)).toBe(true)
+    expect(ospite.ownsKey(`glifo.u.123.note.v1.${nota.id}`)).toBe(false)
+    expect(account.ownsKey('glifo.note.v1.abc')).toBe(false)
   })
 })
 

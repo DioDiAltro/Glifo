@@ -32,14 +32,36 @@ browser. Per averla come un'app vera, con la sua icona e funzionante anche senza
 
 Cose da sapere:
 
-- Gli appunti sono salvati **nel browser del dispositivo** che stai usando: quelli scritti sul
-  computer non compaiono da soli sul telefono.
-- Per spostarli o tenerli al sicuro usa **Salva .md** (anche dentro una cartella di OneDrive,
-  Google Drive o iCloud) e **Apri .md** sull'altro dispositivo. In *Impostazioni* c'è anche
-  **Scarica backup**, con tutti gli appunti in un solo file.
+- Senza account gli appunti sono salvati **nel browser del dispositivo** che stai usando:
+  quelli scritti sul computer non compaiono da soli sul telefono. Con l'**account** sì
+  (vedi sotto).
+- Per spostarli o tenerli al sicuro puoi anche usare **Salva .md** (pure dentro una cartella
+  di OneDrive, Google Drive o iCloud) e **Apri .md** sull'altro dispositivo. In *Impostazioni*
+  c'è anche **Scarica backup**, con tutti gli appunti in un solo file.
 - Puoi tenere Glifo aperto in più schede, o nell'app installata e nel browser insieme: si
   aggiornano a vicenda e nessuna cancella gli appunti scritti nelle altre.
 - Quando esce una nuova versione, l'app si aggiorna da sola alla riapertura.
+
+### Account
+
+Con l'account ritrovi gli stessi appunti, con cartelle, impostazioni e dizionario personale,
+su computer, tablet e telefono. Si entra dal pulsante **Accedi** in alto, con un codice che
+arriva via email: niente password. *Per ora è in prova: il codice arriva solo agli indirizzi
+di chi sta provando Glifo.*
+
+- **Sincronizzazione automatica:** all'avvio, quando torni su Glifo, quando torna la rete e
+  poco dopo ogni modifica. Il pallino sul pulsante dell'account dice com'è andata.
+- **Senza rete** Glifo funziona come sempre, e le modifiche partono quando la rete torna.
+- **Stessa nota cambiata su due dispositivi:** restano tutte e due le versioni, e quella
+  di qui ha l'etichetta «copia in conflitto». Una nota eliminata su un dispositivo ma
+  cambiata su un altro torna tra gli appunti: non si perde mai testo.
+- **Primo accesso:** Glifo chiede se aggiungere all'account gli appunti già presenti nel
+  browser. Se li lasci fuori, li ritrovi quando esci.
+- **Chiave API:** quella dell'assistente AI resta sul dispositivo e non va all'account.
+- **Uscita:** uscendo, le note dell'account vengono tolte dal browser, che magari non è il
+  tuo. Nell'account restano.
+- **Dove stanno i dati:** su [Supabase](https://supabase.com), in Europa (Francoforte).
+  Ognuno può leggere solo i suoi appunti (vedi [supabase/README.md](supabase/README.md)).
 
 ## Funzionalità
 
@@ -82,7 +104,8 @@ Cose da sapere:
   n → ∞»: risponde con il codice LaTeX pronto da inserire.
 
 **Appunti**
-- Salvati automaticamente nel browser, con elenco, filtro e più note.
+- Salvati automaticamente nel browser, con elenco, filtro e più note; con l'account, anche su
+  tutti i tuoi dispositivi.
 - **Cartelle** per organizzarli, per esempio una per corso: le note nuove finiscono nella
   cartella della nota aperta, e il pulsante accanto a ogni nota la sposta.
 - Apri e salva file `.md` dal computer (su Chrome/Edge si risalva sullo stesso file).
@@ -168,6 +191,7 @@ Web app in **TypeScript** con [Vite](https://vite.dev), senza framework e senza 
 | Anteprima Markdown | [markdown-it](https://github.com/markdown-it/markdown-it), highlight.js, DOMPurify |
 | Controllo ortografico | [Hunspell](https://hunspell.github.io) in WebAssembly ([@farscrl/hunspell-wasm](https://github.com/farscrl/hunspell-wasm)) in un worker, dizionari [dictionary-it e dictionary-en](https://github.com/wooorm/dictionaries) |
 | Assistente AI | SDK ufficiale di Anthropic (caricato solo quando serve) |
+| Account e sincronizzazione | [Supabase](https://supabase.com): database Postgres e accesso con codice via email (il client si carica solo se si accede) |
 | App installabile | vite-plugin-pwa |
 
 ```
@@ -203,9 +227,15 @@ src/
   ui/                     pannello dei simboli, anteprima, elenco appunti, finestre
   store/                  salvataggio nel browser, file .md, impostazioni
   ai/assistant.ts         assistente AI
+  account/
+    sync.ts               sincronizzazione: manda e scarica le modifiche, nei conflitti tiene tutte e due le versioni
+    controller.ts         quando sincronizzare (avvio, ritorno su Glifo, rete, dopo le modifiche)
+    space.ts              le note di ogni account in uno spazio a parte del browser
+    supabase.ts           accesso con il codice via email
   host.ts                 integrazione facoltativa con claude.ai (per la demo pubblicata lì)
-tests/                    test automatici (Vitest)
+tests/                    test automatici (Vitest), anche del database con le vere migrazioni (PGlite)
 scripts/smoke-test.mjs    prova nel browser del flusso principale
+scripts/account-test.mjs  prova nel browser dell'account, con un Supabase finto (fake-supabase.mjs)
 supabase/                 il database degli account: tabelle, regole di accesso e i loro test
 ```
 
@@ -234,6 +264,6 @@ inglese di SCOWL ([MIT e BSD](public/licenze/dizionario-inglese.txt), dal pacche
 
 ## Idee per il futuro
 
-In programma: gli **account** per ritrovare gli stessi appunti su ogni dispositivo. Il
-database è già pronto (vedi [supabase/README.md](supabase/README.md)); manca l'accesso
-dall'app. I dettagli, con le altre idee, sono in [ROADMAP.md](ROADMAP.md).
+Gli **account** ci sono, in prova. In programma: aprirli a tutti (anche con l'accesso con
+Google), poi mandare note ad altri e cartelle condivise. I dettagli, con le altre idee, sono
+in [ROADMAP.md](ROADMAP.md).
