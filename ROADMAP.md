@@ -38,11 +38,14 @@ Da sapere (dati controllati il 30/09/2026):
 - Piano gratuito: database da 500 MB, 50.000 utenti attivi al mese, al massimo 2 progetti.
   Va in pausa dopo 7 giorni con poco uso e lo riattiva solo il proprietario: va bene
   finché lo sviluppiamo e lo usi tu.
-- Con utenti veri serve il piano Pro, 25 dollari al mese per progetto, che non va in pausa.
-- Per mandare le email di accesso agli utenti servono un servizio di posta (SMTP, es.
-  Resend) e un dominio (es. glifo.app, circa 10-20 € l'anno), che può ospitare anche il
-  sito. Per le prove basta l'email del proprietario, a cui Supabase scrive da solo. Senza
-  spendere si può aprire l'accesso con Google (vedi il passo 4).
+- Per un gruppo di compagni che lo usano ogni giorno il piano gratuito basta. Con tanti
+  utenti, o per non rischiare la pausa (per esempio d'estate), conviene il piano Pro, 25
+  dollari al mese per progetto.
+- Per mandare le email di accesso agli utenti serve un servizio di posta nostro (SMTP):
+  gratis con un account Gmail, oppure con un dominio (es. glifo.app, circa 10-20 € l'anno,
+  che può ospitare anche il sito) e un servizio come Resend. Per le prove basta l'email del
+  proprietario, a cui Supabase scrive da solo. Senza email si può aprire l'accesso con
+  Google (vedi il passo 4).
 
 Perché non gli altri:
 
