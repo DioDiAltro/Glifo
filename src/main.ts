@@ -894,7 +894,15 @@ if (/[?&#](code|access_token|error_description)=/.test(location.search + locatio
     .then((user) => {
       history.replaceState(null, '', location.pathname)
       if (user && !account) return completeSignIn(user)
-      if (!user && hadError) toast('Il link per accedere non è valido o è scaduto: prova con il codice.', 'error')
+      if (user) return
+      // Il link vale solo nel browser in cui si è chiesto il codice (per esempio non sul
+      // telefono, se il codice l'ha chiesto il computer).
+      toast(
+        hadError
+          ? 'Il link per accedere non è valido o è scaduto: chiedi un altro codice da «Accedi».'
+          : 'Questo link funziona solo nel browser in cui hai chiesto il codice. Più semplice: scrivi in Glifo il codice che trovi nell\'email.',
+        'error',
+      )
     })
     .catch(() => toast('Non è stato possibile completare l\'accesso: riprova con il codice.', 'error'))
 }

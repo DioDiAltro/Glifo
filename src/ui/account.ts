@@ -198,7 +198,7 @@ export function openLoginDialog(opts: {
       h(
         'p',
         { class: 'field-help' },
-        'Non è arrivata? Guarda anche nello spam. Se nell\'email c\'è un link, aprilo da questo dispositivo. ',
+        'Non è arrivata? Guarda anche nello spam. Se nell\'email c\'è solo un link, aprilo in questo browser. ',
         resend,
         opts.lockEmail
           ? null

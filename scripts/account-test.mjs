@@ -216,6 +216,17 @@ try {
   check(!(await tablet.page.evaluate(() => location.search)).includes('code='), 'il codice del link sparisce dall\'indirizzo')
   pc.errors.push(...tablet.errors)
 
+  // Il link aperto su un altro dispositivo (il codice l'ha chiesto il tablet): non si entra,
+  // ma un avviso spiega perché e suggerisce il codice.
+  const altro = await device()
+  await altro.page.goto(fake.link())
+  check(
+    await waitFor(altro.page, () => [...document.querySelectorAll('.toast')].some((t) => t.textContent.includes('solo nel browser in cui hai chiesto il codice'))),
+    'aprendo il link su un altro dispositivo, un avviso dice di usare il codice',
+  )
+  check((await accountState(altro.page)).includes('is-guest'), 'e non si entra nell\'account')
+  pc.errors.push(...altro.errors)
+
   const errors = [...pc.errors, ...tel.errors]
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)
 } finally {
