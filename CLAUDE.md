@@ -36,6 +36,9 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   Glifo può essere aperto in più schede: ogni modifica parte da quello salvato, non dalla copia
   in memoria, e `main.ts` ascolta l'evento `storage` per aggiornare le altre schede.
 - `src/ai/`: assistente AI. `src/host.ts`: funzioni della demo dentro claude.ai.
+- `supabase/`: il database degli account (progetto Supabase `glifo`, Francoforte, piano
+  gratuito): tabelle e regole di accesso in `migrations/`, test in `tests/`. Il README spiega
+  indirizzo, chiave pubblica, sincronizzazione (`sync_pull`/`sync_push`) e come si cambia.
 
 ## Regole
 
@@ -44,3 +47,7 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
 - Prima di un push: `npm test` e `npm run build`; se cambiano editor o interfaccia
   anche `npm run test:e2e`. Aggiungi un test per ogni bug corretto.
 - L'app deve continuare a funzionare senza connessione.
+- Database: ogni modifica è una nuova migrazione in `supabase/migrations/`, seguita dai test
+  di `supabase/tests/` e dagli Advisors. Nel codice va solo la chiave pubblica di Supabase;
+  quella segreta mai, nemmeno nei messaggi.
+- Solo servizi gratuiti, finché lo studente non decide diversamente.

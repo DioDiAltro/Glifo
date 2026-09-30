@@ -18,7 +18,8 @@ avanti l'account servirà anche per l'abbonamento (vedi «Più avanti»).
 usano i file `.md` oppure Impostazioni → «Scarica backup» e «Ripristina backup». Anche con
 gli account, chi non accede continua a usare Glifo così.
 
-**Servizio proposto: Supabase** (da confermare). Dà già pronti database (Postgres), login e
+**Servizio scelto: Supabase**, sul piano gratuito (progetto `glifo`, vedi
+[supabase/README.md](supabase/README.md)). Dà già pronti database (Postgres), login e
 funzioni lato server:
 
 - condivisione e cartelle si descrivono bene in un database relazionale, e le regole di
@@ -61,17 +62,35 @@ Perché non gli altri:
    - ogni nota ricorda l'ultima versione sincronizzata, e le note eliminate restano
      segnate come «eliminate», altrimenti ricompaiono dall'altro dispositivo (si fa insieme
      alla sincronizzazione, al passo 3).
-2. **Il progetto Supabase:** tabelle (profili, note, cartelle, chi fa parte di ogni
-   cartella), regole di accesso e test che provano che nessuno legge le note degli altri.
-3. **Accesso e sincronizzazione** delle proprie note:
+2. **Il progetto Supabase**, fatto: il progetto `glifo` a Francoforte, sul piano gratuito.
+   Contiene:
+   - cartelle, note e impostazioni di ogni account, con le regole di accesso;
+   - i limiti di spazio;
+   - le funzioni per sincronizzare.
+
+   I test in `supabase/tests` (47 controlli) provano, tra l'altro, che nessuno legge o
+   cambia le note degli altri. Profili e membri delle cartelle arrivano con la
+   condivisione (passo 4).
+3. **Accesso e sincronizzazione** delle proprie note (il prossimo):
+   - prima, dalla dashboard di Supabase (Authentication):
+     - nei modelli delle email «Magic Link» e «Confirm signup» il codice `{{ .Token }}` al
+       posto del link;
+     - come indirizzo del sito (Site URL) quello di Glifo;
+   - per provarlo dalle sessioni cloud di Claude serve `*.supabase.co` tra i domini
+     permessi dell'ambiente;
+   - accesso con il codice via email: finché non c'è un servizio di posta (SMTP), i codici
+     arrivano solo ai membri del team Supabase;
    - con la rete manda e scarica le modifiche da sola; senza rete l'app funziona come oggi
      e sincronizza quando la rete torna;
    - se la stessa nota cambia su due dispositivi tiene tutte e due le versioni, così non si
      perde testo;
    - al primo accesso chiede se caricare gli appunti già presenti nel browser;
    - porta con sé impostazioni e dizionario personale; la chiave API di Anthropic resta sul
-     dispositivo.
+     dispositivo;
+   - le note create prima delle cartelle hanno id corti: al primo caricamento ne ricevono
+     uno nuovo (UUID).
 4. **Condivisione:**
+   - profili (il nome che vedono gli altri) e membri di ogni cartella;
    - mandare una copia di una nota a un'altra persona, che la trova tra i «Ricevuti»;
    - cartelle condivise con persone scelte, che possono solo leggere o anche modificare;
    - se due persone cambiano la stessa nota insieme restano tutte e due le versioni.
@@ -87,6 +106,10 @@ Perché non gli altri:
   trascrizione e AI lato server diventa complicata, perché il server non vede il testo.
 - Il punto di partenza nel codice è `src/store/notes.ts`: ogni nota ha già `id`,
   `createdAt` e `updatedAt`, e ogni modifica all'elenco parte da quello salvato.
+- Le note eliminate restano nel database come segno per gli altri dispositivi: dopo qualche
+  mese si potranno togliere con un lavoro programmato (`pg_cron`).
+- Prima di aprire le iscrizioni a tutti: un servizio di posta (SMTP), un CAPTCHA contro le
+  iscrizioni automatiche e i limiti di spazio da rivedere (oggi 20 MB di note per account).
 
 ## Più avanti
 

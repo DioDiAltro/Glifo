@@ -206,6 +206,7 @@ src/
   host.ts                 integrazione facoltativa con claude.ai (per la demo pubblicata lì)
 tests/                    test automatici (Vitest)
 scripts/smoke-test.mjs    prova nel browser del flusso principale
+supabase/                 il database degli account: tabelle, regole di accesso e i loro test
 ```
 
 ### Aggiungere un simbolo
@@ -233,5 +234,6 @@ inglese di SCOWL ([MIT e BSD](public/licenze/dizionario-inglese.txt), dal pacche
 
 ## Idee per il futuro
 
-In programma: gli **account** per ritrovare gli stessi appunti su ogni dispositivo. I dettagli,
-con le altre idee, sono in [ROADMAP.md](ROADMAP.md).
+In programma: gli **account** per ritrovare gli stessi appunti su ogni dispositivo. Il
+database è già pronto (vedi [supabase/README.md](supabase/README.md)); manca l'accesso
+dall'app. I dettagli, con le altre idee, sono in [ROADMAP.md](ROADMAP.md).
