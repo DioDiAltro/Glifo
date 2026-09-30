@@ -14,42 +14,72 @@ stessi appunti, aggiornati.
 spostarli si usano i file `.md` oppure Impostazioni → «Scarica backup» e
 «Ripristina backup» sull'altro dispositivo.
 
-**Strade possibili:**
+**Prima scelta da fare:** se Glifo resta uno strumento personale basta **GitHub**; se lo
+useranno anche altri studenti servono account veri con **Firebase**. Nel dubbio si parte da
+GitHub: i passi 1 e 2 restano validi e Firebase si aggiunge dopo come secondo servizio.
 
-- **Accedi con GitHub:** ogni appunto diventa un file `.md` in un repository
-  privato dello studente. Gratis, con la cronologia delle modifiche, e i file si
-  aprono anche in VS Code. Contro: serve un account GitHub, e il login da un sito
-  senza server richiede un piccolo servizio intermedio (es. un Cloudflare Worker)
-  oppure un token incollato a mano.
-- **Account veri (email o Google)** con un servizio pronto come Supabase o
-  Firebase: login, database e regole di sicurezza senza scrivere un server da
-  zero; il piano gratuito basta per iniziare (verificare i limiti attuali).
-  Funziona ovunque, telefono compreso, e un domani permette di condividere
-  appunti con i compagni. Contro: si conservano dati di altre persone, quindi
-  serve un'informativa sulla privacy (GDPR), e ci sono costi se gli utenti
-  crescono.
+**Piano, in tre passi:**
 
-Prima scelta da fare: se Glifo resta uno strumento personale basta GitHub; se lo
-useranno anche altri studenti servono gli account veri.
+1. **Base comune**, utile con qualunque servizio:
+   - fatto: con Glifo aperto in più schede le note non spariscono più e le schede si
+     aggiornano a vicenda;
+   - ogni nota ricorda l'ultima versione sincronizzata;
+   - le note eliminate restano segnate come «eliminate», altrimenti ricompaiono
+     dall'altro dispositivo.
+2. **Sincronizzazione**, uguale per ogni servizio:
+   - con la rete manda e scarica le modifiche da sola; senza rete l'app funziona come
+     oggi e sincronizza quando la rete torna;
+   - se la stessa nota cambia su due dispositivi tiene tutte e due le versioni, così non
+     si perde testo;
+   - al primo accesso chiede se caricare gli appunti già presenti nel browser;
+   - porta con sé impostazioni e dizionario personale; la chiave API di Anthropic resta
+     sul dispositivo;
+   - test che simulano due dispositivi.
+3. **Il servizio**, secondo la scelta.
 
-**Da tenere a mente, qualunque strada si scelga:**
+**Le strade** (dati controllati il 30/09/2026 sulle documentazioni ufficiali):
 
-- L'app deve continuare a funzionare senza connessione (è installabile): copia
-  locale degli appunti e sincronizzazione quando torna la rete.
-- Conflitti: se la stessa nota viene modificata su due dispositivi offline, non
-  si deve perdere testo (tenere entrambe le versioni o unire le modifiche).
-- Le note eliminate vanno ricordate come «eliminate», altrimenti ricompaiono
-  dall'altro dispositivo.
-- Al primo accesso chiedere se caricare gli appunti già presenti nel browser.
-- Sincronizzare anche le impostazioni e le parole aggiunte al dizionario del controllo
-  ortografico; la chiave API di Anthropic invece resta sul dispositivo.
-- Il browser dà circa 5 MB di spazio (localStorage): con tanti appunti conviene
-  passare a IndexedDB, utile anche senza account.
-- Facoltativo: crittografia end-to-end (gli appunti partono già cifrati con una
-  password e nemmeno il server li può leggere; se si perde la password, si
-  perdono gli appunti).
+- **GitHub**, per uso personale: un repository privato con un file `.md` per nota, con la
+  cronologia delle modifiche e apribile in VS Code. Gratis, senza server, e non si
+  conservano dati di altre persone.
+  - Si accede con un token *fine-grained* limitato a quel repository (permesso Contents
+    in lettura e scrittura; può anche non scadere), incollato una volta per dispositivo.
+  - L'API di GitHub accetta chiamate dal browser (CORS). Per aggiornare un file serve lo
+    `sha` della versione precedente: se nel frattempo è cambiato risponde 409, e così si
+    scoprono i conflitti.
+  - Un pulsante «Accedi con GitHub» richiede un piccolo servizio intermedio (es. un
+    Cloudflare Worker): il login OAuth e il *device flow* non funzionano dal browser,
+    perché GitHub non risponde con CORS e vuole il *client secret* anche con PKCE. Il
+    supporto per le app senza server è in pausa nella roadmap di GitHub.
+- **Firebase**, per account veri:
+  - Accesso con email e password, che funziona anche nell'app installata su iPhone.
+    «Accedi con Google» va su PC e Android; sull'iPhone con l'app installata il popup può
+    non funzionare, e il redirect non va se il sito non è su Firebase Hosting.
+  - Piano gratuito (Spark), senza carta di credito: Firestore con 1 GiB, 50.000 letture
+    e 20.000 scritture al giorno; accesso gratuito fino a 50.000 utenti attivi al mese.
+    Numeri da ricontrollare prima di partire.
+  - Appunti salvati a Milano (`europe-west8`), ma Firebase Authentication tratta le email
+    negli USA. Servono un'informativa sulla privacy (GDPR) che lo dica e un pulsante
+    «Elimina account».
+  - Firestore Lite (senza cache offline: la sincronizzazione è la nostra) con l'accesso
+    pesa circa 65 KB (gzip), da caricare solo dopo il login.
+- Scartate:
+  - **Supabase**: il piano gratuito va in pausa dopo 7 giorni con poco uso e lo riattiva
+    solo il proprietario; per mandare email agli utenti serve un proprio servizio di
+    posta (SMTP).
+  - **Google Drive** senza server: il permesso dura circa un'ora e per rinnovarlo si apre
+    un popup.
+  - **Un servizio tutto nostro su Cloudflare** (Workers + D1): il login andrebbe scritto
+    da zero.
+
+**Da tenere a mente:**
+
+- Il browser dà circa 5 MB di spazio (localStorage): con tanti appunti conviene passare
+  a IndexedDB, utile anche senza account.
+- Facoltativo: crittografia end-to-end (gli appunti partono già cifrati con una password
+  e nemmeno il server li può leggere; se si perde la password, si perdono gli appunti).
 - Il punto di partenza nel codice è `src/store/notes.ts`: ogni nota ha già `id`,
-  `createdAt` e `updatedAt`.
+  `createdAt` e `updatedAt`, e ogni modifica all'elenco parte da quello salvato.
 
 ## Altre idee
 
