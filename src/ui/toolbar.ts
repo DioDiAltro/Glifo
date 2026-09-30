@@ -1,9 +1,96 @@
 import { EditorSelection } from '@codemirror/state'
 import type { MarkdownEditor } from '../editor/editor'
 import { insertBlock, toggleLinePrefix, wrapSelection } from '../editor/insert'
+import { LIST_STYLES, applyListStyle, indentListItems, outdentListItems, type ListStyle } from '../editor/lists'
 import { ICONS, h, icon } from './dom'
 
-type Action = { icon?: keyof typeof ICONS; text?: string; title: string; run: () => void } | 'sep'
+type Action = { icon?: keyof typeof ICONS; text?: string; title: string; run: () => void } | 'sep' | HTMLElement
+
+function listStyle(label: string): ListStyle {
+  return LIST_STYLES.find((s) => s.label === label)!.style
+}
+
+/** Menu con tutti i tipi di elenco (1), a), A), i), es), –, •, cose da fare) e i rientri. */
+function listMenu(editor: MarkdownEditor): HTMLElement {
+  const items: HTMLButtonElement[] = []
+  const menu = h('div', { class: 'tool-menu', attrs: { role: 'menu', 'aria-label': 'Tipi di elenco', hidden: true } })
+  const button = h(
+    'button',
+    {
+      class: 'tool tool-more',
+      title: 'Tutti i tipi di elenco e i rientri',
+      attrs: { type: 'button', 'aria-label': 'Tutti i tipi di elenco', 'aria-haspopup': 'menu', 'aria-expanded': 'false' },
+      on: {
+        mousedown: (ev) => ev.preventDefault(),
+        // detail 0: aperto da tastiera (Invio o spazio sul pulsante)
+        click: (ev) => (menu.hidden ? open(ev.detail === 0) : close()),
+      },
+    },
+    icon(ICONS.listOrdered, 17),
+    icon(ICONS.chevronDown, 12),
+  )
+  const wrap = h('div', { class: 'tool-menu-wrap' }, button, menu)
+
+  const onOutside = (ev: MouseEvent) => {
+    if (!wrap.contains(ev.target as Node)) close()
+  }
+  function open(fromKeyboard: boolean): void {
+    const r = button.getBoundingClientRect()
+    menu.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - 250))}px`
+    menu.style.top = `${r.bottom + 4}px`
+    menu.hidden = false
+    button.setAttribute('aria-expanded', 'true')
+    document.addEventListener('mousedown', onOutside, true)
+    window.addEventListener('resize', close)
+    if (fromKeyboard) items[0].focus()
+  }
+  function close(): void {
+    menu.hidden = true
+    button.setAttribute('aria-expanded', 'false')
+    document.removeEventListener('mousedown', onOutside, true)
+    window.removeEventListener('resize', close)
+  }
+
+  const add = (example: string, label: string, run: () => void, keys?: string) => {
+    const item = h(
+      'button',
+      {
+        class: 'tool-menu-item',
+        attrs: { type: 'button', role: 'menuitem', tabindex: -1 },
+        on: {
+          mousedown: (ev) => ev.preventDefault(),
+          click: () => {
+            close()
+            run()
+            editor.focus()
+          },
+        },
+      },
+      h('span', { class: 'tool-menu-example' }, example),
+      h('span', { class: 'tool-menu-label' }, label),
+      keys ? h('kbd', {}, keys) : null,
+    )
+    items.push(item)
+    menu.append(item)
+  }
+  for (const s of LIST_STYLES) add(s.example, s.label, () => applyListStyle(editor.view, s.style))
+  menu.append(h('div', { class: 'tool-menu-sep', attrs: { role: 'separator' } }))
+  add('→', 'Rientra', () => indentListItems(editor.view), 'Tab')
+  add('←', 'Riduci rientro', () => outdentListItems(editor.view), 'Maiusc+Tab')
+
+  menu.addEventListener('keydown', (ev) => {
+    const i = items.indexOf(document.activeElement as HTMLButtonElement)
+    if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+      ev.preventDefault()
+      items[(i + (ev.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length].focus()
+    } else if (ev.key === 'Escape' || ev.key === 'Tab') {
+      ev.preventDefault()
+      close()
+      button.focus()
+    }
+  })
+  return wrap
+}
 
 function insertLink(editor: MarkdownEditor): void {
   const view = editor.view
@@ -40,9 +127,10 @@ export function createToolbar(editor: MarkdownEditor): HTMLElement {
     { icon: 'italic', title: 'Corsivo (Ctrl+I)', run: () => wrapSelection(v(), '*', '*', 'corsivo') },
     { icon: 'strike', title: 'Barrato', run: () => wrapSelection(v(), '~~', '~~', 'barrato') },
     'sep',
-    { icon: 'list', title: 'Elenco puntato', run: () => toggleLinePrefix(v(), '- ', /^\s*[-*+]\s+(?!\[[ xX]\])/) },
-    { icon: 'listOrdered', title: 'Elenco numerato', run: () => toggleLinePrefix(v(), '1. ', /^\s*\d+[.)]\s+/) },
-    { icon: 'tasks', title: 'Lista di cose da fare', run: () => toggleLinePrefix(v(), '- [ ] ', /^\s*[-*+]\s+\[[ xX]\]\s+/) },
+    { icon: 'list', title: 'Elenco con i trattini', run: () => applyListStyle(v(), listStyle('Trattini')) },
+    { icon: 'listOrdered', title: 'Elenco numerato 1) 2) 3)', run: () => applyListStyle(v(), listStyle('Numeri')) },
+    { icon: 'tasks', title: 'Lista di cose da fare', run: () => applyListStyle(v(), listStyle('Cose da fare')) },
+    listMenu(editor),
     { icon: 'quote', title: 'Citazione', run: () => toggleLinePrefix(v(), '> ', /^>\s?/) },
     'sep',
     { icon: 'code', title: 'Codice', run: () => insertCode(editor) },
@@ -61,7 +149,9 @@ export function createToolbar(editor: MarkdownEditor): HTMLElement {
     'div',
     { class: 'editor-toolbar', attrs: { role: 'toolbar', 'aria-label': 'Formattazione' } },
     actions.map((a) =>
-      a === 'sep'
+      a instanceof HTMLElement
+        ? a
+        : a === 'sep'
         ? h('span', { class: 'toolbar-sep', attrs: { 'aria-hidden': 'true' } })
         : h(
             'button',

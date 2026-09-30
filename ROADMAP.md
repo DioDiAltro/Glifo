@@ -53,6 +53,8 @@ useranno anche altri studenti servono gli account veri.
 
 ## Altre idee
 
+- Nell'editor, le righe lunghe di un elenco che vanno a capo allineate al testo dell'elemento
+  (rientro sospeso), come nell'anteprima.
 - Controllo della **grammatica**, oltre all'ortografia (es. LanguageTool, che supporta
   l'italiano: però il testo verrebbe mandato ai suoi server).
 - Aprire direttamente una cartella di appunti, con le immagini.

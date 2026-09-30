@@ -29,6 +29,7 @@ import x86asm from 'highlight.js/lib/languages/x86asm'
 import xml from 'highlight.js/lib/languages/xml'
 import yaml from 'highlight.js/lib/languages/yaml'
 import { escapeHtml, renderTexOrError } from './katex'
+import { listRule, paragraphRule } from './lists'
 import { analyzeBlockOpen, findBlockClose, matchInlineMath } from './mathDelims'
 
 const HLJS_LANGUAGES = {
@@ -146,6 +147,11 @@ function createMarkdownIt(): MarkdownIt {
     },
   })
   md.use(footnote)
+  // Elenchi con tutti i marcatori di Glifo (a), i), es)…); niente codice rientrato:
+  // i rientri servono agli elenchi, il codice si scrive tra ```.
+  md.block.ruler.at('list', listRule, { alt: ['paragraph', 'reference', 'blockquote'] })
+  md.block.ruler.at('paragraph', paragraphRule)
+  md.disable('code')
   md.inline.ruler.after('escape', 'math_inline', mathInlineRule)
   md.block.ruler.after('blockquote', 'math_block', mathBlockRule, { alt: ['paragraph', 'reference', 'blockquote', 'list'] })
   md.core.ruler.after('inline', 'task_lists', taskListRule)

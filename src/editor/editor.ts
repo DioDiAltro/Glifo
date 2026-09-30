@@ -1,6 +1,6 @@
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
-import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
+import { deleteMarkupBackward, insertNewlineContinueMarkup, markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
 import { HighlightStyle, bracketMatching, indentOnInput, syntaxHighlighting, syntaxTree } from '@codemirror/language'
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search'
@@ -17,6 +17,7 @@ import {
 } from '@codemirror/view'
 import { tags as t } from '@lezer/highlight'
 import { insertTemplate, wrapSelection } from './insert'
+import { continueList, deleteListMarker, indentListItems, listMarkers, noIndentedCode, outdentListItems } from './lists'
 import { mathContextAt, mathRegionAt, type EditorMathContext } from './mathContext'
 import { mathHighlighter } from './mathHighlight'
 import { mathDelimTag, mathMarkdown, mathTag } from './mathSyntax'
@@ -142,7 +143,14 @@ export class MarkdownEditor {
     )
     const editingKeys = Prec.high(
       keymap.of([
-        { key: 'Tab', run: (v) => jumpPlaceholder(v, 1) || tabOutOfMath(v), shift: (v) => jumpPlaceholder(v, -1) },
+        {
+          key: 'Tab',
+          run: (v) => jumpPlaceholder(v, 1) || tabOutOfMath(v) || indentListItems(v),
+          shift: (v) => jumpPlaceholder(v, -1) || outdentListItems(v),
+        },
+        // Invio e Backspace capiscono tutti i marcatori degli elenchi; il resto (es. le citazioni) come prima.
+        { key: 'Enter', run: (v) => continueList(v) || insertNewlineContinueMarkup(v) },
+        { key: 'Backspace', run: (v) => deleteListMarker(v) || deleteMarkupBackward(v) },
         { key: 'Escape', run: clearAllPlaceholders },
         { key: 'Mod-b', run: (v) => (wrapSelection(v, '**', '**', 'grassetto'), true) },
         { key: 'Mod-i', run: (v) => (wrapSelection(v, '*', '*', 'corsivo'), true) },
@@ -168,7 +176,8 @@ export class MarkdownEditor {
       EditorView.lineWrapping,
       italianPhrases,
       placeholder('Scrivi qui i tuoi appunti in Markdown… prova a digitare \\sum'),
-      markdown({ base: markdownLanguage, codeLanguages: languages, extensions: [mathMarkdown] }),
+      markdown({ base: markdownLanguage, codeLanguages: languages, extensions: [mathMarkdown, noIndentedCode], addKeymap: false }),
+      listMarkers,
       // Chiude in automatico anche davanti al $ di fine formula (es. `$x^{|}$`).
       markdownLanguage.data.of({ closeBrackets: { brackets: ['(', '[', '{', '$'], before: ')]}:;>$' } }),
       syntaxHighlighting(highlight),

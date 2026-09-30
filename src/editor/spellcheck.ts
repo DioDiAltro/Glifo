@@ -11,6 +11,7 @@ import {
   type TooltipView,
   type ViewUpdate,
 } from '@codemirror/view'
+import { parseListLine } from '../lists/markers'
 import { findWords, type WordRange } from '../spell/words'
 import { h } from '../ui/dom'
 
@@ -76,7 +77,18 @@ export function wordsToCheck(state: EditorState, from: number, to: number): Word
     },
   })
   if (pos < to) out.push(...findWords(doc.sliceString(pos, to), pos))
-  return out
+  // I marcatori degli elenchi («ii)», «es)») non sono parole da controllare.
+  const markerEnd = new Map<number, number>()
+  return out.filter((w) => {
+    const line = doc.lineAt(w.from)
+    let end = markerEnd.get(line.from)
+    if (end === undefined) {
+      const m = parseListLine(line.text)
+      end = m ? line.from + m.indentLength + m.text.length : line.from
+      markerEnd.set(line.from, end)
+    }
+    return w.from >= end
+  })
 }
 
 interface SpellTarget {

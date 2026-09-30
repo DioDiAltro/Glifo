@@ -48,6 +48,13 @@ Cose da sapere:
   dell'anteprima di VS Code**: i file restano compatibili (anche i blocchi ` ```math ` di GitHub).
 - Colori per il TeX dentro le formule, `$`, graffe e parentesi che si chiudono da sole.
 - Barra di formattazione e scorciatoie (Ctrl+B, Ctrl+I, Ctrl+M per una formula…).
+- **Elenchi di ogni tipo**, anche uno dentro l'altro: `1)` `1.` `(1)`, lettere `a)` `A)` `(a)`,
+  numeri romani `i)` `ii)`, puntati `-` `*` `•`, etichette come `es)` `oss)` `NB)` e cose da
+  fare `- [ ]`. **Invio** continua con il marcatore dopo (1) → 2), a) → b), i) → ii)) e su una
+  riga vuota torna indietro di un livello; **Tab** sposta la riga dentro quella sopra, allineata
+  al suo testo (1) → a) → i), come nei programmi di scrittura), **Maiusc+Tab** la riporta fuori;
+  i numeri si aggiornano da soli. Nell'anteprima ogni marcatore si vede com'è scritto
+  (`-` diventa un trattino). Tutti i tipi sono anche nel menu degli elenchi nella barra.
 - **Controllo ortografico** in italiano e inglese con [Hunspell](https://hunspell.github.io), lo
   stesso correttore di LibreOffice e Firefox. Non controlla formule, codice e link, conosce i
   termini tecnici (iniettiva, jacobiano, bayesiano, eteroschedasticità…), i cognomi degli
@@ -137,8 +144,14 @@ l'indirizzo in **Impostazioni → Avanzate**.
 
 Gli appunti sono normali file `.md`: puoi aprirli in VS Code, Obsidian o su GitHub.
 Il riconoscimento di `$ … $` e `$$ … $$` ricalca quello dell'anteprima Markdown di VS Code
-(stesso motore, KaTeX). Unica eccezione: la chimica con `\ce{…}` (estensione mhchem) funziona
-in Glifo ma non nell'anteprima standard di VS Code.
+(stesso motore, KaTeX). Le differenze:
+
+- la chimica con `\ce{…}` (estensione mhchem) funziona in Glifo ma non nell'anteprima standard
+  di VS Code;
+- gli elenchi con lettere, numeri romani ed etichette (`a)`, `ii)`, `es)`) e il pallino `•` sono
+  di Glifo: altrove si vedono come testo normale (`-`, `*`, `1.` e `1)` vanno bene ovunque);
+- in Glifo il rientro serve agli elenchi: il codice si scrive tra ` ``` ` (i blocchi di codice
+  fatti solo con quattro spazi di rientro non ci sono).
 
 ## Com'è fatto
 
@@ -163,7 +176,9 @@ src/
   search/
     suggest.ts            suggerimenti mentre si scrive \…
     search.ts             ricerca a parole (italiano/inglese, sinonimi, errori di battitura)
+  lists/markers.ts        i marcatori degli elenchi (1), a), ii), es), •…), per editor e anteprima
   editor/
+    lists.ts              Invio, Tab, Maiusc+Tab e Backspace negli elenchi, menu dei tipi
     mathSyntax.ts         riconosce $…$ e $$…$$ nell'editor
     mathContext.ts        "il cursore è in una formula? che comando sto scrivendo?"
     placeholders.ts       i segnaposto raggiungibili con Tab
@@ -179,6 +194,7 @@ src/
   render/
     mathDelims.ts         regole dei delimitatori (condivise da editor e anteprima)
     markdown.ts           Markdown → HTML sicuro
+    lists.ts              elenchi con tutti i marcatori e rientri comodi nell'anteprima
     katex.ts              disegno delle formule, messaggi di errore in italiano
   ui/                     pannello dei simboli, anteprima, elenco appunti, finestre
   store/                  salvataggio nel browser, file .md, impostazioni

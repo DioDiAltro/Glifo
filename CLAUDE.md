@@ -24,7 +24,10 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
 - `src/symbols/`: catalogo dei simboli; per aggiungerne uno vedi «Aggiungere un
   simbolo» nel README.
 - `src/search/`: ricerca a parole in italiano e suggerimenti mentre si scrive `\…`.
-- `src/editor/`: editor CodeMirror 6 (formule, segnaposto, suggerimenti, `spellcheck.ts`).
+- `src/editor/`: editor CodeMirror 6 (formule, segnaposto, suggerimenti, `spellcheck.ts`,
+  `lists.ts` per Invio/Tab/Maiusc+Tab negli elenchi).
+- `src/lists/markers.ts`: i marcatori degli elenchi (1), a), i), es), •…), usati da editor e
+  anteprima (`src/render/lists.ts`). Niente codice rientrato: il rientro è per gli elenchi.
 - `src/spell/`: controllo ortografico (Hunspell in WebAssembly in un worker, dizionari
   `dictionary-it` e `dictionary-en`, glossario tecnico in `glossary.ts`).
 - `src/render/`: KaTeX e anteprima Markdown, con le stesse regole di VS Code per `$…$`.

@@ -47,6 +47,19 @@ public class Main {
 }
 ```
 
+## Elenchi
+
+Ogni marcatore ha il suo significato — `1)`, `a)`, `i)`, `es)`, `-`, `•`… — e si possono mettere uno dentro l'altro. Premi **Invio** per continuare l'elenco, **Tab** per andare dentro e **Maiusc**+**Tab** per tornare fuori:
+
+1) Derivata del prodotto
+    es) $f(x) = x \sin x$
+        i) $f'(x) = \sin x + x \cos x$, ii) vale per ogni $x$
+    - si generalizza a più fattori
+        a) tre funzioni, b) $n$ funzioni
+2) Derivata del quoziente
+
+Tutti i tipi di elenco sono anche nel menu accanto ai pulsanti degli elenchi, nella barra sopra l'editor.
+
 ## Controllo ortografico
 
 Le parole scritte male vengono sottolineate in rosso; formule, codice e link non vengono controllati. Clicca su una parola sottolineata (o premi **Ctrl**+**.**) per correggerla o aggiungerla al tuo dizionario. Prova con questa: perchè.
@@ -62,6 +75,7 @@ Le parole scritte male vengono sottolineate in rosso; formule, codice e link non
 | **Ctrl**+**M** | nuova formula `$…$` |
 | **Ctrl**+**S** | salva la nota come file `.md` |
 | **Ctrl**+**.** | corregge la parola sottolineata in rosso |
+| **Tab** · **Maiusc**+**Tab** | in un elenco: sposta la riga dentro · fuori |
 
 - [x] Prova i suggerimenti
 - [ ] Crea la tua prima nota con il pulsante **+**

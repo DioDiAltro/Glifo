@@ -394,6 +394,64 @@ kbd {
   color: var(--math-delim);
 }
 
+.tool-more {
+  gap: 1px;
+  padding: 0 4px;
+}
+
+.tool-menu {
+  position: fixed;
+  z-index: 60;
+  min-width: 240px;
+  padding: 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.tool-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--text);
+  font-size: 14px;
+  text-align: left;
+}
+
+.tool-menu-item:hover,
+.tool-menu-item:focus-visible {
+  background: var(--surface-2);
+  outline: none;
+}
+
+.tool-menu-example {
+  min-width: 2.4em;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--accent-text);
+}
+
+.tool-menu-label {
+  flex: 1;
+}
+
+.tool-menu-item kbd {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.tool-menu-sep {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--border);
+}
+
 .toolbar-sep {
   width: 1px;
   height: 20px;
@@ -529,6 +587,18 @@ kbd {
   border-bottom: 1.5px dotted var(--accent);
 }
 
+/* Marcatori degli elenchi (1), a), i), es), -…): anche sopra i colori della sintassi */
+.editor-host .cm-list-mark,
+.editor-host .cm-list-mark * {
+  color: var(--md-mark);
+}
+
+.editor-host .cm-list-label,
+.editor-host .cm-list-label * {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
 /* Controllo ortografico */
 .cm-misspelled {
   text-decoration: underline wavy var(--danger);
@@ -655,6 +725,55 @@ kbd {
 
 .markdown-body li + li {
   margin-top: 0.2em;
+}
+
+/* Elenchi dentro gli elenchi: senza lo spazio sotto dei paragrafi. */
+.markdown-body li > ul,
+.markdown-body li > ol {
+  margin: 0.2em 0 0;
+}
+
+/* Marcatori degli elenchi, come sono scritti: «-» è un trattino, «•» e «.» un pallino,
+   1) a) i) con la parentesi, le etichette («es)», «oss)») così come sono. */
+@counter-style glifo-decimal-paren { system: extends decimal; suffix: ') '; }
+@counter-style glifo-decimal-parens { system: extends decimal; prefix: '('; suffix: ') '; }
+@counter-style glifo-lower-alpha-paren { system: extends lower-alpha; suffix: ') '; }
+@counter-style glifo-lower-alpha-parens { system: extends lower-alpha; prefix: '('; suffix: ') '; }
+@counter-style glifo-upper-alpha-paren { system: extends upper-alpha; suffix: ') '; }
+@counter-style glifo-upper-alpha-parens { system: extends upper-alpha; prefix: '('; suffix: ') '; }
+@counter-style glifo-lower-roman-paren { system: extends lower-roman; suffix: ') '; }
+@counter-style glifo-lower-roman-parens { system: extends lower-roman; prefix: '('; suffix: ') '; }
+@counter-style glifo-upper-roman-paren { system: extends upper-roman; suffix: ') '; }
+@counter-style glifo-upper-roman-parens { system: extends upper-roman; prefix: '('; suffix: ') '; }
+
+.markdown-body .ol-decimal-paren { list-style-type: glifo-decimal-paren; }
+.markdown-body .ol-decimal-parens { list-style-type: glifo-decimal-parens; }
+.markdown-body .ol-lower-alpha-paren { list-style-type: glifo-lower-alpha-paren; }
+.markdown-body .ol-lower-alpha-parens { list-style-type: glifo-lower-alpha-parens; }
+.markdown-body .ol-upper-alpha-paren { list-style-type: glifo-upper-alpha-paren; }
+.markdown-body .ol-upper-alpha-parens { list-style-type: glifo-upper-alpha-parens; }
+.markdown-body .ol-lower-roman-paren { list-style-type: glifo-lower-roman-paren; }
+.markdown-body .ol-lower-roman-parens { list-style-type: glifo-lower-roman-parens; }
+.markdown-body .ol-upper-roman-paren { list-style-type: glifo-upper-roman-paren; }
+.markdown-body .ol-upper-roman-parens { list-style-type: glifo-upper-roman-parens; }
+
+.markdown-body .ul-dash {
+  list-style-type: '– ';
+}
+
+.markdown-body .ul-dot {
+  list-style-type: disc;
+}
+
+/* Le etichette e i numeri romani sono più larghi: più spazio a sinistra. */
+.markdown-body .ul-labels,
+.markdown-body ol[type='i'] {
+  padding-left: 2.4em;
+}
+
+.markdown-body .ul-labels > li::marker {
+  color: var(--accent-text);
+  font-weight: 600;
 }
 
 .markdown-body a {

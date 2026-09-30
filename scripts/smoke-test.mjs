@@ -122,6 +122,41 @@ try {
   await settingsDialog.locator('select').filter({ has: page.locator('option[value="it+en"]') }).selectOption('it+en')
   await settingsDialog.locator('.dialog-head .icon-button').click()
 
+  // Elenchi di ogni tipo, uno dentro l'altro, scritti con Invio, Tab, Maiusc+Tab e Backspace
+  await page.locator('.cm-content').click()
+  await page.keyboard.press('Control+End')
+  await page.keyboard.press('Enter')
+  await page.keyboard.press('Enter')
+  const keys = async (...steps) => {
+    for (const s of steps) await (s.startsWith('⌨') ? page.keyboard.press(s.slice(1)) : page.keyboard.type(s))
+  }
+  await keys('1) qualcosa', '⌨Enter', '⌨Tab', '⌨Backspace', 'es) questo', '⌨Enter', '⌨Tab', '⌨Backspace', 'i) di questo')
+  await keys('⌨Enter', '⌨Shift+Tab', '⌨Backspace', '- questo però', '⌨Enter', '⌨Tab', 'dettaglio')
+  await keys('⌨Enter', '⌨Enter', '⌨Enter', 'secondo punto')
+  const written = await page.evaluate(() => {
+    const lines = [...document.querySelectorAll('.cm-line')].map((l) => l.textContent)
+    return lines.slice(lines.indexOf('1) qualcosa')).join('\n')
+  })
+  check(
+    written === ['1) qualcosa', '   es) questo', '       i) di questo', '   - questo però', '     - dettaglio', '2) secondo punto'].join('\n'),
+    `Invio, Tab e Maiusc+Tab compongono l'elenco annidato (${JSON.stringify(written)})`,
+  )
+  await page.waitForTimeout(400)
+  const outline = await page.evaluate(() => {
+    const top = [...document.querySelectorAll('.markdown-body ol.ol-decimal-paren')].find((ol) => ol.textContent.includes('qualcosa'))
+    if (!top) return null
+    return {
+      items: top.children.length,
+      label: top.querySelector('ul.ul-labels > li')?.getAttribute('style'),
+      roman: !!top.querySelector('ul.ul-labels ol.ol-lower-roman-paren'),
+      dashes: !!top.querySelector('ul.ul-dash ul.ul-dash'),
+    }
+  })
+  check(
+    outline?.items === 2 && outline.label?.includes('es)') && outline.roman && outline.dashes,
+    `l'anteprima disegna l'elenco annidato con 1), es), i) e i trattini (${JSON.stringify(outline)})`,
+  )
+
   // Eliminazione della nota, con conferma dentro la pagina
   await page.keyboard.press('Escape')
   const before = await page.locator('.note-item').count()
