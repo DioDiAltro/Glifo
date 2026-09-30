@@ -81,11 +81,21 @@ Due funzioni, da chiamare dopo l'accesso con `supabase.rpc(...)`.
 
 - `src/account/sync.ts` usa queste due funzioni: manda le modifiche, poi scarica le novità.
 - `src/account/space.ts` tiene le note di ogni account in uno spazio a parte del browser.
-- `src/account/supabase.ts` si occupa dell'accesso con il codice via email.
+- `src/account/supabase.ts` si occupa dell'accesso via email.
 
-Perché l'email contenga il codice e non solo il link, nella dashboard (Authentication →
-Emails) i modelli «Magic Link» e «Confirm signup» devono contenere `{{ .Token }}`. Il link
-funziona comunque, se lo si apre dallo stesso browser. Come Site URL va l'indirizzo di Glifo.
+L'email per entrare:
+
+- **Site URL** (Authentication → URL Configuration) deve essere l'indirizzo di Glifo,
+  `https://diodialtro.github.io/Glifo/`: è dove riporta il link. Con quello predefinito,
+  `http://localhost:3000`, il link porta a una pagina che non si apre.
+- **Il servizio di posta di Supabase** (gratuito) scrive solo ai membri del team, poche
+  email all'ora, e con i modelli predefiniti: l'email ha solo il link («Sign in»), non il
+  codice. I modelli si possono cambiare solo con un servizio di posta proprio (SMTP).
+- **Il link** vale una volta sola e solo nel browser in cui si è chiesta l'email (flusso
+  PKCE). Se si aprirebbe altrove, lo si copia e lo si incolla nella finestra di Glifo:
+  l'app prende il token e lo controlla con `verifyOtp({ token_hash, type: 'email' })`.
+- **Il codice di 6 cifre** arriva se i modelli «Magic Link» e «Confirm signup» contengono
+  `{{ .Token }}` (quindi con un SMTP proprio): Glifo lo accetta già.
 
 ## Cambiare il database
 

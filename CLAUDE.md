@@ -40,8 +40,8 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
 - `src/account/`: account e sincronizzazione. `sync.ts` è il motore (manda, scarica, nei
   conflitti tiene tutte e due le versioni), `controller.ts` decide quando sincronizzare,
   `space.ts` tiene le note di ogni account in uno spazio a parte del browser (`glifo.u.<id>.…`),
-  `supabase.ts` fa l'accesso con il codice via email. Il client di Supabase si carica solo
-  se si accede.
+  `supabase.ts` fa l'accesso via email (il link aperto qui o incollato, o il codice). Il
+  client di Supabase si carica solo se si accede.
 - `supabase/`: il database degli account (progetto Supabase `glifo`, Francoforte, piano
   gratuito): tabelle e regole di accesso in `migrations/`, test in `tests/`. Il README spiega
   indirizzo, chiave pubblica, sincronizzazione (`sync_pull`/`sync_push`) e come si cambia.

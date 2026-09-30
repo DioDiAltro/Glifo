@@ -1,8 +1,10 @@
 /**
- * Un Supabase finto per le prove nel browser. L'accesso accetta sempre il codice 123456;
- * la sincronizzazione invece è quella vera: sync_pull e sync_push girano sulle migrazioni di
- * supabase/migrations, in un Postgres in memoria (PGlite).
+ * Un Supabase finto per le prove nel browser. L'accesso accetta sempre il codice 123456, e il
+ * link dell'ultima email (aperto o incollato); la sincronizzazione invece è quella vera:
+ * sync_pull e sync_push girano sulle migrazioni di supabase/migrations, in un Postgres in
+ * memoria (PGlite).
  */
+import { randomBytes } from 'node:crypto'
 import { readdirSync, readFileSync } from 'node:fs'
 import { PGlite } from '@electric-sql/pglite'
 
@@ -23,7 +25,7 @@ export async function createFakeSupabase() {
 
   /** email → id */
   const users = new Map()
-  /** L'ultima richiesta di accesso: con il link nell'email si torna a `redirectTo`. */
+  /** L'ultima richiesta di accesso: il link nell'email ha `tokenHash` e riporta a `redirectTo`. */
   let lastLogin = null
   const emailOf = (id) => [...users].find(([, uid]) => uid === id)?.[0]
 
@@ -108,14 +110,21 @@ export async function createFakeSupabase() {
     const body = raw ? JSON.parse(raw) : {}
 
     if (path === '/auth/v1/otp') {
-      lastLogin = { email: body.email, redirectTo: url.searchParams.get('redirect_to') }
+      lastLogin = { email: body.email, redirectTo: url.searchParams.get('redirect_to'), tokenHash: `pkce_${randomBytes(28).toString('hex')}` }
       return reply(200, {})
     }
     if (path === '/auth/v1/verify') {
-      if (body.token !== CODE) {
+      const expired = () => {
         const message = 'Token has expired or is invalid'
         return reply(403, { code: 'otp_expired', error_code: 'otp_expired', message, msg: message })
       }
+      // Il link dell'email incollato in Glifo: vale una volta sola.
+      if (body.token_hash) {
+        if (body.token_hash !== lastLogin?.tokenHash || lastLogin.used) return expired()
+        lastLogin.used = true
+        return reply(200, session(await userFor(lastLogin.email)))
+      }
+      if (body.token !== CODE) return expired()
       return reply(200, session(await userFor(body.email)))
     }
     if (path === '/auth/v1/token' && url.searchParams.get('grant_type') === 'pkce') {
@@ -152,7 +161,15 @@ export async function createFakeSupabase() {
   return {
     /** Collega il Supabase finto a un contesto del browser (un «dispositivo»). */
     attach: (context) => context.route(`${SUPABASE_URL}/**`, handle),
-    /** L'indirizzo del link nell'email per l'ultima richiesta di accesso. */
+    /** Il link com'è scritto nell'ultima email (da copiare e incollare in Glifo). */
+    emailLink() {
+      const link = new URL(`${SUPABASE_URL}/auth/v1/verify`)
+      link.searchParams.set('token', lastLogin.tokenHash)
+      link.searchParams.set('type', 'magiclink')
+      link.searchParams.set('redirect_to', lastLogin.redirectTo)
+      return link.href
+    },
+    /** Dove porta il link dell'ultima email, dopo il passaggio da Supabase. */
     link() {
       const target = new URL(lastLogin.redirectTo)
       target.searchParams.set('code', LINK_CODE)

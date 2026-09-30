@@ -887,7 +887,7 @@ if (sync && account) {
   sync.start()
 }
 
-// Ritorno dal link nell'email (se al posto del codice c'era un link).
+// Ritorno dal link nell'email.
 if (/[?&#](code|access_token|error_description)=/.test(location.search + location.hash)) {
   const hadError = /error_description=/.test(location.search + location.hash)
   void currentSession()
@@ -895,16 +895,16 @@ if (/[?&#](code|access_token|error_description)=/.test(location.search + locatio
       history.replaceState(null, '', location.pathname)
       if (user && !account) return completeSignIn(user)
       if (user) return
-      // Il link vale solo nel browser in cui si è chiesto il codice (per esempio non sul
-      // telefono, se il codice l'ha chiesto il computer).
+      // Il link vale solo nel browser in cui si è chiesta l'email (per esempio non sul
+      // telefono, se l'ha chiesta il computer), e aprendolo si consuma.
       toast(
         hadError
-          ? 'Il link per accedere non è valido o è scaduto: chiedi un altro codice da «Accedi».'
-          : 'Questo link funziona solo nel browser in cui hai chiesto il codice. Più semplice: scrivi in Glifo il codice che trovi nell\'email.',
+          ? 'Il link per entrare non è valido o è già stato usato: chiedi un\'altra email da «Accedi».'
+          : 'Il link va aperto nel browser in cui hai chiesto di entrare. Chiedi un\'altra email da lì: poi apri il link in quel browser, oppure copialo e incollalo nella finestra di Glifo.',
         'error',
       )
     })
-    .catch(() => toast('Non è stato possibile completare l\'accesso: riprova con il codice.', 'error'))
+    .catch(() => toast('Non è stato possibile completare l\'accesso: riprova da «Accedi».', 'error'))
 }
 
 // ——— Scorciatoie globali ———

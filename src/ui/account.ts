@@ -2,7 +2,7 @@ import type { SyncStatus } from '../account/controller'
 import { dialogShell } from './dialogs'
 import { ICONS, h, icon } from './dom'
 
-/** Chi è entrato, come lo restituisce il controllo del codice. */
+/** Chi è entrato, come lo restituisce il controllo del link o del codice. */
 export interface SignedIn {
   userId: string
   email: string
@@ -56,7 +56,7 @@ export class AccountButton {
 }
 
 /**
- * Accesso con il codice via email, in due passi: l'indirizzo, poi il codice ricevuto.
+ * Accesso via email, in due passi: l'indirizzo, poi il link (o il codice) dell'email.
  * `lockEmail`: per rientrare nello stesso account, l'indirizzo non si cambia.
  */
 export function openLoginDialog(opts: {
@@ -89,7 +89,7 @@ export function openLoginDialog(opts: {
       class: 'prompt-input',
       attrs: { type: 'email', value: email, autocomplete: 'email', spellcheck: 'false', readonly: opts.lockEmail },
     })
-    const submit = h('button', { class: 'btn btn-primary', attrs: { type: 'submit' } }, 'Mandami il codice')
+    const submit = h('button', { class: 'btn btn-primary', attrs: { type: 'submit' } }, 'Mandami l\'email')
     const form = h(
       'form',
       {
@@ -112,7 +112,7 @@ export function openLoginDialog(opts: {
               (err: unknown) => {
                 showError(messageOf(err))
                 submit.disabled = false
-                submit.textContent = 'Mandami il codice'
+                submit.textContent = 'Mandami l\'email'
               },
             )
           },
@@ -121,7 +121,7 @@ export function openLoginDialog(opts: {
       h(
         'p',
         { class: 'login-intro' },
-        'Con l\'account ritrovi gli stessi appunti su computer, tablet e telefono. Niente password: ti mandiamo un codice via email.',
+        'Con l\'account ritrovi gli stessi appunti su computer, tablet e telefono. Niente password: ti mandiamo un\'email per entrare.',
       ),
       h('label', { class: 'prompt-label' }, h('span', {}, 'Email'), input),
       error,
@@ -136,15 +136,15 @@ export function openLoginDialog(opts: {
     error.hidden = true
     const input = h('input', {
       class: 'prompt-input login-code',
-      attrs: { type: 'text', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: 12, spellcheck: 'false' },
+      attrs: { type: 'text', autocomplete: 'one-time-code', autocapitalize: 'off', spellcheck: 'false' },
     })
     const submit = h('button', { class: 'btn btn-primary', attrs: { type: 'submit' } }, 'Accedi')
     const resend = h('button', { class: 'link-button', attrs: { type: 'button' } })
-    // Supabase manda al massimo un codice al minuto allo stesso indirizzo.
+    // Supabase manda al massimo un'email al minuto allo stesso indirizzo.
     let wait = 60
     const tick = () => {
       resend.disabled = wait > 0
-      resend.textContent = wait > 0 ? `Mandamene un altro (tra ${wait} s)` : 'Mandamene un altro'
+      resend.textContent = wait > 0 ? `Mandamene un'altra (tra ${wait} s)` : 'Mandamene un\'altra'
       wait--
     }
     clearInterval(cooldown)
@@ -170,15 +170,15 @@ export function openLoginDialog(opts: {
         on: {
           submit: (ev) => {
             ev.preventDefault()
-            const code = input.value.replace(/\s+/g, '')
-            if (!/^\d{6,10}$/.test(code)) {
-              showError('Scrivi il codice di 6 cifre che trovi nell\'email.')
+            const value = input.value.trim()
+            if (!value) {
+              showError('Incolla qui il link che trovi nell\'email, oppure scrivi il codice se c\'è.')
               input.focus()
               return
             }
             busy(submit, 'Controllo…')
             opts
-              .verifyCode(email, code)
+              .verifyCode(email, value)
               .then(async (user) => {
                 await opts.onSignedIn(user)
                 dialog.close()
@@ -192,13 +192,20 @@ export function openLoginDialog(opts: {
           },
         },
       },
-      h('p', { class: 'login-intro' }, 'Ti abbiamo scritto a ', h('strong', {}, email), '. Scrivi qui il codice che trovi nell\'email.'),
-      h('label', { class: 'prompt-label' }, h('span', {}, 'Codice'), input),
+      h(
+        'p',
+        { class: 'login-intro' },
+        'Ti abbiamo mandato un\'email a ',
+        h('strong', {}, email),
+        '. Aprila in questo browser e premi il link: entri subito.',
+      ),
+      h('label', { class: 'prompt-label' }, h('span', {}, 'Oppure incolla qui il link (o il codice, se c\'è)'), input),
       error,
+      h('p', { class: 'field-help' }, 'Se il link si apre in un altro browser, per esempio sul telefono, copialo senza aprirlo e incollalo qui.'),
       h(
         'p',
         { class: 'field-help' },
-        'Non è arrivata? Guarda anche nello spam. Se nell\'email c\'è solo un link, aprilo in questo browser. ',
+        'Non è arrivata? Guarda anche nello spam. ',
         resend,
         opts.lockEmail
           ? null

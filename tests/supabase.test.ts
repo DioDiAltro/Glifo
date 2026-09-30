@@ -1,6 +1,6 @@
 import type { AuthError, PostgrestError } from '@supabase/supabase-js'
 import { describe, expect, it } from 'vitest'
-import { accountError, syncError } from '../src/account/supabase'
+import { accountError, emailLinkToken, syncError, verifyCode } from '../src/account/supabase'
 
 const auth = (fields: Partial<AuthError>) => ({ name: 'AuthApiError', message: '', status: 400, ...fields }) as AuthError
 const postgrest = (fields: Partial<PostgrestError>) => ({ message: '', details: '', hint: '', code: '', ...fields }) as PostgrestError
@@ -9,11 +9,38 @@ describe('errori dell\'accesso', () => {
   it('ogni problema ha il suo messaggio in italiano', () => {
     expect(accountError(auth({ name: 'AuthRetryableFetchError', status: 0 }))).toMatchObject({ kind: 'offline' })
     expect(accountError(auth({ code: 'over_email_send_rate_limit', status: 429 }))).toMatchObject({ kind: 'rate' })
-    expect(accountError(auth({ code: 'otp_expired', status: 403 })).message).toContain('codice è sbagliato o scaduto')
+    expect(accountError(auth({ code: 'otp_expired', status: 403 })).message).toContain('è sbagliato o scaduto')
     expect(accountError(auth({ code: 'email_address_invalid' }))).toMatchObject({ kind: 'email' })
     // Con il servizio di posta di prova, Supabase scrive solo ai membri del progetto.
     expect(accountError(auth({ code: 'email_address_not_authorized' }))).toMatchObject({ kind: 'closed' })
     expect(accountError(auth({ code: 'qualcosa_di_nuovo' }))).toMatchObject({ kind: 'other' })
+  })
+})
+
+describe('link dell\'email incollato nella finestra', () => {
+  const token = `pkce_${'0a1b2c3d'.repeat(7)}`
+  const link = `https://fgsuonetdmcgojbvrsxi.supabase.co/auth/v1/verify?token=${token}&type=magiclink&redirect_to=https://diodialtro.github.io/Glifo/`
+
+  it('prende il token dal link, anche con spazi o testo intorno', () => {
+    expect(emailLinkToken(link)).toBe(token)
+    expect(emailLinkToken(`  ${link}\n`)).toBe(token)
+    expect(emailLinkToken(`Sign in <${link}>`)).toBe(token)
+    expect(emailLinkToken(link.replace(`token=${token}&type=magiclink`, `type=signup&token=${token}`))).toBe(token)
+  })
+
+  it('anche dal link avvolto da Outlook o da un antivirus', () => {
+    expect(emailLinkToken(`https://eur01.safelinks.protection.outlook.com/?url=${encodeURIComponent(link)}&data=05%7C02&reserved=0`)).toBe(token)
+  })
+
+  it('niente token da un codice, dall\'indirizzo di Glifo o da un testo qualsiasi', () => {
+    expect(emailLinkToken('123456')).toBeNull()
+    expect(emailLinkToken('https://diodialtro.github.io/Glifo/?code=5b1c0f9e-8d4a-4f0e-9a51-2f7d1c3b6a10')).toBeNull()
+    expect(emailLinkToken('sicuro al 100%')).toBeNull()
+  })
+
+  it('un testo che non è né il link né un codice viene segnalato subito', async () => {
+    await expect(verifyCode('studente@example.com', 'https://diodialtro.github.io/Glifo/')).rejects.toMatchObject({ kind: 'input' })
+    await expect(verifyCode('studente@example.com', '12 34')).rejects.toMatchObject({ kind: 'input' })
   })
 })
 

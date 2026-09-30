@@ -45,9 +45,10 @@ Cose da sapere:
 ### Account
 
 Con l'account ritrovi gli stessi appunti, con cartelle, impostazioni e dizionario personale,
-su computer, tablet e telefono. Si entra dal pulsante **Accedi** in alto, con un codice che
-arriva via email: niente password. *Per ora è in prova: il codice arriva solo agli indirizzi
-di chi sta provando Glifo.*
+su computer, tablet e telefono. Si entra dal pulsante **Accedi** in alto con un'email:
+niente password. Il link nell'email va aperto nel browser in cui si usa Glifo; se si
+aprirebbe altrove (per esempio nell'app di Gmail), si copia e si incolla nella finestra di
+Glifo. *Per ora è in prova: l'email arriva solo agli indirizzi di chi sta provando Glifo.*
 
 - **Sincronizzazione automatica:** all'avvio, quando torni su Glifo, quando torna la rete e
   poco dopo ogni modifica. Il pallino sul pulsante dell'account dice com'è andata.
@@ -191,7 +192,7 @@ Web app in **TypeScript** con [Vite](https://vite.dev), senza framework e senza 
 | Anteprima Markdown | [markdown-it](https://github.com/markdown-it/markdown-it), highlight.js, DOMPurify |
 | Controllo ortografico | [Hunspell](https://hunspell.github.io) in WebAssembly ([@farscrl/hunspell-wasm](https://github.com/farscrl/hunspell-wasm)) in un worker, dizionari [dictionary-it e dictionary-en](https://github.com/wooorm/dictionaries) |
 | Assistente AI | SDK ufficiale di Anthropic (caricato solo quando serve) |
-| Account e sincronizzazione | [Supabase](https://supabase.com): database Postgres e accesso con codice via email (il client si carica solo se si accede) |
+| Account e sincronizzazione | [Supabase](https://supabase.com): database Postgres e accesso via email, senza password (il client si carica solo se si accede) |
 | App installabile | vite-plugin-pwa |
 
 ```
@@ -231,7 +232,7 @@ src/
     sync.ts               sincronizzazione: manda e scarica le modifiche, nei conflitti tiene tutte e due le versioni
     controller.ts         quando sincronizzare (avvio, ritorno su Glifo, rete, dopo le modifiche)
     space.ts              le note di ogni account in uno spazio a parte del browser
-    supabase.ts           accesso con il codice via email
+    supabase.ts           accesso via email (link o codice)
   host.ts                 integrazione facoltativa con claude.ai (per la demo pubblicata lì)
 tests/                    test automatici (Vitest), anche del database con le vere migrazioni (PGlite)
 scripts/smoke-test.mjs    prova nel browser del flusso principale

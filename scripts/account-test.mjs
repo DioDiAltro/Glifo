@@ -221,11 +221,33 @@ try {
   const altro = await device()
   await altro.page.goto(fake.link())
   check(
-    await waitFor(altro.page, () => [...document.querySelectorAll('.toast')].some((t) => t.textContent.includes('solo nel browser in cui hai chiesto il codice'))),
-    'aprendo il link su un altro dispositivo, un avviso dice di usare il codice',
+    await waitFor(altro.page, () => [...document.querySelectorAll('.toast')].some((t) => t.textContent.includes('nel browser in cui hai chiesto di entrare'))),
+    'aprendo il link su un altro dispositivo, un avviso spiega come fare',
   )
   check((await accountState(altro.page)).includes('is-guest'), 'e non si entra nell\'account')
   pc.errors.push(...altro.errors)
+
+  // Il link copiato dall'email e incollato nella finestra di Glifo, senza aprirlo.
+  const portatile = await device()
+  await portatile.page.locator('.account-button').click()
+  const pasteDialog = portatile.page.locator('dialog.dialog-login')
+  await pasteDialog.locator('input[type=email]').fill(EMAIL)
+  await pasteDialog.locator('button[type=submit]').click()
+  await pasteDialog.locator('.login-code').fill('https://diodialtro.github.io/Glifo/')
+  await pasteDialog.locator('button[type=submit]').click()
+  await pasteDialog.locator('.prompt-error:not([hidden])').waitFor()
+  check(
+    (await pasteDialog.locator('.prompt-error').innerText()).includes('Incolla qui il link'),
+    'incollando un altro indirizzo, un messaggio dice cosa serve',
+  )
+  const pasted = portatile.page.waitForEvent('load')
+  await pasteDialog.locator('.login-code').fill(` Sign in <${fake.emailLink()}>\n`)
+  await pasteDialog.locator('button[type=submit]').click()
+  await pasted
+  await portatile.page.waitForSelector('.cm-editor')
+  check(!(await accountState(portatile.page)).includes('is-guest'), 'incollando il link dell\'email nella finestra si entra')
+  check(await waitFor(portatile.page, () => document.querySelectorAll('.note-item').length === 2), 'e arrivano le note')
+  pc.errors.push(...portatile.errors)
 
   const errors = [...pc.errors, ...tel.errors]
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)

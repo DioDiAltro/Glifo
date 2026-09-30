@@ -14,10 +14,10 @@ il lavoro si parte da qui, e quando una voce è fatta si toglie.
 Gli appunti si possono mandare a un'altra persona o tenere in una cartella condivisa. Più
 avanti l'account servirà anche per l'abbonamento (vedi «Più avanti»).
 
-**Oggi:** l'account c'è, in prova. Si entra con il codice via email e gli appunti si
-sincronizzano tra i dispositivi (passi 1-3 qui sotto). I codici però arrivano solo ai membri
-del team Supabase, quindi per ora lo può usare solo il proprietario del progetto. Chi non
-accede continua a usare Glifo come prima, con gli appunti nel browser.
+**Oggi:** l'account c'è, in prova. Si entra con un'email e gli appunti si sincronizzano tra
+i dispositivi (passi 1-3 qui sotto). Le email però arrivano solo ai membri del team
+Supabase, quindi per ora lo può usare solo il proprietario del progetto. Chi non accede
+continua a usare Glifo come prima, con gli appunti nel browser.
 
 **Servizio scelto: Supabase**, sul piano gratuito (progetto `glifo`, vedi
 [supabase/README.md](supabase/README.md)). Dà già pronti database (Postgres), login e
@@ -74,8 +74,10 @@ Perché non gli altri:
    cambia le note degli altri. Profili e membri delle cartelle arrivano con la
    condivisione (passo 5).
 3. **Accesso e sincronizzazione**, fatto (in prova):
-   - si entra con il codice via email (o con il link, se l'email ha quello), e le note di
-     ogni account stanno in uno spazio a parte del browser;
+   - si entra con il link dell'email, aperto in questo browser o incollato nella finestra di
+     Glifo (o con il codice, se l'email lo contiene), e le note di ogni account stanno in uno
+     spazio a parte del browser. Con il servizio di posta gratuito di Supabase l'email non si
+     può cambiare, quindi ha solo il link (vedi il passo 4);
    - con la rete Glifo manda e scarica le modifiche da solo: all'avvio, tornando su Glifo,
      quando torna la rete, poco dopo ogni modifica e ogni minuto. Senza rete funziona come
      prima;
@@ -94,7 +96,11 @@ Perché non gli altri:
      servono prima di far entrare altre persone;
    - CAPTCHA contro le iscrizioni automatiche (Cloudflare Turnstile, gratis) e limiti di
      spazio da rivedere (oggi 20 MB di note per account);
-   - per chi non ha Google: codice via email con un servizio di posta (serve un dominio).
+   - un servizio di posta nostro (SMTP): serve per scrivere a chi non è nel team e per
+     cambiare l'email, per esempio con il codice di 6 cifre al posto del solo link (comodo
+     per leggere l'email sul telefono e scrivere il codice sul computer). Gratis si può
+     usare un account Gmail con una «password per le app»; più avanti, con un dominio, un
+     servizio come Brevo o Resend.
 5. **Condivisione:**
    - profili (il nome che vedono gli altri) e membri di ogni cartella;
    - mandare una copia di una nota a un'altra persona, che la trova tra i «Ricevuti»;

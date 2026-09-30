@@ -13,7 +13,7 @@ export function supabase(): Promise<SupabaseClient> {
           storageKey: AUTH_STORAGE_KEY,
           persistSession: true,
           autoRefreshToken: true,
-          // Il link nell'email (se c'è al posto del codice) riporta qui con ?code=…
+          // Il link nell'email riporta qui con ?code=…
           detectSessionInUrl: true,
           flowType: 'pkce',
         },
@@ -30,7 +30,7 @@ export function supabase(): Promise<SupabaseClient> {
 /** Un problema con l'accesso, con il messaggio da mostrare. */
 export class AccountError extends Error {
   constructor(
-    readonly kind: 'offline' | 'rate' | 'code' | 'email' | 'closed' | 'other',
+    readonly kind: 'offline' | 'rate' | 'code' | 'input' | 'email' | 'closed' | 'other',
     message: string,
   ) {
     super(message)
@@ -39,10 +39,11 @@ export class AccountError extends Error {
 
 const MESSAGES: Record<AccountError['kind'], string> = {
   offline: 'Non c\'è connessione: riprova quando sei online.',
-  rate: 'Hai chiesto troppi codici di fila: aspetta qualche minuto e riprova.',
-  code: 'Il codice è sbagliato o scaduto: controlla l\'ultima email che hai ricevuto, oppure chiedine un altro.',
+  rate: 'Hai chiesto troppe email di fila: aspetta un po\' e riprova (a volte serve anche un\'ora).',
+  code: 'Il link o il codice è sbagliato o scaduto: usa quello dell\'ultima email che hai ricevuto, oppure chiedine un\'altra.',
+  input: 'Incolla qui il link che trovi nell\'email, oppure scrivi il codice se c\'è.',
   email: 'Controlla l\'indirizzo email: sembra sbagliato.',
-  closed: 'Per ora l\'accesso è aperto solo a chi sta provando Glifo: questo indirizzo non può ricevere il codice.',
+  closed: 'Per ora l\'accesso è aperto solo a chi sta provando Glifo: a questo indirizzo non possiamo scrivere.',
   other: 'Non è stato possibile accedere. Riprova tra poco.',
 }
 
@@ -89,7 +90,10 @@ function appUrl(): string {
   return location.origin + location.pathname
 }
 
-/** Manda il codice di accesso all'indirizzo email (crea l'account se non c'è ancora). */
+/**
+ * Manda l'email per entrare (crea l'account se non c'è ancora). Con il servizio di posta di
+ * Supabase l'email ha solo un link; il codice c'è se il modello dell'email contiene `{{ .Token }}`.
+ */
 export async function sendCode(email: string): Promise<void> {
   const sb = await loadClient()
   const { error } = await withTimeout(sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo: appUrl() } }))
@@ -101,12 +105,45 @@ export interface SignedIn {
   email: string
 }
 
-/** Controlla il codice ricevuto via email; se è giusto, l'accesso è fatto. */
-export async function verifyCode(email: string, code: string): Promise<SignedIn> {
+/**
+ * Il token del link di accesso copiato dall'email, o `null`. Serve quando il link si aprirebbe
+ * in un altro browser (per esempio in quello dell'app di Gmail): lì l'accesso non si completa,
+ * incollato in Glifo sì. Va bene anche il link «avvolto» da Outlook o da un antivirus.
+ * Esportata per i test.
+ */
+export function emailLinkToken(text: string): string | null {
+  let s = text.trim()
+  for (let i = 0; i < 3; i++) {
+    const token = /\/auth\/v1\/verify\?(?:[^\s"'<>]*&)?token=([\w-]{20,})/.exec(s)?.[1]
+    if (token) return token
+    try {
+      const decoded = decodeURIComponent(s)
+      if (decoded === s) break
+      s = decoded
+    } catch {
+      break
+    }
+  }
+  return null
+}
+
+/** Controlla il codice ricevuto via email, oppure il link dell'email incollato; se va bene, l'accesso è fatto. */
+export async function verifyCode(email: string, input: string): Promise<SignedIn> {
+  const tokenHash = emailLinkToken(input)
+  const code = input.replace(/\s+/g, '')
+  if (!tokenHash && !/^\d{6,10}$/.test(code)) throw new AccountError('input', MESSAGES.input)
   const sb = await loadClient()
-  const { data, error } = await withTimeout(sb.auth.verifyOtp({ email, token: code, type: 'email' }))
+  const { data, error } = await withTimeout(
+    tokenHash ? sb.auth.verifyOtp({ token_hash: tokenHash, type: 'email' }) : sb.auth.verifyOtp({ email, token: code, type: 'email' }),
+  )
   if (error || !data.user) throw error ? accountError(error) : new AccountError('code', MESSAGES.code)
-  return { userId: data.user.id, email: data.user.email ?? email }
+  const user = { userId: data.user.id, email: data.user.email ?? email }
+  // Il link di un'email vecchia, per un altro indirizzo: non si entra in un account diverso.
+  if (user.email.toLowerCase() !== email.toLowerCase()) {
+    await sb.auth.signOut({ scope: 'local' }).catch(() => undefined)
+    throw new AccountError('code', 'Questo link è per un altro indirizzo: usa quello dell\'email che ti abbiamo appena mandato.')
+  }
+  return user
 }
 
 /** L'accesso salvato in questo browser, se c'è (per esempio dopo aver aperto il link dell'email). */
