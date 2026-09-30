@@ -446,6 +446,10 @@ kbd {
   color: var(--muted);
 }
 
+.tool-menu-item.is-danger {
+  color: var(--danger);
+}
+
 .tool-menu-sep {
   height: 1px;
   margin: 4px 2px;
@@ -955,6 +959,11 @@ kbd {
   padding: 12px 10px 6px 16px;
 }
 
+.notes-head-actions {
+  display: flex;
+  gap: 2px;
+}
+
 .notes-head h2 {
   margin: 0;
   font-size: 13px;
@@ -1041,6 +1050,103 @@ kbd {
 .notes-empty {
   padding: 10px;
   color: var(--muted);
+}
+
+/* Cartelle */
+
+.folder-head {
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+}
+
+.folder-head:hover {
+  background: var(--surface-2);
+}
+
+/* Cartella chiusa che contiene la nota aperta */
+.folder.has-active > .folder-head {
+  background: var(--accent-soft);
+}
+
+.folder-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-weight: 600;
+  text-align: left;
+}
+
+.folder-toggle > svg {
+  flex: none;
+}
+
+.folder-toggle > svg:first-child {
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+
+.folder.is-open .folder-toggle > svg:first-child {
+  transform: rotate(90deg);
+}
+
+.folder-toggle > svg:nth-child(2) {
+  color: var(--accent-text);
+}
+
+.folder-name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.folder-count {
+  flex: none;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.folder-notes {
+  margin: 0;
+  padding: 0 0 0 14px;
+  list-style: none;
+}
+
+.folder-empty {
+  padding: 4px 10px 8px;
+  font-size: 13px;
+}
+
+.folder-menu,
+.note-move {
+  opacity: 0;
+}
+
+.folder-head:hover .folder-menu,
+.folder-menu:focus-visible,
+.folder-menu[aria-expanded='true'],
+.note-item:hover .note-move,
+.note-move:focus-visible,
+.note-move[aria-expanded='true'] {
+  opacity: 1;
+}
+
+/* Su telefoni e tablet non c'è il passaggio del mouse: i pulsanti si vedono sempre. */
+@media (hover: none) {
+  .note-delete,
+  .note-move,
+  .folder-menu {
+    opacity: 1;
+  }
 }
 
 .notes-foot {
@@ -1809,8 +1915,38 @@ kbd {
   margin: 8px 0;
 }
 
-.dialog-confirm {
+.dialog-confirm,
+.dialog-prompt {
   width: min(420px, calc(100vw - 32px));
+}
+
+.prompt-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.prompt-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.prompt-input {
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 400;
+}
+
+.prompt-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 13px;
 }
 
 .confirm-message {

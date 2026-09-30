@@ -1,3 +1,4 @@
+import { newId } from './ids'
 import { readItem, readJson, removeItem, storageKeys, writeItem, writeJson } from './storage'
 
 export interface NoteMeta {
@@ -5,6 +6,8 @@ export interface NoteMeta {
   title: string
   createdAt: number
   updatedAt: number
+  /** La cartella che contiene la nota; assente o null: fuori da ogni cartella. */
+  folderId?: string | null
 }
 
 export interface Note extends NoteMeta {
@@ -37,11 +40,10 @@ export function deriveTitle(content: string): string {
   return 'Senza titolo'
 }
 
-function newId(): string {
-  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
-}
-
-/** L'id comincia con l'ora di creazione (8 cifre in base 36): serve a ridare una data alle note recuperate. */
+/**
+ * Gli id delle note create prima delle cartelle cominciano con l'ora di creazione (8 cifre
+ * in base 36): serve a ridare una data alle note recuperate.
+ */
 function createdAtFromId(id: string): number | null {
   const time = parseInt(id.slice(0, 8), 36)
   return time > Date.UTC(2020, 0, 1) && time <= Date.now() ? time : null
@@ -101,18 +103,23 @@ export class NotesStore {
     return [...this.index].sort((a, b) => b.updatedAt - a.updatedAt)
   }
 
+  /** I dati della nota senza il testo. */
+  meta(id: string): NoteMeta | null {
+    return this.index.find((n) => n.id === id) ?? null
+  }
+
   get(id: string): Note | null {
     const meta = this.index.find((n) => n.id === id)
     const content = meta ? readItem(NOTE_PREFIX + id) : null
     return meta && content !== null ? { ...meta, content } : null
   }
 
-  create(content = ''): Note {
+  create(content = '', folderId: string | null = null): Note {
     const now = Date.now()
-    const note: Note = { id: newId(), title: deriveTitle(content), createdAt: now, updatedAt: now, content }
+    const note: Note = { id: newId(), title: deriveTitle(content), createdAt: now, updatedAt: now, folderId, content }
     // Prima il testo e poi l'elenco: chi legge a metà vede una nota da recuperare, non una voce vuota.
     writeItem(NOTE_PREFIX + note.id, content)
-    this.change((index) => [...index, { id: note.id, title: note.title, createdAt: now, updatedAt: now }])
+    this.change((index) => [...index, { id: note.id, title: note.title, createdAt: now, updatedAt: now, folderId }])
     return note
   }
 
@@ -125,10 +132,21 @@ export class NotesStore {
       if (index.some((n) => n.id === id)) return index.map((n) => (n.id === id ? { ...n, title, updatedAt: now } : n))
       // Eliminata in un'altra scheda mentre qui la si stava scrivendo: torna nell'elenco,
       // così il testo appena scritto non va perso.
-      const createdAt = this.index.find((n) => n.id === id)?.createdAt ?? createdAtFromId(id) ?? now
-      return [...index, { id, title, createdAt, updatedAt: now }]
+      const known = this.index.find((n) => n.id === id)
+      const createdAt = known?.createdAt ?? createdAtFromId(id) ?? now
+      return [...index, { id, title, createdAt, updatedAt: now, folderId: known?.folderId ?? null }]
     })
     return okContent && okIndex
+  }
+
+  /** Sposta la nota in una cartella (null: fuori da ogni cartella). */
+  move(id: string, folderId: string | null): void {
+    this.change((index) => index.map((n) => (n.id === id ? { ...n, folderId } : n)))
+  }
+
+  /** Sposta tutte le note di una cartella, per esempio prima di eliminarla. */
+  moveAll(from: string, to: string | null): void {
+    this.change((index) => index.map((n) => (n.folderId === from ? { ...n, folderId: to } : n)))
   }
 
   remove(id: string): void {

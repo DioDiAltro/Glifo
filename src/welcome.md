@@ -79,5 +79,6 @@ Le parole scritte male vengono sottolineate in rosso; formule, codice e link non
 
 - [x] Prova i suggerimenti
 - [ ] Crea la tua prima nota con il pulsante **+**
+- [ ] Crea una cartella per ogni corso (pulsante con la cartella, sopra l'elenco degli appunti)
 
 > Gli appunti restano salvati in questo browser. Ogni tanto salvali anche come file `.md` (pulsante «Salva .md»): sono normali file Markdown che puoi aprire in VS Code, Obsidian o su GitHub.

@@ -56,9 +56,11 @@ Perché non gli altri:
 1. **Base comune** nel browser:
    - fatto: con Glifo aperto in più schede le note non spariscono più e le schede si
      aggiornano a vicenda;
+   - fatto: le **cartelle** (un livello, niente cartelle dentro cartelle), e gli id di note e
+     cartelle sono unici anche tra dispositivi diversi;
    - ogni nota ricorda l'ultima versione sincronizzata, e le note eliminate restano
-     segnate come «eliminate», altrimenti ricompaiono dall'altro dispositivo;
-   - le **cartelle**, utili anche senza account.
+     segnate come «eliminate», altrimenti ricompaiono dall'altro dispositivo (si fa insieme
+     alla sincronizzazione, al passo 3).
 2. **Il progetto Supabase:** tabelle (profili, note, cartelle, chi fa parte di ogni
    cartella), regole di accesso e test che provano che nessuno legge le note degli altri.
 3. **Accesso e sincronizzazione** delle proprie note:

@@ -4,12 +4,13 @@ import { EditorSelection } from '@codemirror/state'
 import welcomeNote from './welcome.md?raw'
 import { MarkdownEditor } from './editor/editor'
 import { deriveTitle, isNotesKey, noteIdOfKey, NotesStore, type Note } from './store/notes'
+import { cleanFolderName, FOLDER_NAME_MAX, FoldersStore, isFoldersKey } from './store/folders'
 import { addPersonalWord, DICTIONARY_KEY, loadPersonalWords, savePersonalWords } from './store/dictionary'
 import { loadSettings, saveSettings, SETTINGS_KEY, sharedSettings, type Settings, type ViewMode } from './store/settings'
 import { downloadText, fileNameFor, openMarkdownFiles, saveMarkdownFile } from './store/files'
 import { migrateKeyPrefix, storageAvailable } from './store/storage'
 import { ICONS, h, icon } from './ui/dom'
-import { confirmDialog, openHelpDialog, openSettingsDialog } from './ui/dialogs'
+import { confirmDialog, openHelpDialog, openSettingsDialog, promptDialog } from './ui/dialogs'
 import { inClaudeViewer } from './host'
 import { SpellClient } from './spell/client'
 import type { SpellLanguage } from './spell/engine'
@@ -24,6 +25,7 @@ migrateKeyPrefix('matherdown.', 'glifo.')
 
 const settings: Settings = loadSettings()
 const store = new NotesStore()
+const folders = new FoldersStore()
 const fileHandles = new Map<string, FileSystemFileHandle>()
 const narrow = window.matchMedia('(max-width: 900px)')
 /** Sotto questa larghezza l'elenco degli appunti si apre sopra l'editor. */
@@ -206,9 +208,14 @@ const sidePanel = new SidePanel({
 
 const notesPanel = new NotesPanel({
   store,
+  folders,
   onSelect: (id) => switchTo(id),
-  onCreate: () => createNote(),
+  onCreate: (folderId) => createNote(undefined, folderId),
   onDelete: (id) => void deleteNote(id),
+  onMove: (id, folderId) => moveNote(id, folderId),
+  onCreateFolder: (moveNoteId) => void createFolder(moveNoteId),
+  onRenameFolder: (id) => void renameFolder(id),
+  onDeleteFolder: (id) => void deleteFolder(id),
   onOpenFiles: () => void openFiles(),
   onSaveFile: () => void saveToFile(),
 })
@@ -364,9 +371,14 @@ function loadNote(id: string): void {
   editor.focus()
 }
 
-function createNote(content = '# Nuovi appunti\n\n'): void {
+/** La cartella della nota aperta, se esiste ancora: le note nuove vanno lì. */
+function currentFolderId(): string | null {
+  return folders.get(store.meta(active.id)?.folderId)?.id ?? null
+}
+
+function createNote(content = '# Nuovi appunti\n\n', folderId = currentFolderId()): void {
   flushSave()
-  const note = store.create(content)
+  const note = store.create(content, folderId)
   switchTo(note.id)
   // Seleziona il titolo, così si può scrivere subito quello vero.
   if (content.startsWith('# Nuovi appunti')) {
@@ -400,6 +412,75 @@ async function deleteNote(id: string): Promise<void> {
   notesPanel.refresh(active.id)
 }
 
+// ——— Cartelle ———
+
+function moveNote(id: string, folderId: string | null): void {
+  store.move(id, folderId)
+  notesPanel.refresh(active.id)
+}
+
+/** Il problema del nome scelto per una cartella, oppure null se va bene. */
+function folderNameProblem(name: string, exceptId?: string): string | null {
+  if (!cleanFolderName(name)) return 'Scrivi un nome per la cartella.'
+  if (folders.nameTaken(name, exceptId)) return 'C\'è già una cartella con questo nome.'
+  return null
+}
+
+async function createFolder(moveNoteId?: string): Promise<void> {
+  const name = await promptDialog({
+    title: 'Nuova cartella',
+    label: 'Nome della cartella',
+    confirmLabel: 'Crea',
+    maxLength: FOLDER_NAME_MAX,
+    check: (value) => folderNameProblem(value),
+  })
+  if (name === null) return
+  const folder = folders.create(name)
+  if (!folder) {
+    // Nel frattempo un'altra scheda ha creato una cartella con lo stesso nome.
+    toast('C\'è già una cartella con questo nome.', 'error')
+    return
+  }
+  if (moveNoteId) store.move(moveNoteId, folder.id)
+  notesPanel.refresh(active.id)
+}
+
+async function renameFolder(id: string): Promise<void> {
+  const folder = folders.get(id)
+  if (!folder) return
+  const name = await promptDialog({
+    title: 'Rinomina la cartella',
+    label: 'Nome della cartella',
+    confirmLabel: 'Rinomina',
+    value: folder.name,
+    maxLength: FOLDER_NAME_MAX,
+    check: (value) => folderNameProblem(value, id),
+  })
+  if (name === null) return
+  if (!folders.rename(id, name)) toast('C\'è già una cartella con questo nome.', 'error')
+  notesPanel.refresh(active.id)
+}
+
+async function deleteFolder(id: string): Promise<void> {
+  const folder = folders.get(id)
+  if (!folder) return
+  const count = store.list().filter((n) => n.folderId === id).length
+  const ok = await confirmDialog({
+    title: 'Eliminare la cartella?',
+    message:
+      count === 0
+        ? `La cartella «${folder.name}» è vuota.`
+        : `La cartella «${folder.name}» verrà eliminata, ma ${count === 1 ? 'la sua nota resta' : `le sue ${count} note restano`}: ${count === 1 ? 'la trovi' : 'le trovi'} fuori dalle cartelle.`,
+    confirmLabel: 'Elimina cartella',
+    danger: true,
+  })
+  if (!ok) return
+  // Prima si spostano le note e poi si toglie la cartella: nessuna nota resta in una cartella che non c'è.
+  store.moveAll(id, null)
+  folders.remove(id)
+  notesPanel.refresh(active.id)
+}
+
 // ——— Altre schede ———
 // Glifo può essere aperto in più schede insieme, o nell'app installata e nel browser:
 // quando un'altra salva, qui si aggiornano l'elenco, la nota aperta, le impostazioni e il dizionario.
@@ -409,6 +490,10 @@ if (storageAvailable()) {
     // Senza chiave: un'altra scheda ha svuotato tutto.
     const key = ev.key
     if (key === null || isNotesKey(key)) notesChangedElsewhere(key && noteIdOfKey(key), ev.newValue)
+    if (key === null || isFoldersKey(key)) {
+      folders.reload()
+      notesPanel.refresh(active.id)
+    }
     if (key === null || key === SETTINGS_KEY) {
       Object.assign(settings, sharedSettings(loadSettings()))
       applyTheme()
@@ -471,8 +556,9 @@ async function openFiles(): Promise<void> {
   if (!files.length) return
   flushSave()
   let last: Note | null = null
+  const folderId = currentFolderId()
   for (const f of files) {
-    last = store.create(f.content)
+    last = store.create(f.content, folderId)
     if (f.handle) fileHandles.set(last.id, f.handle)
   }
   if (last) switchTo(last.id)
@@ -500,7 +586,14 @@ function printNote(): void {
 function backup(): void {
   flushSave()
   const data = JSON.stringify(
-    { app: 'glifo', version: 1, exportedAt: new Date().toISOString(), notes: store.exportAll(), dictionary: loadPersonalWords() },
+    {
+      app: 'glifo',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      notes: store.exportAll(),
+      folders: folders.list(),
+      dictionary: loadPersonalWords(),
+    },
     null,
     2,
   )
@@ -514,11 +607,18 @@ async function restore(): Promise<void> {
     const file = input.files?.[0]
     if (!file) return
     try {
-      const data = JSON.parse(await file.text()) as { notes?: { content?: unknown }[]; dictionary?: unknown }
-      const notes = (data.notes ?? []).filter((n): n is { content: string } => typeof n.content === 'string')
+      const data = JSON.parse(await file.text()) as { notes?: { content?: unknown; folderId?: unknown }[]; folders?: unknown; dictionary?: unknown }
+      const notes = (data.notes ?? []).filter((n): n is { content: string; folderId?: unknown } => typeof n.content === 'string')
       if (!notes.length) throw new Error('nessuna nota')
       flushSave()
-      for (const n of notes) store.create(n.content)
+      // Le cartelle del backup: si usano quelle che hanno già lo stesso nome, le altre si creano.
+      const folderIds = new Map<string, string>()
+      for (const f of Array.isArray(data.folders) ? (data.folders as { id?: unknown; name?: unknown }[]) : []) {
+        if (typeof f?.id !== 'string' || typeof f.name !== 'string') continue
+        const folder = folders.byName(f.name) ?? folders.create(f.name)
+        if (folder) folderIds.set(f.id, folder.id)
+      }
+      for (const n of notes) store.create(n.content, (typeof n.folderId === 'string' && folderIds.get(n.folderId)) || null)
       if (Array.isArray(data.dictionary)) {
         setPersonalWords([...loadPersonalWords(), ...data.dictionary.filter((w): w is string => typeof w === 'string')])
       }

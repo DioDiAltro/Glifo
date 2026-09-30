@@ -25,7 +25,7 @@ try {
   await page.waitForSelector('.cm-editor')
 
   // Nuova nota vuota su cui lavorare
-  await page.locator('.notes-head .icon-button').click()
+  await page.locator('.notes-head button[aria-label="Nuova nota"]').click()
   await page.keyboard.type('Prova\n\n')
   // L'ultima riga che contiene una formula
   const line = () => page.locator('.cm-line', { hasText: '$' }).last()
@@ -166,6 +166,58 @@ try {
   await page.waitForTimeout(200)
   check((await page.locator('.note-item').count()) === before - 1, 'la nota viene eliminata dopo la conferma')
 
+  // Cartelle: si crea, ci si sposta una nota, le note nuove ci finiscono dentro, si rinomina, si elimina
+  const newFolder = async (tab, name) => {
+    await tab.locator('.notes-head button[aria-label="Nuova cartella"]').click()
+    await tab.locator('dialog.dialog-prompt input').fill(name)
+    await tab.keyboard.press('Enter')
+  }
+  const folderNamed = (tab, name) => tab.locator('.folder', { has: tab.locator('.folder-name', { hasText: new RegExp(`^${name}$`) }) })
+  const menuItem = (tab, label) => tab.locator('.tool-menu .tool-menu-item', { hasText: label })
+  await newFolder(page, 'Analisi 1')
+  const analisi = folderNamed(page, 'Analisi 1')
+  const loose = page.locator('.notes-list > .note-item').first()
+  const looseTitle = await loose.locator('.note-title').innerText()
+  await loose.hover()
+  await loose.locator('.note-move').click()
+  await menuItem(page, 'Analisi 1').click()
+  check((await analisi.locator('.note-title').allInnerTexts()).join() === looseTitle, `«Sposta in una cartella» mette la nota nella cartella (${looseTitle})`)
+  await analisi.locator('.note-open').first().click()
+  await page.locator('.notes-head button[aria-label="Nuova nota"]').click()
+  await page.keyboard.type('Nella cartella')
+  await page.waitForTimeout(700)
+  check((await analisi.locator('.note-title').allInnerTexts()).includes('Nella cartella'), 'la nota nuova va nella cartella della nota aperta')
+  await newFolder(page, 'analisi 1')
+  check(await page.locator('dialog.dialog-prompt .prompt-error').isVisible(), 'due cartelle non possono avere lo stesso nome')
+  await page.locator('dialog.dialog-prompt button', { hasText: 'Annulla' }).click()
+  await analisi.locator('.folder-head').hover()
+  await analisi.locator('.folder-menu').click()
+  await menuItem(page, 'Rinomina').click()
+  await page.locator('dialog.dialog-prompt input').fill('Analisi matematica 1')
+  await page.keyboard.press('Enter')
+  const renamed = folderNamed(page, 'Analisi matematica 1')
+  check(await renamed.waitFor({ timeout: 5000 }).then(() => true, () => false), 'la cartella si rinomina')
+  await renamed.locator('.folder-toggle').click()
+  check((await renamed.locator('.note-item').count()) === 0, 'la cartella si chiude')
+  await renamed.locator('.folder-toggle').click()
+  check((await renamed.locator('.note-item').count()) === 2, 'e si riapre')
+  const notesBefore = await page.locator('.note-item').count()
+  await renamed.locator('.folder-head').hover()
+  await renamed.locator('.folder-menu').click()
+  await menuItem(page, 'Elimina cartella').click()
+  await page.locator('dialog.dialog-confirm .btn-danger').click()
+  const folderGone = await page.waitForFunction(() => !document.querySelector('.folder'), null, { timeout: 5000 }).then(() => true, () => false)
+  check(folderGone && (await page.locator('.note-item').count()) === notesBefore, 'eliminando la cartella le sue note restano')
+  // Da tastiera: Invio apre il menu con il fuoco sulla prima voce, Esc lo chiude e torna al pulsante
+  await page.locator('.note-item .note-move').first().focus()
+  await page.keyboard.press('Enter')
+  const inMenu = await page.evaluate(() => document.activeElement?.classList.contains('tool-menu-item'))
+  await page.keyboard.press('Escape')
+  const backOnButton = await page.evaluate(
+    () => document.activeElement?.classList.contains('note-move') && !document.querySelector('.tool-menu:not([hidden])'),
+  )
+  check(inMenu && backOnButton, 'il menu «Sposta in una cartella» si usa anche da tastiera')
+
   // Due schede aperte insieme (o l'app installata e il browser): non si cancellano le note a vicenda
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
   const openTab = async () => {
@@ -192,7 +244,7 @@ try {
     ),
     'la nota aperta anche in un\'altra scheda si aggiorna da sola, titolo compreso',
   )
-  await tabB.locator('.notes-head .icon-button').click()
+  await tabB.locator('.notes-head button[aria-label="Nuova nota"]').click()
   await tabB.keyboard.type('Nota della scheda B')
   await tabB.waitForTimeout(800)
   await tabA.keyboard.type(', e ancora A')
@@ -220,6 +272,11 @@ try {
     'se la nota aperta viene eliminata in un\'altra scheda, si passa a un\'altra nota',
   )
   check((await tabB.locator('.note-item').count()) === 1, 'e sparisce anche dall\'elenco')
+  await newFolder(tabA, 'Fisica 1')
+  check(
+    await waitFor(tabB, () => [...document.querySelectorAll('.folder-name')].some((el) => el.textContent === 'Fisica 1')),
+    'la cartella creata in una scheda compare nell\'altra',
+  )
   await context.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)

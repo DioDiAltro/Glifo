@@ -276,6 +276,61 @@ export function confirmDialog(opts: { title: string; message: string; confirmLab
   })
 }
 
+/**
+ * Chiede un testo, per esempio il nome di una cartella. `check` restituisce il problema da
+ * mostrare (es. «nome già usato») oppure null se va bene. Annullando si ottiene null.
+ */
+export function promptDialog(opts: {
+  title: string
+  label: string
+  confirmLabel: string
+  value?: string
+  maxLength?: number
+  check?: (value: string) => string | null
+}): Promise<string | null> {
+  return new Promise((resolve) => {
+    let result: string | null = null
+    const input = h('input', {
+      class: 'prompt-input',
+      attrs: { type: 'text', value: opts.value ?? '', maxlength: opts.maxLength, autocomplete: 'off', autofocus: true },
+    })
+    const error = h('p', { class: 'prompt-error', attrs: { role: 'alert', hidden: true } })
+    const form = h(
+      'form',
+      {
+        class: 'prompt-form',
+        on: {
+          submit: (ev) => {
+            ev.preventDefault()
+            const problem = opts.check?.(input.value) ?? null
+            if (problem) {
+              error.textContent = problem
+              error.hidden = false
+              input.focus()
+              return
+            }
+            result = input.value
+            dialog.close()
+          },
+        },
+      },
+      h('label', { class: 'prompt-label' }, h('span', {}, opts.label), input),
+      error,
+      h(
+        'div',
+        { class: 'dialog-actions' },
+        h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => dialog.close() } }, 'Annulla'),
+        h('button', { class: 'btn btn-primary', attrs: { type: 'submit' } }, opts.confirmLabel),
+      ),
+    )
+    input.addEventListener('input', () => (error.hidden = true))
+    const dialog = dialogShell(opts.title, [form], 'dialog-prompt')
+    dialog.addEventListener('close', () => resolve(result))
+    dialog.showModal()
+    input.select()
+  })
+}
+
 export function openHelpDialog(): void {
   const row = (keys: string[], text: string) =>
     h(

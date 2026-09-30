@@ -83,6 +83,8 @@ Cose da sapere:
 
 **Appunti**
 - Salvati automaticamente nel browser, con elenco, filtro e più note.
+- **Cartelle** per organizzarli, per esempio una per corso: le note nuove finiscono nella
+  cartella della nota aperta, e il pulsante accanto a ogni nota la sposta.
 - Apri e salva file `.md` dal computer (su Chrome/Edge si risalva sullo stesso file).
 - Anteprima affiancata con scorrimento sincronizzato; doppio clic sull'anteprima porta alla riga.
 - Stampa / PDF dell'anteprima, backup di tutti gli appunti.
