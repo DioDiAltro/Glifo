@@ -14,13 +14,13 @@ li scrivi:
 - non ricordi il comando? Lo **cerchi a parole**: «come faccio il simbolo dell'infinito» → `\infty`;
 - le parole scritte male vengono **sottolineate in rosso** (formule e codice no): un clic e le correggi.
 
-**Usala subito: <https://diodialtro.github.io/glifo/>**
+**Usala subito: <https://diodialtro.github.io/Glifo/>**
 
 ![Suggerimenti mentre si scrive \su](docs/suggerimenti.png)
 
 ## Usarla tutti i giorni
 
-Non serve installare nulla: basta aprire <https://diodialtro.github.io/glifo/> dal
+Non serve installare nulla: basta aprire <https://diodialtro.github.io/Glifo/> dal
 browser. Per averla come un'app vera, con la sua icona e funzionante anche senza internet:
 
 | Dispositivo | Come installarla |
