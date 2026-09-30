@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { migrateKeyPrefix } from '../src/store/storage'
 import { addPersonalWord, loadPersonalWords, savePersonalWords } from '../src/store/dictionary'
+import { loadSettings, saveSettings, sharedSettings } from '../src/store/settings'
 
 beforeEach(() => localStorage.clear())
 
@@ -44,5 +45,25 @@ describe('dizionario personale', () => {
   it('ignora dati salvati male', () => {
     localStorage.setItem('glifo.dictionary.v1', '{"non":"una lista"}')
     expect(loadPersonalWords()).toEqual([])
+  })
+})
+
+describe('impostazioni con Glifo aperto in due schede', () => {
+  it('ogni scheda salva solo quello che ha cambiato', () => {
+    const schedaB = loadSettings()
+    saveSettings({ theme: 'dark', apiKey: 'chiave' }) // cambiate nella scheda A
+    saveSettings({ notesOpen: !schedaB.notesOpen }) // la scheda B chiude l'elenco
+    expect(loadSettings()).toMatchObject({ theme: 'dark', apiKey: 'chiave', notesOpen: false })
+  })
+
+  it('dalle altre schede arrivano tema e correttore, non la vista né i pannelli', () => {
+    const shared = sharedSettings({ ...loadSettings(), theme: 'dark', view: 'preview', notesOpen: false })
+    expect(shared.theme).toBe('dark')
+    expect(Object.keys(shared).filter((k) => ['view', 'notesOpen', 'symbolsOpen'].includes(k))).toEqual([])
+  })
+
+  it('impostazioni salvate male non bloccano l\'avvio', () => {
+    localStorage.setItem('glifo.settings.v1', '"testo"')
+    expect(loadSettings().theme).toBe('auto')
   })
 })

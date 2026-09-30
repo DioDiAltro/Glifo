@@ -3,9 +3,9 @@ import './styles/app.css'
 import { EditorSelection } from '@codemirror/state'
 import welcomeNote from './welcome.md?raw'
 import { MarkdownEditor } from './editor/editor'
-import { deriveTitle, NotesStore, type Note } from './store/notes'
-import { addPersonalWord, loadPersonalWords, savePersonalWords } from './store/dictionary'
-import { loadSettings, saveSettings, type Settings, type ViewMode } from './store/settings'
+import { deriveTitle, isNotesKey, noteIdOfKey, NotesStore, type Note } from './store/notes'
+import { addPersonalWord, DICTIONARY_KEY, loadPersonalWords, savePersonalWords } from './store/dictionary'
+import { loadSettings, saveSettings, SETTINGS_KEY, sharedSettings, type Settings, type ViewMode } from './store/settings'
 import { downloadText, fileNameFor, openMarkdownFiles, saveMarkdownFile } from './store/files'
 import { migrateKeyPrefix, storageAvailable } from './store/storage'
 import { ICONS, h, icon } from './ui/dom'
@@ -221,6 +221,13 @@ document.getElementById('app')!.replaceWith(app)
 
 preview.update(active.content, true)
 notesPanel.refresh(active.id)
+if (store.recovered) {
+  toast(
+    store.recovered === 1
+      ? 'Recuperato un appunto che non compariva nell\'elenco'
+      : `Recuperati ${store.recovered} appunti che non comparivano nell'elenco`,
+  )
+}
 
 // ——— Impostazioni, tema e viste ———
 
@@ -240,7 +247,7 @@ function toggleTheme(): void {
 
 function updateSettings(next: Partial<Settings>): void {
   Object.assign(settings, next)
-  saveSettings(settings)
+  saveSettings(next)
   applyTheme()
   editor.setAutoWrap(settings.autoWrap)
   applySpellcheck()
@@ -389,6 +396,52 @@ async function deleteNote(id: string): Promise<void> {
   if (id === active.id) {
     const next = store.list()[0] ?? store.create('# Nuovi appunti\n\n')
     loadNote(next.id)
+  }
+  notesPanel.refresh(active.id)
+}
+
+// ——— Altre schede ———
+// Glifo può essere aperto in più schede insieme, o nell'app installata e nel browser:
+// quando un'altra salva, qui si aggiornano l'elenco, la nota aperta, le impostazioni e il dizionario.
+
+if (storageAvailable()) {
+  window.addEventListener('storage', (ev) => {
+    // Senza chiave: un'altra scheda ha svuotato tutto.
+    const key = ev.key
+    if (key === null || isNotesKey(key)) notesChangedElsewhere(key && noteIdOfKey(key), ev.newValue)
+    if (key === null || key === SETTINGS_KEY) {
+      Object.assign(settings, sharedSettings(loadSettings()))
+      applyTheme()
+      editor.setAutoWrap(settings.autoWrap)
+      applySpellcheck()
+    }
+    if (key === null || key === DICTIONARY_KEY) spell?.setPersonalWords(loadPersonalWords())
+  })
+}
+
+function notesChangedElsewhere(changedId: string | null, content: string | null): void {
+  store.reload()
+  const unsavedHere = editor.getDoc() !== active.content
+  if (!store.get(active.id)) {
+    // La nota aperta qui è stata eliminata altrove. Se qui ci sono modifiche non salvate
+    // si salvano (la nota torna nell'elenco e il testo non si perde), altrimenti si passa a un'altra.
+    if (unsavedHere) {
+      flushSave()
+    } else {
+      const title = active.title
+      fileHandles.delete(active.id)
+      loadNote((store.list()[0] ?? store.create('# Nuovi appunti\n\n')).id)
+      toast(`«${title}» è stata eliminata in un'altra finestra`)
+    }
+  } else if (changedId === active.id && content !== null && content !== active.content && !unsavedHere) {
+    // Modificata altrove: si mostra il testo nuovo. Se qui ci sono modifiche non ancora salvate
+    // restano queste, che vengono salvate tra un attimo.
+    active.content = content
+    active.title = deriveTitle(content)
+    editor.applyExternalDoc(content)
+    preview.update(content)
+    titleEl.textContent = active.title
+    document.title = `${active.title} · Glifo`
   }
   notesPanel.refresh(active.id)
 }

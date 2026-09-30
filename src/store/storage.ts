@@ -3,6 +3,11 @@
  * (navigazione privata, anteprime…) l'app continua a funzionare in memoria.
  */
 const memory = new Map<string, string>()
+/**
+ * Chiavi il cui ultimo salvataggio è stato rifiutato (es. spazio esaurito): per queste vale
+ * la copia in memoria, così questa scheda continua a vedere quello che ha scritto.
+ */
+const unsaved = new Set<string>()
 let available: boolean | null = null
 
 function hasLocalStorage(): boolean {
@@ -23,7 +28,7 @@ export function storageAvailable(): boolean {
 }
 
 export function readItem(key: string): string | null {
-  if (hasLocalStorage()) {
+  if (hasLocalStorage() && !unsaved.has(key)) {
     try {
       return localStorage.getItem(key)
     } catch {
@@ -39,20 +44,42 @@ export function writeItem(key: string, value: string): boolean {
   if (!hasLocalStorage()) return false
   try {
     localStorage.setItem(key, value)
+    unsaved.delete(key)
     return true
   } catch {
+    unsaved.add(key)
     return false
   }
 }
 
 export function removeItem(key: string): void {
   memory.delete(key)
+  unsaved.delete(key)
   if (!hasLocalStorage()) return
   try {
     localStorage.removeItem(key)
   } catch {
     /* niente da fare */
   }
+}
+
+/** Le chiavi salvate che cominciano con `prefix`, comprese quelle rimaste solo in memoria. */
+export function storageKeys(prefix: string): string[] {
+  const keys = new Set<string>()
+  if (hasLocalStorage()) {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i)
+        if (k?.startsWith(prefix)) keys.add(k)
+      }
+    } catch {
+      /* restano quelle in memoria */
+    }
+    for (const k of unsaved) if (k.startsWith(prefix)) keys.add(k)
+  } else {
+    for (const k of memory.keys()) if (k.startsWith(prefix)) keys.add(k)
+  }
+  return [...keys]
 }
 
 export function readJson<T>(key: string, fallback: T): T {

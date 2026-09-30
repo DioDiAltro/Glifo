@@ -32,6 +32,8 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   `dictionary-it` e `dictionary-en`, glossario tecnico in `glossary.ts`).
 - `src/render/`: KaTeX e anteprima Markdown, con le stesse regole di VS Code per `$…$`.
 - `src/ui/`: interfaccia. `src/store/`: note e impostazioni nel browser (chiavi `glifo.*`).
+  Glifo può essere aperto in più schede: ogni modifica parte da quello salvato, non dalla copia
+  in memoria, e `main.ts` ascolta l'evento `storage` per aggiornare le altre schede.
 - `src/ai/`: assistente AI. `src/host.ts`: funzioni della demo dentro claude.ai.
 
 ## Regole

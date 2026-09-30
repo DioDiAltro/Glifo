@@ -165,6 +165,63 @@ try {
   await page.locator('dialog.dialog-confirm .btn-danger').click()
   await page.waitForTimeout(200)
   check((await page.locator('.note-item').count()) === before - 1, 'la nota viene eliminata dopo la conferma')
+
+  // Due schede aperte insieme (o l'app installata e il browser): non si cancellano le note a vicenda
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+  const openTab = async () => {
+    const tab = await context.newPage()
+    tab.on('pageerror', (e) => errors.push(e.message))
+    await tab.goto(url)
+    await tab.waitForSelector('.cm-editor')
+    return tab
+  }
+  const tabA = await openTab()
+  const tabB = await openTab()
+  const editorText = (tab) => tab.evaluate(() => document.querySelector('.cm-content').textContent)
+  const waitFor = (tab, fn, arg) => tab.waitForFunction(fn, arg, { timeout: 5000 }).then(() => true, () => false)
+  // In cima alla nota, dove la scheda B la sta guardando (l'editor disegna solo le righe visibili)
+  await tabA.locator('.cm-content').click()
+  await tabA.keyboard.press('Control+Home')
+  await tabA.keyboard.type('Scritto nella scheda A\n\n')
+  check(
+    await waitFor(
+      tabB,
+      () =>
+        document.querySelector('.cm-content').textContent.startsWith('Scritto nella scheda A') &&
+        document.querySelector('.doc-title').textContent === 'Scritto nella scheda A',
+    ),
+    'la nota aperta anche in un\'altra scheda si aggiorna da sola, titolo compreso',
+  )
+  await tabB.locator('.notes-head .icon-button').click()
+  await tabB.keyboard.type('Nota della scheda B')
+  await tabB.waitForTimeout(800)
+  await tabA.keyboard.type(', e ancora A')
+  await tabA.waitForTimeout(800)
+  check((await tabA.locator('.note-item', { hasText: 'Nota della scheda B' }).count()) === 1, 'l\'elenco della scheda A mostra la nota creata in B')
+  const tabC = await openTab()
+  const titlesC = await tabC.locator('.note-title').allInnerTexts()
+  check(titlesC.includes('Nota della scheda B') && titlesC.length === 2, `riaprendo Glifo ci sono tutte e due le note (${titlesC})`)
+  check((await editorText(tabB)).includes('Nota della scheda B'), 'la scheda B è rimasta sulla sua nota')
+
+  // Ctrl+Z subito dopo il cambio di nota non riporta il testo della nota di prima
+  await tabC.locator('.note-item:not(.is-active) .note-open').first().click()
+  const opened = await editorText(tabC)
+  await tabC.keyboard.press('Control+z')
+  await tabC.waitForTimeout(700)
+  check((await editorText(tabC)) === opened, 'Ctrl+Z dopo il cambio di nota non riporta la nota di prima')
+
+  // La nota aperta in B viene eliminata in C: B passa a un'altra nota
+  const noteB = tabC.locator('.note-item', { hasText: 'Nota della scheda B' })
+  await noteB.hover()
+  await noteB.locator('.note-delete').click()
+  await tabC.locator('dialog.dialog-confirm .btn-danger').click()
+  check(
+    await waitFor(tabB, () => !document.querySelector('.doc-title').textContent.includes('Nota della scheda B')),
+    'se la nota aperta viene eliminata in un\'altra scheda, si passa a un\'altra nota',
+  )
+  check((await tabB.locator('.note-item').count()) === 1, 'e sparisce anche dall\'elenco')
+  await context.close()
+
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)
 } finally {
   await browser.close()

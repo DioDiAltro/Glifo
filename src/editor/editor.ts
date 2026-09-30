@@ -4,7 +4,7 @@ import { deleteMarkupBackward, insertNewlineContinueMarkup, markdown, markdownLa
 import { languages } from '@codemirror/language-data'
 import { HighlightStyle, bracketMatching, indentOnInput, syntaxHighlighting, syntaxTree } from '@codemirror/language'
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search'
-import { Compartment, EditorSelection, EditorState, Prec, type Extension } from '@codemirror/state'
+import { Compartment, EditorSelection, EditorState, Prec, Transaction, type Extension } from '@codemirror/state'
 import {
   EditorView,
   drawSelection,
@@ -124,6 +124,8 @@ export class MarkdownEditor {
   private suppressDocEvents = false
   private contextFrame = 0
   private readonly spelling = new Compartment()
+  /** La cronologia di Annulla, che ricomincia da capo a ogni cambio di nota. */
+  private readonly undoHistory = new Compartment()
 
   constructor(parent: HTMLElement, doc: string, private readonly cb: EditorCallbacks) {
     this.suggestions = new SuggestionController(
@@ -163,7 +165,7 @@ export class MarkdownEditor {
 
     const extensions: Extension[] = [
       highlightSpecialChars(),
-      history(),
+      this.undoHistory.of(history()),
       drawSelection(),
       dropCursor(),
       EditorState.allowMultipleSelections.of(true),
@@ -244,7 +246,35 @@ export class MarkdownEditor {
     this.view.dispatch({
       changes: { from: 0, to: this.view.state.doc.length, insert: doc },
       selection: EditorSelection.cursor(0),
-      effects: EditorView.scrollIntoView(0),
+      // Senza cronologia: Annulla non deve riportare qui il testo della nota di prima
+      // (che poi verrebbe salvato sopra questa).
+      effects: [EditorView.scrollIntoView(0), this.undoHistory.reconfigure([])],
+    })
+    this.view.dispatch({ effects: this.undoHistory.reconfigure(history()) })
+    this.suppressDocEvents = false
+    this.scheduleContext()
+  }
+
+  /**
+   * Mostra il testo salvato altrove (es. in un'altra scheda) senza generare "modifiche":
+   * cambia solo la parte diversa, così cursore e scorrimento restano dove sono, e resta
+   * fuori dalla cronologia di Annulla, che continua ad annullare solo quello scritto qui.
+   */
+  applyExternalDoc(doc: string): void {
+    const current = this.view.state.doc.toString()
+    if (doc === current) return
+    let from = 0
+    while (from < current.length && from < doc.length && current.charCodeAt(from) === doc.charCodeAt(from)) from++
+    let to = current.length
+    let end = doc.length
+    while (to > from && end > from && current.charCodeAt(to - 1) === doc.charCodeAt(end - 1)) {
+      to--
+      end--
+    }
+    this.suppressDocEvents = true
+    this.view.dispatch({
+      changes: { from, to, insert: doc.slice(from, end) },
+      annotations: [Transaction.addToHistory.of(false), Transaction.remote.of(true)],
     })
     this.suppressDocEvents = false
     this.scheduleContext()

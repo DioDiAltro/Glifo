@@ -35,7 +35,11 @@ export const AI_MODELS = [
   { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5 (il più economico)' },
 ] as const
 
-const KEY = 'glifo.settings.v1'
+/** Chiave in localStorage: serve anche a riconoscere le modifiche fatte in un'altra scheda. */
+export const SETTINGS_KEY = 'glifo.settings.v1'
+
+/** Queste valgono solo per la finestra in cui si cambiano; le altre per tutte le schede. */
+const WINDOW_ONLY: (keyof Settings)[] = ['view', 'notesOpen', 'symbolsOpen']
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'auto',
@@ -51,10 +55,26 @@ export const DEFAULT_SETTINGS: Settings = {
   apiBaseUrl: '',
 }
 
-export function loadSettings(): Settings {
-  return { ...DEFAULT_SETTINGS, ...readJson<Partial<Settings>>(KEY, {}) }
+function stored(): Partial<Settings> {
+  const saved = readJson<unknown>(SETTINGS_KEY, {})
+  return typeof saved === 'object' && saved !== null && !Array.isArray(saved) ? (saved as Partial<Settings>) : {}
 }
 
-export function saveSettings(s: Settings): void {
-  writeJson(KEY, s)
+export function loadSettings(): Settings {
+  return { ...DEFAULT_SETTINGS, ...stored() }
+}
+
+/**
+ * Salva solo i valori cambiati, sopra quelli già salvati: se Glifo è aperto anche in
+ * un'altra scheda, le impostazioni cambiate lì non tornano come prima.
+ */
+export function saveSettings(changes: Partial<Settings>): void {
+  writeJson(SETTINGS_KEY, { ...stored(), ...changes })
+}
+
+/** Le impostazioni da prendere quando cambiano in un'altra scheda (tema, correttore, chiave API…). */
+export function sharedSettings(s: Settings): Partial<Settings> {
+  const shared: Partial<Settings> = { ...s }
+  for (const key of WINDOW_ONLY) delete shared[key]
+  return shared
 }

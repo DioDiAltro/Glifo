@@ -37,6 +37,8 @@ Cose da sapere:
 - Per spostarli o tenerli al sicuro usa **Salva .md** (anche dentro una cartella di OneDrive,
   Google Drive o iCloud) e **Apri .md** sull'altro dispositivo. In *Impostazioni* c'è anche
   **Scarica backup**, con tutti gli appunti in un solo file.
+- Puoi tenere Glifo aperto in più schede, o nell'app installata e nel browser insieme: si
+  aggiornano a vicenda e nessuna cancella gli appunti scritti nelle altre.
 - Quando esce una nuova versione, l'app si aggiorna da sola alla riapertura.
 
 ## Funzionalità

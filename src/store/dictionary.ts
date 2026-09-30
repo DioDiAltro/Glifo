@@ -1,7 +1,7 @@
 import { readJson, writeJson } from './storage'
 
 /** Parole che lo studente ha aggiunto al dizionario del controllo ortografico. */
-const KEY = 'glifo.dictionary.v1'
+export const DICTIONARY_KEY = 'glifo.dictionary.v1'
 
 /** Una parola per voce, senza spazi ai lati, senza doppioni, in ordine alfabetico. */
 function tidy(words: string[]): string[] {
@@ -18,14 +18,14 @@ function tidy(words: string[]): string[] {
 }
 
 export function loadPersonalWords(): string[] {
-  const words = readJson<unknown>(KEY, [])
+  const words = readJson<unknown>(DICTIONARY_KEY, [])
   return Array.isArray(words) ? tidy(words.filter((w): w is string => typeof w === 'string')) : []
 }
 
 /** Salva l'elenco e restituisce la versione ripulita. */
 export function savePersonalWords(words: string[]): string[] {
   const clean = tidy(words)
-  writeJson(KEY, clean)
+  writeJson(DICTIONARY_KEY, clean)
   return clean
 }
 
