@@ -98,8 +98,21 @@ Perché non gli altri:
    - fatto: informativa sulla privacy (`privacy.html`, collegata dalla finestra di accesso,
      dall'account e dalle impostazioni), «Scarica i miei dati» (tutto l'account in un file
      che «Ripristina backup» rilegge) ed «Elimina account» (funzione `delete_account` nel
-     database: con l'utente spariscono note, cartelle, impostazioni e sessioni). Manca
-     l'indirizzo email di contatto nell'informativa, da aggiungere prima di aprire a tutti;
+     database: con l'utente spariscono note, cartelle, impostazioni e sessioni). Come
+     titolare per ora c'è «DioDiAltro». Manca l'indirizzo email di contatto, da aggiungere
+     prima di aprire a tutti;
+   - da decidere: forse Glifo passa sotto **S&Z**, con il dominio `seznet.net` che lo
+     studente ha già con un amico. Cambierebbe tre cose:
+     - titolare nell'informativa: S&Z se è una società, altrimenti le due persone come
+       contitolari, con un accordo scritto su chi risponde alle richieste; come contatto, per
+       esempio, `privacy@seznet.net`;
+     - email di accesso: si possono mandare da `glifo@seznet.net` con un servizio di posta
+       che ha un piano gratuito (Resend o Brevo), dopo aver aggiunto alcuni record DNS al
+       dominio. Arriverebbero a tutti e con il codice di 6 cifre;
+     - indirizzo: `glifo.seznet.net` è gratis con GitHub Pages. Attenzione: le note salvate
+       solo nel browser restano legate al vecchio indirizzo, quindi prima del cambio serve un
+       modo per portarle (l'account o un backup), e vanno aggiornati Site URL e Redirect URLs
+       di Supabase;
    - CAPTCHA contro le iscrizioni automatiche (Cloudflare Turnstile, gratis) e limiti di
      spazio da rivedere (oggi 20 MB di note per account);
    - un servizio di posta nostro (SMTP): serve per scrivere a chi non è nel team e per
