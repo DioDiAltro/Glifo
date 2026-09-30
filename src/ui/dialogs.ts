@@ -1,6 +1,7 @@
 import { inClaudeViewer } from '../host'
 import { AI_MODELS, SPELL_LANGUAGES, type Settings, type SpellLanguages, type Theme } from '../store/settings'
 import { ICONS, h, icon } from './dom'
+import { privacyLink } from './links'
 
 export interface SettingsDialogDeps {
   settings: Settings
@@ -231,7 +232,7 @@ export function openSettingsDialog(deps: SettingsDialogDeps): void {
         'p',
         { class: 'field-help' },
         deps.accountEmail
-          ? `Gli appunti sono salvati nel tuo account (${deps.accountEmail}) e in questo browser. Il backup resta utile per averne una copia tutta tua.`
+          ? `Gli appunti sono salvati nel tuo account (${deps.accountEmail}) e in questo browser. Il backup resta utile per averne una copia tutta tua. Per scaricare tutti i dati dell'account o eliminarlo, apri l'account dal pulsante in alto.`
           : 'Gli appunti sono salvati nel browser. Se cancelli i dati di navigazione li perdi: scarica ogni tanto un backup, o salva le note come file .md. Con l\'account (in alto, «Accedi») li ritrovi su ogni dispositivo.',
       ),
       h(
@@ -240,6 +241,7 @@ export function openSettingsDialog(deps: SettingsDialogDeps): void {
         h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => deps.onBackup() } }, icon(ICONS.download, 15), 'Scarica backup'),
         h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => deps.onRestore() } }, icon(ICONS.upload, 15), 'Ripristina backup'),
       ),
+      h('p', { class: 'field-help' }, 'Come trattiamo i tuoi dati: ', privacyLink(), '.'),
     ),
   ]
   dialogShell('Impostazioni', body, 'dialog-settings').showModal()

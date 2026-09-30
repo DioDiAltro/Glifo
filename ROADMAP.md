@@ -95,8 +95,11 @@ Perché non gli altri:
    - accesso con Google: niente email da mandare, quindi niente servizio di posta né
      dominio. Serve un progetto Google Cloud, gratuito, da creare con il tuo account Google;
      poi l'ID cliente va in Supabase (Authentication → Providers → Google);
-   - informativa sulla privacy (GDPR), «Elimina account» e «Scarica i miei dati», che
-     servono prima di far entrare altre persone;
+   - fatto: informativa sulla privacy (`privacy.html`, collegata dalla finestra di accesso,
+     dall'account e dalle impostazioni), «Scarica i miei dati» (tutto l'account in un file
+     che «Ripristina backup» rilegge) ed «Elimina account» (funzione `delete_account` nel
+     database: con l'utente spariscono note, cartelle, impostazioni e sessioni). Manca
+     l'indirizzo email di contatto nell'informativa, da aggiungere prima di aprire a tutti;
    - CAPTCHA contro le iscrizioni automatiche (Cloudflare Turnstile, gratis) e limiti di
      spazio da rivedere (oggi 20 MB di note per account);
    - un servizio di posta nostro (SMTP): serve per scrivere a chi non è nel team e per

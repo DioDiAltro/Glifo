@@ -63,6 +63,11 @@ Glifo. *Per ora è in prova: l'email arriva solo agli indirizzi di chi sta prova
   tuo. Nell'account restano.
 - **Dove stanno i dati:** su [Supabase](https://supabase.com), in Europa (Francoforte).
   Ognuno può leggere solo i suoi appunti (vedi [supabase/README.md](supabase/README.md)).
+- **I tuoi dati:** nella finestra dell'account, «Scarica i miei dati» scarica tutto l'account
+  in un file (che «Ripristina backup» sa rileggere) ed «Elimina account» lo cancella dal
+  server per sempre. Come vengono trattati i dati lo spiega
+  l'[informativa sulla privacy](https://diodialtro.github.io/Glifo/privacy.html)
+  (`privacy.html`).
 
 ## Funzionalità
 
@@ -232,8 +237,10 @@ src/
     sync.ts               sincronizzazione: manda e scarica le modifiche, nei conflitti tiene tutte e due le versioni
     controller.ts         quando sincronizzare (avvio, ritorno su Glifo, rete, dopo le modifiche)
     space.ts              le note di ogni account in uno spazio a parte del browser
-    supabase.ts           accesso via email (link o codice)
+    supabase.ts           accesso via email (link o codice), eliminazione dell'account
+    export.ts             il file di «Scarica i miei dati»
   host.ts                 integrazione facoltativa con claude.ai (per la demo pubblicata lì)
+privacy.html              l'informativa sulla privacy (una seconda pagina, fuori dall'app)
 tests/                    test automatici (Vitest), anche del database con le vere migrazioni (PGlite)
 scripts/smoke-test.mjs    prova nel browser del flusso principale
 scripts/account-test.mjs  prova nel browser dell'account, con un Supabase finto (fake-supabase.mjs)

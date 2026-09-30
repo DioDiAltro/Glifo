@@ -1211,6 +1211,16 @@ kbd {
   filter: brightness(1.08);
 }
 
+/* Un'azione pericolosa che apre una conferma: rossa, ma senza gridare. */
+.btn-danger-quiet {
+  color: var(--danger);
+}
+
+.btn-danger-quiet:hover {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+
 .btn-ai {
   width: 100%;
   justify-content: flex-start;

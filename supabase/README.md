@@ -42,6 +42,18 @@ Le tabelle sono in `migrations/`:
 - Gli id sono UUID. Le note create prima delle cartelle hanno id più corti: al primo
   caricamento ne ricevono uno nuovo.
 
+## Eliminare l'account
+
+`delete_account()`, da chiamare dopo l'accesso con `supabase.rpc('delete_account')`, elimina
+l'utente del token e, a cascata, le sue cartelle, note, impostazioni e sessioni (anche quelle
+degli altri dispositivi, che al prossimo rinnovo dell'accesso restano fuori). Chi non ha fatto
+l'accesso non la può chiamare.
+
+Il browser non può toccare `auth.users`: la cancellazione la fa
+`private.delete_own_account()`, che gira con i permessi di chi l'ha creata (`security
+definer`) ma cancella solo l'utente del token. Sta nello schema `private`, che l'API non
+espone; `delete_account()` in `public` la chiama con i permessi di chi chiama.
+
 ## Sincronizzazione
 
 Due funzioni, da chiamare dopo l'accesso con `supabase.rpc(...)`.

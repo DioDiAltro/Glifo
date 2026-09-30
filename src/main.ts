@@ -35,9 +35,10 @@ import {
   knowsAccount,
   setCurrentAccount,
 } from './account/space'
-import { currentSession, sendCode, signOut, verifyCode } from './account/supabase'
-import type { LocalChange } from './account/sync'
-import { AccountButton, openAccountDialog, openLoginDialog, type SignedIn } from './ui/account'
+import { accountDataFile } from './account/export'
+import { currentSession, deleteAccount as deleteAccountOnServer, sendCode, signOut, supabaseBackend, verifyCode } from './account/supabase'
+import { SyncError, type LocalChange } from './account/sync'
+import { AccountButton, confirmAccountDeletion, openAccountDialog, openLoginDialog, type SignedIn } from './ui/account'
 import { NotesPanel } from './ui/notesPanel'
 import { Preview } from './ui/preview'
 import { SidePanel } from './ui/sidePanel'
@@ -811,7 +812,50 @@ function openAccount(): void {
     onRelogin: () =>
       openLoginDialog({ email: account.email, lockEmail: true, sendCode, verifyCode, onSignedIn: (user) => completeSignIn(user) }),
     onSignOut: () => void signOutAccount(),
+    onDownload: () => downloadAccountData(),
+    onDelete: () => void deleteAccount(),
   })
+}
+
+/** Cosa dire se un'operazione sull'account non riesce (`action`: «scaricare i dati»…). */
+function accountProblem(err: unknown, action: string): string {
+  const kind = err instanceof SyncError ? err.kind : 'server'
+  if (kind === 'offline') return `Per ${action} serve la connessione.`
+  if (kind === 'auth') return `L'accesso è scaduto: accedi di nuovo, poi riprova a ${action}.`
+  return `Non è stato possibile ${action}: riprova tra poco.`
+}
+
+/** «Scarica i miei dati»: prima si manda quello che manca, poi si scarica dal server tutto l'account. */
+async function downloadAccountData(): Promise<void> {
+  if (!account || !sync) return
+  flushSave()
+  await sync.syncNow()
+  try {
+    const data = await supabaseBackend.pull(null)
+    const date = new Date().toISOString().slice(0, 10)
+    await downloadText(`glifo-dati-account-${date}.json`, accountDataFile(data, account), 'application/json')
+  } catch (err) {
+    toast(accountProblem(err, 'scaricare i dati'), 'error')
+  }
+}
+
+/** Elimina l'account sul server e poi, come uscendo, lo toglie da questo browser. */
+async function deleteAccount(): Promise<void> {
+  if (!account || !sync) return
+  if (!(await confirmAccountDeletion({ email: account.email, onDownload: () => downloadAccountData() }))) return
+  try {
+    await deleteAccountOnServer()
+  } catch (err) {
+    toast(accountProblem(err, 'eliminare l\'account'), 'error')
+    return
+  }
+  unloading = true
+  sync.stop()
+  await signOut()
+  setCurrentAccount(null)
+  forgetAccount(account.userId)
+  leaveNotice('Account eliminato: sul server non resta niente. Qui ci sono gli appunti fuori dall\'account.')
+  reloadPage()
 }
 
 /** Accesso fatto: la prima volta in questo browser si chiede se portare nell'account gli appunti che ci sono. */
@@ -874,6 +918,27 @@ async function signOutAccount(): Promise<void> {
   reloadPage()
 }
 
+const NOTICE_KEY = 'glifo.notice'
+
+/** Un avviso da mostrare dopo aver ricaricato la pagina (resta solo in questa scheda). */
+function leaveNotice(message: string): void {
+  try {
+    sessionStorage.setItem(NOTICE_KEY, message)
+  } catch {
+    /* sessionStorage non disponibile: niente avviso */
+  }
+}
+
+function takeNotice(): string | null {
+  try {
+    const message = sessionStorage.getItem(NOTICE_KEY)
+    sessionStorage.removeItem(NOTICE_KEY)
+    return message
+  } catch {
+    return null
+  }
+}
+
 /** Ricarica la pagina senza salvare più niente: le note giuste si caricano all'avvio. */
 function reloadPage(): void {
   unloading = true
@@ -886,6 +951,10 @@ if (sync && account) {
   accountButton.show({ email: account.email, status: sync.status })
   sync.start()
 }
+
+// Un avviso lasciato prima di ricaricare la pagina (per esempio «account eliminato»).
+const notice = takeNotice()
+if (notice) toast(notice)
 
 // Ritorno dal link nell'email.
 if (/[?&#](code|access_token|error_description)=/.test(location.search + location.hash)) {

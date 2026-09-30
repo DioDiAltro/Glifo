@@ -14,6 +14,10 @@ export default defineConfig({
   build: {
     target: 'es2022',
     chunkSizeWarningLimit: 1500,
+    rollupOptions: {
+      // Due pagine: l'app e l'informativa sulla privacy (che si legge anche senza aprire l'app).
+      input: { main: 'index.html', privacy: 'privacy.html' },
+    },
   },
   plugins: withPwa
     ? [

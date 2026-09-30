@@ -42,6 +42,8 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   `space.ts` tiene le note di ogni account in uno spazio a parte del browser (`glifo.u.<id>.…`),
   `supabase.ts` fa l'accesso via email (il link aperto qui o incollato, o il codice). Il
   client di Supabase si carica solo se si accede.
+- `privacy.html`: l'informativa sulla privacy, una seconda pagina della build (vedi
+  `vite.config.ts`), collegata da `src/ui/links.ts`.
 - `supabase/`: il database degli account (progetto Supabase `glifo`, Francoforte, piano
   gratuito): tabelle e regole di accesso in `migrations/`, test in `tests/`. Il README spiega
   indirizzo, chiave pubblica, sincronizzazione (`sync_pull`/`sync_push`) e come si cambia.
@@ -59,3 +61,5 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   di `supabase/tests/` e dagli Advisors. Nel codice va solo la chiave pubblica di Supabase;
   quella segreta mai, nemmeno nei messaggi.
 - Solo servizi gratuiti, finché lo studente non decide diversamente.
+- Se cambia quali dati Glifo tiene o a quali servizi li manda (per esempio l'accesso con
+  Google), aggiorna `privacy.html` e la sua data.

@@ -1,9 +1,11 @@
 /**
  * Prova l'account in un browser vero: accesso con il codice, appunti portati nell'account,
- * due dispositivi che si sincronizzano, un conflitto senza rete, le impostazioni, l'uscita.
+ * due dispositivi che si sincronizzano, un conflitto senza rete, le impostazioni, l'uscita,
+ * i dati scaricati e l'account eliminato.
  *   npm run build && npm run test:e2e
  * Supabase è finto (scripts/fake-supabase.mjs), ma la sincronizzazione usa le vere migrazioni.
  */
+import { readFile } from 'node:fs/promises'
 import { chromium } from 'playwright-core'
 import { preview } from 'vite'
 import { CODE, createFakeSupabase } from './fake-supabase.mjs'
@@ -92,6 +94,7 @@ try {
   // Codice sbagliato: si resta nella finestra, con un messaggio.
   await pc.page.locator('.account-button').click()
   const dialog = pc.page.locator('dialog.dialog-login')
+  check((await dialog.locator('a[href="privacy.html"]').count()) === 1, 'la finestra di accesso porta all\'informativa sulla privacy')
   await dialog.locator('input[type=email]').fill(EMAIL)
   await dialog.locator('button[type=submit]').click()
   await dialog.locator('.login-code').fill('000000')
@@ -247,7 +250,48 @@ try {
   await portatile.page.waitForSelector('.cm-editor')
   check(!(await accountState(portatile.page)).includes('is-guest'), 'incollando il link dell\'email nella finestra si entra')
   check(await waitFor(portatile.page, () => document.querySelectorAll('.note-item').length === 2), 'e arrivano le note')
+
+  // ——— I tuoi dati: scaricarli, poi eliminare l'account ———
+  await portatile.page.locator('.account-button').click()
+  const accountDialog = portatile.page.locator('dialog.dialog-account')
+  const downloading = portatile.page.waitForEvent('download')
+  await accountDialog.locator('button', { hasText: 'Scarica i miei dati' }).click()
+  const file = await downloading
+  const exported = JSON.parse(await readFile(await file.path(), 'utf8'))
+  check(file.suggestedFilename().startsWith('glifo-dati-account-'), `i dati si scaricano in un file (${file.suggestedFilename()})`)
+  check(
+    exported.account?.email === EMAIL && exported.notes.length === 2 && exported.notes.some((n) => n.content.includes('scritti prima di accedere')),
+    'nel file ci sono l\'account e tutte le sue note',
+  )
+  check(exported.settings?.theme === theme, `e le impostazioni dell'account (${exported.settings?.theme})`)
+
+  await accountDialog.locator('button', { hasText: 'Elimina account' }).click()
+  const confirmDelete = portatile.page.locator('dialog.dialog-delete-account')
+  await confirmDelete.waitFor()
+  check(await confirmDelete.locator('button[type=submit]').isDisabled(), 'per eliminare l\'account bisogna prima scrivere «elimina»')
+  await confirmDelete.locator('input').fill('Elimina')
+  const deleted = portatile.page.waitForEvent('load')
+  await confirmDelete.locator('button[type=submit]').click()
+  await deleted
+  await portatile.page.waitForSelector('.cm-editor')
+  check((await accountState(portatile.page)).includes('is-guest'), 'eliminato l\'account, si torna senza account')
+  check(
+    await waitFor(portatile.page, () => [...document.querySelectorAll('.toast')].some((t) => t.textContent.includes('Account eliminato'))),
+    'un avviso dice che l\'account è stato eliminato',
+  )
+  const leftAfterDelete = await portatile.page.evaluate(() =>
+    Object.keys(localStorage).filter((k) => k.startsWith('glifo.u.') || k.startsWith('glifo.auth')),
+  )
+  check(leftAfterDelete.length === 0, `nel browser non resta niente dell'account (${leftAfterDelete})`)
+  const counts = await fake.counts()
+  check(counts.users === 0 && counts.notes === 0, `sul server non resta niente (${JSON.stringify(counts)})`)
   pc.errors.push(...portatile.errors)
+
+  // ——— L'informativa sulla privacy ———
+  const privacy = await altro.context.newPage()
+  await privacy.goto(`${url}privacy.html`)
+  check((await privacy.locator('h1').innerText()) === 'Informativa sulla privacy', 'l\'informativa sulla privacy si apre')
+  await privacy.close()
 
   const errors = [...pc.errors, ...tel.errors]
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)

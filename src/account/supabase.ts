@@ -179,7 +179,7 @@ export function syncError(error: PostgrestError, status: number): SyncError {
   return new SyncError('server', error.message)
 }
 
-async function call<T>(name: 'sync_pull' | 'sync_push', args: Record<string, unknown>): Promise<T> {
+async function call<T>(name: 'sync_pull' | 'sync_push' | 'delete_account', args: Record<string, unknown>): Promise<T> {
   let sb: SupabaseClient
   try {
     sb = await supabase()
@@ -197,4 +197,12 @@ async function call<T>(name: 'sync_pull' | 'sync_push', args: Record<string, unk
 export const supabaseBackend: SyncBackend = {
   pull: (since: string | null) => call<PullResult>('sync_pull', { since }),
   push: (changes: PushChanges) => call<PushResult>('sync_push', { changes }),
+}
+
+/**
+ * Elimina l'account sul server: con l'utente spariscono note, cartelle e impostazioni (vedi
+ * supabase/migrations). Serve la connessione; gli errori sono quelli della sincronizzazione.
+ */
+export async function deleteAccount(): Promise<void> {
+  await call<null>('delete_account', {})
 }

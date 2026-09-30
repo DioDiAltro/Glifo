@@ -1,6 +1,7 @@
 import type { SyncStatus } from '../account/controller'
 import { dialogShell } from './dialogs'
 import { ICONS, h, icon } from './dom'
+import { privacyLink } from './links'
 
 /** Chi è entrato, come lo restituisce il controllo del link o del codice. */
 export interface SignedIn {
@@ -125,6 +126,13 @@ export function openLoginDialog(opts: {
       ),
       h('label', { class: 'prompt-label' }, h('span', {}, 'Email'), input),
       error,
+      h(
+        'p',
+        { class: 'field-help' },
+        'Con l\'account gli appunti vengono salvati anche sui server di Supabase, in Europa. Come li trattiamo: ',
+        privacyLink(),
+        '.',
+      ),
       h('div', { class: 'dialog-actions' }, cancel(), submit),
     )
     input.addEventListener('input', () => (error.hidden = true))
@@ -236,6 +244,9 @@ export function openAccountDialog(opts: {
   onAdoptGuest(): number
   onRelogin(): void
   onSignOut(): void
+  /** «Scarica i miei dati»: prepara il file e lo scarica (gli errori li mostra lei). */
+  onDownload(): Promise<void>
+  onDelete(): void
 }): void {
   const statusEl = h('p', { class: 'account-status', attrs: { 'aria-live': 'polite' } })
   const syncButton = h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => opts.syncNow() } }, icon(ICONS.refresh, 15), 'Sincronizza ora')
@@ -293,6 +304,11 @@ export function openAccountDialog(opts: {
           ),
         )
       : null
+  const download = h('button', { class: 'btn', attrs: { type: 'button' } }, icon(ICONS.download, 15), 'Scarica i miei dati')
+  download.addEventListener('click', () => {
+    download.disabled = true
+    void opts.onDownload().finally(() => (download.disabled = false))
+  })
   const dialog = dialogShell(
     'Account',
     [
@@ -332,6 +348,36 @@ export function openAccountDialog(opts: {
           ),
         ),
       ),
+      h(
+        'fieldset',
+        {},
+        h('legend', {}, 'I tuoi dati'),
+        h(
+          'p',
+          { class: 'field-help' },
+          'Puoi scaricare in un file tutto quello che c\'è nell\'account (note, cartelle, impostazioni e dizionario), oppure eliminarlo: dal server si cancella tutto, per sempre.',
+        ),
+        h(
+          'div',
+          { class: 'button-row' },
+          download,
+          h(
+            'button',
+            {
+              class: 'btn btn-danger-quiet',
+              attrs: { type: 'button' },
+              on: {
+                click: () => {
+                  dialog.close()
+                  opts.onDelete()
+                },
+              },
+            },
+            'Elimina account…',
+          ),
+        ),
+        h('p', { class: 'field-help' }, 'Come trattiamo i tuoi dati: ', privacyLink(), '.'),
+      ),
     ],
     'dialog-account',
   )
@@ -339,4 +385,63 @@ export function openAccountDialog(opts: {
   const unsubscribe = opts.onStatus(render)
   dialog.addEventListener('close', unsubscribe)
   dialog.showModal()
+}
+
+/**
+ * Conferma prima di eliminare l'account. Non si torna indietro, quindi bisogna scrivere
+ * «elimina»; intanto si possono ancora scaricare i dati.
+ */
+export function confirmAccountDeletion(opts: { email: string; onDownload(): Promise<void> }): Promise<boolean> {
+  return new Promise((resolve) => {
+    let confirmed = false
+    const input = h('input', {
+      class: 'prompt-input',
+      attrs: { type: 'text', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' },
+    })
+    const submit = h('button', { class: 'btn btn-danger', attrs: { type: 'submit', disabled: true } }, 'Elimina l\'account')
+    input.addEventListener('input', () => (submit.disabled = input.value.trim().toLowerCase() !== 'elimina'))
+    const download = h('button', { class: 'link-button', attrs: { type: 'button' } }, 'scarica i tuoi dati')
+    download.addEventListener('click', () => {
+      download.disabled = true
+      void opts.onDownload().finally(() => (download.disabled = false))
+    })
+    const form = h(
+      'form',
+      {
+        class: 'prompt-form',
+        on: {
+          submit: (ev) => {
+            ev.preventDefault()
+            if (submit.disabled) return
+            confirmed = true
+            dialog.close()
+          },
+        },
+      },
+      h(
+        'p',
+        { class: 'confirm-message' },
+        'Dal server si cancellano per sempre l\'account ',
+        h('strong', {}, opts.email),
+        ' e tutto quello che contiene: note, cartelle, impostazioni e dizionario. Non si può annullare.',
+      ),
+      h('p', { class: 'field-help' }, 'Se vuoi tenerne una copia, prima ', download, '. Gli appunti fuori dall\'account restano in questo browser.'),
+      h(
+        'p',
+        { class: 'field-help' },
+        'Sugli altri dispositivi dove sei entrato, l\'accesso scade entro un\'ora: lì premi «Esci dall\'account» per togliere le note anche da quel browser.',
+      ),
+      h('label', { class: 'prompt-label' }, h('span', {}, 'Per confermare scrivi «elimina»'), input),
+      h(
+        'div',
+        { class: 'dialog-actions' },
+        h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => dialog.close() } }, 'Annulla'),
+        submit,
+      ),
+    )
+    const dialog = dialogShell('Eliminare l\'account?', [form], 'dialog-delete-account')
+    dialog.addEventListener('close', () => resolve(confirmed))
+    dialog.showModal()
+    input.focus()
+  })
 }

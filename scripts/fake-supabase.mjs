@@ -83,6 +83,10 @@ export async function createFakeSupabase() {
       await tx.query(`select set_config('role', 'authenticated', true), set_config('request.jwt.claims', $1, true)`, [
         JSON.stringify({ sub: userId, role: 'authenticated' }),
       ])
+      if (name === 'delete_account') {
+        await tx.query('select public.delete_account()')
+        return null
+      }
       const { rows } =
         name === 'sync_pull'
           ? await tx.query('select public.sync_pull($1) as r', [body.since ?? null])
@@ -145,12 +149,15 @@ export async function createFakeSupabase() {
       const id = userIdFrom(request.headers().authorization ?? '')
       return id ? reply(200, userJson({ id, email: emailOf(id) })) : reply(401, { code: 'no_authorization', message: 'No authorization' })
     }
-    const fn = /^\/rest\/v1\/rpc\/(sync_pull|sync_push)$/.exec(path)?.[1]
+    const fn = /^\/rest\/v1\/rpc\/(sync_pull|sync_push|delete_account)$/.exec(path)?.[1]
     if (fn) {
       const userId = userIdFrom(request.headers().authorization ?? '')
       if (!userId) return reply(401, { code: '42501', message: `permission denied for function ${fn}`, details: null, hint: null })
       try {
-        return reply(200, await rpc(fn, userId, body))
+        const result = await rpc(fn, userId, body)
+        // Con l'account eliminato, la stessa email rientrando ne crea uno nuovo.
+        if (fn === 'delete_account') users.delete(emailOf(userId))
+        return reply(200, result)
       } catch (err) {
         return reply(400, { code: err.code ?? 'P0001', message: err.message, details: err.detail ?? null, hint: err.hint ?? null })
       }
@@ -174,6 +181,11 @@ export async function createFakeSupabase() {
       const target = new URL(lastLogin.redirectTo)
       target.searchParams.set('code', LINK_CODE)
       return target.href
+    },
+    /** Quanti account e quante note (di tutti) ci sono nel database. */
+    async counts() {
+      const { rows } = await db.query('select (select count(*) from auth.users)::int as users, (select count(*) from public.notes)::int as notes')
+      return rows[0]
     },
     /** Le note dell'account salvate nel database. */
     async notes(email) {

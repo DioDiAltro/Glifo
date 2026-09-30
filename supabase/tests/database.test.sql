@@ -325,15 +325,43 @@ begin
   end;
 
   -- Eliminare l'account cancella tutto ----------------------------------------------------
+  assert not has_function_privilege('anon', 'public.delete_account()', 'execute')
+    and not has_function_privilege('anon', 'private.delete_own_account()', 'execute'),
+    'chi non ha fatto l''accesso non può chiamare «elimina account»';
+  checks := checks + 1;
+  perform set_config('role', 'anon', true);
+  begin
+    perform public.delete_account();
+    raise exception 'FALLITO: senza accesso si può chiamare «elimina account»';
+  exception when insufficient_privilege then checks := checks + 1;
+  end;
+  perform set_config('role', 'authenticated', true);
+  perform set_config('request.jwt.claims', '', true);
+  begin
+    perform public.delete_account();
+    raise exception 'FALLITO: si elimina un account senza dire quale';
+  exception when insufficient_privilege then checks := checks + 1;
+  end;
+  begin
+    perform private.clear_deleted_note();
+    raise exception 'FALLITO: dal browser si chiamano le altre funzioni di private';
+  exception when insufficient_privilege then checks := checks + 1;
+  end;
+
+  perform set_config('request.jwt.claims', jsonb_build_object('sub', anna, 'role', 'authenticated')::text, true);
+  perform public.delete_account();
   perform set_config('role', 'postgres', true);
-  delete from auth.users where id = anna;
-  select (select count(*) from public.notes where owner_id = anna)
+  select (select count(*) from auth.users where id = anna)
+    + (select count(*) from public.notes where owner_id = anna)
     + (select count(*) from public.folders where owner_id = anna)
     + (select count(*) from public.user_settings where user_id = anna) into cnt;
-  assert cnt = 0, 'eliminando l''account spariscono note, cartelle e impostazioni';
+  assert cnt = 0, 'eliminando l''account spariscono l''utente, le note, le cartelle e le impostazioni';
   checks := checks + 1;
   select count(*) into cnt from public.notes where owner_id = bruno;
   assert cnt = 2, 'le note degli altri account restano';
+  checks := checks + 1;
+  select count(*) into cnt from auth.users where id = bruno;
+  assert cnt = 1, 'e anche gli altri account';
   checks := checks + 1;
 
   raise exception 'TEST OK: % controlli', checks;
