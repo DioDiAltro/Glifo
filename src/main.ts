@@ -19,6 +19,8 @@ import {
   type ViewMode,
 } from './store/settings'
 import { downloadText, fileNameFor, openMarkdownFiles, saveMarkdownFile } from './store/files'
+import { findSchemaBlock, schemaBlockAtLine, schemaBlockText } from './schema/blocks'
+import { parseSchema, SchemaError, serializeSchema, type Schema } from './schema/model'
 import { loadPaneSizes, savePaneSizes } from './store/layout'
 import { migrateKeyPrefix, storageAvailable } from './store/storage'
 import { ICONS, h, icon } from './ui/dom'
@@ -214,6 +216,7 @@ const editorHost = h('div', { class: 'editor-host' })
 const preview = new Preview({
   onToggleTask: (line) => toggleTask(line),
   onJumpToLine: (line) => jumpToLine(line),
+  onEditSchema: (line, source) => void openSchema(line, source),
 })
 
 const editor = new MarkdownEditor(editorHost, active.content, {
@@ -227,6 +230,7 @@ const editor = new MarkdownEditor(editorHost, active.content, {
   },
   onSave: () => void saveToFile(),
   onFocusSearch: () => focusSymbolSearch(),
+  onEditSchema: (line, source) => void openSchema(line, source),
 })
 editor.setAutoWrap(settings.autoWrap)
 
@@ -297,7 +301,12 @@ const notesPanel = new NotesPanel({
   onSaveFile: () => void saveToFile(),
 })
 
-const editorPane = h('section', { class: 'editor-pane', attrs: { id: 'editor-pane' } }, createToolbar(editor), editorHost)
+const editorPane = h(
+  'section',
+  { class: 'editor-pane', attrs: { id: 'editor-pane' } },
+  createToolbar(editor, { onSchema: () => void openSchema(null) }),
+  editorHost,
+)
 const backdrop = h('div', { class: 'backdrop', on: { click: () => setPanels({ notesOpen: false, symbolsOpen: false }) } })
 // I bordi tra le sezioni: trascinandoli se ne cambiano le misure, ricordate su questo dispositivo.
 const resizer = new PaneResizer(
@@ -332,18 +341,22 @@ if (store.recovered) {
 
 // ——— Impostazioni, tema e viste ———
 
+function isDark(): boolean {
+  return settings.theme === 'dark' || (settings.theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+}
+
 function applyTheme(): void {
   const root = document.documentElement
   if (settings.theme === 'auto') delete root.dataset.theme
   else root.dataset.theme = settings.theme
-  const dark = settings.theme === 'dark' || (settings.theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-  themeButton.replaceChildren(icon(dark ? ICONS.sun : ICONS.moon))
+  themeButton.replaceChildren(icon(isDark() ? ICONS.sun : ICONS.moon))
   root.style.setProperty('--editor-font-size', `${settings.fontSize}px`)
+  // Gli schemi hanno i colori del tema: si ridisegnano.
+  preview.setTheme(isDark() ? 'dark' : 'light')
 }
 
 function toggleTheme(): void {
-  const dark = settings.theme === 'dark' || (settings.theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-  updateSettings({ theme: dark ? 'light' : 'dark' })
+  updateSettings({ theme: isDark() ? 'light' : 'dark' })
 }
 
 /** `fromAccount`: arrivate dall'account, quindi non vanno rimandate. */
@@ -675,6 +688,88 @@ function jumpToLine(line: number): void {
   const l = doc.line(Math.min(doc.lines, Math.max(1, line + 1)))
   editor.view.dispatch({ selection: EditorSelection.cursor(l.from), scrollIntoView: true })
   editor.focus()
+}
+
+// ——— Schemi (stile draw.io) ———
+
+let schemaOpen = false
+
+/**
+ * Apre l'editor degli schemi: per uno nuovo (dal pulsante della barra) o per quello del blocco
+ * alla riga `line` (con quel testo: se intanto il testo prima è cambiato, lo si cerca vicino).
+ * L'editor si carica solo adesso, con maxGraph.
+ */
+async function openSchema(line: number | null, source?: string): Promise<void> {
+  if (schemaOpen) return
+  let schema: Schema = { nodes: [], edges: [] }
+  /** Il blocco nella nota: si ritrova dal suo testo, vicino a dove era. */
+  let block: { source: string; from: number } | null = null
+  let near = editor.view.state.selection.main.head
+  if (line !== null) {
+    const doc = editor.getDoc()
+    let found = schemaBlockAtLine(doc, line)
+    if (source !== undefined && found?.source !== source) {
+      const lineStart = editor.view.state.doc.line(Math.min(editor.view.state.doc.lines, line + 1)).from
+      found = findSchemaBlock(doc, source, lineStart)
+    }
+    if (!found) return
+    try {
+      schema = parseSchema(found.source)
+    } catch (err) {
+      toast(err instanceof SchemaError ? err.message : 'Questo schema non si può aprire.', 'error')
+      return
+    }
+    block = { source: found.source, from: found.from }
+    near = found.from
+  }
+  schemaOpen = true
+  try {
+    const { openSchemaEditor } = await import('./schema/editor')
+    await openSchemaEditor({
+      schema,
+      theme: isDark() ? 'dark' : 'light',
+      onSave: (next) => {
+        block = saveSchemaBlock(block, near, next)
+        if (block) near = block.from
+      },
+    })
+  } catch {
+    toast('L\'editor degli schemi non si è aperto: riprova.', 'error')
+  } finally {
+    schemaOpen = false
+  }
+  editor.focus()
+}
+
+/**
+ * Mette lo schema nella nota: al posto del suo blocco o, se è nuovo, su righe sue dopo quella
+ * del cursore. Uno schema senza forme toglie il blocco. È una modifica come le altre: Ctrl+Z
+ * nel testo la annulla.
+ */
+function saveSchemaBlock(block: { source: string; from: number } | null, near: number, schema: Schema): { source: string; from: number } | null {
+  const view = editor.view
+  const doc = view.state.doc.toString()
+  const json = serializeSchema(schema)
+  const empty = schema.nodes.length === 0
+  const current = block ? findSchemaBlock(doc, block.source, block.from) : null
+  if (current) {
+    if (empty) {
+      const to = doc[current.to] === '\n' ? current.to + 1 : current.to
+      view.dispatch({ changes: { from: current.from, to }, userEvent: 'delete' })
+      return null
+    }
+    if (current.source !== json) view.dispatch({ changes: { from: current.contentFrom, to: current.contentTo, insert: json }, userEvent: 'input' })
+    return { source: json, from: current.from }
+  }
+  if (empty) return null
+  const line = view.state.doc.lineAt(Math.min(near, view.state.doc.length))
+  const atEmptyLine = !line.text.trim()
+  const from = atEmptyLine ? line.from : line.to
+  const prefix = atEmptyLine ? '' : '\n\n'
+  const insert = `${prefix}${schemaBlockText(json)}\n`
+  view.dispatch({ changes: { from, insert }, selection: EditorSelection.cursor(from + insert.length), userEvent: 'input' })
+  if (block) toast('Lo schema non era più al suo posto nella nota: l\'ho rimesso qui.')
+  return { source: json, from: from + prefix.length }
 }
 
 // ——— File ———

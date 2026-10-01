@@ -39,6 +39,11 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   dispositivo) nel browser (chiavi `glifo.*`).
   Glifo può essere aperto in più schede: ogni modifica parte da quello salvato, non dalla copia
   in memoria, e `main.ts` ascolta l'evento `storage` per aggiornare le altre schede.
+- `src/schema/`: schemi stile draw.io con maxGraph (caricato solo quando serve). Nella nota sono
+  blocchi ```schema con un JSON (`model.ts`: formato, controlli, colori dei due temi);
+  `editor.ts` è l'editor a tutto schermo, `preview.ts` li disegna nell'anteprima,
+  `src/editor/schemaBlocks.ts` li mostra nel testo come una riga con «Modifica». Il testo delle
+  forme passa sempre da `label.ts` (escape + KaTeX): maxGraph lo inserisce come HTML.
 - `src/ai/`: assistente AI. `src/host.ts`: funzioni della demo dentro claude.ai.
 - `src/account/`: account e sincronizzazione. `sync.ts` è il motore (manda, scarica, nei
   conflitti tiene tutte e due le versioni), `controller.ts` decide quando sincronizzare,

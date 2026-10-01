@@ -23,6 +23,7 @@ function setup(doc: string) {
     onScroll: () => {},
     onSave: () => {},
     onFocusSearch: () => {},
+    onEditSchema: () => {},
   })
   const type = (text: string, at = editor!.view.state.doc.length) =>
     editor!.view.dispatch({ changes: { from: at, insert: text }, selection: { anchor: at + text.length }, userEvent: 'input.type' })

@@ -118,8 +118,13 @@ function insertCode(editor: MarkdownEditor): void {
   }
 }
 
+export interface ToolbarActions {
+  /** Apre l'editor per uno schema nuovo. */
+  onSchema(): void
+}
+
 /** Barra dei pulsanti di formattazione sopra l'editor. */
-export function createToolbar(editor: MarkdownEditor): HTMLElement {
+export function createToolbar(editor: MarkdownEditor, more: ToolbarActions): HTMLElement {
   const v = () => editor.view
   const actions: Action[] = [
     { icon: 'heading', title: 'Titolo (## )', run: () => toggleLinePrefix(v(), '## ', /^#{1,6}\s+/) },
@@ -140,6 +145,7 @@ export function createToolbar(editor: MarkdownEditor): HTMLElement {
       title: 'Tabella',
       run: () => insertBlock(v(), '| Colonna 1 | Colonna 2 |\n| --- | --- |\n|  |  |', '| Colonna 1 | Colonna 2 |\n| --- | --- |\n| '.length),
     },
+    { icon: 'schema', title: 'Schema: forme e frecce, come in draw.io', run: () => more.onSchema() },
     'sep',
     { text: '$x$', title: 'Formula in linea (Ctrl+M)', run: () => editor.insertInlineMath() },
     { text: '$$', title: 'Formula a blocco (Ctrl+Maiusc+M)', run: () => editor.insertBlockMath() },

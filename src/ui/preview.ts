@@ -1,4 +1,6 @@
 import { renderMarkdown } from '../render/markdown'
+import type { Theme } from '../schema/model'
+import { hydrateSchemas } from '../schema/preview'
 import { h } from './dom'
 
 export interface PreviewCallbacks {
@@ -6,6 +8,8 @@ export interface PreviewCallbacks {
   onToggleTask(line: number): void
   /** Doppio clic su un blocco: porta l'editor a quella riga (0-based). */
   onJumpToLine(line: number): void
+  /** «Modifica» (o doppio clic) su uno schema: la riga (0-based) del suo blocco e il suo testo. */
+  onEditSchema(line: number, source: string): void
 }
 
 /** Riquadro dell'anteprima: ridisegna il Markdown e segue lo scorrimento dell'editor. */
@@ -17,6 +21,7 @@ export class Preview {
   private anchors: { line: number; el: HTMLElement }[] = []
   private totalLines = 1
   private syncTarget: { line: number; fraction: number } | null = null
+  private theme: Theme = 'light'
 
   constructor(private readonly cb: PreviewCallbacks) {
     this.content = h('article', { class: 'markdown-body', attrs: { 'aria-label': 'Anteprima degli appunti' } })
@@ -28,10 +33,25 @@ export class Preview {
         if (line >= 0) this.cb.onToggleTask(line)
       }
     })
+    this.content.addEventListener('click', (ev) => {
+      const block = (ev.target as HTMLElement).closest('.schema-edit')?.closest<HTMLElement>('.schema-block')
+      if (block) this.cb.onEditSchema(Number(block.dataset.line), block.dataset.schema ?? '')
+    })
     this.content.addEventListener('dblclick', (ev) => {
       const target = (ev.target as HTMLElement).closest<HTMLElement>('[data-line]')
-      if (target) this.cb.onJumpToLine(Number(target.dataset.line))
+      if (!target) return
+      if (target.classList.contains('schema-block')) this.cb.onEditSchema(Number(target.dataset.line), target.dataset.schema ?? '')
+      else this.cb.onJumpToLine(Number(target.dataset.line))
     })
+  }
+
+  /** Il tema degli schemi: cambiandolo si ridisegnano. */
+  setTheme(theme: Theme): void {
+    if (theme === this.theme) return
+    this.theme = theme
+    const source = this.lastSource
+    this.lastSource = null
+    if (source !== null) this.update(source, true)
   }
 
   /** Aggiorna l'anteprima (con un piccolo ritardo mentre si scrive). */
@@ -44,6 +64,7 @@ export class Preview {
       this.totalLines = source.split('\n').length
       const scroll = this.el.scrollTop
       this.content.innerHTML = renderMarkdown(source)
+      hydrateSchemas(this.content, { theme: this.theme, surface: getComputedStyle(this.el).backgroundColor })
       this.el.scrollTop = scroll
       this.anchors = [...this.content.querySelectorAll<HTMLElement>('[data-line]')]
         .map((el) => ({ line: Number(el.dataset.line), el }))

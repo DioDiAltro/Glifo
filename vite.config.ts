@@ -17,6 +17,12 @@ export default defineConfig({
     rollupOptions: {
       // Due pagine: l'app e l'informativa sulla privacy (che si legge anche senza aprire l'app).
       input: { main: 'index.html', privacy: 'privacy.html' },
+      // maxGraph (gli schemi) usa eval solo per cose che Glifo tiene spente: stili scritti come
+      // codice (GraphView.allowEval è false), forme e menu letti da XML. Quell'avviso si nasconde.
+      onLog(level, log, handler) {
+        if (log.code === 'EVAL' && log.id?.includes('@maxgraph/core')) return
+        handler(level, log)
+      },
     },
   },
   plugins: withPwa

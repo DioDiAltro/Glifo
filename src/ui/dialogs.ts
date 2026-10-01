@@ -421,6 +421,13 @@ export function openHelpDialog(): void {
     h(
       'p',
       { class: 'field-help' },
+      'Schemi: il pulsante con i due riquadri nella barra apre un editor stile draw.io. Trascina le forme sul foglio, passa sopra una forma e trascina una freccia blu per collegarla, fai doppio clic per scriverci (anche formule tra ',
+      h('code', {}, '$ … $'),
+      '). Con «Fatto» lo schema va nella nota; per cambiarlo, «Modifica» nel testo o nell\'anteprima.',
+    ),
+    h(
+      'p',
+      { class: 'field-help' },
       'Suggerimento: dopo la barra puoi scrivere anche in italiano — ',
       h('code', {}, '\\infinito'),
       ', ',
@@ -436,6 +443,8 @@ export function openHelpDialog(): void {
       h('a', { attrs: { href: 'licenze/dizionario-italiano.txt', target: '_blank', rel: 'noopener' } }, 'licenza GPL 3'),
       ') e quello inglese di SCOWL (',
       h('a', { attrs: { href: 'licenze/dizionario-inglese.txt', target: '_blank', rel: 'noopener' } }, 'licenza'),
+      '). Gli schemi usano maxGraph (',
+      h('a', { attrs: { href: 'licenze/maxgraph.txt', target: '_blank', rel: 'noopener' } }, 'licenza Apache 2.0'),
       ').',
     ),
   ]

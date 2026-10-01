@@ -407,6 +407,171 @@ try {
   )
   await layout.close()
 
+  // Schemi stile draw.io: forme, frecce che le collegano, testo con formule, colori; nella nota
+  // come blocco ```schema, disegnati nell'anteprima, da riaprire e modificare
+  const sp = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+  sp.on('pageerror', (e) => errors.push(e.message))
+  await sp.goto(url)
+  await sp.waitForSelector('.cm-editor')
+  await sp.locator('.notes-head button[aria-label="Nuova nota"]').click()
+  await sp.keyboard.press('Control+a')
+  await sp.keyboard.type('# Schemi\n\nPrima\n')
+  const schemaEditor = sp.locator('dialog.schema-editor[open]')
+  await sp.locator('.editor-toolbar button[aria-label^="Schema"]').click()
+  await schemaEditor.waitFor()
+  check(await sp.locator('.schema-empty').isVisible(), 'il pulsante «Schema» apre l\'editor, con le istruzioni sul foglio vuoto')
+  const labelsOnCanvas = () =>
+    sp.evaluate(() =>
+      [...document.querySelectorAll('.schema-canvas foreignObject > div > div > div')].map((d) => {
+        const r = d.getBoundingClientRect()
+        return { text: d.textContent, x: r.x + r.width / 2, y: r.y + r.height / 2 }
+      }),
+    )
+  // Due forme dal pannello: scrivendo con la forma selezionata si mette il testo
+  await sp.locator('.schema-shape[data-shape="rounded"]').click()
+  await sp.keyboard.type('Ipotesi')
+  await sp.keyboard.press('Escape')
+  await sp.locator('.schema-shape[data-shape="rhombus"]').click()
+  await sp.keyboard.type('Vale $x>0$?')
+  await sp.keyboard.press('Escape')
+  let shapes = await labelsOnCanvas()
+  const ipotesi = shapes.find((l) => l.text === 'Ipotesi')
+  const rombo = shapes.find((l) => l.text.startsWith('Vale'))
+  check(!!ipotesi && !!rombo && Math.abs(rombo.y - ipotesi.y) > 60, `le forme nuove non finiscono una sopra l'altra (${JSON.stringify(shapes)})`)
+  check((await sp.locator('.schema-canvas .katex').count()) > 0, 'la formula nella forma è disegnata con KaTeX')
+  // Collegamento: si passa sopra la prima forma e si trascina la freccia blu sul rombo
+  await sp.mouse.move(ipotesi.x, ipotesi.y)
+  const downArrow = await sp.locator('.schema-arrow-down').boundingBox()
+  await sp.mouse.move(downArrow.x + downArrow.width / 2, downArrow.y + downArrow.height / 2)
+  await sp.mouse.down()
+  await sp.mouse.move(rombo.x, rombo.y, { steps: 8 })
+  await sp.mouse.up()
+  // Clic sulla freccia destra del rombo: una forma collegata, da scrivere e colorare
+  await sp.mouse.move(rombo.x, rombo.y)
+  const rightArrow = await sp.locator('.schema-arrow-right').boundingBox()
+  await sp.mouse.click(rightArrow.x + rightArrow.width / 2, rightArrow.y + rightArrow.height / 2)
+  await sp.keyboard.type('Tesi')
+  await sp.keyboard.press('Escape')
+  await sp.locator('.schema-format button[aria-label="Verde"]').click()
+  // Una forma trascinata dal pannello finisce dove la si lascia
+  const canvasBox = await sp.locator('.schema-canvas').boundingBox()
+  const ellipseItem = await sp.locator('.schema-shape[data-shape="ellipse"]').boundingBox()
+  await sp.mouse.move(ellipseItem.x + 30, ellipseItem.y + 15)
+  await sp.mouse.down()
+  await sp.mouse.move(canvasBox.x + 150, canvasBox.y + 120, { steps: 10 })
+  await sp.mouse.up()
+  await sp.keyboard.type('Quarta')
+  await sp.keyboard.press('Escape')
+  shapes = await labelsOnCanvas()
+  check(shapes.length === 4, `con la freccia blu e trascinando dal pannello le forme diventano 4 (${shapes.length})`)
+  // Annulla e Ripeti
+  await sp.locator('button[aria-label="Annulla (Ctrl+Z)"]').click()
+  const undone = (await labelsOnCanvas()).length
+  await sp.keyboard.press('Control+y')
+  check(undone === 3 && (await labelsOnCanvas()).length === 4, 'Annulla e Ripeti funzionano anche negli schemi')
+  await sp.locator('dialog.schema-editor .btn-primary', { hasText: 'Fatto' }).click()
+  await schemaEditor.waitFor({ state: 'detached' })
+  const savedNote = () =>
+    sp.evaluate(() => {
+      for (let i = 0; i < localStorage.length; i++) {
+        const value = localStorage.getItem(localStorage.key(i))
+        if (value?.startsWith('# Schemi')) return value
+      }
+      return ''
+    })
+  await sp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  const block = /```schema\n([\s\S]*?)\n```/.exec(await savedNote())
+  const savedSchema = block ? JSON.parse(block[1]) : { nodes: [], edges: [] }
+  const tesi = savedSchema.nodes.find((n) => n.text === 'Tesi')
+  check(
+    savedSchema.nodes.length === 4 &&
+      savedSchema.edges.length === 2 &&
+      tesi?.color === 'green' &&
+      savedSchema.nodes.some((n) => n.text === 'Vale $x>0$?'),
+    `«Fatto» mette lo schema nella nota, con forme, frecce, testi e colori (${block?.[1].length ?? 0} caratteri)`,
+  )
+  check(
+    (await sp.locator('.cm-schema').innerText()).includes('4 forme, 2 frecce'),
+    'nel testo il blocco diventa una riga «Schema · 4 forme, 2 frecce» con «Modifica»',
+  )
+  // Nell'anteprima: il disegno, con i testi dentro (anche se lo schema non comincia in alto a sinistra)
+  await sp.waitForSelector('.preview-pane .schema-block svg')
+  const drawing = await sp.evaluate(() => {
+    const block = document.querySelector('.preview-pane .schema-block')
+    const svg = block.querySelector('svg').getBoundingClientRect()
+    const within = (r, box) => r.width > 0 && r.left >= box.left - 1 && r.right <= box.right + 1 && r.top >= box.top - 1 && r.bottom <= box.bottom + 1
+    // Un testo si vede solo dentro il suo foreignObject (che lo taglia) e dentro il disegno.
+    const labels = [...block.querySelectorAll('foreignObject')].map((fo) => [fo.getBoundingClientRect(), fo.querySelector('div > div > div').getBoundingClientRect()])
+    const inside = labels.every(([fo, text]) => within(text, fo) && within(text, svg))
+    return { labels: labels.length, inside, katex: !!block.querySelector('.katex') }
+  })
+  check(drawing.labels === 4 && drawing.inside && drawing.katex, `l'anteprima disegna lo schema con i suoi testi e la formula (${JSON.stringify(drawing)})`)
+  // Si riapre dall'anteprima; Ctrl+S salva senza chiudere
+  await sp.locator('.preview-pane .schema-block').hover()
+  await sp.locator('.preview-pane .schema-edit').click()
+  await schemaEditor.waitFor()
+  check((await labelsOnCanvas()).length === 4, '«Modifica» nell\'anteprima riapre lo schema')
+  const free = await sp.locator('.schema-canvas').boundingBox()
+  await sp.mouse.dblclick(free.x + free.width - 120, free.y + free.height - 100)
+  await sp.keyboard.type('Quinta')
+  await sp.keyboard.press('Escape')
+  await sp.keyboard.press('Control+s')
+  await sp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  check((await savedNote()).includes('"text":"Quinta"') && (await schemaEditor.count()) === 1, 'Ctrl+S mette lo schema nella nota e l\'editor resta aperto')
+  await sp.locator('dialog.schema-editor button', { hasText: 'Chiudi' }).click()
+  await schemaEditor.waitFor({ state: 'detached' })
+  check((await sp.locator('dialog.dialog-confirm').count()) === 0, 'dopo aver salvato si chiude senza domande')
+  check(((await savedNote()).match(/```schema/g) ?? []).length === 1, 'nella nota resta un solo schema, aggiornato')
+  // Ctrl+Z nel testo riporta lo schema di prima
+  await sp.locator('.cm-line').first().click()
+  await sp.keyboard.press('Control+z')
+  await sp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  check(!(await savedNote()).includes('Quinta') && (await savedNote()).includes('"text":"Tesi"'), 'Ctrl+Z nel testo annulla l\'ultima modifica dello schema')
+  // Con il tema scuro lo schema si ridisegna con i suoi colori
+  const lightFill = await sp.locator('.preview-pane .schema-block svg').innerHTML()
+  await sp.locator('button[aria-label="Cambia tema"]').click()
+  await sp.waitForFunction((before) => {
+    const svg = document.querySelector('.preview-pane .schema-block svg')
+    return svg && svg.innerHTML !== before && svg.innerHTML.includes('#1b1f2b')
+  }, lightFill, { timeout: 10000 })
+  check(true, 'cambiando tema lo schema si ridisegna con i colori scuri')
+  // Gli schemi funzionano anche offline: editor e maxGraph sono tra i file dell'app installata
+  const precache = await sp.evaluate(() => fetch('sw.js').then((r) => r.text()))
+  check(/assets\/graph-[\w-]+\.js/.test(precache) && /assets\/editor-[\w-]+\.js/.test(precache), 'l\'editor degli schemi è tra i file salvati per usarlo offline')
+  await sp.close()
+
+  // Su tablet e telefono non si «passa sopra»: le frecce blu stanno attorno alla forma toccata
+  const touch = await browser.newPage({ viewport: { width: 1024, height: 768 }, hasTouch: true, isMobile: true })
+  touch.on('pageerror', (e) => errors.push(e.message))
+  await touch.goto(url)
+  await touch.waitForSelector('.cm-editor')
+  await touch.locator('.editor-toolbar button[aria-label^="Schema"]').tap()
+  await touch.waitForSelector('dialog.schema-editor[open]')
+  await touch.locator('.schema-shape[data-shape="rect"]').tap()
+  await touch.locator('dialog.schema-editor .schema-canvas').tap({ position: { x: 20, y: 20 } })
+  const touchShape = await touch.evaluate(() => {
+    const r = document.querySelector('.schema-canvas svg rect').getBoundingClientRect()
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 }
+  })
+  await touch.touchscreen.tap(touchShape.x, touchShape.y)
+  const arrowsAfterTap = await touch.locator('.schema-arrows').isVisible()
+  const touchArrow = arrowsAfterTap ? await touch.locator('.schema-arrow-right').boundingBox() : null
+  if (touchArrow) await touch.touchscreen.tap(touchArrow.x + touchArrow.width / 2, touchArrow.y + touchArrow.height / 2)
+  await touch.locator('dialog.schema-editor .btn-primary', { hasText: 'Fatto' }).tap()
+  await touch.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  const touchSchema = await touch.evaluate(() => {
+    for (let i = 0; i < localStorage.length; i++) {
+      const m = /```schema\n([\s\S]*?)\n```/.exec(localStorage.getItem(localStorage.key(i)) ?? '')
+      if (m) return JSON.parse(m[1])
+    }
+    return { nodes: [], edges: [] }
+  })
+  check(
+    arrowsAfterTap && touchSchema.nodes.length === 2 && touchSchema.edges.length === 1,
+    `col dito: toccando una forma compaiono le frecce blu, e toccandone una si aggiunge una forma collegata (${touchSchema.nodes.length} forme, ${touchSchema.edges.length} frecce)`,
+  )
+  await touch.close()
+
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)
 } finally {
   await browser.close()

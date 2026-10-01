@@ -110,6 +110,19 @@ chi sta provando Glifo.*
 - **Assistente AI** (facoltativo) per le domande difficili, es. «freccia con scritto sopra
   n → ∞»: risponde con il codice LaTeX pronto da inserire.
 
+**Schemi stile draw.io**
+- Il pulsante con i due riquadri nella barra apre un editor a tutto schermo: forme a sinistra
+  (rettangolo, rettangolo arrotondato, ellisse, rombo, testo), da trascinare sul foglio o da
+  cliccare; passando sopra una forma compaiono le **frecce blu**: trascinandone una la colleghi
+  a un'altra forma (o, nel vuoto, ne nasce una nuova), cliccandola aggiungi una forma collegata.
+- Doppio clic (o scrivere con una forma selezionata) per il testo, anche con **formule**
+  `$ … $`; colori, forma, dimensione del testo, frecce dritte o ad angolo, con o senza punte,
+  tratteggiate. Annulla/Ripeti, copia e incolla, zoom, griglia, selezione a rettangolo.
+- Lo schema va nella nota come blocco ` ```schema ` (un JSON corto, una forma per riga):
+  nell'anteprima si vede il disegno, nel testo una riga con «Modifica». I colori seguono il
+  tema chiaro o scuro. Funziona anche offline: è fatto con [maxGraph](https://github.com/maxGraph/maxGraph),
+  il motore di draw.io, che si carica solo quando serve.
+
 **Appunti**
 - Salvati automaticamente nel browser, con elenco, filtro e più note; con l'account, anche su
   tutti i tuoi dispositivi.
@@ -203,6 +216,7 @@ Web app in **TypeScript** con [Vite](https://vite.dev), senza framework e senza 
 | Controllo ortografico | [Hunspell](https://hunspell.github.io) in WebAssembly ([@farscrl/hunspell-wasm](https://github.com/farscrl/hunspell-wasm)) in un worker, dizionari [dictionary-it e dictionary-en](https://github.com/wooorm/dictionaries) |
 | Assistente AI | SDK ufficiale di Anthropic (caricato solo quando serve) |
 | Account e sincronizzazione | [Supabase](https://supabase.com): database Postgres e accesso via email, senza password (il client si carica solo se si accede) |
+| Schemi | [maxGraph](https://github.com/maxGraph/maxGraph), il motore di draw.io (caricato solo quando serve) |
 | App installabile | vite-plugin-pwa |
 
 ```
@@ -245,6 +259,12 @@ src/
     space.ts              le note di ogni account in uno spazio a parte del browser
     supabase.ts           accesso con Google o via email (link o codice), eliminazione dell'account
     export.ts             il file di «Scarica i miei dati»
+  schema/
+    model.ts              il formato degli schemi (blocchi ```schema), i controlli e i colori dei due temi
+    blocks.ts             trova i blocchi ```schema nella nota
+    graph.ts              il collegamento con maxGraph: forme, frecce, disegno per l'anteprima
+    editor.ts             l'editor a tutto schermo (forme, frecce blu, testo, colori, zoom)
+    preview.ts, label.ts  il disegno nell'anteprima; il testo delle forme con le formule
   host.ts                 integrazione facoltativa con claude.ai (per la demo pubblicata lì)
 privacy.html              l'informativa sulla privacy (una seconda pagina, fuori dall'app)
 tests/                    test automatici (Vitest), anche del database con le vere migrazioni (PGlite)
@@ -275,7 +295,9 @@ Il controllo ortografico usa [Hunspell](https://github.com/hunspell/hunspell) (M
 LGPL 2.1), il dizionario italiano di Andrea Pescetti e altri
 ([GPL 3](public/licenze/dizionario-italiano.txt), dal pacchetto `dictionary-it`) e quello
 inglese di SCOWL ([MIT e BSD](public/licenze/dizionario-inglese.txt), dal pacchetto
-`dictionary-en`). I testi delle licenze sono pubblicati anche insieme all'app, in `licenze/`.
+`dictionary-en`). Gli schemi usano [maxGraph](https://github.com/maxGraph/maxGraph)
+([Apache 2.0](public/licenze/maxgraph.txt)). I testi delle licenze sono pubblicati anche insieme
+all'app, in `licenze/`.
 
 ## Idee per il futuro
 

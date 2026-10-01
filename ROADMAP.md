@@ -8,6 +8,21 @@ il lavoro si parte da qui, e quando una voce è fatta si toglie.
 
 ## In programma
 
+### Schemi stile draw.io
+
+Scelto con lo studente: un editor dentro Glifo fatto con maxGraph (il motore di draw.io),
+invece del vero draw.io incorporato, perché funziona offline e non manda niente a nessuno.
+
+- fatto, passo 1: editor a tutto schermo con rettangolo, rettangolo arrotondato, ellisse, rombo e
+  testo; frecce blu per collegare (trascinate) o aggiungere una forma collegata (cliccate);
+  testo con formule; colori dei due temi, forma, dimensione del testo, frecce dritte o ad angolo,
+  punte, tratteggio; annulla, copia e incolla, zoom, griglia. Nella nota è un blocco ```schema
+  (`src/schema/`), disegnato nell'anteprima e mostrato nel testo come una riga con «Modifica»;
+- il prossimo, passo 2: più forme (cilindro, nuvola, documento, parallelogramma, frecce
+  grandi…), modelli pronti (mappa concettuale, diagramma di flusso), allineare e distribuire,
+  scaricare lo schema come immagine (PNG o SVG) per usarlo fuori da Glifo;
+- più avanti: stampare con i colori del tema chiaro anche se si usa quello scuro.
+
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
 **Cosa:** ognuno ha il suo account e ritrova gli stessi appunti su PC, tablet e telefono.

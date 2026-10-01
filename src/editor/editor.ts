@@ -22,6 +22,7 @@ import { mathContextAt, mathRegionAt, type EditorMathContext } from './mathConte
 import { mathHighlighter } from './mathHighlight'
 import { mathDelimTag, mathMarkdown, mathTag } from './mathSyntax'
 import { clearAllPlaceholders, jumpPlaceholder, placeholderField } from './placeholders'
+import { schemaBlocks } from './schemaBlocks'
 import { spellcheck, type SpellcheckOptions } from './spellcheck'
 import { SuggestionController } from './suggestions'
 
@@ -30,6 +31,8 @@ export interface EditorCallbacks {
   onScroll(line: number, fraction: number): void
   onSave(): void
   onFocusSearch(): void
+  /** «Modifica» su uno schema nel testo: la riga (0-based) del suo blocco e il suo testo. */
+  onEditSchema(line: number, source: string): void
 }
 
 const highlight = HighlightStyle.define([
@@ -184,6 +187,7 @@ export class MarkdownEditor {
       markdownLanguage.data.of({ closeBrackets: { brackets: ['(', '[', '{', '$'], before: ')]}:;>$' } }),
       syntaxHighlighting(highlight),
       mathHighlighter,
+      schemaBlocks((line, source) => this.cb.onEditSchema(line, source)),
       placeholderField,
       suggestionKeys,
       editingKeys,

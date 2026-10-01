@@ -12,6 +12,7 @@
   --frame-active: #ffffff;
   --pane-editor: #ffffff;
   --pane-preview: #f7f8fb;
+  --schema-grid: #c9cddb;
   --border: #e1e3ec;
   --border-strong: #cfd3e0;
   --text: #1c2030;
@@ -65,6 +66,7 @@
     --frame-active: rgba(139, 140, 248, 0.15);
     --pane-editor: #181b24;
     --pane-preview: #12151c;
+    --schema-grid: #2f3445;
     --border: #282d3c;
     --border-strong: #363c4f;
     --text: #e4e6ee;
@@ -108,6 +110,7 @@
   --frame-active: rgba(139, 140, 248, 0.15);
   --pane-editor: #181b24;
   --pane-preview: #12151c;
+  --schema-grid: #2f3445;
   --border: #282d3c;
   --border-strong: #363c4f;
   --text: #e4e6ee;
@@ -2172,6 +2175,477 @@ kbd {
   color: var(--danger);
   font-size: 11px;
   font-weight: 600;
+}
+
+/* ——— Schemi (stile draw.io): nell'anteprima, nell'editor del testo e l'editor a tutto schermo ——— */
+
+/* Nell'anteprima: lo schema disegnato (src/schema/preview.ts), con il pulsante per modificarlo. */
+.schema-block {
+  position: relative;
+  margin: 0 0 16px;
+  min-height: 48px;
+  overflow-x: auto;
+}
+
+.schema-block svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+.schema-block.is-loading::before,
+.schema-block.is-empty::before {
+  content: 'Schema…';
+  display: block;
+  padding: 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.schema-block.is-empty::before {
+  content: 'Schema vuoto';
+}
+
+.schema-edit {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.schema-block:hover .schema-edit,
+.schema-edit:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .schema-edit {
+    opacity: 1;
+  }
+}
+
+.schema-error {
+  padding: 10px 14px;
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* Nell'editor del testo il blocco ```schema diventa una riga con il pulsante «Modifica». */
+.cm-schema {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--frame);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--text);
+}
+
+.cm-schema svg {
+  flex: none;
+  color: var(--accent-text);
+}
+
+.cm-schema-info {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted);
+}
+
+.cm-schema-info strong {
+  color: var(--text);
+}
+
+/* L'editor a tutto schermo (src/schema/editor.ts). */
+.schema-editor {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.schema-editor[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.schema-editor::backdrop {
+  background: transparent;
+}
+
+.schema-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--topbar-h);
+  flex: none;
+  padding: 0 12px;
+  background: var(--frame);
+  border-bottom: 1px solid var(--border);
+}
+
+.schema-title {
+  margin: 0 8px 0 4px;
+  font-size: 15px;
+}
+
+.schema-tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.schema-tools .icon-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.schema-zoom {
+  min-width: 52px;
+  height: 30px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.schema-zoom:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.schema-toggle[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.schema-spacer {
+  flex: 1;
+}
+
+.schema-status {
+  color: var(--ok);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.schema-main {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) 264px;
+}
+
+.schema-shapes,
+.schema-format {
+  min-height: 0;
+  overflow: auto;
+  background: var(--frame);
+}
+
+.schema-shapes {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 8px;
+  border-right: 1px solid var(--border);
+}
+
+.schema-shapes h3,
+.schema-format h3 {
+  margin: 4px 6px 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.schema-shape {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: grab;
+  touch-action: none;
+}
+
+.schema-shape:hover {
+  background: var(--frame-hover);
+}
+
+.schema-shape svg {
+  flex: none;
+  color: var(--accent-text);
+}
+
+.schema-canvas-wrap {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.schema-canvas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background-color: var(--surface);
+  outline: none;
+  touch-action: none;
+}
+
+.schema-canvas.has-grid {
+  background-image: radial-gradient(circle, var(--schema-grid) 1px, transparent 1.3px);
+}
+
+.schema-canvas.is-panning,
+.schema-canvas.is-panning * {
+  cursor: grab !important;
+}
+
+/* La selezione a rettangolo di maxGraph. */
+.schema-canvas .mxRubberband {
+  position: absolute;
+  overflow: hidden;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+}
+
+.schema-drag-preview {
+  border: 2px dashed var(--accent);
+  border-radius: 6px;
+  background: var(--accent-soft);
+}
+
+.schema-drag-ellipse {
+  border-radius: 50%;
+}
+
+/* Le frecce blu attorno alla forma sotto il puntatore. */
+.schema-arrows {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.schema-arrow {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--accent);
+  opacity: 0.7;
+  pointer-events: auto;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.schema-arrow:hover {
+  opacity: 1;
+  background: var(--accent-soft);
+}
+
+@media (pointer: coarse) {
+  .schema-arrow {
+    width: 40px;
+    height: 40px;
+    margin: -20px 0 0 -20px;
+  }
+}
+
+.schema-arrow-right svg {
+  transform: rotate(90deg);
+}
+
+.schema-arrow-down svg {
+  transform: rotate(180deg);
+}
+
+.schema-arrow-left svg {
+  transform: rotate(-90deg);
+}
+
+.schema-text {
+  position: absolute;
+  z-index: 3;
+  margin: 0;
+  padding: 4px 6px;
+  border: 2px solid var(--accent);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-ui);
+  line-height: 1.3;
+  text-align: center;
+  resize: none;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.schema-text:focus {
+  outline: none;
+}
+
+.schema-empty {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  width: min(380px, 80%);
+  margin: 0;
+  transform: translate(-50%, -50%);
+  color: var(--muted);
+  text-align: center;
+  pointer-events: none;
+}
+
+.schema-format {
+  padding: 10px 12px;
+  border-left: 1px solid var(--border);
+}
+
+.schema-format-hint {
+  margin: 4px 2px 10px;
+  color: var(--muted);
+}
+
+.schema-help {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.schema-help li + li {
+  margin-top: 6px;
+}
+
+.schema-format-section {
+  margin-bottom: 12px;
+}
+
+.schema-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.schema-choice {
+  display: grid;
+  place-items: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.schema-choice:hover {
+  border-color: var(--accent);
+}
+
+.schema-choice[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.schema-swatch {
+  width: 18px;
+  height: 18px;
+  border: 2px solid;
+  border-radius: 5px;
+}
+
+.schema-size {
+  font-weight: 600;
+  line-height: 1;
+}
+
+.schema-size-s {
+  font-size: 11px;
+}
+
+.schema-size-m {
+  font-size: 14px;
+}
+
+.schema-size-l {
+  font-size: 18px;
+}
+
+.schema-format-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* Sul telefono: le forme in una riga sopra il foglio, l'aspetto sotto. */
+@media (max-width: 760px) {
+  .schema-main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .schema-shapes {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 6px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .schema-shapes h3,
+  .schema-shape span,
+  .schema-title,
+  .schema-status {
+    display: none;
+  }
+
+  .schema-format {
+    max-height: 36vh;
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .schema-help {
+    display: none;
+  }
 }
 
 /* ——— Bordi da trascinare tra le sezioni ——— */

@@ -167,14 +167,19 @@ function createMarkdownIt(): MarkdownIt {
     const attr = line === undefined ? '' : ` data-line="${line}"`
     return `<div class="math-block"${attr}>${renderTexOrError(tokens[idx].content, true)}</div>\n`
   }
-  // I blocchi ```math si comportano come $$ … $$ (come su GitHub).
+  // I blocchi ```math si comportano come $$ … $$ (come su GitHub); quelli ```schema lasciano
+  // il posto allo schema, che l'anteprima disegna dopo (src/schema/preview.ts).
   const fence = md.renderer.rules.fence!
   md.renderer.rules.fence = (tokens, idx, options, env, self) => {
     const token = tokens[idx]
-    if (token.info.trim().toLowerCase() === 'math') {
-      const line = token.map?.[0]
-      const attr = line === undefined ? '' : ` data-line="${line}"`
+    const info = token.info.trim().split(/\s+/)[0].toLowerCase()
+    const line = token.map?.[0]
+    const attr = line === undefined ? '' : ` data-line="${line}"`
+    if (info === 'math') {
       return `<div class="math-block"${attr}>${renderTexOrError(token.content, true)}</div>\n`
+    }
+    if (info === 'schema') {
+      return `<div class="schema-block"${attr} data-schema="${escapeHtml(token.content)}"></div>\n`
     }
     return fence(tokens, idx, options, env, self)
   }
@@ -202,7 +207,7 @@ export function renderMarkdown(src: string): string {
   const html = md.render(src)
   configurePurify()
   return DOMPurify.sanitize(html, {
-    ADD_ATTR: ['target', 'data-line', 'data-task-line', 'aria-hidden', 'encoding'],
+    ADD_ATTR: ['target', 'data-line', 'data-task-line', 'data-schema', 'aria-hidden', 'encoding'],
     ADD_TAGS: ['semantics', 'annotation'],
   })
 }
