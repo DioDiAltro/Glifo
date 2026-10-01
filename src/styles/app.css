@@ -47,6 +47,8 @@
   --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace;
   --editor-font-size: 16px;
+  /* Le larghezze di partenza dei pannelli (src/store/layout.ts); trascinandone il bordo
+     valgono --notes-size e --symbols-size, scritte da src/ui/resize.ts. */
   --notes-w: 250px;
   --symbols-w: 348px;
   --topbar-h: 52px;
@@ -343,8 +345,16 @@ kbd {
 .editor-pane,
 .preview-pane {
   flex: 1 1 0;
-  min-width: 0;
+  /* Come PANE_MIN in src/ui/resize.ts: se la finestra è stretta si restringono i pannelli. */
+  min-width: 220px;
   min-height: 0;
+}
+
+/* Nella vista divisa testo e anteprima si dividono il posto come si è scelto trascinando il
+   bordo tra i due (--split-grow, in millesimi). */
+.app[data-view='split'] .editor-pane,
+.app[data-view='split'] .preview-pane {
+  flex-grow: var(--split-grow, 1);
 }
 
 .editor-pane {
@@ -961,8 +971,9 @@ kbd {
 .notes-panel {
   display: none;
   flex-direction: column;
-  width: var(--notes-w);
-  flex: none;
+  width: var(--notes-size, var(--notes-w));
+  min-width: 200px;
+  flex: 0 1 auto;
   min-height: 0;
   background: var(--frame);
   border-right: 1px solid var(--border);
@@ -1172,6 +1183,7 @@ kbd {
 
 .notes-foot {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   padding: 10px 12px;
   border-top: 1px solid var(--border);
@@ -1261,8 +1273,9 @@ kbd {
 .symbols-panel {
   display: none;
   flex-direction: column;
-  width: var(--symbols-w);
-  flex: none;
+  width: var(--symbols-size, var(--symbols-w));
+  min-width: 280px;
+  flex: 0 1 auto;
   min-height: 0;
   background: var(--frame);
   border-left: 1px solid var(--border);
@@ -2162,6 +2175,59 @@ kbd {
   font-weight: 600;
 }
 
+/* ——— Bordi da trascinare tra le sezioni ——— */
+
+/* Una striscia sopra il bordo, che non occupa posto: 3 pixel a sinistra (dove la sezione
+   accanto ha la barra di scorrimento) e 5 a destra. Passandoci sopra si vede la linea. */
+.resize-handle {
+  display: none;
+  position: relative;
+  z-index: 5;
+  flex: none;
+  width: 8px;
+  margin: 0 -5px 0 -3px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2px;
+  width: 2px;
+  transition: background-color 0.1s;
+}
+
+.resize-handle:hover::after {
+  background: var(--accent);
+  transition-delay: 0.15s;
+}
+
+.resize-handle:focus-visible {
+  outline: none;
+}
+
+.resize-handle.is-dragging::after,
+.resize-handle:focus-visible::after {
+  background: var(--accent);
+  transition-delay: 0s;
+}
+
+.app.notes-open .resize-notes,
+.app[data-view='split'] .resize-split,
+.app.symbols-open .resize-symbols {
+  display: block;
+}
+
+/* Mentre si trascina: la freccia resta quella giusta e non si seleziona il testo. */
+:root.is-resizing,
+:root.is-resizing * {
+  cursor: col-resize !important;
+  user-select: none;
+}
+
 /* ——— Notifiche ——— */
 
 .toasts {
@@ -2212,7 +2278,13 @@ kbd {
     bottom: 0;
     left: 0;
     z-index: 30;
+    width: var(--notes-w);
     box-shadow: var(--shadow);
+  }
+
+  /* Sopra il testo il pannello ha la sua misura: il bordo non serve. */
+  .app.notes-open .resize-notes {
+    display: none;
   }
 
   .app.notes-open .backdrop {
@@ -2241,7 +2313,14 @@ kbd {
     bottom: 0;
     right: 0;
     z-index: 30;
+    width: var(--symbols-w);
+    min-width: 0;
     box-shadow: var(--shadow);
+  }
+
+  .app[data-view='split'] .resize-split,
+  .app.symbols-open .resize-symbols {
+    display: none;
   }
 
   .app.symbols-open .backdrop {
@@ -2299,6 +2378,7 @@ kbd {
   .notes-panel,
   .symbols-panel,
   .editor-pane,
+  .resize-handle,
   .backdrop,
   .toasts {
     display: none !important;

@@ -86,7 +86,7 @@ export class SidePanel {
 
     this.el = h(
       'aside',
-      { class: 'symbols-panel', attrs: { 'aria-label': 'Pannello dei simboli' } },
+      { class: 'symbols-panel', attrs: { id: 'symbols-panel', 'aria-label': 'Pannello dei simboli' } },
       h(
         'div',
         { class: 'panel-search' },

@@ -416,6 +416,11 @@ export function openHelpDialog(): void {
     h(
       'p',
       { class: 'field-help' },
+      'Sezioni: trascina il bordo tra l\'elenco degli appunti, il testo, l\'anteprima e i simboli per allargarli o stringerli; con un doppio clic sul bordo tornano alla misura di partenza. Le misure restano su questo dispositivo.',
+    ),
+    h(
+      'p',
+      { class: 'field-help' },
       'Suggerimento: dopo la barra puoi scrivere anche in italiano — ',
       h('code', {}, '\\infinito'),
       ', ',

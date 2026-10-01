@@ -8,18 +8,6 @@ il lavoro si parte da qui, e quando una voce è fatta si toglie.
 
 ## In programma
 
-### Interfaccia: sezioni più chiare
-
-- fatto: le sezioni hanno tonalità diverse, nel tema chiaro e in quello scuro. La cornice
-  (barra in alto, elenco degli appunti, pannello dei simboli) è più scura, il foglio dove si
-  scrive è il più chiaro e l'anteprima sta in mezzo (variabili `--frame…` e `--pane-…` in
-  `src/styles/app.css`; `tests/theme.test.ts` controlla che i due temi scuri le abbiano tutte);
-- il prossimo, già deciso con lo studente: ridimensionare le sezioni trascinando il bordo:
-  - l'elenco degli appunti, il pannello dei simboli e la divisione tra testo e anteprima;
-  - Glifo ricorda le misure su quel dispositivo (non vanno nell'account);
-  - con un doppio clic sul bordo si torna alla misura di partenza;
-  - sul telefono i pannelli si aprono sopra il testo, quindi lì non serve.
-
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
 **Cosa:** ognuno ha il suo account e ritrova gli stessi appunti su PC, tablet e telefono.

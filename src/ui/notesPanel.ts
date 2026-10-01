@@ -37,7 +37,7 @@ export class NotesPanel {
     this.list = h('ul', { class: 'notes-list', attrs: { role: 'list' } })
     this.el = h(
       'aside',
-      { class: 'notes-panel', attrs: { 'aria-label': 'I tuoi appunti' } },
+      { class: 'notes-panel', attrs: { id: 'notes-panel', 'aria-label': 'I tuoi appunti' } },
       h(
         'div',
         { class: 'notes-head' },

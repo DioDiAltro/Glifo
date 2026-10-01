@@ -118,6 +118,10 @@ chi sta provando Glifo.*
 - Apri e salva file `.md` dal computer (su Chrome/Edge si risalva sullo stesso file).
 - Anteprima affiancata con scorrimento sincronizzato; doppio clic sull'anteprima porta alla riga.
 - Stampa / PDF dell'anteprima, backup di tutti gli appunti.
+- Sezioni in tonalità diverse (la cornice è più scura del foglio su cui si scrive) e **da
+  allargare o stringere**: trascina il bordo dell'elenco degli appunti, del pannello dei
+  simboli o quello tra testo e anteprima (o usa le frecce, quando il bordo ha il fuoco); con un
+  doppio clic tornano alla misura di partenza. Le misure restano su quel dispositivo.
 - Tema chiaro e scuro, funziona su telefono e tablet, **installabile come app** e usabile offline.
 
 ![Ricerca a parole](docs/ricerca.png)
@@ -231,8 +235,9 @@ src/
     markdown.ts           Markdown → HTML sicuro
     lists.ts              elenchi con tutti i marcatori e rientri comodi nell'anteprima
     katex.ts              disegno delle formule, messaggi di errore in italiano
-  ui/                     pannello dei simboli, anteprima, elenco appunti, finestre
-  store/                  salvataggio nel browser, file .md, impostazioni
+  ui/                     pannello dei simboli, anteprima, elenco appunti, finestre,
+                          bordi da trascinare tra le sezioni (resize.ts)
+  store/                  salvataggio nel browser, file .md, impostazioni, misure delle sezioni (layout.ts)
   ai/assistant.ts         assistente AI
   account/
     sync.ts               sincronizzazione: manda e scarica le modifiche, nei conflitti tiene tutte e due le versioni

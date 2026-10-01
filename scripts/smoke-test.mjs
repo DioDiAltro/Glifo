@@ -279,6 +279,87 @@ try {
   )
   await context.close()
 
+  // Sezioni: si allargano e si stringono trascinando il bordo, e le misure restano su questo dispositivo
+  const layout = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+  layout.on('pageerror', (e) => errors.push(e.message))
+  await layout.goto(url)
+  await layout.waitForSelector('.cm-editor')
+  const widths = () =>
+    layout.evaluate(() => {
+      const width = (selector) => Math.round(document.querySelector(selector).getBoundingClientRect().width)
+      return { notes: width('.notes-panel'), editor: width('.editor-pane'), preview: width('.preview-pane'), symbols: width('.symbols-panel') }
+    })
+  const edge = (name) => layout.getByRole('separator', { name })
+  const notesEdge = edge('Larghezza dell\'elenco degli appunti')
+  const splitEdge = edge('Divisione tra testo e anteprima')
+  const symbolsEdge = edge('Larghezza del pannello dei simboli')
+  const dragEdge = async (handle, dx) => {
+    const box = await handle.boundingBox()
+    const x = box.x + box.width / 2
+    const y = box.y + box.height / 2
+    await layout.mouse.move(x, y)
+    await layout.mouse.down()
+    for (let i = 1; i <= 4; i++) await layout.mouse.move(x + (dx * i) / 4, y)
+    await layout.mouse.up()
+  }
+  const start = await widths()
+  check(
+    start.notes === 250 && start.symbols === 348 && Math.abs(start.editor - start.preview) <= 1,
+    `all'inizio le sezioni hanno le misure di partenza (${JSON.stringify(start)})`,
+  )
+  await layout.locator('.cm-content').click()
+  await dragEdge(notesEdge, 80)
+  await dragEdge(splitEdge, -100)
+  await dragEdge(symbolsEdge, -60)
+  const dragged = await widths()
+  check(dragged.notes === 330 && dragged.symbols === 408, `trascinando i bordi si allargano l'elenco e i simboli (${JSON.stringify(dragged)})`)
+  check(dragged.preview - dragged.editor > 150, `e si sposta il bordo tra testo e anteprima (${JSON.stringify(dragged)})`)
+  check(await layout.evaluate(() => !!document.activeElement?.closest('.cm-editor')), 'dopo aver trascinato si continua a scrivere nel testo')
+  const savedSettings = await layout.evaluate(() => localStorage.getItem('glifo.settings.v1') ?? '')
+  check(!savedSettings.includes('Width'), 'le misure non finiscono tra le impostazioni dell\'account')
+  await layout.reload()
+  await layout.waitForSelector('.cm-editor')
+  check(JSON.stringify(await widths()) === JSON.stringify(dragged), 'riaprendo Glifo le misure restano')
+
+  // Dove i pannelli si aprono sopra il testo, i bordi non ci sono e i pannelli hanno la loro misura
+  await layout.setViewportSize({ width: 1100, height: 800 })
+  check(
+    !(await notesEdge.isVisible()) && (await splitEdge.isVisible()) && (await symbolsEdge.isVisible()) && (await widths()).notes === 250,
+    'sotto i 1250 pixel l\'elenco degli appunti si apre sopra il testo, senza bordo',
+  )
+  await layout.setViewportSize({ width: 800, height: 800 })
+  check(!(await splitEdge.isVisible()) && !(await symbolsEdge.isVisible()), 'sul telefono e sui tablet in verticale non ci sono bordi da trascinare')
+  await layout.setViewportSize({ width: 1440, height: 900 })
+  check(JSON.stringify(await widths()) === JSON.stringify(dragged), 'tornando largo le misure sono quelle scelte')
+
+  // Da tastiera, e con i pannelli più larghi possibile testo e anteprima restano leggibili
+  await symbolsEdge.focus()
+  await layout.keyboard.press('ArrowLeft')
+  check((await widths()).symbols === 424, 'con la freccia a sinistra il pannello dei simboli si allarga')
+  await notesEdge.focus()
+  await layout.keyboard.press('End')
+  await symbolsEdge.focus()
+  await layout.keyboard.press('End')
+  const widest = await widths()
+  check(
+    widest.notes === 480 && widest.editor >= 219 && widest.preview >= 219,
+    `allargando tutto, testo e anteprima restano larghi almeno 220 pixel (${JSON.stringify(widest)})`,
+  )
+  await layout.setViewportSize({ width: 1300, height: 900 })
+  const shrunk = await widths()
+  check(
+    shrunk.editor >= 219 && shrunk.preview >= 219 && shrunk.notes + shrunk.editor + shrunk.preview + shrunk.symbols <= 1301,
+    `se la finestra si stringe, si stringono i pannelli e non il testo (${JSON.stringify(shrunk)})`,
+  )
+  await layout.setViewportSize({ width: 1440, height: 900 })
+
+  // Doppio clic: la misura di partenza
+  const notesBox = await notesEdge.boundingBox()
+  await layout.mouse.dblclick(notesBox.x + notesBox.width / 2, notesBox.y + notesBox.height / 2)
+  const saved = await layout.evaluate(() => JSON.parse(localStorage.getItem('glifo.layout.v1')))
+  check((await widths()).notes === 250 && saved.notesWidth === 250, `con un doppio clic sul bordo l'elenco torna largo 250 pixel (${JSON.stringify(saved)})`)
+  await layout.close()
+
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)
 } finally {
   await browser.close()

@@ -19,6 +19,7 @@ import {
   type ViewMode,
 } from './store/settings'
 import { downloadText, fileNameFor, openMarkdownFiles, saveMarkdownFile } from './store/files'
+import { loadPaneSizes, savePaneSizes } from './store/layout'
 import { migrateKeyPrefix, storageAvailable } from './store/storage'
 import { ICONS, h, icon } from './ui/dom'
 import { confirmDialog, openHelpDialog, openSettingsDialog, promptDialog } from './ui/dialogs'
@@ -50,6 +51,7 @@ import { SyncError, type LocalChange } from './account/sync'
 import { AccountButton, confirmAccountDeletion, openAccountDialog, openLoginDialog, type SignedIn } from './ui/account'
 import { NotesPanel } from './ui/notesPanel'
 import { Preview } from './ui/preview'
+import { PaneResizer } from './ui/resize'
 import { SidePanel } from './ui/sidePanel'
 import { toast } from './ui/toast'
 import { createToolbar } from './ui/toolbar'
@@ -294,9 +296,26 @@ const notesPanel = new NotesPanel({
   onSaveFile: () => void saveToFile(),
 })
 
-const editorPane = h('section', { class: 'editor-pane' }, createToolbar(editor), editorHost)
+const editorPane = h('section', { class: 'editor-pane', attrs: { id: 'editor-pane' } }, createToolbar(editor), editorHost)
 const backdrop = h('div', { class: 'backdrop', on: { click: () => setPanels({ notesOpen: false, symbolsOpen: false }) } })
-const workspace = h('main', { class: 'workspace' }, notesPanel.el, editorPane, preview.el, sidePanel.el, backdrop)
+// I bordi tra le sezioni: trascinandoli se ne cambiano le misure, ricordate su questo dispositivo.
+const resizer = new PaneResizer(
+  { notes: notesPanel.el, editor: editorPane, preview: preview.el, symbols: sidePanel.el },
+  loadPaneSizes(),
+  (changes) => savePaneSizes(changes),
+)
+const workspace = h(
+  'main',
+  { class: 'workspace' },
+  notesPanel.el,
+  resizer.notesHandle,
+  editorPane,
+  resizer.splitHandle,
+  preview.el,
+  resizer.symbolsHandle,
+  sidePanel.el,
+  backdrop,
+)
 const app = h('div', { class: 'app' }, topbar, workspace)
 document.getElementById('app')!.replaceWith(app)
 
