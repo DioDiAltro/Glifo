@@ -2186,7 +2186,7 @@ kbd {
   flex: none;
   width: 8px;
   margin: 0 -5px 0 -3px;
-  cursor: col-resize;
+  cursor: ew-resize;
   touch-action: none;
 }
 
@@ -2224,7 +2224,7 @@ kbd {
 /* Mentre si trascina: la freccia resta quella giusta e non si seleziona il testo. */
 :root.is-resizing,
 :root.is-resizing * {
-  cursor: col-resize !important;
+  cursor: ew-resize !important;
   user-select: none;
 }
 

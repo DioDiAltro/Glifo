@@ -307,6 +307,17 @@ try {
     start.notes === 250 && start.symbols === 348 && Math.abs(start.editor - start.preview) <= 1,
     `all'inizio le sezioni hanno le misure di partenza (${JSON.stringify(start)})`,
   )
+  // La freccia è quella a destra e sinistra (↔), anche mentre si trascina sopra il resto della pagina
+  const cursorOf = (selector) => layout.evaluate((s) => getComputedStyle(document.querySelector(s)).cursor, selector)
+  const edgeBox = await notesEdge.boundingBox()
+  await layout.mouse.move(edgeBox.x + edgeBox.width / 2, edgeBox.y + 100)
+  const cursors = [await cursorOf('.resize-notes'), await cursorOf('.resize-split'), await cursorOf('.resize-symbols')]
+  await layout.mouse.down()
+  await layout.mouse.move(edgeBox.x + 40, edgeBox.y + 100)
+  cursors.push(await cursorOf('.cm-content'), await cursorOf('.topbar'))
+  await layout.mouse.move(edgeBox.x + edgeBox.width / 2, edgeBox.y + 100)
+  await layout.mouse.up()
+  check(cursors.every((cursor) => cursor === 'ew-resize'), `sui bordi la freccia è quella a destra e sinistra (${cursors})`)
   await layout.locator('.cm-content').click()
   await dragEdge(notesEdge, 80)
   await dragEdge(splitEdge, -100)
@@ -358,6 +369,7 @@ try {
   await layout.mouse.dblclick(notesBox.x + notesBox.width / 2, notesBox.y + notesBox.height / 2)
   const saved = await layout.evaluate(() => JSON.parse(localStorage.getItem('glifo.layout.v1')))
   check((await widths()).notes === 250 && saved.notesWidth === 250, `con un doppio clic sul bordo l'elenco torna largo 250 pixel (${JSON.stringify(saved)})`)
+
   await layout.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)
