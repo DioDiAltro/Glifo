@@ -145,6 +145,13 @@ chi sta provando Glifo.*
   con la virgola, l'origine O, la legenda con le formule e, per le righe sbagliate, il perché.
 - Nell'anteprima il grafico si **trascina**, si ingrandisce con + e − (o con Ctrl e la rotellina,
   o con due dita) e, passandoci sopra con il mouse, dice le **coordinate** del punto della curva.
+- Ogni numero scritto con le cifre che il grafico usa (`$a = 2$` nella nota o `a = 2` nel blocco,
+  anche attraverso una funzione come `$f(x) = a x^2$`; non `b = 2a`, che segue a) ha uno **slider**
+  sotto il grafico: trascinandolo il grafico cambia subito, ▶ lo muove da solo avanti e indietro, la
+  freccia torna al valore scritto. Va da −10 a 10 (di 1 in 1 se conta i termini di una somma, come
+  `n` in `\sum_{k=0}^{n}`); `a \in [0, 5]` nel blocco dice da dove a dove. La nota non cambia: il
+  file .md e la stampa usano i valori scritti. Se una lettera non è definita (`y = kx + 1` senza
+  `k`), accanto all'errore c'è «Aggiungi lo slider per k», che scrive `k = 1` nel blocco.
 - Con **Salva .md** ogni grafico diventa un'immagine (con il testo del blocco nascosto sotto), come
   gli schemi; riaprendo il file con **Apri .md** torna un blocco da modificare. Funziona offline:
   è tutto scritto per Glifo, senza librerie esterne.
@@ -351,10 +358,10 @@ src/
     sheet.ts              il «foglio» della nota: definizioni dall'alto in basso e risultati dopo «=»
     latex.ts              un'espressione riscritta in LaTeX (le legende dei grafici)
   graph/
-    spec.ts               le righe di un blocco ```grafico: funzioni, curve, punti, la parte da mostrare
+    spec.ts               le righe di un blocco ```grafico: funzioni, curve, punti, la parte da mostrare, gli slider
     plot.ts               dove calcolare le curve (salti, asintoti), la finestra, le tacche
     svg.ts                il disegno in SVG, con i colori dei due temi
-    preview.ts            nell'anteprima: legenda, errori, trascinare, ingrandire, coordinate
+    preview.ts            nell'anteprima: legenda, errori, slider, trascinare, ingrandire, coordinate
     file.ts               i grafici nei file .md: immagine SVG più il testo nascosto, e ritorno
   host.ts                 integrazione facoltativa con claude.ai (per la demo pubblicata lì)
 privacy.html              l'informativa sulla privacy (una seconda pagina, fuori dall'app)

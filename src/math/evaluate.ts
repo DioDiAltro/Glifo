@@ -36,6 +36,13 @@ export interface CompileOptions {
 /** Un'espressione che non si può calcolare: un nome sconosciuto, una funzione usata male… */
 export class MathError extends Error {}
 
+/** Un nome che non è definito da nessuna parte (i grafici propongono uno slider per lui). */
+export class UndefinedName extends MathError {
+  constructor(readonly missing: string) {
+    super(`${nameLabel(missing)} non è definita`)
+  }
+}
+
 export const EMPTY_SCOPE: Scope = { vars: new Set(), consts: new Map(), fns: new Map() }
 
 /**
@@ -283,7 +290,7 @@ export function compile(node: MathNode, scope: Scope, options: CompileOptions = 
       if (name === 'π') return constant(Math.PI)
       if (name === 'e') return constant(Math.E)
       if (scope.fns.has(name)) throw new MathError(`${name} è una funzione: scrivi ${name}(x)`)
-      throw new MathError(`${nameLabel(name)} non è definita`)
+      throw new UndefinedName(name)
     }
     case 'neg': {
       const a = c(node.a)
@@ -498,7 +505,7 @@ function compileApply(node: Extract<MathNode, { k: 'apply' }>, scope: Scope, opt
   if (node.primes) throw new MathError(`${node.name} non è una funzione definita`)
   // a(x + 1): se a è un numero è un prodotto.
   const isNumber = scope.vars.has(node.name) || scope.consts.has(node.name) || node.name === 'π' || node.name === 'e'
-  if (!isNumber) throw new MathError(`${node.name} non è definita`)
+  if (!isNumber) throw new UndefinedName(node.name)
   if (node.args.length !== 1) throw new MathError(`${node.name} è un numero: ${node.name}(…) vuole un solo valore`)
   const a = compile({ k: 'name', name: node.name }, scope, options)
   const b = compile(node.args[0], scope, options)

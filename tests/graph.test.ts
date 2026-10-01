@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { chooseWindow, sampleFunction, sampleImplicit, sampleParametric, tickLabel, ticks, type Viewport } from '../src/graph/plot'
 import { formulaGraph, graphNames, parseGraph, type GraphItem } from '../src/graph/spec'
-import { graphSvg, PALETTES } from '../src/graph/svg'
+import { graphSvg, itemColors, PALETTES } from '../src/graph/svg'
 
 const r = String.raw
 
@@ -103,6 +103,87 @@ describe('il blocco ```grafico: una riga per ogni cosa da disegnare', () => {
     expect(formulaGraph('x = 3')).toBeNull()
     expect(formulaGraph('y = 3')).toBeNull()
     expect(formulaGraph('\\int_0^1 x \\, dx')).toBeNull()
+  })
+})
+
+describe('gli slider: i numeri del grafico', () => {
+  const fn = (spec: ReturnType<typeof parseGraph>, i = 0) => spec.items[i] as Extract<GraphItem, { kind: 'function' }>
+
+  it('ogni numero scritto con le cifre che il grafico usa ha il suo slider, da −10 a 10', () => {
+    const spec = parseGraph('y = a x^2 + b', ['a = 2', 'b = 2a', 'c = 5'])
+    expect(spec.sliders).toEqual([{ name: 'a', value: 2, range: [-10, 10], ends: ['-10', '10'], step: 0.1 }])
+    // Anche attraverso le funzioni, e quelli scritti nel blocco.
+    expect(parseGraph('f(x)\nk = -\\frac{1}{2}', ['a = 3', 'f(x) = a x + k']).sliders.map((s) => [s.name, s.value])).toEqual([
+      ['a', 3],
+      ['k', -0.5],
+    ])
+    // Un numero che il grafico non usa non ha lo slider.
+    expect(parseGraph('y = x\nc = 5').sliders).toEqual([])
+    // Un numero grande ha uno slider più lungo.
+    expect(parseGraph('y = v x', ['v = 50']).sliders[0]).toMatchObject({ range: [-100, 100], step: 1 })
+  })
+
+  it('il blocco dice da dove a dove va: a \\in [0, 5] o 0 \\le a \\le 5', () => {
+    const spec = parseGraph('y = a x\na \\in [0, 2\\pi]', ['a = 2'])
+    expect(spec.errors).toEqual([])
+    expect(spec.sliders[0]).toMatchObject({ name: 'a', range: [0, 2 * Math.PI], ends: ['0', '2\\pi'], step: 0.01 })
+    expect(parseGraph('y = a x\n0 \\le a \\le 5\na = 1').sliders[0]).toMatchObject({ range: [0, 5], value: 1 })
+    expect(parseGraph('y = a x\na \\in [5, 0]\na = 1').errors[0].message).toMatch(/dal più piccolo al più grande: a \\in \[0, 5\]/)
+    // Solo per i numeri scritti con le cifre.
+    expect(parseGraph('y = b x\nb \\in [0, 1]', ['a = 1', 'b = 2a']).errors[0].message).toMatch(/b si calcola da altri numeri/)
+    expect(parseGraph('f(x)\nf \\in [0, 1]', ['f(x) = x']).errors[0].message).toMatch(/f è una funzione/)
+  })
+
+  it('con i valori degli slider il grafico cambia, e quello che li usa segue', () => {
+    const defs = ['a = 2', 'b = 2a', 'f(x) = a x^2']
+    expect(fn(parseGraph('y = b + f(x)', defs, new Map([['a', 3]]))).f(1)).toBe(9)
+    expect(fn(parseGraph('y = b + f(x)', defs)).f(1)).toBe(6)
+    // Anche i numeri scritti nel blocco.
+    expect(fn(parseGraph('k = 1\ny = k x', [], new Map([['k', -2]]))).f(3)).toBe(-6)
+    // Lo slider resta quello scritto: il valore nuovo è solo per questo disegno.
+    expect(parseGraph('y = a x', ['a = 2'], new Map([['a', 7]])).sliders[0]).toMatchObject({ value: 7, range: [-10, 10] })
+  })
+
+  it('i numeri che contano i termini di una somma vanno di 1', () => {
+    const spec = parseGraph('T(x)', ['n = 3', 'T(x) = \\sum_{k=0}^{n} \\frac{x^k}{k!}'])
+    expect(spec.sliders[0]).toMatchObject({ name: 'n', range: [0, 10], step: 1 })
+    expect(fn(parseGraph('T(x)', ['n = 3', 'T(x) = \\sum_{k=0}^{n} \\frac{x^k}{k!}'], new Map([['n', 1]]))).f(2)).toBe(3)
+  })
+
+  it('i colori restano quelli delle righe, anche quando una riga non si può disegnare', () => {
+    const colors = (values?: Map<string, number>) =>
+      parseGraph('y = b x\ny = x', ['a = 1', 'b = \\frac{1}{a}'], values).items.map((i) => [i.line, i.slot])
+    expect(colors()).toEqual([
+      [0, 0],
+      [1, 1],
+    ])
+    // Con a = 0, b = 1/0 non c'è: la retta y = x resta del suo colore, e l'errore lo dice (senza proporre uno slider per b).
+    expect(colors(new Map([['a', 0]]))).toEqual([[1, 1]])
+    const moved = parseGraph('y = b x\ny = x', ['a = 1', 'b = \\frac{1}{a}'], new Map([['a', 0]]))
+    expect(itemColors(moved.items, PALETTES.light)).toEqual([PALETTES.light.series[1]])
+    const error = moved.errors[0]
+    expect(error.message).toBe('b non ha un valore: controlla la sua definizione')
+    expect(error.add).toBeUndefined()
+  })
+
+  it('un nome che manca: la riga da aggiungere al blocco per averlo con uno slider', () => {
+    const add = (src: string, defs: string[] = []) => parseGraph(src, defs).errors.map((e) => e.add?.map((a) => a.line))
+    expect(add('y = kx + 1')).toEqual([['k = 1']])
+    expect(add('y = a x^2 + b x + c')).toEqual([['a = 1', 'b = 1', 'c = 1']])
+    // k(x - 1) è un prodotto; g(x) una funzione, che uno slider non risolve.
+    expect(add('y = k(x - 1)')).toEqual([['k = 1']])
+    expect(add('y = g(x)')).toEqual([undefined])
+    // Dentro le funzioni del blocco e della nota, e nel nome con l'indice.
+    expect(add('f(x) = m x\nf(x)')).toEqual([['m = 1'], undefined])
+    expect(add("y = f'(x_0)(x - x_0) + f(x_0)", ['f(x) = x^2'])).toEqual([['x_{0} = 1']])
+    // Se 1 è fuori dall'intervallo scritto, si parte dall'inizio; la riga dell'intervallo ha lo stesso pulsante.
+    expect(add('y = k x\nk \\in [5, 10]')).toEqual([['k = 5'], ['k = 5']])
+    // Una parola sbagliata non diventa sette slider.
+    expect(add('y = velocita x')).toEqual([undefined])
+    // Con la riga aggiunta, il grafico c'è.
+    const fixed = parseGraph('k = 1\ny = kx + 1')
+    expect(fixed.errors).toEqual([])
+    expect(fixed.sliders.map((s) => s.name)).toEqual(['k'])
   })
 })
 

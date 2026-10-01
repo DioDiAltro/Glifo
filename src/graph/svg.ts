@@ -40,10 +40,9 @@ export const PALETTES: Record<'light' | 'dark', Palette> = {
   },
 }
 
-/** Il colore di ogni riga: le curve nell'ordine, i punti con l'inchiostro del testo. */
+/** Il colore di ogni riga: le curve nell'ordine delle righe, i punti con l'inchiostro del testo. */
 export function itemColors(items: readonly GraphItem[], palette: Palette): string[] {
-  let n = 0
-  return items.map((item) => (item.kind === 'point' ? palette.axis : palette.series[n++ % palette.series.length]))
+  return items.map((item) => (item.kind === 'point' ? palette.axis : palette.series[Math.max(0, item.slot) % palette.series.length]))
 }
 
 const f1 = (v: number) => (Math.round(v * 10) / 10).toString()

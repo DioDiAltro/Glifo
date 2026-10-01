@@ -9,15 +9,19 @@
  *     r = 1 + \cos\theta          in coordinate polari
  *     (\cos t, \sin t)            una curva con un parametro t
  *     P = (1, 2)                  un punto (anche P(1, 2) o solo (1, 2))
- *     a = 2                       un numero da usare nelle altre righe
+ *     a = 2                       un numero da usare nelle altre righe (con uno slider)
+ *     a \in [0, 5]                da dove a dove va lo slider di a (anche 0 \le a \le 5)
  *     x \in [-5, 5]               la parte da mostrare (anche -1 \le y \le 3)
  *     % commento                  non conta
  *
  * Le righe possono usare anche le definizioni scritte prima nella nota (`$a = 2$`, `$f(x) = …$`).
+ * Ogni numero scritto con le cifre che il grafico usa (a = 2, non b = 2a, che segue a) ha uno
+ * slider sotto il grafico: `parseGraph` con `values` rifà il grafico con quei valori al posto di
+ * quelli scritti, senza cambiare la nota.
  */
-import { compile, compileCondition, errorMessage, MathError, scopeWith, withWorkLimit, type Compiled, type Scope, type UserFunction } from '../math/evaluate'
+import { compile, compileCondition, errorMessage, MathError, scopeWith, UndefinedName, withWorkLimit, type Compiled, type Scope, type UserFunction } from '../math/evaluate'
 import { nameLatex, toLatex } from '../math/latex'
-import { children, namesIn, parseStatement, type MathNode } from '../math/parse'
+import { children, namesIn, parseStatement, tokenize, type MathNode } from '../math/parse'
 import { Sheet } from '../math/sheet'
 
 export type Range = [number, number]
@@ -27,6 +31,11 @@ interface ItemBase {
   line: number
   /** Cosa scrivere nella legenda, in LaTeX. */
   label: string
+  /**
+   * Il colore delle curve, nell'ordine delle righe (-1 per i punti). Contano anche le righe
+   * sbagliate: così i colori non cambiano mentre si corregge o si muove uno slider.
+   */
+  slot: number
 }
 
 export type GraphItem =
@@ -40,6 +49,21 @@ export interface GraphError {
   line: number
   text: string
   message: string
+  /** I numeri che mancano, con la riga da aggiungere al blocco per averli con uno slider (k = 1). */
+  add?: { name: string; line: string }[]
+}
+
+/** Un numero del grafico, con il suo slider. */
+export interface GraphSlider {
+  name: string
+  /** Quello scritto nella nota o nel blocco (o quello dato a parseGraph al suo posto). */
+  value: number
+  /** Da dove a dove va: scritto nel blocco (a \in [0, 5]) o, se no, da −10 a 10. */
+  range: Range
+  /** Gli estremi in LaTeX, da scrivere accanto (2\pi, non 6,28). */
+  ends: [string, string]
+  /** Di quanto si muove: di 1 i numeri che contano i termini di una somma. */
+  step: number
 }
 
 export interface GraphSpec {
@@ -50,6 +74,7 @@ export interface GraphSpec {
   y: Range | null
   /** Ci sono seni e coseni: sull'asse x le tacche con π. */
   trig: boolean
+  sliders: GraphSlider[]
 }
 
 const TRIG_FUNCTIONS = new Set(['sin', 'cos', 'tan', 'cot', 'sec', 'csc'])
@@ -86,25 +111,52 @@ function constantValue(node: MathNode, scope: Scope): number {
 }
 
 type Axis = 'x' | 'y' | 't' | 'θ'
+const AXES: readonly string[] = ['x', 'y', 't', 'θ']
 
-/** `x \in [a, b]` o `a \le x \le b`: la parte da mostrare (o l'intervallo di t e θ). */
-function windowLine(node: MathNode, scope: Scope): { axis: Axis; range: Range } | null {
-  const axisOf = (n: MathNode) => (n.k === 'name' && ['x', 'y', 't', 'θ'].includes(n.name) ? (n.name as Axis) : null)
-  let axis: Axis | null = null
-  let lo: MathNode | null = null
-  let hi: MathNode | null = null
-  if (node.k === 'in') {
-    axis = axisOf(node.a)
-    lo = node.lo
-    hi = node.hi
-  } else if (node.k === 'rel' && node.items.length === 3) {
-    axis = axisOf(node.items[1])
-    if (node.ops.every((op) => op === '<' || op === '<=')) [lo, hi] = [node.items[0], node.items[2]]
-    else if (node.ops.every((op) => op === '>' || op === '>=')) [lo, hi] = [node.items[2], node.items[0]]
-    else axis = null
+/**
+ * `a \in [0, 5]` o `0 \le a \le 5`: da dove a dove va un nome. Per x e y è la parte da mostrare,
+ * per t e θ l'intervallo delle curve con un parametro, per gli altri numeri lo slider.
+ */
+function rangeLine(node: MathNode): { name: string; lo: MathNode; hi: MathNode } | null {
+  if (node.k === 'in') return node.a.k === 'name' ? { name: node.a.name, lo: node.lo, hi: node.hi } : null
+  if (node.k !== 'rel' || node.items.length !== 3 || node.items[1].k !== 'name') return null
+  const name = node.items[1].name
+  if (node.ops.every((op) => op === '<' || op === '<=')) return { name, lo: node.items[0], hi: node.items[2] }
+  if (node.ops.every((op) => op === '>' || op === '>=')) return { name, lo: node.items[2], hi: node.items[0] }
+  return null
+}
+
+/** Un numero scritto con le cifre (2, -\frac{1}{2}, 2\pi): non usa altri nomi. */
+function onlyDigits(names: Iterable<string>): boolean {
+  for (const n of names) if (n !== 'π' && n !== 'e') return false
+  return true
+}
+
+/** Lo slider di un numero, se il blocco non dice da dove a dove: da −10 a 10 (di più se il numero è più grande). */
+function defaultRange(value: number, integer: boolean): Range {
+  const size = Math.abs(value) <= 10 ? 10 : 10 ** Math.ceil(Math.log10(Math.abs(value)))
+  return integer && value >= 0 ? [0, size] : [-size, size]
+}
+
+/** Il passo dello slider: tra 100 e 1000 posizioni. */
+function sliderStep(range: Range): number {
+  return 10 ** Math.floor(Math.log10((range[1] - range[0]) / 100))
+}
+
+/** I nomi che contano i termini di una somma o di un prodotto (\sum_{k=0}^{n}): i loro slider vanno di 1. */
+function termCounters(node: MathNode, out: Set<string>): void {
+  if (node.k === 'big') {
+    namesIn(node.from, out)
+    namesIn(node.to, out)
   }
-  if (!axis || !lo || !hi) return null
-  return { axis, range: [constantValue(lo, scope), constantValue(hi, scope)] }
+  for (const child of children(node)) termCounters(child, out)
+}
+
+/** Una riga che sembra un punto ((1, 2), P = (1, 2), P(1, 2)): non ha un colore suo. */
+function looksLikePoint(main: MathNode): boolean {
+  if (main.k === 'tuple') return !dependsOn(main, 't') && !dependsOn(main, 'θ')
+  if (main.k === 'rel' && main.ops.length === 1 && main.items[0].k === 'name' && main.items[1].k === 'tuple') return looksLikePoint(main.items[1])
+  return main.k === 'apply' && main.args.length === 2
 }
 
 interface Definition {
@@ -149,10 +201,10 @@ interface Line {
   cond: MathNode | null
 }
 
-function define(def: Definition, cond: MathNode | null, scope: Scope, consts: Map<string, number>, fns: Map<string, UserFunction>): void {
+function define(def: Definition, cond: MathNode | null, scope: Scope, consts: Map<string, number>, fns: Map<string, UserFunction>, values?: ReadonlyMap<string, number>): void {
   if (!def.params) {
     if (cond) throw new MathError('Un numero non ha condizioni')
-    const value = compile(def.value, scope, { calc: true })({})
+    const value = values?.get(def.name) ?? compile(def.value, scope, { calc: true })({})
     if (!Number.isFinite(value)) throw new MathError(`${def.name} non è un numero`)
     fns.delete(def.name)
     consts.set(def.name, value)
@@ -170,20 +222,36 @@ function define(def: Definition, cond: MathNode | null, scope: Scope, consts: Ma
 
 /**
  * Legge il blocco: `defs` sono le definizioni scritte prima nella nota (vedi Sheet.definitionsFor),
- * che le righe possono usare.
+ * che le righe possono usare; `values` i numeri con un valore diverso da quello scritto (gli slider).
  */
-export function parseGraph(source: string, defs: readonly string[] = []): GraphSpec {
-  return withWorkLimit(GRAPH_WORK, () => readGraph(source, defs))
+export function parseGraph(source: string, defs: readonly string[] = [], values?: ReadonlyMap<string, number>): GraphSpec {
+  return withWorkLimit(GRAPH_WORK, () => readGraph(source, defs, values))
 }
 
 /** I passi di somme e integrali per leggere un grafico, e per ogni disegno: oltre, le curve si fermano. */
 export const GRAPH_WORK = 5e6
 
-function readGraph(source: string, defs: readonly string[]): GraphSpec {
-  const sheet = new Sheet()
+function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap<string, number>): GraphSpec {
+  const sheet = new Sheet(values)
   for (const d of defs) sheet.define(d)
-  const spec: GraphSpec = { items: [], errors: [], x: null, y: null, trig: false }
-  const fail = (l: { line: number; text: string }, err: unknown) => spec.errors.push({ line: l.line, text: l.text, message: errorMessage(err) })
+  const spec: GraphSpec = { items: [], errors: [], x: null, y: null, trig: false, sliders: [] }
+  const fail = (l: { line: number; text: string }, err: unknown): GraphError => {
+    const error = { line: l.line, text: l.text, message: errorMessage(err) }
+    spec.errors.push(error)
+    return error
+  }
+  /** I nomi definiti nella nota o nel blocco (anche quelli che non hanno un valore, come 1/0). */
+  const defined = new Set(sheet.definitions.map((d) => d.name))
+  /** Le righe con un nome che non c'è: alla fine, la riga da aggiungere per ognuno (k = 1). */
+  const undefinedIn: { error: GraphError; line: Line }[] = []
+  const failLine = (l: Line, err: unknown) => {
+    if (err instanceof UndefinedName && defined.has(err.missing)) {
+      fail(l, new MathError(`${err.missing} non ha un valore: controlla la sua definizione`))
+      return
+    }
+    const error = fail(l, err)
+    if (err instanceof UndefinedName) undefinedIn.push({ error, line: l })
+  }
 
   const lines: Line[] = []
   /** Le righe con seni e coseni: se sono funzioni di x, sull'asse x le tacche con π. */
@@ -206,8 +274,10 @@ function readGraph(source: string, defs: readonly string[]): GraphSpec {
   const drawn: Line[] = []
   for (const l of lines) {
     const def = definitionOf(l.main)
-    if (def) pending.set(l, def)
-    else drawn.push(l)
+    if (def) {
+      pending.set(l, def)
+      defined.add(def.name)
+    } else drawn.push(l)
   }
   for (let progress = true; progress && pending.size; ) {
     progress = false
@@ -216,7 +286,7 @@ function readGraph(source: string, defs: readonly string[]): GraphSpec {
       const uses = namesIn(def.value, new Set(), new Set(def.params ?? []))
       if ([...pending.values()].some((other) => other.name !== def.name && uses.has(other.name))) continue
       try {
-        define(def, l.cond, scope(), consts, fns)
+        define(def, l.cond, scope(), consts, fns, values)
       } catch {
         // Riprova dopo le altre: forse usa qualcosa definito più sotto.
         continue
@@ -243,27 +313,40 @@ function readGraph(source: string, defs: readonly string[]): GraphSpec {
   }
   for (const [l, def] of pending) {
     try {
-      define(def, l.cond, scope(), consts, fns)
+      define(def, l.cond, scope(), consts, fns, values)
     } catch (err) {
-      fail(l, reaches(def.name, def.name, new Set()) ? new MathError(`${def.name} usa sé stessa (anche attraverso un'altra definizione)`) : err)
+      failLine(l, reaches(def.name, def.name, new Set()) ? new MathError(`${def.name} usa sé stessa (anche attraverso un'altra definizione)`) : err)
     }
   }
 
-  // Poi le righe da disegnare, nell'ordine in cui sono scritte.
+  // Poi le righe da disegnare, nell'ordine in cui sono scritte, e quelle che dicono da dove a dove.
   const ranges = new Map<Axis, Range>()
+  const sliderRanges = new Map<string, { range: Range; ends: [string, string]; line: Line }>()
   drawn.sort((a, b) => a.line - b.line)
+  let slot = 0
   for (const l of drawn) {
-    try {
-      const window = windowLine(l.main, scope())
-      if (window) {
-        const [lo, hi] = window.range
-        if (!(Number.isFinite(lo) && Number.isFinite(hi) && hi > lo)) throw new MathError('Servono due estremi, dal più piccolo al più grande: x \\in [-5, 5]')
-        ranges.set(window.axis, window.range)
-        continue
+    const r = rangeLine(l.main)
+    if (r) {
+      try {
+        const range: Range = [constantValue(r.lo, scope()), constantValue(r.hi, scope())]
+        if (!(Number.isFinite(range[0]) && Number.isFinite(range[1]) && range[1] > range[0])) {
+          const example = AXES.includes(r.name) ? 'x \\in [-5, 5]' : `${nameLatex(r.name)} \\in [0, 5]`
+          throw new MathError(`Servono due estremi, dal più piccolo al più grande: ${example}`)
+        }
+        if (AXES.includes(r.name)) ranges.set(r.name as Axis, range)
+        if (r.name !== 'x' && r.name !== 'y') sliderRanges.set(r.name, { range, ends: [toLatex(r.lo), toLatex(r.hi)], line: l })
+      } catch (err) {
+        failLine(l, err)
       }
-      spec.items.push(itemFor(l, scope()))
+      continue
+    }
+    try {
+      const item = itemFor(l, scope(), slot)
+      if (item.kind !== 'point') slot++
+      spec.items.push(item)
     } catch (err) {
-      fail(l, err)
+      if (!looksLikePoint(l.main)) slot++
+      failLine(l, err)
     }
   }
   spec.x = ranges.get('x') ?? null
@@ -273,11 +356,126 @@ function readGraph(source: string, defs: readonly string[]): GraphSpec {
   for (const item of spec.items) {
     if (item.kind === 'parametric') item.t = ranges.get(item.param) ?? item.t
   }
+
+  // Gli slider: i numeri scritti con le cifre (nella nota o nel blocco) che il grafico usa, anche
+  // attraverso le altre definizioni (f(x) = a x^2 usa a).
+  const blockDefs = new Map<string, { def: Definition; line: number }>()
+  for (const l of lines) {
+    const def = definitionOf(l.main)
+    if (def) blockDefs.set(def.name, { def, line: l.line })
+  }
+  const noteDefs = new Map<string, number>()
+  sheet.definitions.forEach((d, i) => noteDefs.set(d.name, i))
+  const lastNoteDef = (name: string) => sheet.definitions[noteDefs.get(name) ?? -1]
+  const usesOf = (name: string): Set<string> => {
+    const b = blockDefs.get(name)
+    if (b) return namesIn(b.def.value, new Set(), new Set(b.def.params ?? []))
+    return new Set(sheet.definitions.filter((d) => d.name === name).flatMap((d) => [...d.uses]))
+  }
+  const isNumber = (name: string): boolean => {
+    if (!consts.has(name)) return false
+    const b = blockDefs.get(name)?.def ?? lastNoteDef(name)
+    return !!b && !b.params && onlyDigits(usesOf(name))
+  }
+  const used = new Set<string>()
+  for (const l of drawn) {
+    namesIn(l.main, used)
+    if (l.cond) namesIn(l.cond, used)
+  }
+  for (const queue = [...used]; queue.length; ) {
+    for (const u of usesOf(queue.pop()!)) {
+      if (!used.has(u)) {
+        used.add(u)
+        queue.push(u)
+      }
+    }
+  }
+  const counters = new Set<string>()
+  for (const l of lines) termCounters(l.main, counters)
+  for (const d of sheet.definitions) termCounters(d.value, counters)
+  const order = (name: string) => (blockDefs.has(name) ? 1e6 + blockDefs.get(name)!.line : noteDefs.get(name) ?? 0)
+  spec.sliders = [...used]
+    .filter(isNumber)
+    .sort((a, b) => order(a) - order(b))
+    .map((name) => {
+      const value = consts.get(name)!
+      const integer = counters.has(name)
+      const written = sliderRanges.get(name)
+      const range = written?.range ?? defaultRange(value, integer)
+      return { name, value, range, ends: written?.ends ?? [String(range[0]), String(range[1])], step: integer ? 1 : sliderStep(range) }
+    })
+  // Un intervallo per un nome che non è un numero da muovere.
+  for (const [name, r] of sliderRanges) {
+    if (isNumber(name) || name === 't' || name === 'θ') continue
+    const def = blockDefs.get(name)?.def ?? lastNoteDef(name)
+    if (fns.has(name) || def?.params) failLine(r.line, new MathError(`${name} è una funzione: lo slider è per i numeri, come a = 2`))
+    else if (def && !onlyDigits(usesOf(name))) failLine(r.line, new MathError(`${name} si calcola da altri numeri: lo slider è per quelli scritti con le cifre, come a = 2`))
+    else failLine(r.line, new UndefinedName(name))
+  }
+
+  // I nomi che mancano: la riga da aggiungere al blocco per averli, con uno slider (k = 1, o
+  // l'inizio dell'intervallo scritto, se 1 è fuori).
+  for (const { error, line } of undefinedIn) {
+    const missing = missingNumbers(line, scope()).filter((name) => !defined.has(name))
+    if (!missing.length || missing.length > 6 || hasWord(line.text)) continue
+    error.add = missing.map((name) => {
+      const r = sliderRanges.get(name)
+      const value = !r || (r.range[0] <= 1 && r.range[1] >= 1) ? '1' : r.ends[0]
+      return { name, line: `${nameLatex(name)} = ${value}` }
+    })
+  }
   spec.errors.sort((a, b) => a.line - b.line)
   return spec
 }
 
-function itemFor(l: Line, scope: Scope): GraphItem {
+/** Quattro lettere attaccate (velocita): è una parola scritta senza \text, non quattro numeri da muovere. */
+function hasWord(text: string): boolean {
+  let run = 0
+  let end = -1
+  for (const t of tokenize(text)) {
+    run = t.k === 'name' && /^[a-zA-Z]$/.test(t.v) ? (t.pos === end ? run + 1 : 1) : 0
+    if (run >= 4) return true
+    end = t.end
+  }
+  return false
+}
+
+/**
+ * I numeri che mancano in una riga (non definiti né nella nota né nel blocco): i nomi da soli e
+ * quelli davanti a una parentesi con un'espressione (k(x - 1) è un prodotto); g(x) invece è una
+ * funzione, e uno slider non serve.
+ */
+function missingNumbers(l: Line, scope: Scope): string[] {
+  const out = new Set<string>()
+  const known = (name: string, bound: ReadonlySet<string>) =>
+    bound.has(name) || AXES.includes(name) || name === 'π' || name === 'e' || scope.consts.has(name) || scope.fns.has(name)
+  const visit = (n: MathNode, bound: ReadonlySet<string>): void => {
+    if (n.k === 'name') {
+      if (!known(n.name, bound)) out.add(n.name)
+      return
+    }
+    if (n.k === 'apply') {
+      const product = !n.primes && n.args.length === 1 && n.args[0].k !== 'name'
+      if (product && !known(n.name, bound)) out.add(n.name)
+    }
+    if (n.k === 'big' || n.k === 'int') {
+      visit(n.from, bound)
+      visit(n.to, bound)
+      visit(n.body, new Set([...bound, n.v]))
+      return
+    }
+    for (const child of children(n)) visit(child, bound)
+  }
+  const def = definitionOf(l.main)
+  const polar = l.main.k === 'rel' && l.main.items[0].k === 'name' && l.main.items[0].name === 'r' && dependsOn(l.main.items[1], 'θ')
+  if (def) visit(def.value, new Set(def.params ?? []))
+  else if (polar) visit((l.main as Extract<MathNode, { k: 'rel' }>).items[1], new Set())
+  else visit(l.main, new Set())
+  if (l.cond) visit(l.cond, new Set(def?.params ?? []))
+  return [...out]
+}
+
+function itemFor(l: Line, scope: Scope, slot: number): GraphItem {
   const { main, cond, line } = l
 
   // Un punto: (1, 2), P = (1, 2), P(1, 2). Con t (o θ) è una curva con un parametro.
@@ -300,12 +498,12 @@ function itemFor(l: Line, scope: Scope): GraphItem {
       const fy = compile(coords[1], inner)
       const v: Record<string, number> = { [param]: 0 }
       const label = `${name ? `${nameLatex(name)} = ` : ''}${toLatex({ k: 'tuple', items: coords })}${condLabel(cond)}`
-      return { kind: 'parametric', line, label, param, t: [0, 2 * Math.PI], fx: (t) => ((v[param] = t), fx(v)), fy: (t) => ((v[param] = t), fy(v)) }
+      return { kind: 'parametric', line, label, slot, param, t: [0, 2 * Math.PI], fx: (t) => ((v[param] = t), fx(v)), fy: (t) => ((v[param] = t), fy(v)) }
     }
     if (cond) throw new MathError('Un punto non ha condizioni')
     const [x, y] = coords.map((n) => compile(n, scope)({}))
     if (!Number.isFinite(x) || !Number.isFinite(y)) throw new MathError('Le coordinate del punto non sono numeri')
-    return { kind: 'point', line, label: name ? nameLatex(name) : '', x, y, name }
+    return { kind: 'point', line, label: name ? nameLatex(name) : '', slot: -1, x, y, name }
   }
 
   if (main.k === 'rel') {
@@ -319,21 +517,21 @@ function itemFor(l: Line, scope: Scope): GraphItem {
     // f(x) = … (già definita): la curva è la funzione, con la sua variabile.
     if (lhs.k === 'apply' && lhs.args.length === 1 && scope.fns.get(lhs.name)?.params.length === 1) {
       const fn = scope.fns.get(lhs.name)!
-      return { kind: 'function', line, label, f: (x) => fn.call([x]) }
+      return { kind: 'function', line, label, slot, f: (x) => fn.call([x]) }
     }
     // y = f(x)
     if (lhs.k === 'name' && lhs.name === 'y' && !dependsOn(rhs, 'y')) {
       const inner = scopeWith(scope, ['x'])
       const f = restrict(compile(rhs, inner), cond, inner)
       const v = { x: 0 }
-      return { kind: 'function', line, label, f: (x) => ((v.x = x), f(v)) }
+      return { kind: 'function', line, label, slot, f: (x) => ((v.x = x), f(v)) }
     }
     // x = 3: retta verticale
     if (lhs.k === 'name' && lhs.name === 'x' && !dependsOn(rhs, 'y') && !dependsOn(rhs, 'x')) {
       if (cond) throw new MathError('Una retta verticale non ha condizioni')
       const x = compile(rhs, scope)({})
       if (!Number.isFinite(x)) throw new MathError('x non è un numero')
-      return { kind: 'vertical', line, label, x }
+      return { kind: 'vertical', line, label, slot, x }
     }
     // r = f(θ): coordinate polari
     if (lhs.k === 'name' && lhs.name === 'r' && dependsOn(rhs, 'θ')) {
@@ -344,6 +542,7 @@ function itemFor(l: Line, scope: Scope): GraphItem {
         kind: 'parametric',
         line,
         label,
+        slot,
         param: 'θ',
         t: [0, 2 * Math.PI],
         fx: (t) => ((v.θ = t), r(v) * Math.cos(t)),
@@ -361,6 +560,7 @@ function itemFor(l: Line, scope: Scope): GraphItem {
       kind: 'implicit',
       line,
       label,
+      slot,
       F: (x, y) => {
         v.x = x
         v.y = y
@@ -374,14 +574,14 @@ function itemFor(l: Line, scope: Scope): GraphItem {
   if (main.k === 'name' && scope.fns.has(main.name)) {
     const fn = scope.fns.get(main.name)!
     if (fn.params.length !== 1) throw new MathError(`${main.name} ha ${fn.params.length} variabili: si disegnano le funzioni di una`)
-    return { kind: 'function', line, label: `${nameLatex(main.name)}(${nameLatex(fn.params[0])})`, f: (x) => fn.call([x]) }
+    return { kind: 'function', line, label: `${nameLatex(main.name)}(${nameLatex(fn.params[0])})`, slot, f: (x) => fn.call([x]) }
   }
   // Un'espressione da sola: è y = …
   if (!dependsOn(main, 'x')) throw new MathError('Manca la x: per una retta orizzontale scrivi y = 3')
   const inner = scopeWith(scope, ['x'])
   const f = restrict(compile(main, inner), cond, inner)
   const v = { x: 0 }
-  return { kind: 'function', line, label: `y = ${toLatex(main)}${condLabel(cond)}`, f: (x) => ((v.x = x), f(v)) }
+  return { kind: 'function', line, label: `y = ${toLatex(main)}${condLabel(cond)}`, slot, f: (x) => ((v.x = x), f(v)) }
 }
 
 /** I nomi che il blocco usa: quelli da cercare tra le definizioni della nota. */

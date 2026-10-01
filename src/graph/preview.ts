@@ -3,12 +3,18 @@
  * definizioni della nota che usa (vedi src/render/markdown.ts); qui diventa il disegno, con la
  * legenda e gli errori riga per riga. Il grafico si sposta trascinandolo, si ingrandisce con i
  * pulsanti (o con Ctrl + rotellina, o con due dita) e, passandoci sopra, dice le coordinate.
+ *
+ * Sotto il grafico, uno slider per ogni numero che usa (a = 2): trascinandolo il grafico cambia
+ * subito, ▶ lo muove da solo, la freccia torna al valore scritto. La nota non cambia: il file .md
+ * e la stampa usano i valori scritti. A un nome che manca (k non è definita) il pulsante
+ * «Aggiungi lo slider per k» aggiunge k = 1 al blocco (lo fa src/ui/preview.ts).
  */
+import { nameLatex } from '../math/latex'
 import { escapeHtml, renderTex } from '../render/katex'
 import type { Theme } from '../schema/model'
 import { chooseWindow, type Viewport } from './plot'
-import { parseGraph, type GraphSpec } from './spec'
-import { graphSvg, graphTitle, itemColors, PALETTES, type Palette } from './svg'
+import { parseGraph, type GraphError, type GraphSlider, type GraphSpec } from './spec'
+import { graphSvg, graphTitle, itemColors, PALETTES, pointName, type Palette } from './svg'
 
 export interface GraphLook {
   theme: Theme
@@ -36,6 +42,20 @@ function remember<T>(cache: Map<string, T>, key: string, make: () => T): T {
 /** Lo spostamento e lo zoom fatti a mano: restano finché il blocco resta uguale. */
 const views = new Map<string, Window>()
 let counter = 0
+
+interface SliderState {
+  value: number
+  playing: boolean
+  /** Mentre si muove da solo: dove è (senza arrotondare al passo) e in che verso va. */
+  pos: number
+  dir: 1 | -1
+}
+/** Gli slider spostati (o che si muovono da soli): restano mentre l'anteprima si ridisegna. */
+const sliderStates = new Map<string, SliderState>()
+/** Quanto ci mette uno slider che si muove da solo ad andare da un estremo all'altro (secondi). */
+const SWEEP = 5
+/** Si sta stampando: i grafici con i valori scritti nella nota. */
+let printing = false
 
 function specFor(key: string, source: string, defs: string[]): GraphSpec {
   return remember(specs, key, () => parseGraph(source, defs))
@@ -68,21 +88,82 @@ const ICON = {
   plus: '<path d="M12 5v14M5 12h14"/>',
   minus: '<path d="M5 12h14"/>',
   reset: '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/>',
+  play: '<path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/>',
+  pause: '<path d="M9 6v12M15 6v12"/>',
 }
 
-function toolButton(label: string, paths: string, action: string): string {
-  return `<button type="button" class="icon-button graph-tool" data-action="${action}" title="${label}" aria-label="${label}"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg></button>`
+function icon(paths: string): string {
+  return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`
+}
+
+function toolButton(label: string, paths: string, action: string, extra = ''): string {
+  return `<button type="button" class="icon-button graph-tool${extra}" data-action="${action}" title="${label}" aria-label="${label}">${icon(paths)}</button>`
+}
+
+/** Il valore di uno slider con la virgola, con le cifre del suo passo (o di più, per un valore scritto con più cifre). */
+function sliderText(v: number, step: number): string {
+  const base = step >= 1 ? 0 : Math.round(-Math.log10(step))
+  let decimals = base
+  while (decimals < base + 4 && Math.abs(Number(v.toFixed(decimals)) - v) > 1e-9 * Math.max(1, Math.abs(v))) decimals++
+  let text = v.toFixed(decimals)
+  if (text.includes('.')) text = text.replace(/0+$/, '').replace(/\.$/, '')
+  if (text === '-0') text = '0'
+  return text.replace('.', ',').replace('-', '−')
+}
+
+/** Il valore più vicino tra quelli dello slider (gli estremi, più un passo alla volta). */
+function snap(v: number, s: GraphSlider): number {
+  const [lo, hi] = s.range
+  const k = Math.round((v - lo) / s.step)
+  return Math.min(hi, Math.max(lo, Number((lo + k * s.step).toPrecision(12))))
+}
+
+/** «Aggiungi lo slider per k», «Aggiungi gli slider per a, b e c». */
+function addLabel(add: NonNullable<GraphError['add']>): string {
+  const names = add.map((a) => pointName(a.name))
+  if (names.length === 1) return `Aggiungi lo slider per ${names[0]}`
+  return `Aggiungi gli slider per ${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`
+}
+
+function texHtml(tex: string): string {
+  const { html, error } = renderTex(tex)
+  return error ? escapeHtml(tex) : html
+}
+
+/** La parte da mostrare scritta nel blocco (x \in [a, b]), per vedere se è cambiata. */
+function explicitWindow(spec: GraphSpec): string {
+  return JSON.stringify([spec.x, spec.y])
+}
+
+interface SliderRow {
+  slider: GraphSlider
+  state: SliderState
+  /** Dove si ricorda lo stato (vedi sliderStates). */
+  key: string
+  input: HTMLInputElement
+  output: HTMLElement
+  play: HTMLButtonElement
+  back: HTMLButtonElement
 }
 
 class GraphView {
-  private readonly spec: GraphSpec
+  /** Il blocco come è scritto, con i valori scritti nella nota. */
+  private readonly written: GraphSpec
+  /** Quello disegnato adesso: con i valori degli slider. */
+  private spec: GraphSpec
+  /** I valori degli slider con cui è stato fatto `spec` ('' se sono quelli scritti). */
+  private specValues = ''
+  private readonly source: string
+  private readonly defs: string[]
   private readonly key: string
   private readonly palette: Palette
   private readonly theme: Theme
-  private readonly colors: string[]
+  private colors: string[]
   private readonly id = `graph-${++counter}`
   private base: Window
   private view: Window
+  /** La parte da mostrare scritta nel blocco, per la quale è stata scelta `base` (può usare uno slider). */
+  private explicit: string
   private width: number
   private height: number
   private readonly frameEl: HTMLElement
@@ -90,7 +171,13 @@ class GraphView {
   private readonly tip: HTMLElement
   private readonly dot: HTMLElement
   private readonly reset: HTMLButtonElement
+  private readonly slidersEl: HTMLElement | null
+  private readonly rows: SliderRow[] = []
+  private readonly notes: HTMLElement
+  private notesHtml = ''
   private frame = 0
+  private animation = 0
+  private lastTime = 0
   private drag: { x: number; y: number; view: Window } | null = null
   private readonly touches = new Map<number, { x: number; y: number }>()
   private pinch: { distance: number; center: { x: number; y: number }; view: Window } | null = null
@@ -99,10 +186,12 @@ class GraphView {
     private readonly block: HTMLElement,
     look: GraphLook,
   ) {
-    const source = block.dataset.graph ?? ''
-    const defs = readDefs(block)
-    this.key = `${source}\n\u0000${defs.join('\n')}`
-    this.spec = specFor(this.key, source, defs)
+    this.source = block.dataset.graph ?? ''
+    this.defs = readDefs(block)
+    this.key = `${this.source}\n\u0000${this.defs.join('\n')}`
+    this.written = specFor(this.key, this.source, this.defs)
+    this.spec = this.written
+    this.explicit = explicitWindow(this.written)
     this.theme = look.theme
     this.palette = { ...PALETTES[look.theme], halo: look.surface || PALETTES[look.theme].halo }
     this.colors = itemColors(this.spec.items, this.palette)
@@ -113,13 +202,16 @@ class GraphView {
     this.view = views.get(this.key) ?? this.base
 
     // I pulsanti stanno sopra il disegno (e si vedono passandoci sopra); sui telefoni sotto, sempre.
-    block.innerHTML = `<div class="graph-stage" style="max-width:${this.width}px"><div class="graph-frame"><div class="graph-canvas"></div><div class="graph-dot" hidden></div><div class="graph-tip" hidden></div></div><div class="graph-tools">${toolButton('Ingrandisci', ICON.plus, 'in')}${toolButton('Rimpicciolisci', ICON.minus, 'out')}${toolButton('Torna alla vista di partenza', ICON.reset, 'reset')}</div></div>${this.legendHtml()}${this.errorsHtml()}`
+    block.innerHTML = `<div class="graph-stage" style="max-width:${this.width}px"><div class="graph-frame"><div class="graph-canvas"></div><div class="graph-dot" hidden></div><div class="graph-tip" hidden></div></div><div class="graph-tools">${toolButton('Ingrandisci', ICON.plus, 'in')}${toolButton('Rimpicciolisci', ICON.minus, 'out')}${toolButton('Torna alla vista di partenza', ICON.reset, 'reset')}</div></div>${this.slidersHtml()}<div class="graph-notes"></div>`
     const frame = block.querySelector<HTMLElement>('.graph-stage')!
     this.frameEl = frame
     this.canvas = block.querySelector<HTMLElement>('.graph-canvas')!
     this.tip = block.querySelector<HTMLElement>('.graph-tip')!
     this.dot = block.querySelector<HTMLElement>('.graph-dot')!
     this.reset = block.querySelector<HTMLButtonElement>('[data-action="reset"]')!
+    this.notes = block.querySelector<HTMLElement>('.graph-notes')!
+    this.slidersEl = block.querySelector<HTMLElement>('.graph-sliders')
+    this.setUpSliders()
     this.render()
 
     frame.addEventListener('click', (ev) => {
@@ -136,6 +228,172 @@ class GraphView {
     this.canvas.addEventListener('pointercancel', (ev) => this.onUp(ev))
     this.canvas.addEventListener('pointerleave', () => this.hideTip())
     this.canvas.addEventListener('wheel', (ev) => this.onWheel(ev), { passive: false })
+    if (this.rows.some((r) => r.state.playing)) this.animate()
+  }
+
+  private slidersHtml(): string {
+    if (!this.written.sliders.length) return ''
+    const rows = this.written.sliders.map((s, i) => {
+      const name = escapeHtml(pointName(s.name))
+      return (
+        `<div class="graph-slider" data-index="${i}">` +
+        toolButton(`Muovi ${name} da solo`, ICON.play, 'play', ' graph-play') +
+        `<span class="graph-slider-label">${texHtml(nameLatex(s.name))} = <output class="graph-slider-value"></output></span>` +
+        `<span class="graph-slider-end">${texHtml(s.ends[0])}</span>` +
+        `<input type="range" class="graph-slider-input" min="${s.range[0]}" max="${s.range[1]}" step="${s.step}" aria-label="Valore di ${name}">` +
+        `<span class="graph-slider-end">${texHtml(s.ends[1])}</span>` +
+        toolButton(`Torna al valore scritto: ${name} = ${escapeHtml(sliderText(s.value, s.step))}`, ICON.reset, 'written', ' graph-slider-back') +
+        '</div>'
+      )
+    })
+    return `<div class="graph-sliders" style="max-width:${this.width}px">${rows.join('')}</div>`
+  }
+
+  private setUpSliders(): void {
+    const el = this.slidersEl
+    if (!el) return
+    const line = this.block.dataset.line ?? ''
+    this.written.sliders.forEach((slider, i) => {
+      const row = el.querySelector<HTMLElement>(`.graph-slider[data-index="${i}"]`)!
+      const key = `${line}\u0000${slider.name}\u0000${slider.value}\u0000${slider.range.join(' ')}\u0000${slider.step}`
+      const state = sliderStates.get(key) ?? { value: slider.value, playing: false, pos: slider.value, dir: 1 }
+      this.rows.push({
+        slider,
+        state,
+        key,
+        input: row.querySelector<HTMLInputElement>('input')!,
+        output: row.querySelector<HTMLElement>('output')!,
+        play: row.querySelector<HTMLButtonElement>('[data-action="play"]')!,
+        back: row.querySelector<HTMLButtonElement>('[data-action="written"]')!,
+      })
+      this.showSlider(this.rows[i])
+    })
+    const rowOf = (ev: Event) => {
+      const index = (ev.target as HTMLElement).closest<HTMLElement>('.graph-slider')?.dataset.index
+      return index === undefined ? null : this.rows[Number(index)]
+    }
+    el.addEventListener('input', (ev) => {
+      const row = rowOf(ev)
+      if (!row) return
+      // Trascinato a mano: smette di muoversi da solo.
+      row.state.playing = false
+      this.setSlider(row, snap(row.input.valueAsNumber, row.slider))
+    })
+    el.addEventListener('click', (ev) => {
+      const row = rowOf(ev)
+      const action = (ev.target as HTMLElement).closest<HTMLElement>('[data-action]')?.dataset.action
+      if (!row || !action) return
+      if (action === 'written') {
+        row.state.playing = false
+        this.setSlider(row, row.slider.value)
+      } else if (action === 'play') {
+        const { state } = row
+        state.playing = !state.playing
+        if (state.playing) {
+          const [lo, hi] = row.slider.range
+          state.pos = Math.min(hi, Math.max(lo, state.value))
+          if (state.pos >= hi) state.dir = -1
+          else if (state.pos <= lo) state.dir = 1
+          this.animate()
+        }
+        this.setSlider(row, state.value)
+      }
+    })
+    // Il doppio clic sugli slider non deve portare all'editor.
+    el.addEventListener('dblclick', (ev) => ev.stopPropagation())
+  }
+
+  /** Mostra lo slider com'è adesso: la posizione, il valore (quello scritto, mentre si stampa), i pulsanti. */
+  private showSlider(row: SliderRow): void {
+    const { slider, state, input, output, play, back } = row
+    const value = printing ? slider.value : state.value
+    const text = sliderText(value, slider.step)
+    input.value = String(value)
+    input.setAttribute('aria-valuetext', text)
+    output.textContent = text
+    // Nascosto ma al suo posto (vedi app.css): la barra non salta quando compare.
+    const unchanged = state.value === slider.value
+    back.disabled = unchanged
+    back.classList.toggle('is-idle', unchanged)
+    const pressed = String(state.playing)
+    if (play.getAttribute('aria-pressed') === pressed) return
+    const name = pointName(slider.name)
+    const label = state.playing ? `Ferma ${name}` : `Muovi ${name} da solo`
+    play.title = label
+    play.setAttribute('aria-label', label)
+    play.setAttribute('aria-pressed', pressed)
+    play.innerHTML = icon(state.playing ? ICON.pause : ICON.play)
+  }
+
+  private setSlider(row: SliderRow, value: number): void {
+    row.state.value = value
+    if (!row.state.playing) row.state.pos = value
+    if (value === row.slider.value && !row.state.playing) sliderStates.delete(row.key)
+    else {
+      if (sliderStates.size >= MAX_CACHE) sliderStates.delete(sliderStates.keys().next().value!)
+      sliderStates.set(row.key, row.state)
+    }
+    this.showSlider(row)
+    this.hideTip()
+    this.schedule()
+  }
+
+  /** Gli slider che si muovono da soli: avanti e indietro tra gli estremi, finché non si fermano. */
+  private animate(): void {
+    if (this.animation) return
+    this.lastTime = 0
+    const tick = (now: number) => {
+      this.animation = 0
+      // L'anteprima è stata ridisegnata: continua il grafico nuovo (lo stato è lo stesso).
+      if (!this.block.isConnected) return
+      const dt = this.lastTime ? Math.min(0.1, (now - this.lastTime) / 1000) : 0
+      this.lastTime = now
+      let moving = false
+      for (const row of this.rows) {
+        const { state, slider } = row
+        if (!state.playing) continue
+        moving = true
+        const [lo, hi] = slider.range
+        state.pos += (state.dir * (hi - lo) * dt) / SWEEP
+        if (state.pos >= hi) {
+          state.pos = hi
+          state.dir = -1
+        } else if (state.pos <= lo) {
+          state.pos = lo
+          state.dir = 1
+        }
+        const value = snap(state.pos, slider)
+        if (value !== state.value) this.setSlider(row, value)
+      }
+      if (moving) this.animation = requestAnimationFrame(tick)
+    }
+    this.animation = requestAnimationFrame(tick)
+  }
+
+  /** Il grafico con i valori degli slider (con quelli scritti, mentre si stampa). */
+  private currentSpec(): GraphSpec {
+    const values = new Map<string, number>()
+    if (!printing) {
+      for (const { slider, state } of this.rows) if (state.value !== slider.value) values.set(slider.name, state.value)
+    }
+    const signature = [...values].join(';')
+    if (signature === this.specValues) return this.spec
+    this.specValues = signature
+    try {
+      this.spec = values.size ? parseGraph(this.source, this.defs, values) : this.written
+    } catch {
+      this.spec = this.written
+    }
+    this.colors = itemColors(this.spec.items, this.palette)
+    // Se la parte da mostrare scritta nel blocco usa uno slider (x \in [0, L]), segue.
+    const explicit = explicitWindow(this.spec)
+    if (explicit !== this.explicit) {
+      this.explicit = explicit
+      const moved = this.view !== this.base
+      this.base = this.startWindow()
+      if (!moved) this.view = this.base
+    }
+    return this.spec
   }
 
   private legendHtml(): string {
@@ -160,7 +418,8 @@ class GraphView {
     const first = Number(this.block.dataset.line)
     const rows = this.spec.errors.map((e) => {
       const where = Number.isFinite(first) ? `Riga ${first + e.line + 2}` : `Riga ${e.line + 1}`
-      return `<li><strong>${where}</strong> <code>${escapeHtml(e.text)}</code> — ${escapeHtml(e.message)}</li>`
+      const add = e.add ? ` <button type="button" class="btn btn-small graph-add-slider" data-add="${escapeHtml(e.add.map((a) => a.line).join('\n'))}">${escapeHtml(addLabel(e.add))}</button>` : ''
+      return `<li><strong>${where}</strong> <code>${escapeHtml(e.text)}</code> — ${escapeHtml(e.message)}${add}</li>`
     })
     return `<ul class="graph-errors">${rows.join('')}</ul>`
   }
@@ -175,27 +434,56 @@ class GraphView {
     this.base = this.startWindow()
     if (!moved) this.view = this.base
     this.frameEl.style.maxWidth = `${this.width}px`
+    if (this.slidersEl) this.slidersEl.style.maxWidth = `${this.width}px`
     this.hideTip()
     this.render()
   }
 
+  /** Ridisegna subito (per la stampa, con i valori scritti, e dopo). */
+  redraw(): void {
+    if (this.frame) cancelAnimationFrame(this.frame)
+    for (const row of this.rows) this.showSlider(row)
+    this.render()
+  }
+
   private startWindow(): Window {
-    return remember(windows, `${this.width}x${this.height}\n${this.key}`, () => {
-      const { x0, x1, y0, y1 } = chooseWindow(this.spec, this.width, this.height)
+    // Con gli slider spostati la parte da mostrare resta quella di partenza, se il blocco non la lega a uno slider.
+    const spec = explicitWindow(this.spec) === explicitWindow(this.written) ? this.written : this.spec
+    const make = () => {
+      const { x0, x1, y0, y1 } = chooseWindow(spec, this.width, this.height)
       return { x0, x1, y0, y1 }
-    })
+    }
+    return spec === this.written ? remember(windows, `${this.width}x${this.height}\n${this.key}`, make) : make()
   }
 
   private viewport(): Viewport {
     return { ...this.view, width: this.width, height: this.height }
   }
 
+  private schedule(): void {
+    if (!this.frame) {
+      this.frame = requestAnimationFrame(() => {
+        this.frame = 0
+        this.render()
+      })
+    }
+  }
+
   private render(): void {
+    this.frame = 0
+    const spec = this.currentSpec()
     const v = this.view
+    const draw = () => graphSvg(spec, this.viewport(), this.palette, { id: 'graph', title: graphTitle(spec) })
+    // I disegni con i valori scritti si ricordano; quelli con gli slider spostati cambiano di continuo.
     const key = `${this.theme} ${this.palette.halo} ${this.width}x${this.height} ${v.x0} ${v.x1} ${v.y0} ${v.y1}\n${this.key}`
-    const svg = remember(drawings, key, () => graphSvg(this.spec, this.viewport(), this.palette, { id: 'graph', title: graphTitle(this.spec) }))
+    const svg = spec === this.written ? remember(drawings, key, draw) : draw()
     // Il disegno è fatto da Glifo: i testi sono già passati da escapeXml. Gli id (il ritaglio) diversi per ogni grafico.
     this.canvas.innerHTML = svg.replaceAll('graph-clip', `${this.id}-clip`)
+    const notes = this.legendHtml() + this.errorsHtml()
+    if (notes !== this.notesHtml) {
+      this.notesHtml = notes
+      this.notes.innerHTML = notes
+    }
     const moved = this.view !== this.base
     this.reset.hidden = !moved
     this.block.classList.toggle('is-moved', moved)
@@ -209,12 +497,7 @@ class GraphView {
       views.set(this.key, view)
     }
     this.hideTip()
-    if (!this.frame) {
-      this.frame = requestAnimationFrame(() => {
-        this.frame = 0
-        this.render()
-      })
-    }
+    this.schedule()
   }
 
   /** Ingrandisce (factor < 1) o rimpicciolisce attorno a un punto (in pixel del disegno), di solito il centro. */
@@ -358,6 +641,13 @@ class GraphView {
 /** I grafici disegnati, per rifarli quando cambia la larghezza dell'anteprima. */
 const drawnViews = new Map<HTMLElement, GraphView>()
 let resizer: ResizeObserver | null = null
+let printWatched = false
+
+/** Si stampa la nota: i grafici con i valori scritti, non con quelli degli slider; dopo, di nuovo come prima. */
+function setPrinting(value: boolean): void {
+  printing = value
+  for (const [block, view] of drawnViews) if (block.isConnected) view.redraw()
+}
 
 /** Disegna i grafici dell'anteprima ancora da disegnare. */
 export function hydrateGraphs(root: HTMLElement, look: GraphLook): void {
@@ -371,6 +661,11 @@ export function hydrateGraphs(root: HTMLElement, look: GraphLook): void {
     resizer = new ResizeObserver((entries) => {
       for (const entry of entries) drawnViews.get(entry.target as HTMLElement)?.resize()
     })
+  }
+  if (!printWatched) {
+    printWatched = true
+    window.addEventListener('beforeprint', () => setPrinting(true))
+    window.addEventListener('afterprint', () => setPrinting(false))
   }
   for (const block of root.querySelectorAll<HTMLElement>('.graph-block:not([data-drawn])')) {
     block.dataset.drawn = ''

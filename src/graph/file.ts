@@ -9,6 +9,8 @@
  *     y = x^2
  *     -->
  */
+import { formatNumber } from '../math/format'
+import { nameLatex } from '../math/latex'
 import { renderTexMathml } from '../render/katex'
 import { renderMarkdown } from '../render/markdown'
 import { findFencedBlocks } from '../schema/blocks'
@@ -36,7 +38,7 @@ function unhide(source: string): string {
 
 /**
  * Il grafico come immagine SVG a sé, chiara su bianco, con la legenda sotto (le formule in
- * MathML, che i browser disegnano da soli).
+ * MathML, che i browser disegnano da soli) e i numeri degli slider con il valore scritto (a = 2).
  */
 export function graphImage(source: string, defs: readonly string[] = []): string {
   const spec = parseGraph(source, defs)
@@ -48,9 +50,11 @@ export function graphImage(source: string, defs: readonly string[] = []): string
   const rows = spec.items
     .map((item, i) => ({ item, color: colors[i] }))
     .filter(({ item }) => item.kind !== 'point' || item.name)
-  const legendHeight = rows.length ? rows.length * 28 + 12 : 0
+  const numbers = spec.sliders.map((s) => `${nameLatex(s.name)} = ${formatNumber(s.value, { comma: true, decimal: true, digits: 6 })?.tex ?? s.value}`)
+  const lines = rows.length + (numbers.length ? 1 : 0)
+  const legendHeight = lines ? lines * 28 + 12 : 0
   let legend = ''
-  if (rows.length) {
+  if (lines) {
     const div = document.createElementNS('http://www.w3.org/1999/xhtml', 'div')
     div.setAttribute('style', 'display:flex;flex-direction:column;align-items:center;font:16px serif;color:#1c2030')
     div.innerHTML = rows
@@ -61,6 +65,7 @@ export function graphImage(source: string, defs: readonly string[] = []): string
             : `<span style="width:18px;height:3px;border-radius:2px;background:${color}"></span>`
         return `<div style="display:flex;align-items:center;gap:8px;height:28px">${swatch}${renderTexMathml(item.label)}</div>`
       })
+      .concat(numbers.length ? [`<div style="display:flex;align-items:center;height:28px">${renderTexMathml(numbers.join(', \\quad '))}</div>`] : [])
       .join('')
     legend = `<foreignObject x="0" y="${height + 6}" width="${width}" height="${legendHeight - 6}">${new XMLSerializer().serializeToString(div)}</foreignObject>`
   }

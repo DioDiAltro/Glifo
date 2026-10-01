@@ -10,8 +10,12 @@ import { children, namesIn, parseMath, type MathNode } from './parse'
 
 export interface Definition {
   name: string
+  /** Le variabili, se è una funzione (f(x) = …); null se è un numero (a = …). */
+  params: string[] | null
   /** Il testo della definizione (a = 2, f(x) = x^2), per rifarla altrove (nei grafici). */
   source: string
+  /** Quello a destra dell'uguale. */
+  value: MathNode
   /** I nomi che usa. */
   uses: Set<string>
 }
@@ -141,6 +145,12 @@ export class Sheet {
   private exactFns = new Map<string, ExactFunction | null>()
   readonly definitions: Definition[] = []
 
+  /**
+   * `fixed`: i numeri con un valore diverso da quello scritto (gli slider dei grafici). Valgono in
+   * tutto il foglio: quello che li usa (b = 2a, f(x) = a x^2) segue.
+   */
+  constructor(private readonly fixed?: ReadonlyMap<string, number>) {}
+
   /** Lo stato di adesso, per calcolare un'espressione con le definizioni fatte fin qui. */
   scope(): Scope {
     return { vars: EMPTY_SCOPE.vars, consts: new Map(this.consts), fns: new Map(this.fns) }
@@ -181,7 +191,7 @@ export class Sheet {
   private record(target: { name: string; params: string[] | null }, value: MathNode, source: string, known?: { float: number; exact: Rational | null }): void {
     const { name, params } = target
     const uses = namesIn(value, new Set(), new Set(params ?? []))
-    this.definitions.push({ name, source: source.trim(), uses })
+    this.definitions.push({ name, params, source: source.trim(), value, uses })
     this.consts.delete(name)
     this.exactConsts.delete(name)
     this.fns.delete(name)
@@ -199,7 +209,8 @@ export class Sheet {
       }
       return
     }
-    const result = known ?? this.evaluate(value)
+    const forced = this.fixed?.get(name)
+    const result = forced !== undefined ? { float: forced, exact: null } : known ?? this.evaluate(value)
     if (!result || !Number.isFinite(result.float)) return
     this.consts.set(name, result.float)
     this.exactConsts.set(name, result.exact)

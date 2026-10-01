@@ -48,3 +48,20 @@ export function insertGraphBlock(view: EditorView, line: string | null, after?: 
   })
   view.focus()
 }
+
+/**
+ * «Aggiungi lo slider per k» nell'anteprima: le righe `text` (k = 1) all'inizio del blocco
+ * ```grafico che apre alla riga `line` (da 0). Se lì non c'è più quel blocco, niente.
+ */
+export function addToGraphBlock(view: EditorView, line: number, text: string): boolean {
+  const { doc } = view.state
+  if (!text || line < 0 || line >= doc.lines) return false
+  const fence = doc.line(line + 1)
+  const m = /^([ \t]*)(?:`{3,}|~{3,})[ \t]*grafico[ \t]*$/.exec(fence.text)
+  if (!m) return false
+  const lines = text.split('\n').map((t) => m[1] + t)
+  const changes =
+    line + 1 < doc.lines ? { from: doc.line(line + 2).from, insert: lines.join('\n') + '\n' } : { from: fence.to, insert: '\n' + lines.join('\n') }
+  view.dispatch({ changes, userEvent: 'input' })
+  return true
+}

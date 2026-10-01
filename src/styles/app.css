@@ -3136,6 +3136,75 @@ kbd {
   color: inherit;
 }
 
+/* «Aggiungi lo slider per k», accanto all'errore «k non è definita». */
+.graph-add-slider {
+  margin: 4px 0 0 6px;
+  vertical-align: middle;
+}
+
+/* Gli slider: uno per ogni numero che il grafico usa (a = 2). */
+.graph-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 8px auto 0;
+}
+
+.graph-slider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+}
+
+/* Abbastanza largo per «x₀ = −10,25»: mentre il numero cambia la barra non si sposta. */
+.graph-slider-label {
+  flex: none;
+  min-width: 6.5em;
+  white-space: nowrap;
+}
+
+.graph-slider-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.graph-slider-end {
+  flex: none;
+  color: var(--muted);
+  font-size: 0.85em;
+}
+
+.graph-slider-input {
+  flex: 1 1 120px;
+  min-width: 80px;
+  height: 28px;
+  margin: 0;
+  border-radius: 6px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.graph-play[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Il pulsante per tornare al valore scritto tiene il suo posto anche quando non serve: la barra non salta. */
+.graph-slider-back.is-idle {
+  visibility: hidden;
+}
+
+/* Sui telefoni gli estremi non ci stanno: la barra ha bisogno di posto. */
+@media (max-width: 520px) {
+  .graph-slider-end {
+    display: none;
+  }
+
+  .graph-slider-label {
+    min-width: 5.5em;
+  }
+}
+
 /* ——— Bordi da trascinare tra le sezioni ——— */
 
 /* Una striscia sopra il bordo, che non occupa posto: 3 pixel a sinistra (dove la sezione
@@ -3373,7 +3442,27 @@ kbd {
 
   .graph-tools,
   .graph-tip,
-  .graph-dot {
+  .graph-dot,
+  .graph-add-slider,
+  .graph-slider .graph-tool,
+  .graph-slider-input,
+  .graph-slider-end {
     display: none !important;
+  }
+
+  /* Degli slider resta il valore scritto: a = 2, uno accanto all'altro. */
+  .graph-sliders {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0 24px;
+  }
+
+  .graph-slider {
+    min-height: 0;
+  }
+
+  .graph-slider-label {
+    min-width: 0;
   }
 }

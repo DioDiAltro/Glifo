@@ -469,7 +469,11 @@ export function openHelpDialog(): void {
       h('code', {}, 'P = (1, 2)'),
       ') e la parte da mostrare (',
       h('code', {}, 'x \\in [-5, 5]'),
-      '). Nell\'anteprima il grafico si trascina, si ingrandisce con + e − (o con Ctrl e la rotellina) e, passandoci sopra, dice le coordinate. Con «Salva .md» diventa un\'immagine, come gli schemi.',
+      '). Nell\'anteprima il grafico si trascina, si ingrandisce con + e − (o con Ctrl e la rotellina) e, passandoci sopra, dice le coordinate. Ogni numero che usa (',
+      h('code', {}, 'a = 2'),
+      ') ha uno slider sotto il grafico: muovendolo il grafico cambia e la nota no; ▶ lo muove da solo e ',
+      h('code', {}, 'a \\in [0, 5]'),
+      ' dice da dove a dove va. Con «Salva .md» diventa un\'immagine, come gli schemi.',
     ),
     h(
       'p',

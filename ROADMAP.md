@@ -183,10 +183,10 @@ delle tabelle per più database. Tutto è descritto nel README. Se serviranno:
 
 Calcoli e grafici sono fatti (ottobre 2026, primo giro «vediamo cosa esce»): risultati dopo `=` con
 le definizioni della nota, blocchi ```grafico con funzioni, curve, punti, asintoti, trascinare e
-ingrandire, grafici nei file .md come immagini. Tutto è descritto nel README. Se serviranno:
+ingrandire, grafici nei file .md come immagini, e gli **slider** per i numeri (in `y = a x^2`,
+trascinare `a` e vedere il grafico cambiare, come in GeoGebra e nelle Note matematiche). Tutto è
+descritto nel README. Se serviranno:
 
-- i **cursori** per i numeri (in `y = a x^2`, trascinare `a` e vedere il grafico cambiare, come
-  nelle Note matematiche);
 - le **zone colorate** con le disuguaglianze (`y > x^2`, il dominio di una funzione di due
   variabili in Analisi 2);
 - segnare da soli zeri, massimi, minimi e intersezioni (con un clic sulla curva);

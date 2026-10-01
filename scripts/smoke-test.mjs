@@ -1131,6 +1131,25 @@ try {
   await resetButton.click()
   await gp.waitForFunction(() => document.querySelector('.preview-pane .graph-block [data-action="reset"]')?.hidden, null, { timeout: 5000 })
   check(true, 'il grafico si trascina e si ingrandisce, e torna alla vista di partenza')
+  // Lo slider di a ($a = 3$ nella nota): con le frecce il grafico cambia e la nota no; ▶ lo muove da
+  // solo; la freccia lo riporta al valore scritto
+  const slider = gp.locator('.preview-pane .graph-block').first().locator('.graph-slider')
+  const sliderValue = () => slider.locator('output').innerText()
+  check((await slider.count()) === 1 && (await sliderValue()) === '3', `sotto il grafico c'è lo slider di a, con il valore scritto (${await sliderValue()})`)
+  const curvePath = () => gp.evaluate(() => document.querySelector('.preview-pane .graph-block path[data-item="0"]')?.getAttribute('d'))
+  const writtenCurve = await curvePath()
+  const noteBeforeSlider = await graphNote()
+  await slider.locator('input').focus()
+  for (let i = 0; i < 5; i++) await gp.keyboard.press('ArrowRight')
+  await gp.waitForFunction((d) => document.querySelector('.preview-pane .graph-block path[data-item="0"]')?.getAttribute('d') !== d, writtenCurve, { timeout: 5000 })
+  const slid = await sliderValue()
+  check(slid === '3,5' && (await graphNote()) === noteBeforeSlider, `con lo slider il grafico cambia e la nota resta com'è (${slid})`)
+  await slider.locator('[data-action="play"]').click()
+  await gp.waitForFunction(() => document.querySelector('.preview-pane .graph-slider output')?.textContent !== '3,5', null, { timeout: 5000 })
+  await slider.locator('[data-action="play"]').click()
+  await slider.locator('[data-action="written"]').click()
+  await gp.waitForFunction((d) => document.querySelector('.preview-pane .graph-block path[data-item="0"]')?.getAttribute('d') === d, writtenCurve, { timeout: 5000 })
+  check((await sliderValue()) === '3', '▶ muove lo slider da solo, e la freccia lo riporta al valore scritto')
   // Il pulsante «Grafico» lontano da una formula prepara un blocco con «y = » da completare
   await gp.locator('.cm-content').click()
   await gp.keyboard.press('Control+End')
@@ -1142,6 +1161,17 @@ try {
   check(
     (await graphNote()).endsWith('```\n\n```grafico\ny = \\sin x\n```\n') && piTicks >= 2,
     `il pulsante «Grafico» prepara il blocco e \\sin x ha le tacche in π (${JSON.stringify({ piTicks, note: (await graphNote()).slice(-60) })})`,
+  )
+  // Un nome che manca (k non è definita): «Aggiungi lo slider per k» scrive k = 1 nel blocco, e lo slider c'è
+  await gp.keyboard.press('Control+End')
+  await gp.locator('.editor-toolbar button[aria-label^="Grafico"]').click()
+  await gp.keyboard.type('k(x - 1)')
+  await gp.locator('.preview-pane .graph-add-slider').click({ timeout: 5000 })
+  await gp.waitForFunction(() => document.querySelectorAll('.preview-pane .graph-block')[2]?.querySelector('.graph-slider'), null, { timeout: 5000 })
+  await gp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  check(
+    (await graphNote()).endsWith('```grafico\nk = 1\ny = k(x - 1)\n```\n') && !(await gp.locator('.preview-pane .graph-errors').count()),
+    `«Aggiungi lo slider per k» scrive k = 1 nel blocco (${JSON.stringify((await graphNote()).slice(-40))})`,
   )
   // «Salva .md»: ogni grafico è un'immagine con il suo testo nascosto; «Apri .md» lo riporta
   await gp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
@@ -1157,7 +1187,7 @@ try {
   const graphPictures = [...graphFile.matchAll(/^!\[Grafico\]\(data:image\/svg\+xml;base64,([A-Za-z0-9+/=]+)\)\n<!-- glifo-grafico/gm)]
   const firstGraphSvg = graphPictures.length ? Buffer.from(graphPictures[0][1], 'base64').toString('utf8') : ''
   check(
-    graphPictures.length === 2 && !graphFile.includes('```grafico') && firstGraphSvg.includes('<math') && firstGraphSvg.includes('fill="#ffffff"'),
+    graphPictures.length === 3 && !graphFile.includes('```grafico') && firstGraphSvg.includes('<math') && firstGraphSvg.includes('fill="#ffffff"'),
     `nel file .md i grafici sono immagini con la legenda, e il testo nascosto (${graphPictures.length})`,
   )
   const vsGraphs = new MarkdownIt({ html: true })
@@ -1171,7 +1201,7 @@ try {
     return { widths: imgs.map((img) => img.naturalWidth), text: document.body.innerText.includes('\\sin x') }
   })
   await vscodeGraphs.close()
-  check(graphImages.widths.length === 2 && graphImages.widths.every((w) => w >= 600) && !graphImages.text, `in VS Code si vedono i grafici e non il loro testo (${JSON.stringify(graphImages)})`)
+  check(graphImages.widths.length === 3 && graphImages.widths.every((w) => w >= 600) && !graphImages.text, `in VS Code si vedono i grafici e non il loro testo (${JSON.stringify(graphImages)})`)
   await gp.evaluate((text) => {
     window.showOpenFilePicker = async () => [{ getFile: async () => new File([text], 'grafici.md') }]
   }, graphFile)

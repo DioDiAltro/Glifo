@@ -11,6 +11,8 @@ export interface PreviewCallbacks {
   onJumpToLine(line: number): void
   /** «Modifica» (o doppio clic) su uno schema: la riga (0-based) del suo blocco e il suo testo. */
   onEditSchema(line: number, source: string): void
+  /** «Aggiungi lo slider per k» sotto un grafico: la riga (0-based) del suo blocco e le righe da aggiungere (k = 1). */
+  onAddToGraph(line: number, text: string): void
 }
 
 /** Riquadro dell'anteprima: ridisegna il Markdown e segue lo scorrimento dell'editor. */
@@ -37,6 +39,9 @@ export class Preview {
     this.content.addEventListener('click', (ev) => {
       const block = (ev.target as HTMLElement).closest('.schema-edit')?.closest<HTMLElement>('.schema-block')
       if (block) this.cb.onEditSchema(Number(block.dataset.line), block.dataset.schema ?? '')
+      const add = (ev.target as HTMLElement).closest<HTMLElement>('.graph-add-slider')
+      const graph = add?.closest<HTMLElement>('.graph-block')
+      if (add && graph) this.cb.onAddToGraph(Number(graph.dataset.line), add.dataset.add ?? '')
     })
     this.content.addEventListener('dblclick', (ev) => {
       const target = (ev.target as HTMLElement).closest<HTMLElement>('[data-line]')

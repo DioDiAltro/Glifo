@@ -7,8 +7,9 @@ import { renderMarkdown } from '../src/render/markdown'
 import { hydrateGraphs } from '../src/graph/preview'
 import { graphImage, graphImagesFor, graphsForFile, graphsFromFile } from '../src/graph/file'
 import { acceptCalcResult, calcPlugin, calcResults } from '../src/editor/calcResults'
-import { formulaAtCursor, insertGraphBlock } from '../src/editor/graphInsert'
+import { addToGraphBlock, formulaAtCursor, insertGraphBlock } from '../src/editor/graphInsert'
 import { mathMarkdown } from '../src/editor/mathSyntax'
+import { Preview } from '../src/ui/preview'
 import { fullyParsed } from './support/editorState'
 
 // CodeMirror misura il testo sullo schermo: in jsdom bastano misure vuote.
@@ -40,6 +41,10 @@ function preview(src: string): HTMLElement {
 }
 
 const frame = () => new Promise((done) => requestAnimationFrame(() => done(null)))
+const frames = async (n: number) => {
+  for (let i = 0; i < n; i++) await frame()
+}
+const light = { theme: 'light', surface: '#fff' } as const
 
 describe('i risultati dopo «=»', () => {
   it('nell\'anteprima si vedono, colorati, con le definizioni scritte prima', () => {
@@ -133,6 +138,127 @@ describe('i grafici nell\'anteprima', () => {
   })
 })
 
+describe('gli slider sotto il grafico', () => {
+  const NOTE = 'Sia $a = 2$.\n\n```grafico\ny = a x^2\nP = (a, a^2)\n```\n'
+  const drawn = (src: string) => {
+    const host = preview(src)
+    hydrateGraphs(host, light)
+    const block = host.querySelector<HTMLElement>('.graph-block')!
+    const row = block.querySelector<HTMLElement>('.graph-slider')!
+    return {
+      block,
+      row,
+      input: row.querySelector('input')!,
+      value: () => row.querySelector('output')!.textContent,
+      back: row.querySelector<HTMLButtonElement>('[data-action="written"]')!,
+      play: row.querySelector<HTMLButtonElement>('[data-action="play"]')!,
+      curve: () => block.querySelector('path[data-item="0"]')!.getAttribute('d'),
+      point: () => block.querySelector('.graph-coords')!.textContent,
+    }
+  }
+  const move = (input: HTMLInputElement, value: string) => {
+    input.value = value
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  }
+
+  it('ogni numero che il grafico usa ha il suo slider; trascinandolo il grafico cambia, la freccia torna al valore scritto', async () => {
+    const g = drawn(NOTE)
+    expect(g.block.querySelectorAll('.graph-slider')).toHaveLength(1)
+    expect(g.row.querySelector('.graph-slider-label .katex')).not.toBeNull()
+    expect([g.input.min, g.input.max, g.input.step, g.input.value]).toEqual(['-10', '10', '0.1', '2'])
+    expect([g.value(), g.point(), g.back.disabled]).toEqual(['2', '(2; 4)', true])
+    const written = g.curve()
+    move(g.input, '3.5')
+    await frame()
+    expect([g.value(), g.point(), g.back.disabled]).toEqual(['3,5', '(3,5; 12,25)', false])
+    expect(g.input.getAttribute('aria-valuetext')).toBe('3,5')
+    expect(g.curve()).not.toBe(written)
+    // L'anteprima si ridisegna mentre si scrive: lo slider resta dov'è.
+    const again = drawn(NOTE)
+    expect([again.value(), again.curve()]).toEqual(['3,5', g.curve()])
+    again.back.click()
+    await frame()
+    expect([again.value(), again.point(), again.back.disabled, again.curve()]).toEqual(['2', '(2; 4)', true, written])
+  })
+
+  it('la nota non cambia: il file .md e la stampa usano il valore scritto', async () => {
+    const image = graphImagesFor(NOTE).get(2)
+    const g = drawn(NOTE)
+    const written = g.curve()
+    move(g.input, '-1')
+    await frame()
+    expect(graphImagesFor(NOTE).get(2)).toBe(image)
+    window.dispatchEvent(new Event('beforeprint'))
+    expect([g.curve(), g.point(), g.value()]).toEqual([written, '(2; 4)', '2'])
+    window.dispatchEvent(new Event('afterprint'))
+    expect([g.point(), g.value()]).toEqual(['(−1; 1)', '−1'])
+    g.back.click()
+    await frame()
+  })
+
+  it('▶ lo muove da solo, avanti e indietro; premuto di nuovo lo ferma', async () => {
+    const g = drawn(NOTE)
+    g.play.click()
+    expect(g.play.getAttribute('aria-pressed')).toBe('true')
+    expect(g.play.getAttribute('aria-label')).toBe('Ferma a')
+    await frames(12)
+    const moving = Number(g.value()!.replace(',', '.'))
+    expect(moving).toBeGreaterThan(2)
+    g.play.click()
+    expect(g.play.getAttribute('aria-pressed')).toBe('false')
+    const stopped = g.value()
+    await frames(4)
+    expect(g.value()).toBe(stopped)
+    // Arrivato in fondo torna indietro.
+    move(g.input, '10')
+    g.play.click()
+    await frames(6)
+    expect(Number(g.value()!.replace(',', '.'))).toBeLessThan(10)
+    g.back.click()
+    expect(g.play.getAttribute('aria-pressed')).toBe('false')
+    await frame()
+  })
+
+  it('la parte da mostrare resta quella, se il blocco non la lega a uno slider', async () => {
+    const numbers = (block: HTMLElement) => [...block.querySelectorAll('svg text')].map((t) => t.textContent)
+    const g = drawn('Sia $a = 2$.\n\n```grafico\ny = a x^2\n```\n')
+    const ticks = numbers(g.block)
+    move(g.input, '5')
+    await frame()
+    expect(numbers(g.block)).toEqual(ticks)
+    g.back.click()
+    await frame()
+    const tied = drawn('```grafico\nL = 4\ny = x\nx \\in [0, L]\n```\n')
+    const largest = () => Math.max(...numbers(tied.block).map((t) => Number(t)).filter(Number.isFinite))
+    expect(largest()).toBeLessThanOrEqual(4)
+    move(tied.input, '9')
+    await frame()
+    expect(largest()).toBeGreaterThan(6)
+    tied.back.click()
+    await frame()
+  })
+
+  it('a un nome che manca, «Aggiungi lo slider per k» scrive k = 1 nel blocco', () => {
+    const added: [number, string][] = []
+    const p = new Preview({ onToggleTask: () => {}, onJumpToLine: () => {}, onEditSchema: () => {}, onAddToGraph: (line, text) => added.push([line, text]) })
+    document.body.append(p.el)
+    p.update('Testo\n\n```grafico\ny = a x^2 + b x\n```\n', true)
+    const button = p.el.querySelector<HTMLButtonElement>('.graph-add-slider')!
+    expect(button.textContent).toBe('Aggiungi gli slider per a e b')
+    button.click()
+    expect(added).toEqual([[2, 'a = 1\nb = 1']])
+
+    const v = makeView('Testo\n\n```grafico\ny = a x^2 + b x\n```\n')
+    expect(addToGraphBlock(v, 2, 'a = 1\nb = 1')).toBe(true)
+    expect(v.state.doc.toString()).toBe('Testo\n\n```grafico\na = 1\nb = 1\ny = a x^2 + b x\n```\n')
+    // Se intanto il blocco si è spostato, niente; in un elenco, con il rientro del blocco.
+    expect(addToGraphBlock(v, 0, 'k = 1')).toBe(false)
+    const list = makeView('- punto\n\n  ```grafico\n  y = kx\n  ```')
+    expect(addToGraphBlock(list, 2, 'k = 1')).toBe(true)
+    expect(list.state.doc.toString()).toBe('- punto\n\n  ```grafico\n  k = 1\n  y = kx\n  ```')
+  })
+})
+
 describe('il pulsante «Grafico» e la formula sotto il cursore', () => {
   it('con il cursore su una funzione la riconosce, con le definizioni di prima', () => {
     const doc = r`$a = 2$ poi $f(x) = a x + 1$ e $b = 3$`
@@ -173,6 +299,14 @@ describe('i grafici nei file .md', () => {
     expect(saved).toContain('% x --&gt; 0')
     expect(saved).not.toContain('```')
     expect(graphsFromFile(saved)).toBe(text)
+  })
+
+  it('sotto la legenda, i numeri degli slider con il valore scritto', () => {
+    const svg = graphImage('y = a x\nk = \\frac{1}{2}\ny = k', ['a = 2'])
+    expect(svg).toMatch(/viewBox="0 0 640 496"/)
+    expect(svg).toContain('<mi>a</mi><mo>=</mo><mn>2</mn>')
+    expect(svg).toContain('<mn>0,5</mn>')
+    expect(graphImage('y = x')).toMatch(/viewBox="0 0 640 440"/)
   })
 
   it('l\'immagine ha il disegno e la legenda in MathML, ed è un SVG valido', () => {
