@@ -5,8 +5,8 @@ import { parseSchema, SchemaError, serializeSchema, type Schema } from '../src/s
 
 const sample: Schema = {
   nodes: [
-    { id: 'a', shape: 'rounded', x: 40, y: 60, w: 140, h: 56, text: 'Ipotesi', color: 'blue', size: 'm' },
-    { id: 'b', shape: 'rhombus', x: 300.4, y: 60, w: 120, h: 80, text: 'Vale $x > 0$?', color: 'default', size: 'l' },
+    { id: 'a', shape: 'rounded', x: 40, y: 60, w: 140, h: 56, text: 'Ipotesi', color: 'blue', size: 'm', rot: 0 },
+    { id: 'b', shape: 'rhombus', x: 300.4, y: 60, w: 120, h: 80, text: 'Vale $x > 0$?', color: 'default', size: 'l', rot: 0 },
   ],
   edges: [
     { id: 'e1', from: 'a', to: 'b', text: 'quindi', color: 'default', size: 'm', route: 'orthogonal', arrows: 'end', dashed: false, points: [] },
@@ -49,10 +49,29 @@ describe('il formato degli schemi', () => {
       }),
     )
     expect(schema.nodes.map((n) => n.id)).toEqual(['a', 'a~2', 'n1'])
-    expect(schema.nodes[0]).toEqual({ id: 'a', shape: 'rect', x: 0, y: 100000, w: 10, h: 60, text: '', color: 'default', size: 'm' })
+    expect(schema.nodes[0]).toEqual({ id: 'a', shape: 'rect', x: 0, y: 100000, w: 10, h: 60, text: '', color: 'default', size: 'm', rot: 0 })
     expect(schema.edges).toEqual([
       { id: 'x', from: 'a', to: 'a~2', text: '', color: 'default', size: 'm', route: 'orthogonal', arrows: 'end', dashed: false, points: [[1, 2]] },
     ])
+  })
+
+  it('le forme nuove si rileggono, e solo quelle con un verso si girano', () => {
+    const json = serializeSchema({
+      nodes: [
+        { id: 'f', shape: 'arrow', x: 0, y: 0, w: 60, h: 130, text: 'Poi', color: 'default', size: 'm', rot: 1 },
+        { id: 'd', shape: 'cylinder', x: 0, y: 200, w: 100, h: 90, text: 'Dati', color: 'gray', size: 'm', rot: 0 },
+      ],
+      edges: [],
+    })
+    expect(json).toContain('{"id":"f","shape":"arrow","x":0,"y":0,"w":60,"h":130,"text":"Poi","rot":1}')
+    expect(json).toContain('{"id":"d","shape":"cylinder","x":0,"y":200,"w":100,"h":90,"text":"Dati","color":"gray"}')
+    expect(parseSchema(json).nodes.map((n) => [n.shape, n.rot])).toEqual([
+      ['arrow', 1],
+      ['cylinder', 0],
+    ])
+    // Un verso su una forma che non ne ha, o un verso che non esiste, non conta.
+    const odd = parseSchema('{"nodes":[{"id":"a","shape":"rect","rot":2},{"id":"b","shape":"triangle","rot":7},{"id":"c","shape":"doubleArrow","rot":3}]}')
+    expect(odd.nodes.map((n) => n.rot)).toEqual([0, 0, 3])
   })
 
   it('un blocco che non è uno schema dà un errore da mostrare', () => {

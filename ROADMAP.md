@@ -22,10 +22,13 @@ invece del vero draw.io incorporato, perché funziona offline e non manda niente
   anche sul tema scuro (maxGraph lo faceva nero); con «Salva .md» ogni schema va nel file come
   immagine SVG, che l'anteprima di VS Code mostra, con il JSON in un commento che Glifo rilegge
   riaprendo il file (`src/schema/file.ts`);
-- il prossimo, passo 2: più forme (cilindro, nuvola, documento, parallelogramma, frecce
-  grandi…), modelli pronti (mappa concettuale, diagramma di flusso), allineare e distribuire,
-  scaricare lo schema come immagine (PNG o SVG) per usarlo fuori da Glifo;
-- più avanti: stampare con i colori del tema chiaro anche se si usa quello scuro.
+- fatto, passo 2: altre forme (parallelogramma, esagono, triangolo, nuvola, documento, cilindro,
+  nota, freccia grande e doppia; triangolo e frecce si girano di un quarto, `shapes.ts`),
+  modelli pronti (diagramma di flusso, mappa concettuale, albero, ciclo, linea del tempo,
+  `templates.ts`), allinea e distribuisci (`arrange.ts`), «Scarica» come PNG (fitto il doppio,
+  con la risoluzione scritta dentro per Word) o SVG, e «Copia come immagine» (`image.ts`);
+- più avanti: stampare con i colori del tema chiaro anche se si usa quello scuro; frecce curve;
+  raggruppare le forme; altri modelli (per esempio una mappa mentale).
 
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 

@@ -8,6 +8,7 @@
 import { chromium } from 'playwright-core'
 import { preview } from 'vite'
 import MarkdownIt from 'markdown-it'
+import { readFileSync } from 'node:fs'
 
 const server = await preview({ preview: { port: 4174, strictPort: true }, logLevel: 'error' })
 const url = server.resolvedUrls.local[0]
@@ -674,6 +675,94 @@ try {
     `col dito: toccando una forma compaiono le frecce blu, e toccandone una si aggiunge una forma collegata (${touchSchema.nodes.length} forme, ${touchSchema.edges.length} frecce)`,
   )
   await touch.close()
+
+  // Schemi, passo 2: forme nuove (anche girate), modelli pronti, allineare e distribuire,
+  // scaricare o copiare lo schema come immagine
+  const s2context = await browser.newContext({ viewport: { width: 1440, height: 900 }, acceptDownloads: true })
+  await s2context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(url).origin })
+  const s2 = await s2context.newPage()
+  s2.on('pageerror', (e) => errors.push(e.message))
+  await s2.goto(url)
+  await s2.waitForSelector('.cm-editor')
+  await s2.locator('.notes-head button[aria-label="Nuova nota"]').click()
+  await s2.keyboard.press('Control+a')
+  await s2.keyboard.type('# Forme nuove\n')
+  const editor2 = s2.locator('dialog.schema-editor[open]')
+  await s2.locator('.editor-toolbar button[aria-label^="Schema"]').click()
+  await editor2.waitFor()
+  const paletteCount = await s2.locator('.schema-shape').count()
+  check(paletteCount === 14, `nel pannello ci sono 14 forme, con cilindro, nuvola, frecce grandi… (${paletteCount})`)
+  const canvasTexts = () => s2.evaluate(() => [...document.querySelectorAll('.schema-canvas foreignObject')].map((f) => f.textContent))
+  await s2.locator('.schema-templates button', { hasText: 'Diagramma di flusso' }).click()
+  const flowTexts = await canvasTexts()
+  await s2.keyboard.press('Control+z')
+  const afterUndo = (await canvasTexts()).length
+  check(
+    flowTexts.includes('Va bene?') && flowTexts.includes('Leggi i dati') && afterUndo === 0 && (await s2.locator('.schema-empty').isVisible()),
+    `dal foglio vuoto «Diagramma di flusso» disegna il modello, e un solo Annulla lo toglie (${flowTexts.length} testi, poi ${afterUndo})`,
+  )
+  // La freccia grande si gira di un quarto: larghezza e altezza si scambiano
+  await s2.locator('.schema-shape[data-shape="arrow"]').click()
+  await s2.locator('.schema-format button[aria-label^="Gira di un quarto"]').click()
+  // Il menu «Modelli» aggiunge un modello accanto a quello che c'è, già selezionato
+  await s2.locator('.schema-menu-button', { hasText: 'Modelli' }).click()
+  const menuInDialog = await s2.evaluate(() => !!document.querySelector('dialog.schema-editor .tool-menu'))
+  await s2.locator('.tool-menu-item', { hasText: 'Ciclo' }).click()
+  await s2.locator('.schema-format button[aria-label^="Distribuisci in verticale"]').click()
+  await s2.locator('.schema-format button[aria-label="Allinea a sinistra"]').click()
+  await s2.keyboard.press('Control+s')
+  await s2.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  const s2schema = await s2.evaluate(() => {
+    for (let i = 0; i < localStorage.length; i++) {
+      const value = localStorage.getItem(localStorage.key(i)) ?? ''
+      const m = value.startsWith('# Forme nuove') && /```schema\n([\s\S]*?)\n```/.exec(value)
+      if (m) return JSON.parse(m[1])
+    }
+    return { nodes: [], edges: [] }
+  })
+  const bigArrow = s2schema.nodes.find((n) => n.shape === 'arrow')
+  check(bigArrow?.rot === 1 && bigArrow.w === 60 && bigArrow.h === 130, `girata, la freccia grande punta in giù e il riquadro si gira con lei (${JSON.stringify(bigArrow)})`)
+  const phases = s2schema.nodes.filter((n) => /^Fase \d$/.test(n.text ?? '')).sort((a, b) => a.y - b.y)
+  const gaps = phases.slice(1).map((n, i) => n.y - (phases[i].y + phases[i].h))
+  check(
+    menuInDialog &&
+      phases.length === 4 &&
+      s2schema.edges.length === 4 &&
+      phases.every((n) => n.x === phases[0].x) &&
+      Math.min(...gaps) > 0 &&
+      Math.max(...gaps) - Math.min(...gaps) <= 1,
+    `il menu «Modelli» aggiunge il ciclo; «Distribuisci in verticale» e «Allinea a sinistra» mettono le fasi in colonna con lo stesso spazio (${JSON.stringify(gaps)})`,
+  )
+  // Scaricare come PNG (fitto il doppio, con la sua risoluzione scritta dentro) e come SVG
+  const pngDownload = s2.waitForEvent('download')
+  await s2.locator('.schema-menu-button', { hasText: 'Scarica' }).click()
+  await s2.locator('.tool-menu-item', { hasText: 'Immagine PNG' }).click()
+  const pngFile = await pngDownload
+  const pngBytes = readFileSync(await pngFile.path())
+  const pngChunks = []
+  for (let at = 8; at < pngBytes.length; at += 12 + pngBytes.readUInt32BE(at)) pngChunks.push(pngBytes.toString('latin1', at + 4, at + 8))
+  const svgDownload = s2.waitForEvent('download')
+  await s2.locator('.schema-menu-button', { hasText: 'Scarica' }).click()
+  await s2.locator('.tool-menu-item', { hasText: 'Immagine SVG' }).click()
+  const svgFile = await svgDownload
+  const svgText = readFileSync(await svgFile.path(), 'utf8')
+  const svgWidth = Number(/^<svg[^>]*\swidth="(\d+)"/.exec(svgText)?.[1] ?? 0)
+  check(
+    pngFile.suggestedFilename() === 'Forme-nuove-schema.png' && pngBytes.toString('latin1', 1, 4) === 'PNG' && pngChunks[1] === 'pHYs' && pngBytes.readUInt32BE(16) === svgWidth * 2,
+    `«Scarica → Immagine PNG» dà un PNG nitido col nome della nota (${pngFile.suggestedFilename()}, ${pngBytes.readUInt32BE(16)} px, ${pngChunks.slice(0, 3)})`,
+  )
+  check(svgFile.suggestedFilename() === 'Forme-nuove-schema.svg' && svgText.includes('Fase 3') && svgText.includes('fill="#ffffff"'), '«Immagine SVG» dà lo schema chiaro su bianco')
+  await s2.locator('.schema-menu-button', { hasText: 'Scarica' }).click()
+  await s2.locator('.tool-menu-item', { hasText: 'Copia come immagine' }).click()
+  await s2.waitForFunction(() => [...document.querySelectorAll('dialog.schema-editor .toast')].some((t) => t.textContent.startsWith('Immagine copiata')), null, { timeout: 5000 })
+  const clipboardTypes = await s2.evaluate(async () => (await navigator.clipboard.read()).flatMap((item) => item.types))
+  check(clipboardTypes.includes('image/png'), `«Copia come immagine» mette il PNG negli appunti, e il messaggio si vede sopra l'editor (${clipboardTypes})`)
+  await s2.locator('dialog.schema-editor .btn-primary', { hasText: 'Fatto' }).click()
+  await editor2.waitFor({ state: 'detached' })
+  await s2.waitForSelector('.preview-pane .schema-block svg')
+  const previewTexts = await s2.evaluate(() => [...document.querySelectorAll('.preview-pane .schema-block foreignObject')].map((f) => f.textContent))
+  check(previewTexts.includes('Fase 4'), 'nell\'anteprima lo schema si vede con le forme nuove')
+  await s2context.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)
 } finally {

@@ -729,6 +729,8 @@ async function openSchema(line: number | null, source?: string): Promise<void> {
     await openSchemaEditor({
       schema,
       theme: isDark() ? 'dark' : 'light',
+      // Il titolo di adesso (quello salvato arriva un attimo dopo aver scritto).
+      title: deriveTitle(editor.getDoc()),
       onSave: (next) => {
         block = saveSchemaBlock(block, near, next)
         if (block) near = block.from

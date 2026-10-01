@@ -4,8 +4,27 @@
  * I colori hanno un nome: nel tema chiaro e in quello scuro diventano colori diversi.
  */
 
-export const SHAPES = ['rect', 'rounded', 'ellipse', 'rhombus', 'text'] as const
+export const SHAPES = [
+  'rect',
+  'rounded',
+  'ellipse',
+  'rhombus',
+  'parallelogram',
+  'hexagon',
+  'triangle',
+  'cloud',
+  'document',
+  'cylinder',
+  'note',
+  'arrow',
+  'doubleArrow',
+  'text',
+] as const
 export type ShapeKind = (typeof SHAPES)[number]
+/** Le forme che hanno un verso e si possono girare di un quarto di giro alla volta. */
+export const ROTATABLE: readonly ShapeKind[] = ['triangle', 'arrow', 'doubleArrow']
+/** Quarti di giro in senso orario: 0 è com'è nel pannello (freccia a destra, triangolo in su). */
+export type Rotation = 0 | 1 | 2 | 3
 export const COLORS = ['default', 'blue', 'green', 'yellow', 'red', 'purple', 'gray'] as const
 export type ColorName = (typeof COLORS)[number]
 export const TEXT_SIZES = ['s', 'm', 'l'] as const
@@ -28,6 +47,8 @@ export interface SchemaNode {
   text: string
   color: ColorName
   size: TextSize
+  /** Solo per le forme con un verso (ROTATABLE), altrimenti 0. */
+  rot: Rotation
 }
 
 export interface SchemaEdge {
@@ -49,7 +70,7 @@ export interface Schema {
   edges: SchemaEdge[]
 }
 
-export type NodeLook = Pick<SchemaNode, 'shape' | 'text' | 'color' | 'size'>
+export type NodeLook = Pick<SchemaNode, 'shape' | 'text' | 'color' | 'size' | 'rot'>
 export type EdgeLook = Pick<SchemaEdge, 'text' | 'color' | 'size' | 'route' | 'arrows' | 'dashed'>
 
 export const DEFAULT_EDGE: EdgeLook = { text: '', color: 'default', size: 'm', route: 'orthogonal', arrows: 'end', dashed: false }
@@ -60,6 +81,15 @@ export const SHAPE_SIZE: Record<ShapeKind, [number, number]> = {
   rounded: [120, 60],
   ellipse: [120, 70],
   rhombus: [120, 80],
+  parallelogram: [140, 60],
+  hexagon: [130, 70],
+  triangle: [100, 90],
+  cloud: [140, 90],
+  document: [120, 70],
+  cylinder: [100, 90],
+  note: [110, 90],
+  arrow: [130, 60],
+  doubleArrow: [150, 60],
   text: [100, 40],
 }
 
@@ -70,6 +100,15 @@ export const SHAPE_NAMES: Record<ShapeKind, string> = {
   rounded: 'Rettangolo arrotondato',
   ellipse: 'Ellisse',
   rhombus: 'Rombo',
+  parallelogram: 'Parallelogramma',
+  hexagon: 'Esagono',
+  triangle: 'Triangolo',
+  cloud: 'Nuvola',
+  document: 'Documento',
+  cylinder: 'Cilindro',
+  note: 'Nota',
+  arrow: 'Freccia grande',
+  doubleArrow: 'Freccia doppia',
   text: 'Testo',
 }
 
@@ -181,6 +220,7 @@ export function parseSchema(source: string): Schema {
       text: text(raw.text),
       color: oneOf(raw.color, COLORS, 'default'),
       size: oneOf(raw.size, TEXT_SIZES, 'm'),
+      rot: ROTATABLE.includes(shape) && [1, 2, 3].includes(raw.rot as number) ? (raw.rot as Rotation) : 0,
     })
   }
   const ids = new Set(nodes.map((n) => n.id))
@@ -215,6 +255,7 @@ export function serializeSchema(schema: Schema): string {
     if (n.text) out.text = n.text
     if (n.color !== 'default') out.color = n.color
     if (n.size !== 'm') out.size = n.size
+    if (n.rot) out.rot = n.rot
     return JSON.stringify(out)
   })
   const edges = schema.edges.map((e) => {

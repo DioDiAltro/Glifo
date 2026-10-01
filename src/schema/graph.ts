@@ -20,7 +20,8 @@ import {
   type CellStyle,
 } from '@maxgraph/core'
 import { labelHtml } from './label'
-import { DEFAULT_EDGE, FONT_SIZE, INK, PALETTE, type EdgeLook, type NodeLook, type Schema, type Theme } from './model'
+import { DEFAULT_EDGE, FONT_SIZE, INK, PALETTE, type EdgeLook, type NodeLook, type Rotation, type Schema, type Theme } from './model'
+import { registerShapes, SHAPE_STYLES } from './shapes'
 
 export interface Look {
   theme: Theme
@@ -33,6 +34,22 @@ const SVG_NS = 'http://www.w3.org/2000/svg'
 /** Lo spazio attorno allo schema nell'anteprima e nelle immagini dei file .md. */
 const PADDING = 8
 const IMAGE_PADDING = 16
+
+const COMPASS = ['east', 'south', 'west', 'north'] as const
+type Compass = (typeof COMPASS)[number]
+
+/** La direzione di maxGraph dopo `rot` quarti di giro in senso orario da `start`. */
+function turn(start: Compass, rot: Rotation): Compass {
+  return COMPASS[(COMPASS.indexOf(start) + rot) % 4]
+}
+
+/** Nel triangolo il testo sta verso il lato largo, lontano dalla punta. */
+const TRIANGLE_TEXT: Record<Compass, CellStyle> = {
+  north: { spacingTop: 30, spacingLeft: 12, spacingRight: 12 },
+  east: { spacingRight: 30, spacingTop: 12, spacingBottom: 12 },
+  south: { spacingBottom: 30, spacingLeft: 12, spacingRight: 12 },
+  west: { spacingLeft: 30, spacingTop: 12, spacingBottom: 12 },
+}
 
 export function nodeStyle(v: NodeLook, look: Look): CellStyle {
   const swatch = PALETTE[look.theme][v.color]
@@ -54,6 +71,26 @@ export function nodeStyle(v: NodeLook, look: Look): CellStyle {
       return { ...base, shape: 'ellipse', perimeter: 'ellipsePerimeter' }
     case 'rhombus':
       return { ...base, shape: 'rhombus', perimeter: 'rhombusPerimeter' }
+    case 'parallelogram':
+      return { ...base, shape: SHAPE_STYLES.parallelogram, spacingLeft: 14, spacingRight: 14 }
+    case 'hexagon':
+      return { ...base, shape: 'hexagon', perimeter: 'hexagonPerimeter', spacingLeft: 14, spacingRight: 14 }
+    case 'triangle': {
+      const direction = turn('north', v.rot)
+      return { ...base, shape: 'triangle', perimeter: 'trianglePerimeter', direction, ...TRIANGLE_TEXT[direction] }
+    }
+    case 'cloud':
+      return { ...base, shape: 'cloud', perimeter: 'ellipsePerimeter', spacing: 16 }
+    case 'document':
+      return { ...base, shape: SHAPE_STYLES.document, spacingBottom: 10 }
+    case 'cylinder':
+      return { ...base, shape: 'cylinder', spacingTop: 14 }
+    case 'note':
+      return { ...base, shape: SHAPE_STYLES.note, spacingRight: 8 }
+    case 'arrow':
+      return { ...base, shape: SHAPE_STYLES.arrow, direction: turn('east', v.rot) }
+    case 'doubleArrow':
+      return { ...base, shape: SHAPE_STYLES.doubleArrow, direction: turn('east', v.rot) }
     case 'text':
       // Solo testo: il colore va alle lettere.
       return { ...base, fillColor: 'none', strokeColor: 'none', fontColor: v.color === 'default' ? INK[look.theme] : swatch.stroke }
@@ -86,7 +123,7 @@ const isEdgeLook = (v: unknown): v is EdgeLook => typeof v === 'object' && v !==
 /** Come appare una forma (il suo valore in maxGraph). Nessuno lo cambia: se ne mette uno nuovo. */
 export function nodeLook(cell: Cell): NodeLook {
   const v: unknown = cell.getValue()
-  return isNodeLook(v) ? v : { shape: 'rect', text: typeof v === 'string' ? v : '', color: 'default', size: 'm' }
+  return isNodeLook(v) ? v : { shape: 'rect', text: typeof v === 'string' ? v : '', color: 'default', size: 'm', rot: 0 }
 }
 
 export function edgeLook(cell: Cell): EdgeLook {
@@ -129,6 +166,7 @@ function styleHandles(): void {
  * rettangolo; altrimenti serve solo a disegnare (anteprima).
  */
 export function createGraph(container: HTMLElement, editable: boolean): Graph {
+  registerShapes()
   if (editable) styleHandles()
   const plugins = editable ? [SelectionCellsHandler, ConnectionHandler, SelectionHandler, PanningHandler, RubberBandHandler] : []
   const graph = new Graph(container, undefined, plugins)
@@ -158,21 +196,38 @@ export function createGraph(container: HTMLElement, editable: boolean): Graph {
 
 /** Mette lo schema nel foglio, al posto di quello che c'era. */
 export function loadSchema(graph: Graph, schema: Schema, look: Look): void {
-  const parent = graph.getDefaultParent()
   graph.batchUpdate(() => {
-    graph.removeCells(graph.getChildCells(parent, true, true), true)
-    const cells = new Map<string, Cell>()
+    graph.removeCells(graph.getChildCells(graph.getDefaultParent(), true, true), true)
+    insertSchema(graph, schema, look, { keepIds: true })
+  })
+}
+
+/**
+ * Aggiunge lo schema a quello che c'è nel foglio, spostato di `dx`, `dy` (per i modelli).
+ * Con `keepIds` le forme tengono i loro id, altrimenti maxGraph ne dà di nuovi.
+ */
+export function insertSchema(graph: Graph, schema: Schema, look: Look, { dx = 0, dy = 0, keepIds = false } = {}): Cell[] {
+  const parent = graph.getDefaultParent()
+  const cells = new Map<string, Cell>()
+  const added: Cell[] = []
+  graph.batchUpdate(() => {
     for (const n of schema.nodes) {
-      const value: NodeLook = Object.freeze({ shape: n.shape, text: n.text, color: n.color, size: n.size })
-      cells.set(n.id, graph.insertVertex({ parent, id: n.id, value, position: [n.x, n.y], size: [n.w, n.h], style: nodeStyle(value, look) }))
+      const value: NodeLook = Object.freeze({ shape: n.shape, text: n.text, color: n.color, size: n.size, rot: n.rot })
+      const id = keepIds ? n.id : undefined
+      const vertex = graph.insertVertex({ parent, id, value, position: [n.x + dx, n.y + dy], size: [n.w, n.h], style: nodeStyle(value, look) })
+      cells.set(n.id, vertex)
+      added.push(vertex)
     }
     for (const e of schema.edges) {
       const value: EdgeLook = Object.freeze({ text: e.text, color: e.color, size: e.size, route: e.route, arrows: e.arrows, dashed: e.dashed })
-      const edge = graph.insertEdge({ parent, id: e.id, value, source: cells.get(e.from), target: cells.get(e.to), style: edgeStyle(value, look) })
+      const id = keepIds ? e.id : undefined
+      const edge = graph.insertEdge({ parent, id, value, source: cells.get(e.from), target: cells.get(e.to), style: edgeStyle(value, look) })
       const geometry = edge.getGeometry()
-      if (geometry && e.points.length) geometry.points = e.points.map(([x, y]) => new Point(x, y))
+      if (geometry && e.points.length) geometry.points = e.points.map(([x, y]) => new Point(x + dx, y + dy))
+      added.push(edge)
     }
   })
+  return added
 }
 
 /** Lo schema disegnato nel foglio. */

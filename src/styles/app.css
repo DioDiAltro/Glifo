@@ -2392,7 +2392,7 @@ kbd {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px;
+  padding: 6px 8px;
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -2530,12 +2530,34 @@ kbd {
   position: absolute;
   left: 50%;
   top: 45%;
-  width: min(380px, 80%);
+  width: min(420px, 86%);
   margin: 0;
   transform: translate(-50%, -50%);
   color: var(--muted);
   text-align: center;
   pointer-events: none;
+}
+
+.schema-empty p {
+  margin: 0 0 12px;
+}
+
+/* I modelli da cui partire: i pulsanti si cliccano anche se il resto del messaggio no. */
+.schema-templates {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.schema-templates .btn {
+  pointer-events: auto;
+}
+
+.schema-menu-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .schema-format {
@@ -2639,6 +2661,8 @@ kbd {
 
   .schema-shapes h3,
   .schema-shape span,
+  .schema-menu-button span,
+  .schema-zoom,
   .schema-title,
   .schema-status {
     display: none;

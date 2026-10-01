@@ -7,9 +7,10 @@ let current: { anchor: HTMLElement; close: (returnFocus?: boolean) => void } | n
 /**
  * Menu a comparsa accanto a un pulsante. Si usa anche da tastiera (frecce per muoversi,
  * Invio per scegliere, Esc per chiudere) e si chiude cliccando fuori. Premendo di nuovo
- * lo stesso pulsante si chiude.
+ * lo stesso pulsante si chiude. `container`: dove metterlo; dentro una finestra modale va
+ * messo lì, perché quello che sta fuori resta sotto e non si clicca.
  */
-export function openMenu(anchor: HTMLElement, entries: MenuEntry[], label: string, fromKeyboard = false): void {
+export function openMenu(anchor: HTMLElement, entries: MenuEntry[], label: string, fromKeyboard = false, container: HTMLElement = document.body): void {
   if (current) {
     const same = current.anchor === anchor
     current.close()
@@ -39,7 +40,7 @@ export function openMenu(anchor: HTMLElement, entries: MenuEntry[], label: strin
     items.push(item)
     menu.append(item)
   }
-  document.body.append(menu)
+  container.append(menu)
 
   // Sotto il pulsante, allineato a destra; sopra se in basso non c'è spazio.
   const r = anchor.getBoundingClientRect()

@@ -21,7 +21,7 @@ const CLOSE = /^[ \t]*-->[ \t]*$/
 const IMAGE = /^[ \t]*!\[[^\]\n]*\]\(data:image\/svg\+xml;base64,[A-Za-z0-9+/=]*\)[ \t]*$/
 
 /** Il testo in base64, passando per UTF-8 (btoa da solo accetta solo caratteri latini). */
-function base64(text: string): string {
+export function base64(text: string): string {
   const bytes = new TextEncoder().encode(text)
   let binary = ''
   for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000))

@@ -131,7 +131,12 @@ export async function downloadText(name: string, content: string, type = 'text/p
       return false
     }
   }
-  const blob = new Blob([content], { type: `${type};charset=utf-8` })
+  downloadBlob(name, new Blob([content], { type: `${type};charset=utf-8` }))
+  return true
+}
+
+/** Scarica un file già pronto, anche binario (per esempio un'immagine PNG). */
+export function downloadBlob(name: string, blob: Blob): void {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
@@ -140,5 +145,4 @@ export async function downloadText(name: string, content: string, type = 'text/p
   a.click()
   a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
-  return true
 }
