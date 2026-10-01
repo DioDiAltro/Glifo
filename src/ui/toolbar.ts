@@ -121,6 +121,8 @@ function insertCode(editor: MarkdownEditor): void {
 export interface ToolbarActions {
   /** Apre l'editor per uno schema nuovo. */
   onSchema(): void
+  /** Mette nella nota un grafico di funzione. */
+  onGraph(): void
 }
 
 /** Barra dei pulsanti di formattazione sopra l'editor. */
@@ -146,6 +148,7 @@ export function createToolbar(editor: MarkdownEditor, more: ToolbarActions): HTM
       run: () => insertBlock(v(), '| Colonna 1 | Colonna 2 |\n| --- | --- |\n|  |  |', '| Colonna 1 | Colonna 2 |\n| --- | --- |\n| '.length),
     },
     { icon: 'schema', title: 'Schema: forme e frecce, come in draw.io', run: () => more.onSchema() },
+    { icon: 'graph', title: 'Grafico di una funzione (con il cursore su una formula come y = x^2, disegna quella)', run: () => more.onGraph() },
     'sep',
     { text: '$x$', title: 'Formula in linea (Ctrl+M)', run: () => editor.insertInlineMath() },
     { text: '$$', title: 'Formula a blocco (Ctrl+Maiusc+M)', run: () => editor.insertBlockMath() },

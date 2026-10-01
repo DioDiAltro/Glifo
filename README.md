@@ -12,7 +12,9 @@ li scrivi:
 - clicchi su quello giusto (o premi **Tab**) e il comando viene completato;
 - con **Tab** salti da un segnaposto all'altro: `\sum_{n=0}^{\infty}` si scrive in pochi tasti;
 - non ricordi il comando? Lo **cerchi a parole**: «come faccio il simbolo dell'infinito» → `\infty`;
-- le parole scritte male vengono **sottolineate in rosso** (formule e codice no): un clic e le correggi.
+- le parole scritte male vengono **sottolineate in rosso** (formule e codice no): un clic e le correggi;
+- una formula che finisce con `=` ha già il **risultato**, come nelle Note matematiche dell'iPad, e un
+  blocco `grafico` **disegna le funzioni**.
 
 **Usala subito: <https://diodialtro.github.io/Glifo/>**
 
@@ -109,6 +111,45 @@ chi sta provando Glifo.*
   testo e spazi, chimica (`\ce{H2O}`). Oltre 470 simboli, con più di 600 varianti.
 - **Assistente AI** (facoltativo) per le domande difficili, es. «freccia con scritto sopra
   n → ∞»: risponde con il codice LaTeX pronto da inserire.
+
+**Calcoli e grafici** (come le Note matematiche della Calcolatrice dell'iPad)
+- Una formula che finisce con `=` mostra il **risultato**: nell'editor accanto all'uguale, più chiaro,
+  e nell'anteprima colorato. Con il cursore subito dopo l'uguale **Tab** (o un clic) lo scrive nella
+  formula; finché non lo si scrive non è nel testo, quindi cambia da solo se cambiano i numeri.
+  Per una formula che finisce con l'uguale ma non vuole il risultato basta `={}`.
+- Le formule si leggono dall'alto in basso: `$a = 2$` e `$f(x) = x^2 - a$` valgono per quelle sotto,
+  e `$f(3) =$` dà 7. Anche `a := 2`, più definizioni in una formula (`$a = 2, \quad b = 3$`) e
+  `$a = 3 + 4 =$` (mostra 7 e definisce a).
+- I risultati come in un quaderno: frazioni esatte (`$\frac{1}{3} + \frac{1}{6} =$` dà ½), decimali
+  con la virgola (`0{,}1 + 0{,}2` dà 0,3, non 0,30000000000000004), i puntini quando le cifre
+  continuano (√2 = 1,414213…), le potenze di 10 per i numeri molto grandi o piccoli.
+- Si calcolano le quattro operazioni, potenze e radici, `\sin`, `\cos`, `\tan` e le inverse,
+  `\ln`, `\log` (naturale, come in Analisi; `\log_{10}` e `\lg` per la base 10), `\exp`, valore
+  assoluto, parte intera, fattoriale, `\binom`, percentuali, gradi (`30^\circ`), somme e prodotti
+  (`\sum_{k=1}^{10} k^2`), integrali definiti (`\int_0^1 x^2 \, dx`, anche con ±∞), derivate delle
+  funzioni definite (`f'(2)`, `f''(2)`) e funzioni a tratti con `\begin{cases}`. Si scrivono in LaTeX
+  ma anche come in una calcolatrice: `sqrt(x)`, `sin(x)`, `2*x`, `pi`; e con i nomi italiani (`\tg`,
+  `\arctg`, `\operatorname{sen}`, `settsinh`).
+- Il pulsante con gli **assi** nella barra mette nella nota un **grafico**: con il cursore su una
+  funzione (`$f(x) = …$`) disegna quella, se no prepara il blocco da scrivere. Il grafico della
+  formula sotto il cursore si vede anche nel pannello a destra, con «Inserisci il grafico».
+- Il blocco ` ```grafico ` ha una riga per ogni cosa da disegnare: funzioni (`y = x^2`, `f(x) = \frac{1}{x}`,
+  o solo `x^2`), anche dove vale una condizione (`y = \sqrt{x}, 0 \le x \le 4`), rette verticali
+  (`x = 2`), curve qualsiasi (`x^2 + y^2 = 4`), in coordinate polari (`r = 1 + \cos\theta`) o con un
+  parametro (`(\cos t, \sin t)`), punti (`P = (1, 2)`, anche `(0,5; 2)`), numeri da usare
+  (`a = 2`) e la parte da mostrare (`x \in [-5, 5]`, `-1 \le y \le 3`). Usa anche le definizioni della
+  nota scritte prima; `%` comincia un commento.
+- Glifo sceglie da solo la parte da mostrare (dove la funzione si annulla, ha massimi e minimi, gli
+  asintoti; per seni e coseni due giri con le tacche in π; le circonferenze restano rotonde), stacca
+  la curva dove salta e segna gli **asintoti verticali** tratteggiati. Assi con la freccia, i numeri
+  con la virgola, l'origine O, la legenda con le formule e, per le righe sbagliate, il perché.
+- Nell'anteprima il grafico si **trascina**, si ingrandisce con + e − (o con Ctrl e la rotellina,
+  o con due dita) e, passandoci sopra con il mouse, dice le **coordinate** del punto della curva.
+- Con **Salva .md** ogni grafico diventa un'immagine (con il testo del blocco nascosto sotto), come
+  gli schemi; riaprendo il file con **Apri .md** torna un blocco da modificare. Funziona offline:
+  è tutto scritto per Glifo, senza librerie esterne.
+
+![Risultati dopo «=» e grafici nell'anteprima](docs/grafici.png)
 
 **Schemi stile draw.io**
 - Il pulsante con i due riquadri nella barra apre un editor a tutto schermo: forme a sinistra
@@ -230,6 +271,8 @@ Il riconoscimento di `$ … $` e `$$ … $$` ricalca quello dell'anteprima Markd
 - gli schemi, salvati con **Salva .md**, nel file sono immagini scritte dentro il file stesso
   (`data:image/svg+xml`): VS Code le mostra, GitHub no. Il JSON dello schema è subito sotto, in
   un commento `<!-- glifo-schema … -->`: si può leggere, e Glifo lo usa quando riapre il file.
+  Lo stesso per i grafici, con il testo del blocco in `<!-- glifo-grafico … -->`;
+- i risultati dopo `=` sono di Glifo: nel file ci sono solo quelli scritti nella formula con Tab.
 
 ## Com'è fatto
 
@@ -244,6 +287,7 @@ Web app in **TypeScript** con [Vite](https://vite.dev), senza framework e senza 
 | Assistente AI | SDK ufficiale di Anthropic (caricato solo quando serve) |
 | Account e sincronizzazione | [Supabase](https://supabase.com): database Postgres e accesso via email, senza password (il client si carica solo se si accede) |
 | Schemi | [maxGraph](https://github.com/maxGraph/maxGraph), il motore di draw.io (caricato solo quando serve) |
+| Calcoli e grafici | scritti per Glifo: lettura delle formule LaTeX, conti (anche esatti, con le frazioni), disegno in SVG |
 | App installabile | vite-plugin-pwa |
 
 ```
@@ -265,6 +309,8 @@ src/
     insert.ts             inserimento dei simboli (aggiunge i $, usa la selezione…)
     suggestions.ts        stato dei suggerimenti (↑ ↓ Tab Esc)
     spellcheck.ts         sottolineatura delle parole sbagliate e correzioni
+    calcResults.ts        i risultati dopo «=» nell'editor (Tab li scrive)
+    graphInsert.ts        il pulsante «Grafico»: la funzione sotto il cursore in un blocco ```grafico
     editor.ts             configurazione di CodeMirror
   spell/
     words.ts              divide il testo in parole (salta indirizzi, codice, sigle…)
@@ -298,6 +344,18 @@ src/
     graph.ts              il collegamento con maxGraph: forme, frecce, disegno per l'anteprima
     editor.ts             l'editor a tutto schermo (forme, frecce blu, testo, colori, zoom)
     preview.ts, label.ts  il disegno nell'anteprima; il testo delle forme con le formule
+  math/
+    parse.ts              legge le espressioni (LaTeX o come in una calcolatrice) in un albero
+    evaluate.ts           le calcola: funzioni, somme, integrali, derivate, condizioni
+    exact.ts, format.ts   i conti esatti con le frazioni; i risultati scritti all'italiana
+    sheet.ts              il «foglio» della nota: definizioni dall'alto in basso e risultati dopo «=»
+    latex.ts              un'espressione riscritta in LaTeX (le legende dei grafici)
+  graph/
+    spec.ts               le righe di un blocco ```grafico: funzioni, curve, punti, la parte da mostrare
+    plot.ts               dove calcolare le curve (salti, asintoti), la finestra, le tacche
+    svg.ts                il disegno in SVG, con i colori dei due temi
+    preview.ts            nell'anteprima: legenda, errori, trascinare, ingrandire, coordinate
+    file.ts               i grafici nei file .md: immagine SVG più il testo nascosto, e ritorno
   host.ts                 integrazione facoltativa con claude.ai (per la demo pubblicata lì)
 privacy.html              l'informativa sulla privacy (una seconda pagina, fuori dall'app)
 tests/                    test automatici (Vitest), anche del database con le vere migrazioni (PGlite)

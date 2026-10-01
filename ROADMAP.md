@@ -179,10 +179,21 @@ delle tabelle per più database. Tutto è descritto nel README. Se serviranno:
   chiedi.
 - Funziona già con la propria chiave API; con l'abbonamento anche senza.
 
-### Grafici come nella Calcolatrice dell'iPad
+### Calcoli e grafici: idee in più
 
-- Scrivi una funzione (es. `y = x^2`) e vedi il grafico nell'anteprima; i risultati si
-  calcolano quando scrivi `=`, come nelle «Note matematiche».
+Calcoli e grafici sono fatti (ottobre 2026, primo giro «vediamo cosa esce»): risultati dopo `=` con
+le definizioni della nota, blocchi ```grafico con funzioni, curve, punti, asintoti, trascinare e
+ingrandire, grafici nei file .md come immagini. Tutto è descritto nel README. Se serviranno:
+
+- i **cursori** per i numeri (in `y = a x^2`, trascinare `a` e vedere il grafico cambiare, come
+  nelle Note matematiche);
+- le **zone colorate** con le disuguaglianze (`y > x^2`, il dominio di una funzione di due
+  variabili in Analisi 2);
+- segnare da soli zeri, massimi, minimi e intersezioni (con un clic sulla curva);
+- le derivate scritte come formula (oggi `f'(x)` si calcola, ma non si vede come espressione) e i limiti;
+- i calcoli anche fuori dalle formule (`12 * 3 =` nel testo) e con le unità di misura (`3 m/s`);
+- un'impostazione per spegnere i risultati dopo `=`, se a qualcuno danno fastidio;
+- «Copia come immagine» e PNG anche per i grafici (come per gli schemi).
 
 ### Non solo appunti
 

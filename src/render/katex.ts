@@ -15,9 +15,10 @@ const MAX_CACHE = 4000
  *
  * `ui = true` si usa solo per le anteprime generate dall'app (simboli e
  * segnaposto): abilita `\htmlClass`, che non concediamo mai al testo delle note.
+ * `ui = 'result'` abilita solo `\htmlClass{calc-result}`, il colore dei risultati dopo «=».
  */
-export function renderTex(tex: string, displayMode = false, ui = false): TexRender {
-  const key = `${displayMode ? 'D' : 'I'}${ui ? 'U' : 'N'}${tex}`
+export function renderTex(tex: string, displayMode = false, ui: boolean | 'result' = false): TexRender {
+  const key = `${displayMode ? 'D' : 'I'}${ui === 'result' ? 'R' : ui ? 'U' : 'N'}${tex}`
   const hit = cache.get(key)
   if (hit) return hit
 
@@ -28,7 +29,12 @@ export function renderTex(tex: string, displayMode = false, ui = false): TexRend
       throwOnError: true,
       strict: 'ignore',
       output: 'htmlAndMathml',
-      trust: ui ? (context) => context.command === '\\htmlClass' : false,
+      trust:
+        ui === 'result'
+          ? (context) => context.command === '\\htmlClass' && context.class === 'calc-result'
+          : ui
+          ? (context) => context.command === '\\htmlClass'
+          : false,
     })
     result = { html, error: null }
   } catch (err) {
@@ -56,6 +62,15 @@ export function renderTexMathml(tex: string, displayMode = false): string {
   } catch {
     return escapeHtml(tex)
   }
+}
+
+/**
+ * Una formula che finisce con «=», con in fondo il risultato calcolato da Glifo (src/math/sheet.ts),
+ * colorato con la classe `calc-result`. Se così non si disegna, la formula da sola.
+ */
+export function renderTexWithResult(tex: string, result: string, displayMode = false): string {
+  const { html, error } = renderTex(`${tex} \\htmlClass{calc-result}{${result}}`, displayMode, 'result')
+  return error ? renderTexOrError(tex, displayMode) : html
 }
 
 /** Versione HTML sempre valida: se la formula è sbagliata mostra l'errore. */

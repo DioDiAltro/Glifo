@@ -1,4 +1,4 @@
-/** I blocchi ```schema nel testo di una nota: dove sono e cosa contengono. */
+/** I blocchi ```schema (e ```grafico) nel testo di una nota: dove sono e cosa contengono. */
 
 export interface SchemaBlock {
   /** Dall'inizio della riga con ```schema alla fine della riga che lo chiude. */
@@ -27,6 +27,11 @@ interface OpenFence {
 
 /** I blocchi ```schema del testo, in ordine. Quelli dentro altri blocchi di codice non contano. */
 export function findSchemaBlocks(text: string): SchemaBlock[] {
+  return findFencedBlocks(text, 'schema')
+}
+
+/** I blocchi di codice con questo nome (```schema, ```grafico), in ordine; quelli dentro altri blocchi non contano. */
+export function findFencedBlocks(text: string, name: string): SchemaBlock[] {
   const blocks: SchemaBlock[] = []
   const add = (open: OpenFence, to: number, contentTo: number, closed: boolean) =>
     blocks.push({ from: open.from, to, contentFrom: open.contentFrom, contentTo, source: text.slice(open.contentFrom, contentTo), line: open.line, closed })
@@ -44,7 +49,7 @@ export function findSchemaBlocks(text: string): SchemaBlock[] {
       }
     } else if (m && !(m[1][0] === '`' && m[2].includes('`'))) {
       const info = m[2].trim().split(/\s+/)[0].toLowerCase()
-      open = { marker: m[1], schema: info === 'schema', from: pos, contentFrom: Math.min(end + 1, text.length), line }
+      open = { marker: m[1], schema: info === name, from: pos, contentFrom: Math.min(end + 1, text.length), line }
     }
     if (newline < 0) break
     pos = newline + 1

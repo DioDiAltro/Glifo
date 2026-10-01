@@ -28,7 +28,9 @@ import typescript from 'highlight.js/lib/languages/typescript'
 import x86asm from 'highlight.js/lib/languages/x86asm'
 import xml from 'highlight.js/lib/languages/xml'
 import yaml from 'highlight.js/lib/languages/yaml'
-import { escapeHtml, renderTexOrError } from './katex'
+import { graphNames } from '../graph/spec'
+import { Sheet } from '../math/sheet'
+import { escapeHtml, renderTexOrError, renderTexWithResult } from './katex'
 import { listRule, paragraphRule } from './lists'
 import { analyzeBlockOpen, findBlockClose, matchInlineMath } from './mathDelims'
 
@@ -157,18 +159,25 @@ function createMarkdownIt(): MarkdownIt {
   md.core.ruler.after('inline', 'task_lists', taskListRule)
   md.core.ruler.push('source_line', sourceLineRule)
 
-  md.renderer.rules.math_inline = (tokens, idx) => {
-    const content = stripBackticks(tokens[idx].content)
-    return renderTexOrError(content, DISPLAY_ENVS.test(content))
+  // Le formule passano anche dal «foglio» della nota (src/math/sheet.ts), come nell'editor: le
+  // definizioni ($a = 2$, $f(x) = …$) servono a quelle sotto e ai grafici, e una formula che
+  // finisce con «=» si vede con il suo risultato, colorato (finché non lo si scrive con Tab).
+  const formula = (content: string, display: boolean, env: unknown) => {
+    const result = sheetOf(env)?.add(content)
+    return result ? renderTexWithResult(content, result.tex, display) : renderTexOrError(content, display)
   }
-  md.renderer.rules.math_inline_display = (tokens, idx) => renderTexOrError(tokens[idx].content, true)
-  md.renderer.rules.math_block = (tokens, idx) => {
+  md.renderer.rules.math_inline = (tokens, idx, _options, env) => {
+    const content = stripBackticks(tokens[idx].content)
+    return formula(content, DISPLAY_ENVS.test(content), env)
+  }
+  md.renderer.rules.math_inline_display = (tokens, idx, _options, env) => formula(tokens[idx].content, true, env)
+  md.renderer.rules.math_block = (tokens, idx, _options, env) => {
     const line = tokens[idx].map?.[0]
     const attr = line === undefined ? '' : ` data-line="${line}"`
-    return `<div class="math-block"${attr}>${renderTexOrError(tokens[idx].content, true)}</div>\n`
+    return `<div class="math-block"${attr}>${formula(tokens[idx].content, true, env)}</div>\n`
   }
-  // I blocchi ```math si comportano come $$ … $$ (come su GitHub); quelli ```schema lasciano
-  // il posto allo schema, che l'anteprima disegna dopo (src/schema/preview.ts).
+  // I blocchi ```math si comportano come $$ … $$ (come su GitHub); quelli ```schema e ```grafico
+  // lasciano il posto al disegno, che l'anteprima fa dopo (src/schema/preview.ts, src/graph/preview.ts).
   const fence = md.renderer.rules.fence!
   md.renderer.rules.fence = (tokens, idx, options, env, self) => {
     const token = tokens[idx]
@@ -181,9 +190,21 @@ function createMarkdownIt(): MarkdownIt {
     if (info === 'schema') {
       return `<div class="schema-block"${attr} data-schema="${escapeHtml(token.content)}"></div>\n`
     }
+    if (info === 'grafico') {
+      const defs = sheetOf(env)?.definitionsFor(graphNames(token.content)) ?? []
+      return `<div class="graph-block"${attr} data-graph="${escapeHtml(token.content)}" data-defs="${escapeHtml(JSON.stringify(defs))}"></div>\n`
+    }
     return fence(tokens, idx, options, env, self)
   }
   return md
+}
+
+interface RenderEnv {
+  sheet?: Sheet
+}
+
+function sheetOf(env: unknown): Sheet | undefined {
+  return (env as RenderEnv | undefined)?.sheet
 }
 
 let md: MarkdownIt | null = null
@@ -204,10 +225,11 @@ function configurePurify(): void {
 /** Da Markdown a HTML sicuro (il testo delle note non può eseguire script). */
 export function renderMarkdown(src: string): string {
   md ??= createMarkdownIt()
-  const html = md.render(src)
+  const env: RenderEnv = { sheet: new Sheet() }
+  const html = md.render(src, env as Record<string, unknown>)
   configurePurify()
   return DOMPurify.sanitize(html, {
-    ADD_ATTR: ['target', 'data-line', 'data-task-line', 'data-schema', 'aria-hidden', 'encoding'],
+    ADD_ATTR: ['target', 'data-line', 'data-task-line', 'data-schema', 'data-graph', 'data-defs', 'aria-hidden', 'encoding'],
     ADD_TAGS: ['semantics', 'annotation'],
   })
 }

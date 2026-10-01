@@ -1399,6 +1399,56 @@ kbd {
   display: none;
 }
 
+/* Il grafico della formula sotto il cursore, quando è una funzione (src/ui/sidePanel.ts). */
+.formula-graph {
+  margin-top: 6px;
+  text-align: center;
+}
+
+.formula-graph[hidden] {
+  display: none;
+}
+
+.formula-graph-canvas svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.formula-graph-insert {
+  margin-top: 6px;
+}
+
+/* Nell'anteprima: il risultato dopo «=», calcolato da Glifo e non ancora scritto nella nota. */
+.markdown-body .calc-result {
+  color: var(--accent);
+}
+
+/* Nell'editor: il risultato dopo «=» (src/editor/calcResults.ts); Tab o un clic lo scrivono. */
+.cm-calc-result {
+  margin-left: 0.25em;
+  padding: 0 0.4em;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-family: var(--font-ui);
+  font-size: 0.92em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cm-calc-result kbd {
+  margin-left: 0.45em;
+  padding: 0 0.3em;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font-family: var(--font-ui);
+  font-size: 0.75em;
+  opacity: 0.7;
+}
+
 .panel-body {
   flex: 1;
   min-height: 0;
@@ -2918,6 +2968,174 @@ kbd {
   }
 }
 
+/* ——— Grafici di funzione: i blocchi ```grafico nell'anteprima (src/graph/preview.ts) ——— */
+
+.graph-block {
+  margin: 0 0 16px;
+}
+
+.graph-stage {
+  position: relative;
+  margin: 0 auto;
+}
+
+.graph-frame {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Un dito da solo scorre la pagina; due dita (o il mouse) muovono il grafico. */
+.graph-canvas {
+  cursor: grab;
+  touch-action: pan-x pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.graph-canvas.is-dragging {
+  cursor: grabbing;
+}
+
+.graph-canvas svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.graph-tools {
+  position: absolute;
+  z-index: 1;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.graph-stage:hover .graph-tools,
+.graph-tools:focus-within,
+.graph-block.is-moved .graph-tools {
+  opacity: 1;
+}
+
+/* Sui telefoni e i tablet i pulsanti sono sempre visibili: sotto il grafico, per non coprirlo. */
+@media (hover: none) {
+  .graph-tools {
+    position: static;
+    justify-content: flex-end;
+    margin-top: 6px;
+    opacity: 1;
+  }
+}
+
+.graph-tool {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.graph-tool[hidden] {
+  display: none;
+}
+
+.graph-tip {
+  position: absolute;
+  z-index: 2;
+  padding: 2px 7px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  color: var(--text);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.graph-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border: 2px solid var(--pane-preview);
+  border-radius: 50%;
+  background: var(--graph-color);
+  pointer-events: none;
+}
+
+.graph-tip[hidden],
+.graph-dot[hidden] {
+  display: none;
+}
+
+.markdown-body .graph-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 20px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.markdown-body .graph-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.graph-swatch {
+  flex: none;
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--graph-color);
+}
+
+.graph-swatch.is-point {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.graph-coords {
+  color: var(--muted);
+  font-size: 0.9em;
+}
+
+.graph-hint {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.9em;
+  text-align: center;
+}
+
+.markdown-body .graph-errors {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 0.9em;
+  list-style: none;
+}
+
+.markdown-body .graph-errors li + li {
+  margin-top: 4px;
+}
+
+.graph-errors code {
+  color: inherit;
+}
+
 /* ——— Bordi da trascinare tra le sezioni ——— */
 
 /* Una striscia sopra il bordo, che non occupa posto: 3 pixel a sinistra (dove la sezione
@@ -3148,7 +3366,14 @@ kbd {
 
   .markdown-body .math-block,
   .markdown-body pre,
-  .markdown-body table {
+  .markdown-body table,
+  .graph-block {
     break-inside: avoid;
+  }
+
+  .graph-tools,
+  .graph-tip,
+  .graph-dot {
+    display: none !important;
   }
 }

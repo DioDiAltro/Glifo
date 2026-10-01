@@ -41,7 +41,7 @@ export interface EditorMathContext {
 const MATH_NODES = new Set(['InlineMath', 'BlockMath'])
 const CODE_NODES = new Set(['FencedCode', 'CodeBlock', 'InlineCode', 'HTMLBlock', 'CommentBlock', 'Comment'])
 
-function regionFromNode(state: EditorState, node: SyntaxNode): MathRegion {
+export function regionFromNode(state: EditorState, node: SyntaxNode): MathRegion {
   const isBlock = node.name === 'BlockMath'
   const marks = node.getChildren(isBlock ? 'BlockMathMark' : 'InlineMathMark')
   const first = marks[0]

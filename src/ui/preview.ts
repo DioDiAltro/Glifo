@@ -1,3 +1,4 @@
+import { hydrateGraphs } from '../graph/preview'
 import { renderMarkdown } from '../render/markdown'
 import type { Theme } from '../schema/model'
 import { hydrateSchemas } from '../schema/preview'
@@ -45,7 +46,7 @@ export class Preview {
     })
   }
 
-  /** Il tema degli schemi: cambiandolo si ridisegnano. */
+  /** Il tema di schemi e grafici: cambiandolo si ridisegnano. */
   setTheme(theme: Theme): void {
     if (theme === this.theme) return
     this.theme = theme
@@ -64,7 +65,9 @@ export class Preview {
       this.totalLines = source.split('\n').length
       const scroll = this.el.scrollTop
       this.content.innerHTML = renderMarkdown(source)
-      hydrateSchemas(this.content, { theme: this.theme, surface: getComputedStyle(this.el).backgroundColor })
+      const surface = getComputedStyle(this.el).backgroundColor
+      hydrateSchemas(this.content, { theme: this.theme, surface })
+      hydrateGraphs(this.content, { theme: this.theme, surface })
       this.el.scrollTop = scroll
       this.anchors = [...this.content.querySelectorAll<HTMLElement>('[data-line]')]
         .map((el) => ({ line: Number(el.dataset.line), el }))

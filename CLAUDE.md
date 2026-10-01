@@ -57,6 +57,16 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   ogni database (i test lo eseguono in PGlite e in SQLite). I modelli pronti sono in `templates.ts`, allinea e
   distribuisci in `arrange.ts`, PNG e «Copia come immagine» in `image.ts`. Menu e messaggi
   dentro l'editor vanno messi nella sua finestra (è modale: fuori restano sotto).
+- `src/math/`: le espressioni delle formule (LaTeX o da calcolatrice): `parse.ts` le legge, `evaluate.ts`
+  le calcola (`exact.ts` con le frazioni, `format.ts` scrive i risultati all'italiana), `sheet.ts` è il
+  «foglio» della nota: le formule dall'alto in basso, `$a = 2$` e `$f(x) = …$` definiscono, una formula
+  che finisce con `=` ha il risultato (nell'editor `src/editor/calcResults.ts`, Tab lo scrive;
+  nell'anteprima colorato, classe `calc-result`). `\log` è il logaritmo naturale.
+- `src/graph/`: i blocchi ```grafico (una riga per funzione, curva, punto; `spec.ts`), il campionamento
+  con salti e asintoti e la finestra scelta da sola (`plot.ts`), il disegno SVG (`svg.ts`, colori
+  validati con la skill dataviz), l'anteprima interattiva (`preview.ts`) e i file .md (`file.ts`, come
+  gli schemi). Le definizioni della nota arrivano al blocco in `data-defs` (vedi `render/markdown.ts`).
+  Il pulsante «Grafico» e il grafico nel pannello della formula: `src/editor/graphInsert.ts`.
 - `src/ai/`: assistente AI. `src/host.ts`: funzioni della demo dentro claude.ai.
 - `src/account/`: account e sincronizzazione. `sync.ts` è il motore (manda, scarica, nei
   conflitti tiene tutte e due le versioni), `controller.ts` decide quando sincronizzare,

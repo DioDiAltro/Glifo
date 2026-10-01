@@ -16,6 +16,7 @@ import {
   type ViewUpdate,
 } from '@codemirror/view'
 import { tags as t } from '@lezer/highlight'
+import { acceptCalcResult, calcPlugin } from './calcResults'
 import { insertTemplate, wrapSelection } from './insert'
 import { continueList, deleteListMarker, indentListItems, listMarkers, noIndentedCode, outdentListItems } from './lists'
 import { mathContextAt, mathRegionAt, type EditorMathContext } from './mathContext'
@@ -150,7 +151,7 @@ export class MarkdownEditor {
       keymap.of([
         {
           key: 'Tab',
-          run: (v) => jumpPlaceholder(v, 1) || tabOutOfMath(v) || indentListItems(v),
+          run: (v) => jumpPlaceholder(v, 1) || acceptCalcResult(v) || tabOutOfMath(v) || indentListItems(v),
           shift: (v) => jumpPlaceholder(v, -1) || outdentListItems(v),
         },
         // Invio e Backspace capiscono tutti i marcatori degli elenchi; il resto (es. le citazioni) come prima.
@@ -187,6 +188,8 @@ export class MarkdownEditor {
       markdownLanguage.data.of({ closeBrackets: { brackets: ['(', '[', '{', '$'], before: ')]}:;>$' } }),
       syntaxHighlighting(highlight),
       mathHighlighter,
+      // Dopo «=» in una formula, il risultato (src/editor/calcResults.ts).
+      calcPlugin,
       schemaBlocks((line, source) => this.cb.onEditSchema(line, source)),
       placeholderField,
       suggestionKeys,

@@ -35,6 +35,18 @@ A = \begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}
 \begin{cases} x + y = 3 \\ x - y = 1 \end{cases}
 $$
 
+## Calcoli e grafici
+
+Scrivi una formula che finisce con `=` e Glifo fa il conto, come le Note matematiche dell'iPad: $\frac{3}{4} + \frac{1}{6} =$ — con il cursore subito dopo l'uguale, **Tab** scrive il risultato nella formula. Valgono le definizioni scritte prima: con $a = 3$ e $f(x) = x^2 - a$, ecco $f(2) =$
+
+Per un grafico c'è il pulsante con gli assi nella barra (con il cursore su una funzione come $f(x)$ qui sopra, disegna quella), oppure un blocco `grafico` con una riga per ogni cosa da disegnare. Trascinalo per spostarlo; i pulsanti + e − lo ingrandiscono.
+
+```grafico
+f(x)
+y = 2x
+P = (3, 6)
+```
+
 ## Anche per programmare
 
 Il codice tra tre apici inversi viene colorato (Java, Python, C, SQL…):

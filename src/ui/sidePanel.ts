@@ -1,5 +1,9 @@
 import { askAi, type AiResult } from '../ai/assistant'
 import type { MarkdownEditor } from '../editor/editor'
+import { formulaAtCursor, insertGraphBlock } from '../editor/graphInsert'
+import { chooseWindow } from '../graph/plot'
+import { formulaGraph } from '../graph/spec'
+import { graphSvg, graphTitle, PALETTES } from '../graph/svg'
 import type { SuggestionItem } from '../editor/suggestions'
 import { cleanKatexError, renderTex } from '../render/katex'
 import { isConfidentAnswer, searchSymbols, type SearchResult } from '../search/search'
@@ -11,6 +15,8 @@ import { ICONS, clear, h, icon } from './dom'
 export interface SidePanelDeps {
   editor: MarkdownEditor
   settings: () => Settings
+  /** Il tema scuro è attivo (per i colori del grafico della formula). */
+  isDark: () => boolean
   openSettings: () => void
   toast: (message: string, kind?: 'info' | 'error') => void
 }
@@ -41,6 +47,10 @@ export class SidePanel {
   private readonly formulaRender: HTMLElement
   private readonly formulaMeta: HTMLElement
   private readonly formulaError: HTMLElement
+  /** Il grafico della formula sotto il cursore, se è una funzione (y = …, f(x) = …). */
+  private readonly formulaGraph: HTMLElement
+  private readonly formulaGraphCanvas: HTMLElement
+  private lastGraphKey = ''
   private readonly body: HTMLElement
   private query = ''
   private results: SearchResult[] = []
@@ -82,6 +92,28 @@ export class SidePanel {
     this.formulaRender = h('div', { class: 'formula-render', attrs: { 'aria-live': 'polite' } })
     this.formulaMeta = h('span', { class: 'formula-meta' })
     this.formulaError = h('div', { class: 'formula-error', attrs: { role: 'status' } })
+    this.formulaGraphCanvas = h('div', { class: 'formula-graph-canvas' })
+    this.formulaGraph = h(
+      'div',
+      { class: 'formula-graph', attrs: { hidden: true } },
+      this.formulaGraphCanvas,
+      h(
+        'button',
+        {
+          class: 'btn btn-small formula-graph-insert',
+          title: 'Mette nella nota un blocco ```grafico con questa funzione, che l\'anteprima disegna',
+          attrs: { type: 'button' },
+          on: {
+            mousedown: preventFocusSteal,
+            click: () => {
+              const found = formulaAtCursor(this.deps.editor.view)
+              if (found) insertGraphBlock(this.deps.editor.view, found.tex, found.to)
+            },
+          },
+        },
+        'Inserisci il grafico',
+      ),
+    )
     this.body = h('div', { class: 'panel-body' })
 
     this.el = h(
@@ -101,6 +133,7 @@ export class SidePanel {
         h('div', { class: 'formula-head' }, h('span', {}, 'Anteprima formula'), this.formulaMeta),
         this.formulaRender,
         this.formulaError,
+        this.formulaGraph,
       ),
       this.body,
     )
@@ -108,9 +141,33 @@ export class SidePanel {
     deps.editor.suggestions.subscribe(() => {
       this.render()
       this.updateFormula()
+      this.updateGraph()
     })
     this.updateFormula()
     this.render()
+  }
+
+  /** Come nelle Note matematiche: se la formula sotto il cursore è una funzione, il suo grafico, da mettere nella nota. */
+  private updateGraph(): void {
+    const s = this.deps.editor.suggestions
+    const found = s.ctx?.region ? formulaAtCursor(this.deps.editor.view) : null
+    const dark = this.deps.isDark()
+    const key = found ? `${dark}\n${found.tex}\n${found.defs.join('\n')}` : ''
+    if (key === this.lastGraphKey) return
+    this.lastGraphKey = key
+    const spec = found ? formulaGraph(found.tex, found.defs) : null
+    if (!spec) {
+      this.formulaGraph.hidden = true
+      this.formulaGraphCanvas.replaceChildren()
+      return
+    }
+    const width = Math.max(220, Math.min(420, this.formulaGraphCanvas.clientWidth || 300))
+    const height = Math.round(width * 0.58)
+    const palette = PALETTES[dark ? 'dark' : 'light']
+    const surface = getComputedStyle(this.formulaGraph.parentElement ?? this.el).backgroundColor
+    // Il disegno è fatto da Glifo: i testi sono già passati da escapeXml.
+    this.formulaGraphCanvas.innerHTML = graphSvg(spec, chooseWindow(spec, width, height), { ...palette, halo: surface || palette.halo }, { id: 'formula-graph', title: graphTitle(spec) })
+    this.formulaGraph.hidden = false
   }
 
   focusSearch(): void {

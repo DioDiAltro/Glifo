@@ -3,6 +3,7 @@ import './styles/app.css'
 import { EditorSelection } from '@codemirror/state'
 import welcomeNote from './welcome.md?raw'
 import { MarkdownEditor } from './editor/editor'
+import { formulaAtCursor, insertGraphBlock } from './editor/graphInsert'
 import { deriveTitle, NotesStore, type Note } from './store/notes'
 import { cleanFolderName, FOLDER_NAME_MAX, FoldersStore } from './store/folders'
 import { addPersonalWord, DICTIONARY_KEY, loadPersonalWords, savePersonalWords } from './store/dictionary'
@@ -19,7 +20,8 @@ import {
   type ViewMode,
 } from './store/settings'
 import { downloadText, fileNameFor, openMarkdownFiles, saveMarkdownFile } from './store/files'
-import { findSchemaBlock, findSchemaBlocks, schemaBlockAtLine, schemaBlockText } from './schema/blocks'
+import { findFencedBlocks, findSchemaBlock, findSchemaBlocks, schemaBlockAtLine, schemaBlockText } from './schema/blocks'
+import { graphImagesFor, graphsForFile, graphsFromFile } from './graph/file'
 import { schemasForFile, schemasFromFile } from './schema/file'
 import { parseSchema, SchemaError, serializeSchema, type Schema } from './schema/model'
 import { loadPaneSizes, savePaneSizes } from './store/layout'
@@ -284,6 +286,7 @@ function wordsChangedHere(): void {
 const sidePanel = new SidePanel({
   editor,
   settings: () => settings,
+  isDark: () => isDark(),
   openSettings: () => openSettings(),
   toast,
 })
@@ -305,7 +308,7 @@ const notesPanel = new NotesPanel({
 const editorPane = h(
   'section',
   { class: 'editor-pane', attrs: { id: 'editor-pane' } },
-  createToolbar(editor, { onSchema: () => void openSchema(null) }),
+  createToolbar(editor, { onSchema: () => void openSchema(null), onGraph: () => insertGraph() }),
   editorHost,
 )
 const backdrop = h('div', { class: 'backdrop', on: { click: () => setPanels({ notesOpen: false, symbolsOpen: false }) } })
@@ -691,6 +694,14 @@ function jumpToLine(line: number): void {
   editor.focus()
 }
 
+// ——— Grafici di funzione ———
+
+/** Il pulsante «Grafico»: con il cursore su una funzione ($f(x) = …$) la disegna, se no prepara un blocco da scrivere. */
+function insertGraph(): void {
+  const formula = formulaAtCursor(editor.view)
+  insertGraphBlock(editor.view, formula?.tex ?? null, formula?.to)
+}
+
 // ——— Schemi (stile draw.io) ———
 
 let schemaOpen = false
@@ -784,8 +795,8 @@ async function openFiles(): Promise<void> {
   let last: Note | null = null
   const folderId = currentFolderId()
   for (const f of files) {
-    // Gli schemi salvati come immagini (vedi saveToFile) tornano blocchi da modificare.
-    last = store.create(schemasFromFile(f.content), folderId)
+    // Gli schemi e i grafici salvati come immagini (vedi saveToFile) tornano blocchi da modificare.
+    last = store.create(graphsFromFile(schemasFromFile(f.content)), folderId)
     if (f.handle) fileHandles.set(last.id, f.handle)
   }
   changedHere()
@@ -794,17 +805,25 @@ async function openFiles(): Promise<void> {
 }
 
 /**
- * Il testo per il file .md: ogni schema diventa un'immagine, così si vede anche in VS Code e
- * negli altri programmi (il suo JSON resta nel file, nascosto). Se maxGraph non si carica, il
- * file si salva lo stesso, con gli schemi come blocchi di codice.
+ * Il testo per il file .md: ogni schema e ogni grafico diventa un'immagine, così si vede anche in
+ * VS Code e negli altri programmi (il suo testo resta nel file, nascosto). Se qualcosa non si
+ * riesce a disegnare (o maxGraph non si carica), il file si salva lo stesso, con i blocchi di codice.
  */
 async function markdownForFile(text: string): Promise<string> {
-  if (!findSchemaBlocks(text).length) return text
+  let out = text
+  if (findFencedBlocks(out, 'grafico').length) {
+    try {
+      out = graphsForFile(out, graphImagesFor(out))
+    } catch {
+      // I grafici restano blocchi ```grafico.
+    }
+  }
+  if (!findSchemaBlocks(out).length) return out
   try {
     const { schemaImage } = await import('./schema/graph')
-    return schemasForFile(text, schemaImage)
+    return schemasForFile(out, schemaImage)
   } catch {
-    return text
+    return out
   }
 }
 

@@ -1063,6 +1063,130 @@ try {
   )
   await db.close()
 
+  // Calcoli e grafici: il risultato dopo «=» (Tab lo scrive), il grafico della formula nel pannello e
+  // nella nota, il disegno nell'anteprima (legenda, coordinate, trascinare e ingrandire), i file .md
+  const gp = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+  gp.on('pageerror', (e) => errors.push(e.message))
+  await gp.goto(url)
+  await gp.waitForSelector('.cm-editor')
+  await gp.locator('.notes-head button[aria-label="Nuova nota"]').click()
+  await gp.keyboard.press('Control+a')
+  await gp.keyboard.type('# Grafici\n\nSia $a = 3$ e $f(x) = x^2 - a$. Poi $f(4) =')
+  await gp.waitForSelector('.cm-calc-result')
+  await gp.waitForFunction(() => document.querySelector('.markdown-body .calc-result'), null, { timeout: 5000 })
+  const ghost = await gp.locator('.cm-calc-result').innerText()
+  const previewResult = await gp.locator('.markdown-body .calc-result').innerText()
+  check(
+    ghost.startsWith('13') && ghost.includes('Tab') && previewResult.includes('13'),
+    `dopo «=» il risultato si vede nell'editor (con Tab) e nell'anteprima (${JSON.stringify({ ghost, previewResult })})`,
+  )
+  await gp.keyboard.press('Tab')
+  const calcLine = await gp.locator('.cm-line', { hasText: 'Poi' }).innerText()
+  check(calcLine.endsWith('$f(4) = 13$') && (await gp.locator('.cm-calc-result').count()) === 0, `Tab scrive il risultato nella formula (${JSON.stringify(calcLine)})`)
+  // Con il cursore su f(x) = x^2 - a il pannello ne mostra il grafico; «Inserisci il grafico» lo mette nella nota
+  // (Ctrl+Inizio e giù: Inizio da solo, con le righe che vanno a capo, va all'inizio della riga visibile.)
+  await gp.keyboard.press('Control+Home')
+  await gp.keyboard.press('ArrowDown')
+  await gp.keyboard.press('ArrowDown')
+  for (let i = 0; i < 24; i++) await gp.keyboard.press('ArrowRight')
+  await gp.waitForSelector('.formula-graph:not([hidden]) svg', { timeout: 5000 })
+  await gp.locator('.formula-graph-insert').click()
+  await gp.waitForSelector('.preview-pane .graph-block svg.graph-svg', { timeout: 5000 })
+  const graphNote = () =>
+    gp.evaluate(() => {
+      for (let i = 0; i < localStorage.length; i++) {
+        const value = localStorage.getItem(localStorage.key(i)) ?? ''
+        if (value.startsWith('# Grafici')) return value
+      }
+      return ''
+    })
+  await gp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  const legend = await gp.locator('.preview-pane .graph-legend').innerText()
+  check(
+    (await graphNote()).includes('$f(4) = 13$\n\n```grafico\nf(x) = x^2 - a\n```\n') && legend.includes('f(x)'),
+    `«Inserisci il grafico» mette la funzione in un blocco sotto la formula, e l'anteprima la disegna (${JSON.stringify(legend)})`,
+  )
+  // Passando sopra la curva: le coordinate del punto
+  const onCurve = await gp.evaluate(() => {
+    const path = document.querySelector('.preview-pane .graph-block path[data-item="0"]')
+    const p = path.getPointAtLength(path.getTotalLength() / 2)
+    const m = path.getScreenCTM()
+    return { x: p.x * m.a + m.e, y: p.y * m.d + m.f }
+  })
+  await gp.mouse.move(onCurve.x, onCurve.y)
+  await gp.waitForSelector('.preview-pane .graph-tip:not([hidden])', { timeout: 5000 })
+  const tip = await gp.locator('.preview-pane .graph-tip').innerText()
+  check(/^\(−?\d+(,\d+)?; −?\d+(,\d+)?\)$/.test(tip), `passando sopra la curva si vedono le coordinate (${tip})`)
+  // Trascinare sposta il grafico; + lo ingrandisce; il pulsante con la freccia torna alla vista di partenza
+  const graphBox = await gp.locator('.preview-pane .graph-canvas').boundingBox()
+  await gp.mouse.move(graphBox.x + graphBox.width / 2, graphBox.y + graphBox.height / 2)
+  await gp.mouse.down()
+  await gp.mouse.move(graphBox.x + graphBox.width / 2 + 120, graphBox.y + graphBox.height / 2 + 30, { steps: 5 })
+  await gp.mouse.up()
+  const resetButton = gp.locator('.preview-pane .graph-block [data-action="reset"]')
+  await resetButton.waitFor({ state: 'visible', timeout: 5000 })
+  const pannedSvg = await gp.locator('.preview-pane .graph-canvas svg').innerHTML()
+  await gp.locator('.preview-pane .graph-block [data-action="in"]').click()
+  await gp.waitForFunction((before) => document.querySelector('.preview-pane .graph-canvas svg')?.innerHTML !== before, pannedSvg, { timeout: 5000 })
+  await resetButton.click()
+  await gp.waitForFunction(() => document.querySelector('.preview-pane .graph-block [data-action="reset"]')?.hidden, null, { timeout: 5000 })
+  check(true, 'il grafico si trascina e si ingrandisce, e torna alla vista di partenza')
+  // Il pulsante «Grafico» lontano da una formula prepara un blocco con «y = » da completare
+  await gp.locator('.cm-content').click()
+  await gp.keyboard.press('Control+End')
+  await gp.locator('.editor-toolbar button[aria-label^="Grafico"]').click()
+  await gp.keyboard.type('\\sin x')
+  await gp.waitForFunction(() => document.querySelectorAll('.preview-pane .graph-block svg.graph-svg').length === 2, null, { timeout: 5000 })
+  const piTicks = await gp.locator('.preview-pane .graph-block').nth(1).locator('svg text', { hasText: 'π' }).count()
+  await gp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  check(
+    (await graphNote()).endsWith('```\n\n```grafico\ny = \\sin x\n```\n') && piTicks >= 2,
+    `il pulsante «Grafico» prepara il blocco e \\sin x ha le tacche in π (${JSON.stringify({ piTicks, note: (await graphNote()).slice(-60) })})`,
+  )
+  // «Salva .md»: ogni grafico è un'immagine con il suo testo nascosto; «Apri .md» lo riporta
+  await gp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  await gp.evaluate(() => {
+    window.showSaveFilePicker = async () => ({
+      name: 'grafici.md',
+      createWritable: async () => ({ write: async (text) => (window.savedFile = text), close: async () => {} }),
+    })
+  })
+  await gp.locator('button', { hasText: 'Salva .md' }).click()
+  await gp.waitForFunction(() => typeof window.savedFile === 'string', null, { timeout: 10000 })
+  const graphFile = await gp.evaluate(() => window.savedFile)
+  const graphPictures = [...graphFile.matchAll(/^!\[Grafico\]\(data:image\/svg\+xml;base64,([A-Za-z0-9+/=]+)\)\n<!-- glifo-grafico/gm)]
+  const firstGraphSvg = graphPictures.length ? Buffer.from(graphPictures[0][1], 'base64').toString('utf8') : ''
+  check(
+    graphPictures.length === 2 && !graphFile.includes('```grafico') && firstGraphSvg.includes('<math') && firstGraphSvg.includes('fill="#ffffff"'),
+    `nel file .md i grafici sono immagini con la legenda, e il testo nascosto (${graphPictures.length})`,
+  )
+  const vsGraphs = new MarkdownIt({ html: true })
+  const validateGraphLink = vsGraphs.validateLink
+  vsGraphs.validateLink = (link) => validateGraphLink(link) || /^data:image\/.*?;/.test(link)
+  const vscodeGraphs = await browser.newPage()
+  await vscodeGraphs.setContent(`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' https: data:">${vsGraphs.render(graphFile)}`)
+  const graphImages = await vscodeGraphs.evaluate(async () => {
+    const imgs = [...document.querySelectorAll('img')]
+    await Promise.all(imgs.map((img) => img.decode().catch(() => {})))
+    return { widths: imgs.map((img) => img.naturalWidth), text: document.body.innerText.includes('\\sin x') }
+  })
+  await vscodeGraphs.close()
+  check(graphImages.widths.length === 2 && graphImages.widths.every((w) => w >= 600) && !graphImages.text, `in VS Code si vedono i grafici e non il loro testo (${JSON.stringify(graphImages)})`)
+  await gp.evaluate((text) => {
+    window.showOpenFilePicker = async () => [{ getFile: async () => new File([text], 'grafici.md') }]
+  }, graphFile)
+  await gp.locator('button', { hasText: 'Apri .md' }).click()
+  await gp.waitForFunction(
+    () => [...Array(localStorage.length).keys()].filter((i) => localStorage.getItem(localStorage.key(i))?.startsWith('# Grafici')).length === 2,
+    null,
+    { timeout: 10000 },
+  )
+  const reopened = await gp.evaluate(() =>
+    [...Array(localStorage.length).keys()].map((i) => localStorage.getItem(localStorage.key(i))).filter((v) => v?.startsWith('# Grafici')),
+  )
+  check(reopened[0] === reopened[1], 'riaprendo il file i grafici tornano blocchi ```grafico, come prima')
+  await gp.close()
+
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)
 } finally {
   await browser.close()
