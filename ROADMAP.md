@@ -8,49 +8,6 @@ il lavoro si parte da qui, e quando una voce è fatta si toglie.
 
 ## In programma
 
-### Schemi stile draw.io
-
-Scelto con lo studente: un editor dentro Glifo fatto con maxGraph (il motore di draw.io),
-invece del vero draw.io incorporato, perché funziona offline e non manda niente a nessuno.
-
-- fatto, passo 1: editor a tutto schermo con rettangolo, rettangolo arrotondato, ellisse, rombo e
-  testo; frecce blu per collegare (trascinate) o aggiungere una forma collegata (cliccate);
-  testo con formule; colori dei due temi, forma, dimensione del testo, frecce dritte o ad angolo,
-  punte, tratteggio; annulla, copia e incolla, zoom, griglia. Nella nota è un blocco ```schema
-  (`src/schema/`), disegnato nell'anteprima e mostrato nel testo come una riga con «Modifica»;
-- fatto, dopo le prime prove dello studente: il riquadro che segue una forma trascinata si vede
-  anche sul tema scuro (maxGraph lo faceva nero); con «Salva .md» ogni schema va nel file come
-  immagine SVG, che l'anteprima di VS Code mostra, con il JSON in un commento che Glifo rilegge
-  riaprendo il file (`src/schema/file.ts`);
-- fatto, passo 2: altre forme (parallelogramma, esagono, triangolo, nuvola, documento, cilindro,
-  nota, freccia grande e doppia; triangolo e frecce si girano di un quarto, `shapes.ts`),
-  modelli pronti (diagramma di flusso, mappa concettuale, albero, ciclo, linea del tempo,
-  `templates.ts`), allinea e distribuisci (`arrange.ts`), «Scarica» come PNG (fitto il doppio,
-  con la risoluzione scritta dentro per Word) o SVG, e «Copia come immagine» (`image.ts`);
-- fatto, su richiesta dello studente: frecce curve («Curva», come in draw.io), il testo di una
-  freccia all'inizio, a metà o alla fine (per le cardinalità), e il gruppo «Basi di dati» nel
-  pannello: entità ed entità debole, relazione e relazione identificante, attributi (chiave,
-  multivalore, derivato, e a pallino come nell'Atzeni), tabella con PK ed FK, database; i
-  modelli «Schema E-R» e «Tabelle»;
-- fatto, dopo le prove dello studente: la tabella si scrive com'è disegnata, con il nome nella
-  fascia in alto e i campi sotto (doppio clic sul nome o su un campo per cambiare quello). Trovati
-  provando, per tutte le forme: un clic sul foglio finisce di scrivere (prima il riquadro del testo
-  restava aperto); un clic su un colore, mentre si scrive, non va più perso; Ctrl+S, mentre si
-  scrive, salva nella nota invece di aprire «Salva pagina con nome» del browser;
-- fatto, su proposta dello studente: i campi delle tabelle nel pannello a destra, con PK ed FK
-  da premere (anche tutte e due, come in Esame), il tipo e «Aggiungi campo»; «Scarica» → «Codice
-  SQL delle tabelle», per il database scelto (SQL standard, PostgreSQL, MySQL/MariaDB, SQLite,
-  Oracle, SQL Server: lo studente non sa ancora quale userà il corso), con le chiavi esterne prese
-  dalle frecce tra le tabelle o dai nomi (`sql.ts`, provato davvero in PostgreSQL e SQLite);
-- corretto, trovato dallo studente: col cursore subito prima o subito dopo la riga «Schema» nel
-  testo, «Titolo» (o un elenco, una citazione, o il testo scritto) cambiava la riga ``` e lo schema
-  tornava testo; ora va su una riga nuova lì accanto (`schemaBlocks.ts`);
-- più avanti, se servono: il contrario (da un file SQL alle tabelle disegnate) e il passaggio dallo
-  schema E-R alle tabelle (la progettazione logica);
-- più avanti: stampare con i colori del tema chiaro anche se si usa quello scuro; raggruppare le
-  forme; altri modelli (per esempio una mappa mentale); le punte «a zampa di gallina» per le
-  cardinalità, se servono al corso di basi di dati.
-
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
 **Cosa:** ognuno ha il suo account e ritrova gli stessi appunti su PC, tablet e telefono.
@@ -184,6 +141,20 @@ Perché non gli altri:
   mese si potranno togliere con un lavoro programmato (`pg_cron`).
 
 ## Più avanti
+
+### Schemi: idee in più
+
+Gli schemi sono fatti, con lo studente (ottobre 2026): editor stile draw.io con maxGraph, che
+funziona offline; forme, frecce curve, modelli pronti, allinea e distribuisci, immagini PNG e SVG;
+le figure delle basi di dati (E-R come nell'Atzeni, tabelle con PK, FK e tipi) e il codice SQL
+delle tabelle per più database. Tutto è descritto nel README. Se serviranno:
+
+- il contrario dell'SQL: da un file SQL alle tabelle disegnate; e il passaggio dallo schema E-R
+  alle tabelle (la progettazione logica);
+- stampare con i colori del tema chiaro anche se si usa quello scuro;
+- raggruppare le forme;
+- altri modelli (per esempio una mappa mentale);
+- le punte «a zampa di gallina» per le cardinalità, se servono al corso di basi di dati.
 
 ### Abbonamento e funzioni a pagamento (da capire)
 
