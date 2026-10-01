@@ -18,6 +18,7 @@ import {
   type Marker,
 } from '../lists/markers'
 import type { CommandTarget } from './placeholders'
+import { besideSchema, schemaBlockRanges } from './schemaBlocks'
 
 /**
  * Elenchi nell'editor, con tutti i marcatori di Glifo (1), a), i), es), -, •…):
@@ -334,10 +335,18 @@ export function applyListStyle(target: CommandTarget, style: ListStyle): void {
   const sel = state.selection.main
   const firstNo = state.doc.lineAt(sel.from).number
   const lastNo = state.doc.lineAt(sel.to).number
+  // Le righe di uno schema restano come sono: col cursore sul suo bordo, l'elenco comincia su una riga nuova lì accanto.
+  const blocks = schemaBlockRanges(state)
   const lines: Line[] = []
   for (let n = firstNo; n <= lastNo; n++) {
     const line = state.doc.line(n)
+    if (blocks.some((b) => line.from >= b.from && line.to <= b.to)) continue
     if (line.text.trim() || firstNo === lastNo) lines.push(line)
+  }
+  if (!lines.length) {
+    const beside = besideSchema(state, `${withValue(style.marker, 1).text} ${style.task ? '[ ] ' : ''}`)
+    if (beside) target.dispatch(beside)
+    return
   }
   const matches = (line: Line) => {
     const m = parseListLine(line.text)

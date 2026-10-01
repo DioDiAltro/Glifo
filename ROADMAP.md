@@ -42,6 +42,9 @@ invece del vero draw.io incorporato, perché funziona offline e non manda niente
   SQL delle tabelle», per il database scelto (SQL standard, PostgreSQL, MySQL/MariaDB, SQLite,
   Oracle, SQL Server: lo studente non sa ancora quale userà il corso), con le chiavi esterne prese
   dalle frecce tra le tabelle o dai nomi (`sql.ts`, provato davvero in PostgreSQL e SQLite);
+- corretto, trovato dallo studente: col cursore subito prima o subito dopo la riga «Schema» nel
+  testo, «Titolo» (o un elenco, una citazione, o il testo scritto) cambiava la riga ``` e lo schema
+  tornava testo; ora va su una riga nuova lì accanto (`schemaBlocks.ts`);
 - più avanti, se servono: il contrario (da un file SQL alle tabelle disegnate) e il passaggio dallo
   schema E-R alle tabelle (la progettazione logica);
 - più avanti: stampare con i colori del tema chiaro anche se si usa quello scuro; raggruppare le

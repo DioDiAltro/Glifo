@@ -1,4 +1,4 @@
-import { StateField, type EditorState, type Extension } from '@codemirror/state'
+import { ChangeSet, EditorSelection, EditorState, StateField, Transaction, type Extension, type TransactionSpec } from '@codemirror/state'
 import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view'
 import { findSchemaBlocks } from '../schema/blocks'
 import { parseSchema } from '../schema/model'
@@ -86,5 +86,88 @@ export function schemaBlocks(onEdit: (line: number, source: string) => void): Ex
     },
     provide: (f) => [EditorView.decorations.from(f), EditorView.atomicRanges.of((view) => view.state.field(f))],
   })
-  return field
+  return [field, guardBlocks(field)]
+}
+
+/** Dove sono gli schemi chiusi (le righe «Schema»), dall'inizio della riga ```schema alla fine di quella che chiude. */
+export function schemaBlockRanges(state: EditorState): { from: number; to: number }[] {
+  return findSchemaBlocks(state.doc.toString())
+    .filter((b) => b.closed)
+    .map(({ from, to }) => ({ from, to }))
+}
+
+/**
+ * Se il cursore è sul bordo di uno schema (subito prima o subito dopo la sua riga), un comando
+ * che cambia le righe (titolo, elenco, citazione) non tocca lo schema: mette `text` su una riga
+ * nuova, prima o dopo, con il cursore lì. Null se il cursore non è su uno schema.
+ */
+export function besideSchema(state: EditorState, text: string): TransactionSpec | null {
+  const head = state.selection.main.head
+  const block = schemaBlockRanges(state).find((b) => head >= b.from && head <= b.to)
+  if (!block) return null
+  if (head === block.from) return { changes: { from: block.from, insert: `${text}\n` }, selection: EditorSelection.cursor(block.from + text.length), scrollIntoView: true, userEvent: 'input' }
+  return { changes: { from: block.to, insert: `\n${text}` }, selection: EditorSelection.cursor(block.to + 1 + text.length), scrollIntoView: true, userEvent: 'input' }
+}
+
+/**
+ * Le righe ```schema e ``` di uno schema non si toccano da fuori, se no lo schema torna testo:
+ * quello che si scrive (o si incolla, o arriva dai pulsanti) proprio prima o proprio dopo lo
+ * schema va su una riga sua; una modifica che lo romperebbe lo stesso non si fa (Canc o ⌫ che
+ * attaccherebbero una riga di testo allo schema spostano solo il cursore). Toglierlo tutto si può.
+ */
+function guardBlocks(field: StateField<DecorationSet>): Extension {
+  return EditorState.transactionFilter.of((tr) => {
+    if (!tr.docChanged || !(tr.isUserEvent('input') || tr.isUserEvent('delete') || tr.isUserEvent('move'))) return tr
+    const blocks: { from: number; to: number }[] = []
+    tr.startState.field(field).between(0, tr.startState.doc.length, (from, to) => {
+      blocks.push({ from, to })
+    })
+    let near = false
+    tr.changes.iterChangedRanges((fromA, toA) => {
+      if (blocks.some((b) => fromA <= b.to + 1 && toA >= b.from - 1)) near = true
+    })
+    if (!near) return tr
+
+    // Scritto subito prima o subito dopo lo schema: con un a capo in più, su una riga sua.
+    const fixes: { at: number; before: boolean }[] = []
+    tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
+      if (!inserted.length) return
+      const text = inserted.toString()
+      if (blocks.some((b) => b.to === fromA) && !text.startsWith('\n')) fixes.push({ at: fromB, before: false })
+      if (blocks.some((b) => b.from === toA) && !text.endsWith('\n')) fixes.push({ at: toB, before: true })
+    })
+    const fix = fixes.length ? ChangeSet.of(fixes.map((f) => ({ from: f.at, insert: '\n' })), tr.newDoc.length) : null
+    const changes = fix ? tr.changes.compose(fix) : tr.changes
+
+    // Ogni schema che non si toglie tutto deve restare uno schema, al suo posto.
+    const after = findSchemaBlocks((fix ? fix.apply(tr.newDoc) : tr.newDoc).toString()).filter((b) => b.closed)
+    let broken = false
+    for (const b of blocks) {
+      let whole = false
+      tr.changes.iterChangedRanges((fromA, toA) => {
+        if (fromA <= b.from && toA >= b.to) whole = true
+      })
+      const at = changes.mapPos(b.from, 1)
+      if (!whole && !after.some((n) => n.from === at)) broken = true
+    }
+    if (broken) {
+      // ⌫ subito dopo una riga di testo, o Canc subito prima: il cursore passa oltre lo schema.
+      let cursor: number | null = null
+      tr.changes.iterChanges((fromA, toA, _fromB, _toB, inserted) => {
+        if (inserted.length) return
+        if (blocks.some((b) => b.from === toA)) cursor = fromA
+        else if (blocks.some((b) => b.to === fromA)) cursor = toA
+      })
+      return cursor === null ? {} : { selection: EditorSelection.cursor(cursor), scrollIntoView: true }
+    }
+    if (!fix) return tr
+    // Il cursore resta dove sarebbe stato, rispetto al testo scritto.
+    const map = (pos: number) => fix.mapPos(pos, fixes.some((f) => f.at === pos && f.before) ? -1 : 1)
+    const selection = EditorSelection.create(
+      tr.newSelection.ranges.map((r) => EditorSelection.range(map(r.anchor), map(r.head))),
+      tr.newSelection.mainIndex,
+    )
+    const userEvent = tr.annotation(Transaction.userEvent)
+    return { changes, selection, effects: tr.effects, scrollIntoView: tr.scrollIntoView, ...(userEvent && { userEvent }) }
+  })
 }

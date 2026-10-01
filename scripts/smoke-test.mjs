@@ -1042,6 +1042,25 @@ try {
     studenteText === 'Studente\nPK Matricola: CHAR(6)\nNome: VARCHAR(30)\nCognome: VARCHAR(40)\nPK FK Corso\nEmail',
     `nella nota la tabella ha i tipi e PK FK, anche il tipo confermato con un clic sul foglio (${JSON.stringify(studenteText)})`,
   )
+  // Col cursore subito dopo la riga dello schema, «Titolo» va su una riga nuova: prima la riga ```
+  // diventava «## ```» e lo schema tornava testo. (Scrivere sul bordo lo provano i test unitari.)
+  await db.locator('.cm-content').click()
+  await db.keyboard.press('Control+End')
+  await db.keyboard.press('ArrowLeft')
+  await db.locator('.editor-toolbar button[aria-label="Titolo (## )"]').click()
+  await db.keyboard.type('Dopo lo schema')
+  await db.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  const besideText = await db.evaluate(() => {
+    for (let i = 0; i < localStorage.length; i++) {
+      const value = localStorage.getItem(localStorage.key(i)) ?? ''
+      if (value.startsWith('# Basi di dati')) return value
+    }
+    return ''
+  })
+  check(
+    (await db.locator('.cm-editor .cm-schema').count()) === 1 && /\n```\n## Dopo lo schema\n?$/.test(besideText),
+    `col cursore subito dopo uno schema, «Titolo» va su una riga nuova e lo schema resta (${JSON.stringify(besideText.slice(-40))})`,
+  )
   await db.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)

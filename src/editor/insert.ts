@@ -2,7 +2,8 @@ import { EditorSelection, type EditorState, type TransactionSpec } from '@codemi
 import type { EditorView } from '@codemirror/view'
 import { parseTemplate } from '../symbols/template'
 import { mathContextAt } from './mathContext'
-import { addPlaceholders, type Placeholder } from './placeholders'
+import { addPlaceholders, type CommandTarget, type Placeholder } from './placeholders'
+import { besideSchema, schemaBlockRanges } from './schemaBlocks'
 
 export interface InsertOptions {
   /** Modello TeX con segnaposto `#`. */
@@ -127,14 +128,25 @@ export function wrapSelection(view: EditorView, before: string, after = before, 
   view.focus()
 }
 
-/** Aggiunge o toglie un prefisso a tutte le righe selezionate ("# ", "- ", "> "…). */
-export function toggleLinePrefix(view: EditorView, prefix: string, pattern: RegExp): void {
+/**
+ * Aggiunge o toglie un prefisso a tutte le righe selezionate ("# ", "- ", "> "…). Le righe di
+ * uno schema restano come sono (se no lo schema tornerebbe testo): col cursore sul bordo di uno
+ * schema, il prefisso va su una riga nuova lì accanto.
+ */
+export function toggleLinePrefix(view: CommandTarget & { focus?(): void }, prefix: string, pattern: RegExp): void {
   const { state } = view
+  const blocks = schemaBlockRanges(state)
   const lines = new Set<number>()
   for (const r of state.selection.ranges) {
     for (let n = state.doc.lineAt(r.from).number; n <= state.doc.lineAt(r.to).number; n++) lines.add(n)
   }
-  const all = [...lines].map((n) => state.doc.line(n))
+  const all = [...lines].map((n) => state.doc.line(n)).filter((l) => !blocks.some((b) => l.from >= b.from && l.to <= b.to))
+  if (!all.length) {
+    const beside = besideSchema(state, prefix)
+    if (beside) view.dispatch(beside)
+    view.focus?.()
+    return
+  }
   const allHave = all.every((l) => pattern.test(l.text))
   const changes = all.map((l) => {
     const m = pattern.exec(l.text)
@@ -143,7 +155,7 @@ export function toggleLinePrefix(view: EditorView, prefix: string, pattern: RegE
     return { from: l.from, to: l.from + (m ? m[0].length : 0), insert: prefix }
   })
   view.dispatch({ changes, userEvent: 'input', scrollIntoView: true })
-  view.focus()
+  view.focus?.()
 }
 
 /** Inserisce un blocco di testo su righe proprie, con il cursore al punto `cursorOffset`. */

@@ -44,7 +44,8 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
 - `src/schema/`: schemi stile draw.io con maxGraph (caricato solo quando serve). Nella nota sono
   blocchi ```schema con un JSON (`model.ts`: formato, controlli, colori dei due temi);
   `editor.ts` è l'editor a tutto schermo, `preview.ts` li disegna nell'anteprima,
-  `src/editor/schemaBlocks.ts` li mostra nel testo come una riga con «Modifica». Il testo delle
+  `src/editor/schemaBlocks.ts` li mostra nel testo come una riga con «Modifica» e ne protegge le
+  righe ``` (quello che si scrive o arriva dai pulsanti sul bordo dello schema va su una riga sua). Il testo delle
   forme passa sempre da `label.ts` (escape + KaTeX): maxGraph lo inserisce come HTML.
   Nei file .md (`file.ts`, usato da «Salva .md» e «Apri .md») ogni schema diventa un'immagine
   SVG, che VS Code mostra, più il JSON in un commento HTML; aprendo il file torna un blocco.
