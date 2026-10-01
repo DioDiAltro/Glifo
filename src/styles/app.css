@@ -5,6 +5,13 @@
   --bg: #f5f6fa;
   --surface: #ffffff;
   --surface-2: #f0f1f6;
+  /* Le zone della pagina, come in molte app: la cornice (barra in alto e pannelli ai lati) è
+     un po' più scura del foglio su cui si scrive; l'anteprima sta in mezzo. */
+  --frame: #eceef3;
+  --frame-hover: #e1e4ec;
+  --frame-active: #ffffff;
+  --pane-editor: #ffffff;
+  --pane-preview: #f7f8fb;
   --border: #e1e3ec;
   --border-strong: #cfd3e0;
   --text: #1c2030;
@@ -51,6 +58,11 @@
     --bg: #0e1016;
     --surface: #151821;
     --surface-2: #1b1f2b;
+    --frame: #0c0e14;
+    --frame-hover: #171a24;
+    --frame-active: rgba(139, 140, 248, 0.15);
+    --pane-editor: #181b24;
+    --pane-preview: #12151c;
     --border: #282d3c;
     --border-strong: #363c4f;
     --text: #e4e6ee;
@@ -89,6 +101,11 @@
   --bg: #0e1016;
   --surface: #151821;
   --surface-2: #1b1f2b;
+  --frame: #0c0e14;
+  --frame-hover: #171a24;
+  --frame-active: rgba(139, 140, 248, 0.15);
+  --pane-editor: #181b24;
+  --pane-preview: #12151c;
   --border: #282d3c;
   --border-strong: #363c4f;
   --text: #e4e6ee;
@@ -195,7 +212,7 @@ kbd {
   align-items: center;
   gap: 8px;
   padding: 0 10px;
-  background: var(--surface);
+  background: var(--frame);
   border-bottom: 1px solid var(--border);
   min-width: 0;
 }
@@ -333,12 +350,12 @@ kbd {
 .editor-pane {
   display: flex;
   flex-direction: column;
-  background: var(--surface);
+  background: var(--pane-editor);
 }
 
 .preview-pane {
   overflow: auto;
-  background: var(--bg);
+  background: var(--pane-preview);
   border-left: 1px solid var(--border);
 }
 
@@ -362,7 +379,7 @@ kbd {
   gap: 2px;
   padding: 5px 10px;
   border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--pane-editor);
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -472,7 +489,7 @@ kbd {
 .editor-host .cm-editor {
   height: 100%;
   font-size: var(--editor-font-size);
-  background: var(--surface);
+  background: var(--pane-editor);
   color: var(--text);
 }
 
@@ -947,7 +964,7 @@ kbd {
   width: var(--notes-w);
   flex: none;
   min-height: 0;
-  background: var(--surface);
+  background: var(--frame);
   border-right: 1px solid var(--border);
 }
 
@@ -980,7 +997,7 @@ kbd {
   padding: 7px 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--surface-2);
+  background: var(--surface);
 }
 
 .notes-list {
@@ -999,11 +1016,12 @@ kbd {
 }
 
 .note-item:hover {
-  background: var(--surface-2);
+  background: var(--frame-hover);
 }
 
 .note-item.is-active {
-  background: var(--accent-soft);
+  background: var(--frame-active);
+  box-shadow: 0 1px 2px rgba(20, 24, 40, 0.06);
 }
 
 .note-open {
@@ -1246,7 +1264,7 @@ kbd {
   width: var(--symbols-w);
   flex: none;
   min-height: 0;
-  background: var(--surface);
+  background: var(--frame);
   border-left: 1px solid var(--border);
 }
 
@@ -1275,7 +1293,7 @@ kbd {
   padding: 0 64px 0 34px;
   border: 1px solid var(--border-strong);
   border-radius: 10px;
-  background: var(--surface-2);
+  background: var(--surface);
 }
 
 .panel-search-input:focus {

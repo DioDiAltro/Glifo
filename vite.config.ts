@@ -55,5 +55,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
+    // Di solito nei test i CSS sono vuoti; questo serve ai controlli dei temi (tests/theme.test.ts).
+    css: { include: [/src\/styles\/app\.css/] },
   },
 })
