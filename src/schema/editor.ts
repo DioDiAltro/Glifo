@@ -50,6 +50,7 @@ import {
   DEFAULT_EDGE,
   DOT_SHAPES,
   FONT_SIZE,
+  INK,
   PALETTE,
   ROTATABLE,
   ROUTES,
@@ -58,8 +59,12 @@ import {
   SHAPES,
   TEXT_AT,
   TEXT_SIZES,
+  joinTable,
   serializeSchema,
+  splitTable,
+  tableField,
   tableHeight,
+  tableMetrics,
   type EdgeArrows,
   type EdgeLook,
   type EdgeRoute,
@@ -215,6 +220,12 @@ class SchemaEditor {
   private readonly format: HTMLElement
   private readonly arrows: HTMLElement
   private readonly textInput: HTMLTextAreaElement
+  /** Le tabelle si scrivono com'è disegnate: il nome nella fascia in alto, i campi sotto. */
+  private readonly tableText: HTMLElement
+  private readonly tableName: HTMLInputElement
+  private readonly tableFields: HTMLTextAreaElement
+  /** La larghezza (in pixel) del riquadro della tabella: si allarga se una riga non ci sta. */
+  private tableWidth = 0
   private readonly empty: HTMLElement
   private readonly zoomLabel: HTMLButtonElement
   private readonly undoButton: HTMLButtonElement
@@ -236,6 +247,10 @@ class SchemaEditor {
   /** L'ultimo tocco era con un dito o una penna: senza «passare sopra», le frecce blu stanno attorno alla forma selezionata. */
   private touch = false
   private editing: Cell | null = null
+  /** Si sta scrivendo una tabella (nome e campi), non nel riquadro unico. */
+  private editingTable = false
+  /** Cambia solo il testo: il pannello dell'aspetto resta com'è (vedi setText). */
+  private keepFormat = false
   private grid = true
   private spaceDown = false
   private closed = false
@@ -324,6 +339,22 @@ class SchemaEditor {
       class: 'schema-text',
       attrs: { hidden: true, rows: 1, 'aria-label': 'Testo (le formule tra $…$)', spellcheck: 'false' },
     })
+    this.tableName = h('input', {
+      class: 'schema-table-name',
+      attrs: { type: 'text', 'aria-label': 'Nome della tabella', placeholder: 'Nome della tabella', spellcheck: 'false', autocomplete: 'off' },
+    })
+    // Senza a capo automatici: ogni riga è un campo, come nella tabella disegnata.
+    this.tableFields = h('textarea', {
+      class: 'schema-table-fields',
+      attrs: {
+        rows: 1,
+        wrap: 'off',
+        'aria-label': 'Campi della tabella, uno per riga: PK davanti alla chiave primaria, FK davanti a quelle esterne',
+        placeholder: 'Un campo per riga',
+        spellcheck: 'false',
+      },
+    })
+    this.tableText = h('div', { class: 'schema-table-text', attrs: { hidden: true } }, this.tableName, this.tableFields)
     this.empty = h(
       'div',
       { class: 'schema-empty' },
@@ -341,7 +372,7 @@ class SchemaEditor {
         TEMPLATES.map((t) => h('button', { class: 'btn btn-small', title: t.hint, attrs: { type: 'button' }, on: { click: () => this.insertTemplate(t) } }, t.name)),
       ),
     )
-    this.wrap = h('div', { class: 'schema-canvas-wrap' }, this.canvas, this.arrows, this.textInput, this.empty)
+    this.wrap = h('div', { class: 'schema-canvas-wrap' }, this.canvas, this.arrows, this.textInput, this.tableText, this.empty)
     this.format = h('aside', { class: 'schema-format', attrs: { 'aria-label': 'Aspetto' } })
 
     this.dialog = h(
@@ -721,17 +752,43 @@ class SchemaEditor {
 
   // ——— Testo: un riquadro sopra la forma o la freccia ———
 
-  private startEditing(cell: Cell, initial?: string): void {
+  /**
+   * Comincia a scrivere nella forma o nella freccia. `initial`: il tasto premuto con la forma
+   * selezionata, che prende il posto del testo (nelle tabelle solo del nome). `at`: il punto del
+   * doppio clic sul foglio, che nelle tabelle dice se si cambia il nome o un campo.
+   */
+  private startEditing(cell: Cell, initial?: string, at?: [number, number]): void {
     const state = this.graph.view.getState(cell)
     if (!state) return
     this.stopEditing(true)
     this.editing = cell
     this.hideArrows()
+    if (cell.isVertex() && nodeLook(cell).shape === 'table') {
+      this.startTable(cell, state, initial, at)
+      return
+    }
+    const input = this.textInput
+    input.value = initial ?? cellText(cell)
+    input.hidden = false
+    this.placeText()
+    input.focus()
+    if (initial === undefined) input.select()
+    else input.setSelectionRange(input.value.length, input.value.length)
+  }
+
+  /** Il riquadro del testo sopra quello che si sta scrivendo, della misura giusta (anche dopo aver spostato il foglio). */
+  private placeText(): void {
+    const cell = this.editing
+    const state = cell && this.graph.view.getState(cell)
+    if (!cell || !state) return
+    if (this.editingTable) {
+      this.placeTable(state, nodeLook(cell))
+      return
+    }
     const scale = this.graph.view.scale
     const look = cell.isEdge() ? edgeLook(cell) : nodeLook(cell)
     const fontSize = Math.max(11, FONT_SIZE[look.size] * scale)
     const input = this.textInput
-    input.value = initial ?? cellText(cell)
     input.style.fontSize = `${fontSize}px`
     if (cell.isVertex()) {
       input.style.left = `${state.x}px`
@@ -747,11 +804,7 @@ class SchemaEditor {
       input.style.width = `${width}px`
       input.style.minHeight = `${fontSize * 2}px`
     }
-    input.hidden = false
     this.fitTextInput()
-    input.focus()
-    if (initial === undefined) input.select()
-    else input.setSelectionRange(input.value.length, input.value.length)
   }
 
   private fitTextInput(): void {
@@ -760,22 +813,164 @@ class SchemaEditor {
     input.style.height = `${input.scrollHeight}px`
   }
 
+  /** La tabella si scrive com'è disegnata: il nome nella fascia in alto, i campi sotto, uno per riga. */
+  private startTable(cell: Cell, state: CellState, initial?: string, at?: [number, number]): void {
+    const look = nodeLook(cell)
+    const { name, fields } = splitTable(look.text)
+    this.editingTable = true
+    this.tableName.value = initial ?? name
+    this.tableFields.value = fields
+    this.tableText.hidden = false
+    this.placeText()
+    // Doppio clic su un campo: si cambia quello; altrimenti (e con Invio, F2 o scrivendo) il nome.
+    const row = at ? this.tableRowAt(state, look, fields, at[1]) : -1
+    if (row >= 0) {
+      this.selectField(row)
+      return
+    }
+    const input = this.tableName
+    input.focus()
+    if (initial === undefined) input.select()
+    else input.setSelectionRange(input.value.length, input.value.length)
+  }
+
+  /** Il riquadro della tabella sopra la tabella, con le sue misure e i suoi colori, allo zoom di adesso. */
+  private placeTable(state: CellState, look: NodeLook): void {
+    const scale = this.graph.view.scale
+    const font = FONT_SIZE[look.size]
+    // Come nelle altre forme il testo non scende sotto gli 11 pixel: allora il riquadro è più grande della tabella.
+    const k = Math.max(scale, 11 / font)
+    const { head, row } = tableMetrics(look.size)
+    const swatch = PALETTE[this.look.theme][look.color]
+    const box = this.tableText
+    // Il bordo (2 pixel) sta fuori dalla tabella: dentro, nome e campi sono proprio dove sono disegnati.
+    box.style.left = `${state.x - 2}px`
+    box.style.top = `${state.y - 2}px`
+    box.style.fontSize = `${font * k}px`
+    box.style.setProperty('--table-head', `${head * k}px`)
+    box.style.setProperty('--table-row', `${row * k}px`)
+    box.style.setProperty('--table-pad', `${5 * k}px`)
+    box.style.setProperty('--table-fill', swatch.fill)
+    box.style.setProperty('--table-stroke', swatch.stroke)
+    box.style.setProperty('--table-ink', INK[this.look.theme])
+    this.tableWidth = (state.width / scale) * k + 4
+    this.fitTableText()
+  }
+
+  /** Il riquadro della tabella cresce con i campi, e si allarga se un nome non ci sta. */
+  private fitTableText(): void {
+    const { tableText: box, tableName: name, tableFields: fields } = this
+    box.style.width = `${this.tableWidth}px`
+    fields.style.height = 'auto'
+    fields.style.height = `${fields.scrollHeight}px`
+    const extra = Math.max(fields.scrollWidth - fields.clientWidth, name.scrollWidth - name.clientWidth)
+    if (extra > 0) box.style.width = `${this.tableWidth + extra + 12}px`
+  }
+
+  /** Il campo all'altezza `y` (sul foglio) della tabella; -1 sulla fascia del nome. */
+  private tableRowAt(state: CellState, look: NodeLook, fields: string, y: number): number {
+    const { head, row } = tableMetrics(look.size)
+    const local = (y - state.y) / this.graph.view.scale
+    if (!Number.isFinite(local) || local < head) return -1
+    const count = fields.split('\n').length
+    return Math.max(0, Math.min(count - 1, Math.floor((local - head - 5) / row)))
+  }
+
+  /** Nei campi della tabella: seleziona il nome del campo `i` (senza «PK» o «FK»), pronto da riscrivere. */
+  private selectField(i: number): void {
+    const fields = this.tableFields
+    const lines = fields.value.split('\n')
+    const line = Math.max(0, Math.min(i, lines.length - 1))
+    const from = lines.slice(0, line).reduce((n, l) => n + l.length + 1, 0)
+    fields.focus()
+    fields.setSelectionRange(from + tableField(lines[line]).start, from + lines[line].length)
+  }
+
   private stopEditing(apply: boolean): void {
     const cell = this.editing
     if (!cell) return
+    const text = this.editingTable ? joinTable(this.tableName.value, this.tableFields.value) : this.textInput.value
     this.editing = null
+    this.editingTable = false
     this.textInput.hidden = true
-    if (apply && this.textInput.value !== cellText(cell)) this.setText(cell, this.textInput.value)
+    this.tableText.hidden = true
+    if (apply && text !== cellText(cell)) this.setText(cell, text)
     this.canvas.focus()
     if (this.touch) this.hideArrows()
   }
 
+  /**
+   * I tasti uguali in ogni riquadro di testo: Esc e Ctrl+Invio finiscono di scrivere, Ctrl+S salva
+   * nella nota (altrimenti il browser aprirebbe «Salva pagina con nome»). Vero se il tasto era suo.
+   */
+  private textKey(ev: KeyboardEvent): boolean {
+    const mod = ev.ctrlKey || ev.metaKey
+    if (ev.key === 'Escape' || (ev.key === 'Enter' && mod)) {
+      ev.preventDefault()
+      this.stopEditing(true)
+      return true
+    }
+    if (mod && ev.key.toLowerCase() === 's') {
+      ev.preventDefault()
+      this.save()
+      return true
+    }
+    return false
+  }
+
+  /** Nella tabella: Invio, Tab e ↓ dal nome vanno ai campi; ↑ dalla prima riga e Maiusc+Tab tornano al nome. */
+  private setUpTableText(): void {
+    const { tableText: box, tableName: name, tableFields: fields } = this
+    name.addEventListener('keydown', (ev) => {
+      ev.stopPropagation()
+      if (ev.isComposing || this.textKey(ev)) return
+      if (ev.key === 'Enter' || ev.key === 'ArrowDown' || (ev.key === 'Tab' && !ev.shiftKey)) {
+        ev.preventDefault()
+        this.selectField(0)
+      } else if (ev.key === 'Tab') {
+        ev.preventDefault()
+        this.stopEditing(true)
+      }
+    })
+    fields.addEventListener('keydown', (ev) => {
+      ev.stopPropagation()
+      if (ev.isComposing || this.textKey(ev)) return
+      const firstLine = !fields.value.slice(0, fields.selectionStart).includes('\n')
+      if ((ev.key === 'Tab' && ev.shiftKey) || (ev.key === 'ArrowUp' && firstLine && !ev.shiftKey)) {
+        ev.preventDefault()
+        name.focus()
+        if (ev.key === 'Tab') name.select()
+        else name.setSelectionRange(name.value.length, name.value.length)
+      } else if (ev.key === 'Tab') {
+        ev.preventDefault()
+        this.stopEditing(true)
+      }
+    })
+    name.addEventListener('input', () => this.fitTableText())
+    fields.addEventListener('input', () => this.fitTableText())
+    // Si smette di scrivere uscendo dalla tabella, non passando dal nome ai campi.
+    box.addEventListener('focusout', (ev) => {
+      if (!box.contains(ev.relatedTarget as Node | null)) this.stopEditing(true)
+    })
+    // Un clic sul bordo del riquadro lascia il cursore dov'era.
+    box.addEventListener('mousedown', (ev) => {
+      if (ev.target === box) ev.preventDefault()
+    })
+  }
+
   private setText(cell: Cell, text: string): void {
     const value = cell.isEdge() ? { ...edgeLook(cell), text } : { ...nodeLook(cell), text }
-    this.graph.batchUpdate(() => {
-      this.graph.getDataModel().setValue(cell, Object.freeze(value))
-      this.fitTable(cell)
-    })
+    // Il pannello dell'aspetto non dipende dal testo, e non si rifà: si finisce di scrivere anche
+    // cliccando una sua scelta (un colore…), che rifacendolo sparirebbe sotto il puntatore.
+    this.keepFormat = true
+    try {
+      this.graph.batchUpdate(() => {
+        this.graph.getDataModel().setValue(cell, Object.freeze(value))
+        this.fitTable(cell)
+      })
+    } finally {
+      this.keepFormat = false
+    }
   }
 
   /** Una tabella è alta quanto il nome più i suoi campi, uno per riga. */
@@ -996,7 +1191,7 @@ class SchemaEditor {
         h(
           'p',
           { class: 'schema-format-hint' },
-          'Nella tabella la prima riga è il nome, poi un campo per riga. Scrivi «PK» davanti alla chiave primaria (si sottolinea) e «FK» davanti a quelle esterne.',
+          'Doppio clic sul nome della tabella o su un campo per cambiarlo. I campi sono uno per riga: Invio ne comincia uno nuovo. Scrivi «PK» davanti alla chiave primaria (si sottolinea) e «FK» davanti a quelle esterne.',
         ),
       )
     }
@@ -1161,13 +1356,19 @@ class SchemaEditor {
     const viewChanged = () => {
       this.drawGrid()
       this.hideArrows()
+      // Spostando il foglio (con la rotellina) mentre si scrive, il riquadro del testo lo segue.
+      this.placeText()
     }
     graph.getView().addListener(InternalEvent.SCALE, viewChanged)
     graph.getView().addListener(InternalEvent.TRANSLATE, viewChanged)
     graph.getView().addListener(InternalEvent.SCALE_AND_TRANSLATE, viewChanged)
 
     graph.addMouseListener({
-      mouseDown: () => this.hideArrows(),
+      mouseDown: () => {
+        // Un clic sul foglio finisce di scrivere: maxGraph ferma il clic, e il riquadro del testo non perderebbe il cursore.
+        this.stopEditing(true)
+        this.hideArrows()
+      },
       mouseMove: (_sender: unknown, me: InternalMouseEvent) => {
         if (graph.isMouseDown || this.editing || this.connection.isConnecting()) return
         const state = me.getState()
@@ -1183,7 +1384,8 @@ class SchemaEditor {
       const cell = evt.getProperty('cell') as Cell | null
       const event = evt.getProperty('event') as MouseEvent
       if (cell) {
-        this.startEditing(cell)
+        // Nelle tabelle conta dove: sul nome o su un campo.
+        this.startEditing(cell, undefined, this.canvasPoint(event))
       } else {
         // Doppio clic sul foglio vuoto: un rettangolo arrotondato da scrivere.
         const p = this.toSchema(...this.canvasPoint(event))
@@ -1219,11 +1421,13 @@ class SchemaEditor {
     input.addEventListener('blur', () => this.stopEditing(true))
     input.addEventListener('keydown', (ev) => {
       ev.stopPropagation()
-      if (ev.key === 'Escape' || (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey)) || ev.key === 'Tab') {
+      if (ev.isComposing || this.textKey(ev)) return
+      if (ev.key === 'Tab') {
         ev.preventDefault()
         this.stopEditing(true)
       }
     })
+    this.setUpTableText()
 
     dialog.addEventListener('cancel', (ev) => ev.preventDefault())
     dialog.addEventListener('keydown', (ev) => this.onKey(ev))
@@ -1338,7 +1542,7 @@ class SchemaEditor {
     this.redoButton.disabled = !this.undo.canRedo()
     this.empty.hidden = this.graph.getDefaultParent().getChildCount() > 0
     if (this.closed) return
-    this.renderFormat()
+    if (!this.keepFormat) this.renderFormat()
     // Sugli schermi touch le frecce blu seguono la forma selezionata (anche quando la si sposta).
     if (this.touch) this.hideArrows()
   }

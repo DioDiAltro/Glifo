@@ -2575,6 +2575,66 @@ kbd {
   outline: none;
 }
 
+/* La tabella mentre la si scrive, com'è disegnata: il nome nella fascia in alto, i campi sotto.
+   Misure e colori (--table-…) li mette l'editor, per la tabella e lo zoom di adesso. */
+.schema-table-text {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  border: 2px solid var(--accent);
+  border-radius: 4px;
+  background: var(--table-fill);
+  color: var(--table-ink);
+  font-family: var(--font-ui);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.schema-table-name,
+.schema-table-fields {
+  display: block;
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 0 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.schema-table-name {
+  flex: none;
+  height: var(--table-head);
+  font-weight: 600;
+  text-align: center;
+  background: color-mix(in srgb, var(--table-stroke) 12%, var(--table-fill));
+  /* La linea sotto il nome, senza spostare i campi (come nella tabella disegnata). */
+  box-shadow: inset 0 -1px var(--table-stroke);
+}
+
+.schema-table-fields {
+  padding-top: var(--table-pad);
+  padding-bottom: var(--table-pad);
+  line-height: var(--table-row);
+  text-align: left;
+  white-space: pre;
+  resize: none;
+  overflow: hidden;
+}
+
+.schema-table-name:focus,
+.schema-table-fields:focus {
+  outline: none;
+}
+
+.schema-table-name::placeholder,
+.schema-table-fields::placeholder {
+  color: inherit;
+  opacity: 0.5;
+}
+
 .schema-empty {
   position: absolute;
   left: 50%;

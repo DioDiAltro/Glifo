@@ -135,6 +135,31 @@ export function tableHeight(text: string, size: TextSize): number {
   return head + Math.max(1, text.split('\n').length - 1) * row + 10
 }
 
+/** Il testo di una tabella in due parti, come si scrive nell'editor: il nome (la prima riga) e i campi. */
+export function splitTable(text: string): { name: string; fields: string } {
+  const i = text.indexOf('\n')
+  return i < 0 ? { name: text, fields: '' } : { name: text.slice(0, i), fields: text.slice(i + 1) }
+}
+
+/** Nome e campi di nuovo in un testo solo; le righe vuote lasciate in fondo non diventano campi. */
+export function joinTable(name: string, fields: string): string {
+  const rows = fields.trimEnd()
+  return rows ? `${name}\n${rows}` : name
+}
+
+export interface TableField {
+  /** «PK» (chiave primaria) o «FK» (esterna), scritto all'inizio della riga; '' per gli altri campi. */
+  key: '' | 'PK' | 'FK'
+  name: string
+  /** Dove comincia il nome nella riga, dopo «PK » o «FK ». */
+  start: number
+}
+
+export function tableField(line: string): TableField {
+  const m = /^(\s*(PK|FK)\s+)(.*)$/i.exec(line)
+  return m ? { key: m[2].toUpperCase() as 'PK' | 'FK', name: m[3], start: m[1].length } : { key: '', name: line, start: 0 }
+}
+
 export const SHAPE_NAMES: Record<ShapeKind, string> = {
   rect: 'Rettangolo',
   rounded: 'Rettangolo arrotondato',

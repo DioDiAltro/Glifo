@@ -1,6 +1,6 @@
 import { escapeHtml, renderTexMathml, renderTexOrError } from '../render/katex'
 import { matchInlineMath } from '../render/mathDelims'
-import { tableMetricsFor } from './model'
+import { splitTable, tableField, tableMetricsFor } from './model'
 
 /** Testo semplice in HTML: `\$` è un dollaro, gli a capo restano. */
 function plainHtml(text: string): string {
@@ -38,16 +38,13 @@ const LINE = 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis'
  */
 export function tableHtml(text: string, fontSize: number, mathml = false): string {
   const { head, row } = tableMetricsFor(fontSize)
-  const [name = '', ...lines] = text.split('\n')
-  const fields = lines.map((line) => {
-    const m = /^\s*(PK|FK)\s+(.*)$/i.exec(line)
-    return m ? { key: m[1].toUpperCase(), text: m[2] } : { key: '', text: line }
-  })
+  const { name, fields: lines } = splitTable(text)
+  const fields = lines ? lines.split('\n').map(tableField) : []
   // Se c'è almeno una chiave, i nomi dei campi stanno tutti in colonna dopo «PK» e «FK».
   const tags = fields.some((f) => f.key)
   const rows = fields.map((f) => {
     const tag = tags ? `<span style="display:inline-block;width:2.4em;font-size:0.72em;font-weight:700;opacity:0.7">${f.key}</span>` : ''
-    const body = labelHtml(f.text, mathml)
+    const body = labelHtml(f.name, mathml)
     return `<div style="height:${row}px;line-height:${row}px;padding:0 8px;text-align:left;${LINE}">${tag}${f.key === 'PK' ? `<u>${body}</u>` : body}</div>`
   })
   const title = `<div style="height:${head}px;line-height:${head}px;padding:0 8px;text-align:center;font-weight:600;${LINE}">${labelHtml(name, mathml)}</div>`

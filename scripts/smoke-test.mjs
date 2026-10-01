@@ -631,10 +631,20 @@ try {
     window.showOpenFilePicker = async () => [{ getFile: async () => new File([text], 'schemi.md') }]
   }, mdFile)
   await sp.locator('button', { hasText: 'Apri .md' }).click()
-  await sp.waitForFunction(() => document.querySelectorAll('.cm-schema').length === 1 && document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
-  const reopenedNotes = await sp.evaluate(() =>
-    [...Array(localStorage.length).keys()].map((i) => localStorage.getItem(localStorage.key(i))).filter((v) => v?.startsWith('# Schemi')),
-  )
+  // Si aspetta la nota nuova: il file si legge dopo il clic, e la nota di prima ha già uno schema ed è salvata.
+  const schemiNotes = () =>
+    [...Array(localStorage.length).keys()].map((i) => localStorage.getItem(localStorage.key(i))).filter((v) => v?.startsWith('# Schemi'))
+  await sp
+    .waitForFunction(
+      () =>
+        [...Array(localStorage.length).keys()].filter((i) => localStorage.getItem(localStorage.key(i))?.startsWith('# Schemi')).length === 2 &&
+        document.querySelectorAll('.cm-schema').length === 1 &&
+        document.querySelector('.doc-status')?.textContent === 'Salvato',
+      null,
+      { timeout: 5000 },
+    )
+    .catch(() => {})
+  const reopenedNotes = await sp.evaluate(schemiNotes)
   check(
     reopenedNotes.length === 2 && reopenedNotes.every((v) => v === noteBefore),
     'riaprendo il file con Glifo lo schema torna un blocco da modificare, uguale a prima',
@@ -814,16 +824,88 @@ try {
   await db.keyboard.press('Escape')
   // Il nome dall'altra parte del pallino
   await db.locator('.schema-format button[aria-label="Il nome dall\'altra parte del pallino"]').click()
-  // Una tabella: scrivendo i campi si allunga, PK si sottolinea
+  // Una tabella si scrive com'è disegnata: il nome nella fascia in alto, i campi sotto, uno per riga.
+  // Scrivendo con la tabella selezionata cambia solo il nome; Invio passa ai campi, col primo nome selezionato.
+  const tableEditing = () =>
+    db.evaluate(() => {
+      const box = document.querySelector('.schema-table-text')
+      const name = box.querySelector('.schema-table-name')
+      const fields = box.querySelector('.schema-table-fields')
+      const active = document.activeElement
+      return {
+        open: !box.hidden,
+        single: !document.querySelector('.schema-text').hidden,
+        name: name.value,
+        fields: fields.value,
+        focus: active === name ? 'name' : active === fields ? 'fields' : '',
+        selected: active === name || active === fields ? active.value.slice(active.selectionStart, active.selectionEnd) : '',
+        nameBottom: Math.round(name.getBoundingClientRect().bottom),
+        fieldsTop: Math.round(fields.getBoundingClientRect().top),
+        align: [getComputedStyle(name).textAlign, getComputedStyle(fields).textAlign],
+      }
+    })
   await tableItem.click()
+  await db.keyboard.type('Studente')
+  const typedName = await tableEditing()
   await db.keyboard.press('Enter')
-  await db.keyboard.press('Control+a')
-  await db.keyboard.type('Studente\nPK Matricola\nNome\nCognome\nFK Corso')
-  await db.keyboard.press('Escape')
+  const toFields = await tableEditing()
+  await db.keyboard.type('Matricola')
+  await db.keyboard.press('Control+End')
+  // Un Invio di troppo in fondo non diventa un campo vuoto. Si finisce cliccando un colore: si
+  // salvano il testo e il colore (prima il pannello si rifaceva e il clic andava perso).
+  await db.keyboard.type('\nCognome\nFK Corso\n\n')
+  await db.locator('.schema-format button[aria-label="Blu"]').click()
+  const blueTable = await db.evaluate(() => ({
+    open: !document.querySelector('.schema-table-text').hidden,
+    blue: document.querySelector('.schema-format button[aria-label="Blu"]')?.getAttribute('aria-pressed'),
+  }))
+  check(
+    typedName.open &&
+      !typedName.single &&
+      typedName.focus === 'name' &&
+      typedName.name === 'Studente' &&
+      typedName.fields === 'PK Codice\nNome' &&
+      typedName.nameBottom <= typedName.fieldsTop &&
+      typedName.align.join() === 'center,left',
+    `la tabella si scrive in due parti, il nome in alto e i campi sotto, e scrivendo cambia solo il nome (${JSON.stringify(typedName)})`,
+  )
+  check(toFields.focus === 'fields' && toFields.selected === 'Codice', `Invio dal nome passa ai campi, col nome del primo selezionato (${JSON.stringify(toFields)})`)
   const tableLabel = await db.evaluate(() => {
     const fo = [...document.querySelectorAll('.schema-canvas foreignObject')].find((f) => f.textContent.startsWith('Studente'))
     return { underlined: fo?.querySelector('u')?.textContent ?? '', fk: !!fo && fo.textContent.includes('FKCorso') }
   })
+  check(
+    !blueTable.open && blueTable.blue === 'true' && tableLabel.underlined === 'Matricola',
+    `un clic su un colore mentre si scrive salva il testo e cambia anche il colore (${JSON.stringify(blueTable)})`,
+  )
+  // Doppio clic su un campo: si cambia quello. Ctrl+S mentre si scrive salva nella nota (senza, il
+  // browser aprirebbe «Salva pagina con nome»); un clic sul foglio finisce di scrivere.
+  const rowAt = (text) =>
+    db.evaluate((text) => {
+      const fo = [...document.querySelectorAll('.schema-canvas foreignObject')].find((f) => f.textContent.startsWith('Studente'))
+      const r = [...fo.querySelectorAll('div')].find((d) => d.textContent === text).getBoundingClientRect()
+      return { x: r.x + 40, y: r.y + r.height / 2 }
+    }, text)
+  const nomeRow = await rowAt('Nome')
+  await db.mouse.dblclick(nomeRow.x, nomeRow.y)
+  const onRow = await tableEditing()
+  await db.evaluate(() => window.addEventListener('keydown', (e) => e.key === 's' && (window.__ctrlS = e), true))
+  await db.keyboard.press('Control+s')
+  const ctrlS = await db.evaluate(() => ({ prevented: window.__ctrlS?.defaultPrevented, status: document.querySelector('.schema-status').textContent }))
+  const afterSave = await tableEditing()
+  check(
+    onRow.focus === 'fields' && onRow.selected === 'Nome' && ctrlS.prevented && ctrlS.status === 'Salvato nella nota' && !afterSave.open,
+    `doppio clic su un campo seleziona quello, e Ctrl+S mentre si scrive salva nella nota (${JSON.stringify({ ...ctrlS, selected: onRow.selected })})`,
+  )
+  const head = await rowAt('Studente')
+  await db.mouse.dblclick(head.x, head.y)
+  const onName = await tableEditing()
+  const dbSheet = await db.locator('dialog.schema-editor .schema-canvas').boundingBox()
+  await db.mouse.click(dbSheet.x + 15, dbSheet.y + 15)
+  check(
+    onName.focus === 'name' && onName.selected === 'Studente' && !(await tableEditing()).open,
+    `doppio clic sul nome seleziona il nome, e un clic sul foglio finisce di scrivere (${JSON.stringify(onName)})`,
+  )
   // Tutte le frecce curve, con il testo alla fine
   await db.keyboard.press('Escape')
   await db.keyboard.press('Control+a')

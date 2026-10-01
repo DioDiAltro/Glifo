@@ -119,7 +119,8 @@ chi sta provando Glifo.*
 - **Basi di dati** (gruppo da aprire nel pannello): entità ed entità debole, relazione e relazione
   identificante, attributi (chiave sottolineata, multivalore, derivato, e a pallino come nei libri
   italiani, pieno per l'identificatore), tabella con un campo per riga (`PK` sottolinea la chiave
-  primaria, `FK` segna quella esterna) e database.
+  primaria, `FK` segna quella esterna) e database. La tabella si scrive com'è disegnata: il nome
+  nella fascia in alto e i campi sotto, con un doppio clic sul nome o sul campo da cambiare.
 - **Modelli pronti** da cui partire, sul foglio vuoto o dal menu «Modelli»: diagramma di flusso,
   mappa concettuale, albero, ciclo, linea del tempo, schema E-R e tabelle.
 - Con più forme selezionate (trascinando un riquadro sul foglio vuoto, o con Maiusc + clic):
@@ -128,7 +129,7 @@ chi sta provando Glifo.*
 - **Scarica** lo schema come immagine PNG (nitida, alla misura giusta anche in Word) o SVG,
   oppure **copialo come immagine** e incollalo in Word, Google Docs o nelle slide.
 - Doppio clic (o scrivere con una forma selezionata) per il testo, anche con **formule**
-  `$ … $`; colori, forma, dimensione del testo, frecce dritte, ad angolo o **curve**, con o senza
+  `$ … $` (si finisce con Esc o con un clic sul foglio; Ctrl+S salva anche mentre si scrive); colori, forma, dimensione del testo, frecce dritte, ad angolo o **curve**, con o senza
   punte, tratteggiate, con il testo all'inizio, a metà o alla fine (per le cardinalità). Annulla/Ripeti, copia e incolla, zoom, griglia, selezione a rettangolo.
 - Lo schema va nella nota come blocco ` ```schema ` (un JSON corto, una forma per riga):
   nell'anteprima si vede il disegno, nel testo una riga con «Modifica». I colori seguono il

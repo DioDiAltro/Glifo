@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { alignBoxes, distributeBoxes, type Box } from '../src/schema/arrange'
 import { crc32, withDensity } from '../src/schema/image'
 import { tableHtml } from '../src/schema/label'
-import { parseSchema, serializeSchema, SHAPES, tableHeight } from '../src/schema/model'
+import { joinTable, parseSchema, serializeSchema, SHAPES, splitTable, tableField, tableHeight } from '../src/schema/model'
 import { TEMPLATES } from '../src/schema/templates'
 
 const boxes: Box[] = [
@@ -146,5 +146,29 @@ describe('basi di dati e frecce curve', () => {
     expect((title as HTMLElement).style.height).toBe('28px')
     expect(tableHeight('Esame\nPK Matricola\nFK Corso\nVoto', 'm')).toBe(28 + 3 * 22 + 10)
     expect(tableHeight('Solo il nome', 'l')).toBe(36 + 29 + 10)
+  })
+
+  it('nell\'editor la tabella si scrive in due parti, il nome e i campi, e torna un testo solo', () => {
+    expect(splitTable('Esame\nPK Matricola\nVoto')).toEqual({ name: 'Esame', fields: 'PK Matricola\nVoto' })
+    expect(splitTable('Solo il nome')).toEqual({ name: 'Solo il nome', fields: '' })
+    expect(splitTable('')).toEqual({ name: '', fields: '' })
+    expect(joinTable('Esame', 'PK Matricola\nVoto')).toBe('Esame\nPK Matricola\nVoto')
+    // Le righe vuote lasciate in fondo (un Invio di troppo) non diventano campi; quelle in mezzo restano.
+    expect(joinTable('Esame', 'PK Matricola\n\nVoto\n\n  \n')).toBe('Esame\nPK Matricola\n\nVoto')
+    expect(joinTable('Esame', '\n')).toBe('Esame')
+    expect(joinTable('', '')).toBe('')
+    for (const text of ['Esame\nPK Matricola\nVoto', 'Solo il nome', '\nSenza nome']) {
+      const { name, fields } = splitTable(text)
+      expect(joinTable(name, fields)).toBe(text)
+    }
+  })
+
+  it('PK e FK davanti a un campo: dove comincia il nome, per selezionarlo', () => {
+    expect(tableField('PK Matricola')).toEqual({ key: 'PK', name: 'Matricola', start: 3 })
+    expect(tableField('  fk   Corso di laurea')).toEqual({ key: 'FK', name: 'Corso di laurea', start: 7 })
+    expect(tableField('Voto')).toEqual({ key: '', name: 'Voto', start: 0 })
+    // «PK» da solo, o attaccato al nome, è un campo che si chiama così.
+    expect(tableField('PK')).toEqual({ key: '', name: 'PK', start: 0 })
+    expect(tableField('PKey')).toEqual({ key: '', name: 'PKey', start: 0 })
   })
 })

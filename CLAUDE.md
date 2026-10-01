@@ -48,7 +48,8 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   SVG, che VS Code mostra, più il JSON in un commento HTML; aprendo il file torna un blocco.
   Le forme in più (anche quelle delle basi di dati: entità debole, attributi a pallino, tabella)
   sono in `shapes.ts`; il testo delle tabelle (nome, campi, PK/FK) lo fa `tableHtml` in
-  `label.ts`. I modelli pronti sono in `templates.ts`, allinea e
+  `label.ts`, e nell'editor si scrive in due parti, il nome e i campi (`splitTable`/`joinTable`
+  in `model.ts`). I modelli pronti sono in `templates.ts`, allinea e
   distribuisci in `arrange.ts`, PNG e «Copia come immagine» in `image.ts`. Menu e messaggi
   dentro l'editor vanno messi nella sua finestra (è modale: fuori restano sotto).
 - `src/ai/`: assistente AI. `src/host.ts`: funzioni della demo dentro claude.ai.
