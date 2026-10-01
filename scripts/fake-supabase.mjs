@@ -1,6 +1,7 @@
 /**
- * Un Supabase finto per le prove nel browser. L'accesso accetta sempre il codice 123456, e il
- * link dell'ultima email (aperto o incollato); la sincronizzazione invece è quella vera:
+ * Un Supabase finto per le prove nel browser. L'accesso accetta sempre il codice 123456, il
+ * link dell'ultima email (aperto o incollato) e Google (la «pagina di Google» riporta subito
+ * a Glifo con l'account scelto con setGoogle); la sincronizzazione invece è quella vera:
  * sync_pull e sync_push girano sulle migrazioni di supabase/migrations, in un Postgres in
  * memoria (PGlite).
  */
@@ -12,6 +13,7 @@ const ROOT = new URL('../supabase/', import.meta.url)
 export const SUPABASE_URL = 'https://fgsuonetdmcgojbvrsxi.supabase.co'
 export const CODE = '123456'
 const LINK_CODE = 'codice-del-link'
+export const GOOGLE_CODE = 'codice-di-google'
 
 const b64 = (value) => Buffer.from(JSON.stringify(value)).toString('base64url')
 
@@ -27,6 +29,10 @@ export async function createFakeSupabase() {
   const users = new Map()
   /** L'ultima richiesta di accesso: il link nell'email ha `tokenHash` e riporta a `redirectTo`. */
   let lastLogin = null
+  /** L'accesso con Google: se è attivo in Supabase e con quale account Google si entra. */
+  let google = { enabled: true, email: null }
+  /** Per le prove: sync_push risponde con un errore, così le modifiche restano da mandare. */
+  let pushFails = false
   const emailOf = (id) => [...users].find(([, uid]) => uid === id)?.[0]
 
   async function userFor(email) {
@@ -113,6 +119,20 @@ export async function createFakeSupabase() {
     const raw = request.postData()
     const body = raw ? JSON.parse(raw) : {}
 
+    if (path === '/auth/v1/settings') return reply(200, { external: { email: true, google: google.enabled }, disable_signup: false })
+    if (path === '/auth/v1/authorize') {
+      // La pagina di Google: si sceglie l'account (quello di setGoogle) e si torna a Glifo.
+      if (!google.enabled || url.searchParams.get('provider') !== 'google') {
+        return reply(400, { code: 400, error_code: 'validation_failed', msg: 'Unsupported provider: provider is not enabled' })
+      }
+      const back = new URL(url.searchParams.get('redirect_to'))
+      back.searchParams.set('code', GOOGLE_CODE)
+      return route.fulfill({
+        status: 200,
+        headers: { 'content-type': 'text/html' },
+        body: `<!doctype html><title>Google</title><script>location.replace(${JSON.stringify(back.href)})</script>`,
+      })
+    }
     if (path === '/auth/v1/otp') {
       lastLogin = { email: body.email, redirectTo: url.searchParams.get('redirect_to'), tokenHash: `pkce_${randomBytes(28).toString('hex')}` }
       return reply(200, {})
@@ -130,6 +150,12 @@ export async function createFakeSupabase() {
       }
       if (body.token !== CODE) return expired()
       return reply(200, session(await userFor(body.email)))
+    }
+    if (path === '/auth/v1/token' && url.searchParams.get('grant_type') === 'pkce' && body.auth_code === GOOGLE_CODE) {
+      if (!body.code_verifier || !google.email) {
+        return reply(400, { code: 'flow_state_not_found', error_code: 'flow_state_not_found', message: 'invalid flow state' })
+      }
+      return reply(200, session(await userFor(google.email)))
     }
     if (path === '/auth/v1/token' && url.searchParams.get('grant_type') === 'pkce') {
       // Il link nell'email: il codice del link vale per l'ultima richiesta di accesso.
@@ -153,6 +179,7 @@ export async function createFakeSupabase() {
     if (fn) {
       const userId = userIdFrom(request.headers().authorization ?? '')
       if (!userId) return reply(401, { code: '42501', message: `permission denied for function ${fn}`, details: null, hint: null })
+      if (fn === 'sync_push' && pushFails) return reply(503, { code: 'PGRST000', message: 'Servizio non disponibile (prova)', details: null, hint: null })
       try {
         const result = await rpc(fn, userId, body)
         // Con l'account eliminato, la stessa email rientrando ne crea uno nuovo.
@@ -182,9 +209,22 @@ export async function createFakeSupabase() {
       target.searchParams.set('code', LINK_CODE)
       return target.href
     },
-    /** Quanti account e quante note (di tutti) ci sono nel database. */
-    async counts() {
-      const { rows } = await db.query('select (select count(*) from auth.users)::int as users, (select count(*) from public.notes)::int as notes')
+    /** Con quale account Google si entra, e se l'accesso con Google è attivo. */
+    setGoogle(options) {
+      google = { ...google, ...options }
+    },
+    /** Per le prove: fa fallire (o di nuovo riuscire) sync_push. */
+    failPush(value) {
+      pushFails = value
+    },
+    /** L'id dell'account con questa email, se c'è. */
+    userId: (email) => users.get(email) ?? null,
+    /** Quello che resta nel database dell'account `id`: l'utente e le sue note. */
+    async countsFor(id) {
+      const { rows } = await db.query(
+        'select (select count(*) from auth.users where id = $1)::int as users, (select count(*) from public.notes where owner_id = $1)::int as notes',
+        [id],
+      )
       return rows[0]
     },
     /** Le note dell'account salvate nel database. */

@@ -92,9 +92,11 @@ Perché non gli altri:
    - i test usano le vere migrazioni in un Postgres in memoria (PGlite), anche nella prova
      nel browser con un Supabase finto (`scripts/fake-supabase.mjs`).
 4. **Aprire l'account a tutti** (il prossimo, gratis):
-   - accesso con Google: niente email da mandare, quindi niente servizio di posta né
-     dominio. Serve un progetto Google Cloud, gratuito, da creare con il tuo account Google;
-     poi l'ID cliente va in Supabase (Authentication → Providers → Google);
+   - accesso con Google: nell'app è fatto («Continua con Google» nella finestra di accesso;
+     con la stessa email si ritrova lo stesso account). Da fare, dallo studente: il progetto
+     Google Cloud e l'attivazione in Supabase, con i passi in
+     [supabase/README.md](supabase/README.md) («Accesso con Google»). Finché l'app Google è
+     «Testing» entrano solo gli indirizzi aggiunti come «Test users»;
    - fatto: informativa sulla privacy (`privacy.html`, collegata dalla finestra di accesso,
      dall'account e dalle impostazioni), «Scarica i miei dati» (tutto l'account in un file
      che «Ripristina backup» rilegge) ed «Elimina account» (funzione `delete_account` nel

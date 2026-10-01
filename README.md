@@ -45,10 +45,11 @@ Cose da sapere:
 ### Account
 
 Con l'account ritrovi gli stessi appunti, con cartelle, impostazioni e dizionario personale,
-su computer, tablet e telefono. Si entra dal pulsante **Accedi** in alto con un'email:
-niente password. Il link nell'email va aperto nel browser in cui si usa Glifo; se si
-aprirebbe altrove (per esempio nell'app di Gmail), si copia e si incolla nella finestra di
-Glifo. *Per ora è in prova: l'email arriva solo agli indirizzi di chi sta provando Glifo.*
+su computer, tablet e telefono. Si entra dal pulsante **Accedi** in alto, senza password:
+con **Continua con Google** oppure con un'email. Il link nell'email va aperto nel browser in
+cui si usa Glifo; se si aprirebbe altrove (per esempio nell'app di Gmail), si copia e si
+incolla nella finestra di Glifo. *Per ora è in prova: possono entrare solo gli indirizzi di
+chi sta provando Glifo.*
 
 - **Sincronizzazione automatica:** all'avvio, quando torni su Glifo, quando torna la rete e
   poco dopo ogni modifica. Il pallino sul pulsante dell'account dice com'è andata.
@@ -237,7 +238,7 @@ src/
     sync.ts               sincronizzazione: manda e scarica le modifiche, nei conflitti tiene tutte e due le versioni
     controller.ts         quando sincronizzare (avvio, ritorno su Glifo, rete, dopo le modifiche)
     space.ts              le note di ogni account in uno spazio a parte del browser
-    supabase.ts           accesso via email (link o codice), eliminazione dell'account
+    supabase.ts           accesso con Google o via email (link o codice), eliminazione dell'account
     export.ts             il file di «Scarica i miei dati»
   host.ts                 integrazione facoltativa con claude.ai (per la demo pubblicata lì)
 privacy.html              l'informativa sulla privacy (una seconda pagina, fuori dall'app)

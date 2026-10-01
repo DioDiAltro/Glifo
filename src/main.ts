@@ -36,7 +36,16 @@ import {
   setCurrentAccount,
 } from './account/space'
 import { accountDataFile } from './account/export'
-import { currentSession, deleteAccount as deleteAccountOnServer, sendCode, signOut, supabaseBackend, verifyCode } from './account/supabase'
+import {
+  currentSession,
+  deleteAccount as deleteAccountOnServer,
+  loginDetails,
+  sendCode,
+  signInWithGoogle,
+  signOut,
+  supabaseBackendFor,
+  verifyCode,
+} from './account/supabase'
 import { SyncError, type LocalChange } from './account/sync'
 import { AccountButton, confirmAccountDeletion, openAccountDialog, openLoginDialog, type SignedIn } from './ui/account'
 import { NotesPanel } from './ui/notesPanel'
@@ -788,7 +797,7 @@ function dropStarter(): void {
 
 function openAccount(): void {
   if (!account || !sync) {
-    openLoginDialog({ sendCode, verifyCode, onSignedIn: (user) => completeSignIn(user) })
+    openLoginDialog({ sendCode, verifyCode, withGoogle: startGoogleSignIn, onSignedIn: (user) => completeSignIn(user) })
     return
   }
   openAccountDialog({
@@ -810,11 +819,31 @@ function openAccount(): void {
       return moved
     },
     onRelogin: () =>
-      openLoginDialog({ email: account.email, lockEmail: true, sendCode, verifyCode, onSignedIn: (user) => completeSignIn(user) }),
+      openLoginDialog({
+        email: account.email,
+        lockEmail: true,
+        sendCode,
+        verifyCode,
+        withGoogle: startGoogleSignIn,
+        onSignedIn: (user) => completeSignIn(user),
+      }),
     onSignOut: () => void signOutAccount(),
     onDownload: () => downloadAccountData(),
     onDelete: () => void deleteAccount(),
   })
+}
+
+const OAUTH_KEY = 'glifo.oauth'
+
+/** Accesso con Google: si salva tutto e si va sulla pagina di Google; al ritorno ci pensa il codice in fondo. */
+async function startGoogleSignIn(): Promise<void> {
+  flushSave()
+  try {
+    sessionStorage.setItem(OAUTH_KEY, 'google')
+  } catch {
+    /* senza sessionStorage al ritorno l'avviso sarà quello generico */
+  }
+  await signInWithGoogle()
 }
 
 /** Cosa dire se un'operazione sull'account non riesce (`action`: «scaricare i dati»…). */
@@ -831,9 +860,10 @@ async function downloadAccountData(): Promise<void> {
   flushSave()
   await sync.syncNow()
   try {
-    const data = await supabaseBackend.pull(null)
+    const data = await supabaseBackendFor(account.userId).pull(null)
+    const login = await loginDetails().catch(() => undefined)
     const date = new Date().toISOString().slice(0, 10)
-    await downloadText(`glifo-dati-account-${date}.json`, accountDataFile(data, account), 'application/json')
+    await downloadText(`glifo-dati-account-${date}.json`, accountDataFile(data, account, login), 'application/json')
   } catch (err) {
     toast(accountProblem(err, 'scaricare i dati'), 'error')
   }
@@ -844,7 +874,7 @@ async function deleteAccount(): Promise<void> {
   if (!account || !sync) return
   if (!(await confirmAccountDeletion({ email: account.email, onDownload: () => downloadAccountData() }))) return
   try {
-    await deleteAccountOnServer()
+    await deleteAccountOnServer(account.userId)
   } catch (err) {
     toast(accountProblem(err, 'eliminare l\'account'), 'error')
     return
@@ -956,20 +986,31 @@ if (sync && account) {
 const notice = takeNotice()
 if (notice) toast(notice)
 
-// Ritorno dal link nell'email.
+// Ritorno dal link nell'email o dalla pagina di Google.
 if (/[?&#](code|access_token|error_description)=/.test(location.search + location.hash)) {
   const hadError = /error_description=/.test(location.search + location.hash)
+  let viaGoogle = false
+  try {
+    viaGoogle = sessionStorage.getItem(OAUTH_KEY) === 'google'
+    sessionStorage.removeItem(OAUTH_KEY)
+  } catch {
+    /* sessionStorage non disponibile */
+  }
   void currentSession()
     .then((user) => {
       history.replaceState(null, '', location.pathname)
-      if (user && !account) return completeSignIn(user)
-      if (user) return
+      // Il primo accesso, o un account diverso da quello aperto (per esempio un altro account
+      // Google): si passa a quello. Le note dell'account di prima restano nel suo spazio.
+      if (user && user.userId !== account?.userId) return completeSignIn(user)
+      if (user) return void sync?.syncNow()
       // Il link vale solo nel browser in cui si è chiesta l'email (per esempio non sul
       // telefono, se l'ha chiesta il computer), e aprendolo si consuma.
       toast(
-        hadError
-          ? 'Il link per entrare non è valido o è già stato usato: chiedi un\'altra email da «Accedi».'
-          : 'Il link va aperto nel browser in cui hai chiesto di entrare. Chiedi un\'altra email da lì: poi apri il link in quel browser, oppure copialo e incollalo nella finestra di Glifo.',
+        viaGoogle
+          ? 'L\'accesso con Google non è stato completato: riprova da «Accedi».'
+          : hadError
+            ? 'Il link per entrare non è valido o è già stato usato: chiedi un\'altra email da «Accedi».'
+            : 'Il link va aperto nel browser in cui hai chiesto di entrare. Chiedi un\'altra email da lì: poi apri il link in quel browser, oppure copialo e incollalo nella finestra di Glifo.',
         'error',
       )
     })

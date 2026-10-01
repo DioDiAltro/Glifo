@@ -93,7 +93,9 @@ Due funzioni, da chiamare dopo l'accesso con `supabase.rpc(...)`.
 
 - `src/account/sync.ts` usa queste due funzioni: manda le modifiche, poi scarica le novità.
 - `src/account/space.ts` tiene le note di ogni account in uno spazio a parte del browser.
-- `src/account/supabase.ts` si occupa dell'accesso via email.
+- `src/account/supabase.ts` si occupa dell'accesso (email o Google). Sincronizza, scarica i
+  dati ed elimina l'account solo se l'accesso salvato nel browser è dell'account aperto: così
+  le note di un account non finiscono mai in un altro.
 
 L'email per entrare:
 
@@ -108,6 +110,34 @@ L'email per entrare:
   l'app prende il token e lo controlla con `verifyOtp({ token_hash, type: 'email' })`.
 - **Il codice di 6 cifre** arriva se i modelli «Magic Link» e «Confirm signup» contengono
   `{{ .Token }}` (quindi con un SMTP proprio): Glifo lo accetta già.
+
+### Accesso con Google
+
+Glifo chiama `signInWithOAuth({ provider: 'google' })` e torna con `?code=…`, come il link
+dell'email. Prima legge `/auth/v1/settings`: se Google non è attivo, lo dice nella finestra
+invece di mandare su una pagina di errore. Con la stessa email di un account già esistente,
+Supabase collega Google a quell'account: note e impostazioni restano le stesse.
+
+Per attivarlo (gratis, senza carta di credito):
+
+1. In [Google Cloud](https://console.cloud.google.com/) si crea un progetto «Glifo». Nella
+   [Google Auth Platform](https://console.cloud.google.com/auth/overview), «Get started»:
+   - nome dell'app «Glifo», email di assistenza;
+   - pubblico «External»;
+   - email di contatto.
+2. In **Audience** l'app resta «Testing»: entrano solo gli indirizzi aggiunti tra i «Test
+   users» (fino a 100). Quando l'account si apre a tutti, «Publish app».
+3. In **Clients** → «Create client», tipo «Web application»:
+   - *Authorized JavaScript origins*: `https://diodialtro.github.io`;
+   - *Authorized redirect URIs*: `https://fgsuonetdmcgojbvrsxi.supabase.co/auth/v1/callback`.
+
+   Poi si copiano «Client ID» e «Client secret».
+4. In Supabase, Authentication → Sign In / Providers → **Google**: si attiva, e si incollano
+   Client ID e Client secret. Il secret va solo lì.
+
+La pagina di Google mostra l'indirizzo di Supabase (`fgsuonetdmcgojbvrsxi.supabase.co`) al posto
+di «Glifo». Si può cambiare in due modi: con la verifica del marchio da parte di Google, o con
+un dominio personalizzato per Supabase, che però è a pagamento.
 
 ## Cambiare il database
 

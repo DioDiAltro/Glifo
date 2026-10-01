@@ -1,6 +1,6 @@
 import type { AuthError, PostgrestError } from '@supabase/supabase-js'
 import { describe, expect, it } from 'vitest'
-import { accountError, emailLinkToken, syncError, verifyCode } from '../src/account/supabase'
+import { accountError, emailLinkToken, providerEnabled, syncError, verifyCode } from '../src/account/supabase'
 
 const auth = (fields: Partial<AuthError>) => ({ name: 'AuthApiError', message: '', status: 400, ...fields }) as AuthError
 const postgrest = (fields: Partial<PostgrestError>) => ({ message: '', details: '', hint: '', code: '', ...fields }) as PostgrestError
@@ -41,6 +41,17 @@ describe('link dell\'email incollato nella finestra', () => {
   it('un testo che non è né il link né un codice viene segnalato subito', async () => {
     await expect(verifyCode('studente@example.com', 'https://diodialtro.github.io/Glifo/')).rejects.toMatchObject({ kind: 'input' })
     await expect(verifyCode('studente@example.com', '12 34')).rejects.toMatchObject({ kind: 'input' })
+  })
+})
+
+describe('accesso con Google', () => {
+  it('è attivo solo se Supabase lo dice', () => {
+    expect(providerEnabled({ external: { email: true, google: true } }, 'google')).toBe(true)
+    expect(providerEnabled({ external: { email: true, google: false } }, 'google')).toBe(false)
+    expect(providerEnabled({ external: { email: true } }, 'google')).toBe(false)
+    // Una risposta di errore (per esempio una chiave sbagliata) o niente.
+    expect(providerEnabled({ message: 'Invalid API key' }, 'google')).toBe(false)
+    expect(providerEnabled(null, 'google')).toBe(false)
   })
 })
 

@@ -18,10 +18,11 @@ const data: PullResult = {
 }
 
 describe('«Scarica i miei dati»', () => {
-  const file = JSON.parse(accountDataFile(data, { userId: 'u1', email: 'anna@example.com' }, new Date('2026-09-30T20:00:00Z')))
+  const login = { providers: ['email', 'google'], profile: { full_name: 'Anna Rossi', avatar_url: 'https://example.com/anna.png' } }
+  const file = JSON.parse(accountDataFile(data, { userId: 'u1', email: 'anna@example.com' }, login, new Date('2026-09-30T20:00:00Z')))
 
   it('ha l\'account, le note e le cartelle, senza quelle eliminate', () => {
-    expect(file.account).toEqual({ id: 'u1', email: 'anna@example.com' })
+    expect(file.account).toEqual({ id: 'u1', email: 'anna@example.com', ...login })
     expect(file.exportedAt).toBe('2026-09-30T20:00:00.000Z')
     expect(file.notes).toEqual([
       { id: 'n1', title: 'Limiti', createdAt: Date.parse(row.created_at), updatedAt: Date.parse(row.updated_at), folderId: 'f1', content: '# Limiti\n\n$\\lim_{x \\to 0}$' },
@@ -42,6 +43,6 @@ describe('«Scarica i miei dati»', () => {
 
   it('funziona anche con un account appena creato, senza impostazioni', () => {
     const empty = JSON.parse(accountDataFile({ cursor: '1', folders: [], notes: [], settings: null }, { userId: 'u2', email: 'b@example.com' }))
-    expect(empty).toMatchObject({ notes: [], folders: [], settings: {}, dictionary: [] })
+    expect(empty).toMatchObject({ account: { providers: [], profile: {} }, notes: [], folders: [], settings: {}, dictionary: [] })
   })
 })

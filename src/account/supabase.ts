@@ -13,7 +13,7 @@ export function supabase(): Promise<SupabaseClient> {
           storageKey: AUTH_STORAGE_KEY,
           persistSession: true,
           autoRefreshToken: true,
-          // Il link nell'email riporta qui con ?code=…
+          // Il link nell'email e la pagina di Google riportano qui con ?code=…
           detectSessionInUrl: true,
           flowType: 'pkce',
         },
@@ -146,6 +146,34 @@ export async function verifyCode(email: string, input: string): Promise<SignedIn
   return user
 }
 
+/** Quali modi di entrare sono attivi, dalla risposta di /auth/v1/settings (esportata per i test). */
+export function providerEnabled(settings: unknown, provider: string): boolean {
+  const external = (settings as { external?: Record<string, unknown> } | null)?.external
+  return external?.[provider] === true
+}
+
+/**
+ * Accesso con Google: si va sulla pagina di Google e si torna su Glifo con ?code=… (vedi
+ * main.ts). Prima si controlla che in Supabase l'accesso con Google sia attivo: altrimenti
+ * Supabase mostrerebbe una pagina di errore al posto di quella di Google.
+ */
+export async function signInWithGoogle(): Promise<void> {
+  const sb = await loadClient()
+  let settings: unknown
+  try {
+    const res = await withTimeout(fetch(`${SUPABASE_URL}/auth/v1/settings`, { headers: { apikey: SUPABASE_KEY } }))
+    settings = await res.json()
+  } catch {
+    throw new AccountError('offline', MESSAGES.offline)
+  }
+  if (!providerEnabled(settings, 'google')) {
+    throw new AccountError('closed', 'L\'accesso con Google non è ancora attivo: per ora entra con l\'email.')
+  }
+  const { data, error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: appUrl(), skipBrowserRedirect: true } })
+  if (error || !data.url) throw accountError(error)
+  location.assign(data.url)
+}
+
 /** L'accesso salvato in questo browser, se c'è (per esempio dopo aver aperto il link dell'email). */
 export async function currentSession(): Promise<SignedIn | null> {
   const sb = await loadClient()
@@ -193,16 +221,51 @@ async function call<T>(name: 'sync_pull' | 'sync_push' | 'delete_account', args:
   return data as T
 }
 
-/** Il server degli account per la sincronizzazione. */
-export const supabaseBackend: SyncBackend = {
-  pull: (since: string | null) => call<PullResult>('sync_pull', { since }),
-  push: (changes: PushChanges) => call<PushResult>('sync_push', { changes }),
+/**
+ * Controlla che l'accesso salvato in questo browser sia proprio di `userId`. Potrebbe essere di
+ * un altro account, per esempio subito dopo essere entrati con un altro account Google, o se
+ * in un'altra scheda si è appena entrati con un altro account: allora non si manda, non si
+ * scarica e non si elimina niente, così le note di un account non finiscono in un altro.
+ */
+async function ensureSessionOf(userId: string): Promise<void> {
+  let sb: SupabaseClient
+  try {
+    sb = await supabase()
+  } catch {
+    throw new SyncError('offline', 'Nessuna connessione')
+  }
+  const { data, error } = await sb.auth.getSession()
+  if (error && (error.name === 'AuthRetryableFetchError' || error.status === 0)) throw new SyncError('offline', 'Nessuna connessione')
+  if (data.session?.user.id !== userId) throw new SyncError('auth', 'L\'accesso salvato in questo browser è di un altro account')
+}
+
+/** Il server degli account per la sincronizzazione dell'account `userId`. */
+export function supabaseBackendFor(userId: string): SyncBackend {
+  return {
+    pull: async (since: string | null) => {
+      await ensureSessionOf(userId)
+      return call<PullResult>('sync_pull', { since })
+    },
+    push: async (changes: PushChanges) => {
+      await ensureSessionOf(userId)
+      return call<PushResult>('sync_push', { changes })
+    },
+  }
 }
 
 /**
- * Elimina l'account sul server: con l'utente spariscono note, cartelle e impostazioni (vedi
- * supabase/migrations). Serve la connessione; gli errori sono quelli della sincronizzazione.
+ * Elimina sul server l'account `userId`: con l'utente spariscono note, cartelle e impostazioni
+ * (vedi supabase/migrations). Serve la connessione; gli errori sono quelli della sincronizzazione.
  */
-export async function deleteAccount(): Promise<void> {
+export async function deleteAccount(userId: string): Promise<void> {
+  await ensureSessionOf(userId)
   await call<null>('delete_account', {})
+}
+
+/** Come si entra nell'account e cosa ne sa il servizio di accesso (per «Scarica i miei dati»). */
+export async function loginDetails(): Promise<{ providers: string[]; profile: Record<string, unknown> }> {
+  const sb = await supabase()
+  const user = (await sb.auth.getSession()).data.session?.user
+  const providers = user?.app_metadata?.providers
+  return { providers: Array.isArray(providers) ? providers : [], profile: user?.user_metadata ?? {} }
 }

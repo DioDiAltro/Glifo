@@ -1,7 +1,7 @@
 import type { FoldersStore } from '../store/folders'
 import type { NotesStore } from '../store/notes'
 import type { Account } from './space'
-import { supabaseBackend } from './supabase'
+import { supabaseBackendFor } from './supabase'
 import { SyncEngine, SyncError, type Prefs, type SyncBackend, type SyncHooks, type SyncState } from './sync'
 
 /** Com'è andata l'ultima sincronizzazione, per il pulsante dell'account. */
@@ -48,7 +48,7 @@ export class AccountSync {
   ) {
     this.engine = new SyncEngine({
       ...deps,
-      backend: deps.backend ?? supabaseBackend,
+      backend: deps.backend ?? supabaseBackendFor(account.userId),
       lock: (run) => withLock(`glifo-sync-${account.userId}`, run),
     })
   }

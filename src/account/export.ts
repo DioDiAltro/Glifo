@@ -5,7 +5,13 @@ import type { PullResult } from './sync'
  * e dizionario), in un file JSON. Ha la forma del backup, quindi «Ripristina backup» lo rimette
  * in Glifo, anche senza account.
  */
-export function accountDataFile(data: PullResult, account: { userId: string; email: string }, now = new Date()): string {
+export function accountDataFile(
+  data: PullResult,
+  account: { userId: string; email: string },
+  /** Come si entra (email, google…) e cosa ne sa il servizio di accesso (per Google: nome e immagine). */
+  login: { providers: string[]; profile: Record<string, unknown> } = { providers: [], profile: {} },
+  now = new Date(),
+): string {
   const ms = (iso: string) => Date.parse(iso)
   const dictionary = data.settings?.dictionary
   return JSON.stringify(
@@ -13,7 +19,7 @@ export function accountDataFile(data: PullResult, account: { userId: string; ema
       app: 'glifo',
       version: 1,
       exportedAt: now.toISOString(),
-      account: { id: account.userId, email: account.email },
+      account: { id: account.userId, email: account.email, providers: login.providers, profile: login.profile },
       notes: data.notes
         .filter((n) => !n.deleted_at)
         .map((n) => ({ id: n.id, title: n.title, createdAt: ms(n.created_at), updatedAt: ms(n.updated_at), folderId: n.folder_id, content: n.content })),

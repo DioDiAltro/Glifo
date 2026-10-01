@@ -8,7 +8,7 @@
 import { readFile } from 'node:fs/promises'
 import { chromium } from 'playwright-core'
 import { preview } from 'vite'
-import { CODE, createFakeSupabase } from './fake-supabase.mjs'
+import { CODE, GOOGLE_CODE, createFakeSupabase } from './fake-supabase.mjs'
 
 const server = await preview({ preview: { port: 4175, strictPort: true }, logLevel: 'error' })
 const url = server.resolvedUrls.local[0]
@@ -251,7 +251,68 @@ try {
   check(!(await accountState(portatile.page)).includes('is-guest'), 'incollando il link dell\'email nella finestra si entra')
   check(await waitFor(portatile.page, () => document.querySelectorAll('.note-item').length === 2), 'e arrivano le note')
 
+  // ——— Accesso con Google ———
+  const google = await device()
+  // Un appunto solo di questo browser: entrando, Glifo chiede se aggiungerlo all'account.
+  await google.page.locator('.notes-head button[aria-label="Nuova nota"]').click()
+  await google.page.keyboard.type('Appunto del browser')
+  await google.page.waitForTimeout(700)
+  await google.page.locator('.account-button').click()
+  const googleDialog = google.page.locator('dialog.dialog-login')
+  fake.setGoogle({ enabled: false })
+  await googleDialog.locator('button', { hasText: 'Continua con Google' }).click()
+  await googleDialog.locator('.prompt-error:not([hidden])').waitFor()
+  check(
+    (await googleDialog.locator('.prompt-error').innerText()).includes('non è ancora attivo'),
+    'se in Supabase Google non è attivo, la finestra lo dice (e non si va su una pagina di errore)',
+  )
+  fake.setGoogle({ enabled: true, email: EMAIL })
+  await googleDialog.locator('button', { hasText: 'Continua con Google' }).click()
+  const keepHere = async () => {
+    const question = google.page.locator('dialog.dialog-confirm')
+    await question.waitFor()
+    await question.locator('.btn:not(.btn-primary)').click()
+  }
+  await keepHere()
+  check(
+    await waitFor(google.page, () => document.querySelector('.account-button') && !document.querySelector('.account-button').classList.contains('is-guest')),
+    'con Google si entra nell\'account (la stessa email: lo stesso account)',
+  )
+  check(await waitFor(google.page, () => document.querySelectorAll('.note-item').length === 2), 'e arrivano le note')
+  check(!(await google.page.evaluate(() => location.search)).includes('code='), 'il codice di Google sparisce dall\'indirizzo')
+
+  // Si torna da Google con un altro account mentre in questo browser c'è ancora il primo, con
+  // una modifica non ancora mandata: non deve finire nell'altro account, nemmeno mentre Glifo
+  // chiede cosa fare dell'appunto del browser (intanto il primo account prova a sincronizzare).
+  fake.failPush(true)
+  await typeAtEnd(google.page, ' — modifica solo del primo account')
+  await google.page.waitForTimeout(3500)
+  fake.failPush(false)
+  const OTHER = 'altra@example.com'
+  fake.setGoogle({ email: OTHER })
+  await google.page.evaluate(() => localStorage.setItem('glifo.auth.v1-code-verifier', JSON.stringify('verificatore')))
+  await google.page.goto(`${url}?code=${GOOGLE_CODE}`)
+  await google.page.locator('dialog.dialog-confirm').waitFor()
+  await google.page.waitForTimeout(4000)
+  await keepHere()
+  const emailHere = () =>
+    google.page.evaluate(() => JSON.parse(localStorage.getItem('glifo.account.v1') ?? 'null')?.email).catch(() => null)
+  check(await poll(async () => (await emailHere()) === OTHER), 'tornando con un altro account Google si passa a quello')
+  await google.page.waitForSelector('.cm-editor')
+  await google.page.waitForTimeout(1500)
+  const otherNotes = await fake.notes(OTHER)
+  check(
+    !otherNotes.some((n) => n.content.includes('modifica solo del primo account')),
+    `le note del primo account non finiscono nell'altro (${otherNotes.length} note nell'altro)`,
+  )
+  check(
+    !(await fake.notes(EMAIL)).some((n) => n.content.includes('modifica solo del primo account')),
+    'e la modifica resta in questo browser, nello spazio del primo account',
+  )
+  pc.errors.push(...google.errors)
+
   // ——— I tuoi dati: scaricarli, poi eliminare l'account ———
+  const deletedId = fake.userId(EMAIL)
   await portatile.page.locator('.account-button').click()
   const accountDialog = portatile.page.locator('dialog.dialog-account')
   const downloading = portatile.page.waitForEvent('download')
@@ -283,8 +344,8 @@ try {
     Object.keys(localStorage).filter((k) => k.startsWith('glifo.u.') || k.startsWith('glifo.auth')),
   )
   check(leftAfterDelete.length === 0, `nel browser non resta niente dell'account (${leftAfterDelete})`)
-  const counts = await fake.counts()
-  check(counts.users === 0 && counts.notes === 0, `sul server non resta niente (${JSON.stringify(counts)})`)
+  const counts = await fake.countsFor(deletedId)
+  check(counts.users === 0 && counts.notes === 0, `sul server non resta niente dell'account (${JSON.stringify(counts)})`)
   pc.errors.push(...portatile.errors)
 
   // ——— L'informativa sulla privacy ———
