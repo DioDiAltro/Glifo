@@ -229,6 +229,7 @@ kbd {
   white-space: nowrap;
 }
 
+/* Il simbolo ∮ (src/ui/logo.ts), come nell'icona dell'app. */
 .brand-mark {
   display: grid;
   place-items: center;
@@ -237,8 +238,6 @@ kbd {
   border-radius: 8px;
   background: var(--accent);
   color: var(--on-accent);
-  font-size: 17px;
-  font-weight: 800;
 }
 
 .doc-info {

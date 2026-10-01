@@ -26,7 +26,7 @@ export default defineConfig({
           registerType: 'autoUpdate',
           includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
           manifest: {
-            name: 'Glifo – appunti universitari',
+            name: 'Glifo',
             short_name: 'Glifo',
             description: 'Appunti in Markdown per ogni materia: formule LaTeX con anteprima dei simboli, codice, tabelle.',
             lang: 'it',

@@ -49,6 +49,7 @@ import {
 } from './account/supabase'
 import { SyncError, type LocalChange } from './account/sync'
 import { AccountButton, confirmAccountDeletion, openAccountDialog, openLoginDialog, type SignedIn } from './ui/account'
+import { logoMark } from './ui/logo'
 import { NotesPanel } from './ui/notesPanel'
 import { Preview } from './ui/preview'
 import { PaneResizer } from './ui/resize'
@@ -158,7 +159,7 @@ const topbar = h(
   h(
     'div',
     { class: 'brand' },
-    h('span', { class: 'brand-mark', attrs: { 'aria-hidden': 'true' } }, 'Σ'),
+    h('span', { class: 'brand-mark', attrs: { 'aria-hidden': 'true' }, html: logoMark() }),
     h('span', { class: 'brand-name' }, 'Glifo'),
   ),
   h('div', { class: 'doc-info' }, titleEl, statusEl),

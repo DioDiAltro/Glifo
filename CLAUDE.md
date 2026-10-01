@@ -19,6 +19,8 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   (`scripts/fake-supabase.mjs`). Serve Chromium: indica il percorso con `CHROMIUM_PATH`
   (nelle sessioni cloud `/opt/pw-browsers/chromium`).
 - `GLIFO_NO_PWA=1 npx vite build`: build senza service worker (per la demo su claude.ai).
+- `node scripts/icons.mjs`: ridisegna `public/favicon.svg` e le icone PNG dell'app dal simbolo
+  ∮ in `src/ui/logo.ts` (serve `CHROMIUM_PATH`). Va rifatto ogni volta che cambia il simbolo.
 
 ## Dove sono le cose
 

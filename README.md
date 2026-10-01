@@ -236,7 +236,7 @@ src/
     lists.ts              elenchi con tutti i marcatori e rientri comodi nell'anteprima
     katex.ts              disegno delle formule, messaggi di errore in italiano
   ui/                     pannello dei simboli, anteprima, elenco appunti, finestre,
-                          bordi da trascinare tra le sezioni (resize.ts)
+                          bordi da trascinare tra le sezioni (resize.ts), il simbolo ∮ (logo.ts)
   store/                  salvataggio nel browser, file .md, impostazioni, misure delle sezioni (layout.ts)
   ai/assistant.ts         assistente AI
   account/
@@ -250,6 +250,7 @@ privacy.html              l'informativa sulla privacy (una seconda pagina, fuori
 tests/                    test automatici (Vitest), anche del database con le vere migrazioni (PGlite)
 scripts/smoke-test.mjs    prova nel browser del flusso principale
 scripts/account-test.mjs  prova nel browser dell'account, con un Supabase finto (fake-supabase.mjs)
+scripts/icons.mjs         ridisegna favicon e icone dell'app dal simbolo in src/ui/logo.ts
 supabase/                 il database degli account: tabelle, regole di accesso e i loro test
 ```
 

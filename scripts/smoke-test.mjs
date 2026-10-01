@@ -370,6 +370,41 @@ try {
   const saved = await layout.evaluate(() => JSON.parse(localStorage.getItem('glifo.layout.v1')))
   check((await widths()).notes === 250 && saved.notesWidth === 250, `con un doppio clic sul bordo l'elenco torna largo 250 pixel (${JSON.stringify(saved)})`)
 
+  // L'app installata si chiama «Glifo», e le sue icone sono disegnate dal simbolo di adesso (∮)
+  const installed = await layout.evaluate(async () => {
+    const manifest = await (await fetch(document.querySelector('link[rel="manifest"]').href)).json()
+    const pixels = async (src, size) => {
+      const img = new Image()
+      img.src = src
+      await img.decode()
+      const canvas = document.createElement('canvas')
+      canvas.width = canvas.height = size
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0, size, size)
+      return { width: img.naturalWidth, data: ctx.getImageData(0, 0, size, size).data }
+    }
+    const icons = []
+    for (const icon of manifest.icons) {
+      const size = Number(icon.sizes.split('x')[0])
+      const png = await pixels(icon.src, size)
+      // Quella che Android ritaglia ha lo sfondo fino agli angoli: con il favicon si confrontano le altre.
+      let diff = 0
+      if (icon.purpose !== 'maskable') {
+        const svg = await pixels('favicon.svg', size)
+        for (let i = 0; i < png.data.length; i++) diff += Math.abs(png.data[i] - svg.data[i])
+        diff /= png.data.length
+      }
+      icons.push({ src: icon.src, ok: png.width === size && diff < 1 })
+    }
+    const apple = await pixels(document.querySelector('link[rel="apple-touch-icon"]').href, 180)
+    icons.push({ src: 'apple-touch-icon', ok: apple.width === 180 })
+    return { name: manifest.name, shortName: manifest.short_name, icons, mark: !!document.querySelector('.brand-mark svg circle') }
+  })
+  check(installed.name === 'Glifo' && installed.shortName === 'Glifo', `l'app installata si chiama «Glifo» (${installed.name})`)
+  check(
+    installed.icons.every((icon) => icon.ok) && installed.mark,
+    `le icone e il marchio in alto sono il simbolo di adesso (${JSON.stringify(installed.icons)})`,
+  )
   await layout.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)
