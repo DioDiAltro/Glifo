@@ -19,9 +19,9 @@ import {
   VertexHandlerConfig,
   type CellStyle,
 } from '@maxgraph/core'
-import { labelHtml } from './label'
-import { DEFAULT_EDGE, FONT_SIZE, INK, PALETTE, type EdgeLook, type NodeLook, type Rotation, type Schema, type Theme } from './model'
-import { registerShapes, SHAPE_STYLES } from './shapes'
+import { labelHtml, tableHtml } from './label'
+import { DEFAULT_EDGE, FONT_SIZE, INK, PALETTE, type EdgeLook, type NodeLook, type Rotation, type Schema, type TextAt, type Theme } from './model'
+import { DOT_PERIMETER, registerShapes, SHAPE_STYLES } from './shapes'
 
 export interface Look {
   theme: Theme
@@ -94,6 +94,36 @@ export function nodeStyle(v: NodeLook, look: Look): CellStyle {
     case 'text':
       // Solo testo: il colore va alle lettere.
       return { ...base, fillColor: 'none', strokeColor: 'none', fontColor: v.color === 'default' ? INK[look.theme] : swatch.stroke }
+    case 'weakEntity':
+      return { ...base, shape: SHAPE_STYLES.weakEntity, spacing: 9 }
+    case 'identifyingRelation':
+      return { ...base, shape: SHAPE_STYLES.identifyingRelation, perimeter: 'rhombusPerimeter', spacingLeft: 16, spacingRight: 16 }
+    case 'keyAttribute':
+      // La chiave: il nome sottolineato.
+      return { ...base, shape: 'ellipse', perimeter: 'ellipsePerimeter', fontStyle: 4 }
+    case 'multiAttribute':
+      return { ...base, shape: 'doubleEllipse', perimeter: 'ellipsePerimeter', spacingLeft: 10, spacingRight: 10 }
+    case 'derivedAttribute':
+      return { ...base, shape: 'ellipse', perimeter: 'ellipsePerimeter', dashed: true }
+    case 'attribute':
+    case 'identifier': {
+      // Il pallino da una parte e il nome accanto; le frecce arrivano al pallino (DOT_PERIMETER).
+      const left = v.rot !== 2
+      return {
+        ...base,
+        shape: SHAPE_STYLES.dot,
+        perimeter: DOT_PERIMETER,
+        direction: left ? 'east' : 'west',
+        fillColor: v.shape === 'identifier' ? swatch.stroke : swatch.fill,
+        align: left ? 'left' : 'right',
+        spacing: 0,
+        spacingLeft: left ? 18 : 0,
+        spacingRight: left ? 0 : 18,
+      }
+    }
+    case 'table':
+      // Il nome in alto e i campi sotto li mette in fila tableHtml.
+      return { ...base, shape: SHAPE_STYLES.table, verticalAlign: 'top', spacing: 0, overflow: 'fill' }
     default:
       return base
   }
@@ -114,7 +144,25 @@ export function edgeStyle(v: EdgeLook, look: Look): CellStyle {
     dashed: v.dashed,
   }
   if (v.route === 'orthogonal') Object.assign(style, { edgeStyle: 'orthogonalEdgeStyle', rounded: true, orthogonalLoop: true })
+  // Curva: lo stesso percorso ad angoli retti, disegnato morbido (come «Curved» in draw.io).
+  else if (v.route === 'curved') Object.assign(style, { edgeStyle: 'orthogonalEdgeStyle', curved: true, orthogonalLoop: true })
   return style
+}
+
+/** Dove sta il testo lungo la freccia: per maxGraph da -1 (all'inizio) a 1 (alla fine). */
+const AT_X: Record<TextAt, number> = { start: -0.5, middle: 0, end: 0.5 }
+
+export function edgeTextAt(cell: Cell): TextAt {
+  const x = cell.getGeometry()?.x ?? 0
+  return x < -0.25 ? 'start' : x > 0.25 ? 'end' : 'middle'
+}
+
+/** Il riquadro di una freccia con il testo in quel punto. */
+export function withTextAt(geometry: Geometry, at: TextAt): Geometry {
+  const moved = geometry.clone()
+  moved.x = AT_X[at]
+  moved.y = 0
+  return moved
 }
 
 const isNodeLook = (v: unknown): v is NodeLook => typeof v === 'object' && v !== null && 'shape' in v
@@ -133,6 +181,15 @@ export function edgeLook(cell: Cell): EdgeLook {
 
 export function cellText(cell: Cell): string {
   return cell.isEdge() ? edgeLook(cell).text : nodeLook(cell).text
+}
+
+/** Il testo da mostrare, in HTML: le tabelle hanno il nome in alto e un campo per riga. */
+function cellHtml(cell: Cell, mathml: boolean): string {
+  if (cell.isVertex()) {
+    const look = nodeLook(cell)
+    if (look.shape === 'table') return tableHtml(look.text, FONT_SIZE[look.size], mathml)
+  }
+  return labelHtml(cellText(cell), mathml)
 }
 
 /** Una freccia nuova, come quelle che si disegnano trascinando. */
@@ -172,7 +229,7 @@ export function createGraph(container: HTMLElement, editable: boolean): Graph {
   const graph = new Graph(container, undefined, plugins)
   graph.setHtmlLabels(true)
   // Il testo è sempre HTML preparato qui: formule con KaTeX, il resto con i caratteri speciali al sicuro.
-  graph.getLabel = (cell) => (cell ? labelHtml(cellText(cell)) : '')
+  graph.getLabel = (cell) => (cell ? cellHtml(cell, false) : '')
   graph.convertValueToString = (cell) => cellText(cell)
   graph.setTooltips(false)
   graph.setCellsEditable(false)
@@ -227,6 +284,7 @@ export function insertSchema(graph: Graph, schema: Schema, look: Look, { dx = 0,
       const edge = graph.insertEdge({ parent, id, value, source: cells.get(e.from), target: cells.get(e.to), style: edgeStyle(value, look) })
       const geometry = edge.getGeometry()
       if (geometry && e.points.length) geometry.points = e.points.map(([x, y]) => new Point(x + dx, y + dy))
+      if (geometry) geometry.x = AT_X[e.at]
       added.push(edge)
     }
   })
@@ -246,7 +304,7 @@ export function readSchema(graph: Graph): Schema {
       const from = cell.getTerminal(true)?.getId()
       const to = cell.getTerminal(false)?.getId()
       if (!from || !to) continue
-      schema.edges.push({ id, from, to, ...edgeLook(cell), points: (geometry.points ?? []).map((p): [number, number] => [p.x, p.y]) })
+      schema.edges.push({ id, from, to, ...edgeLook(cell), points: (geometry.points ?? []).map((p): [number, number] => [p.x, p.y]), at: edgeTextAt(cell) })
     }
   }
   return schema
@@ -272,7 +330,7 @@ function drawSchema(schema: Schema, look: Look, image: boolean): SVGSVGElement {
   container.style.cssText = 'position:absolute;left:-10000px;top:0;width:100px;height:100px;overflow:hidden;visibility:hidden'
   document.body.append(container)
   const graph = createGraph(container, false)
-  if (image) graph.getLabel = (cell) => (cell ? labelHtml(cellText(cell), true) : '')
+  if (image) graph.getLabel = (cell) => (cell ? cellHtml(cell, true) : '')
   const padding = image ? IMAGE_PADDING : PADDING
   try {
     loadSchema(graph, schema, look)

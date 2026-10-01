@@ -46,7 +46,9 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   forme passa sempre da `label.ts` (escape + KaTeX): maxGraph lo inserisce come HTML.
   Nei file .md (`file.ts`, usato da «Salva .md» e «Apri .md») ogni schema diventa un'immagine
   SVG, che VS Code mostra, più il JSON in un commento HTML; aprendo il file torna un blocco.
-  Le forme in più sono in `shapes.ts`, i modelli pronti in `templates.ts`, allinea e
+  Le forme in più (anche quelle delle basi di dati: entità debole, attributi a pallino, tabella)
+  sono in `shapes.ts`; il testo delle tabelle (nome, campi, PK/FK) lo fa `tableHtml` in
+  `label.ts`. I modelli pronti sono in `templates.ts`, allinea e
   distribuisci in `arrange.ts`, PNG e «Copia come immagine» in `image.ts`. Menu e messaggi
   dentro l'editor vanno messi nella sua finestra (è modale: fuori restano sotto).
 - `src/ai/`: assistente AI. `src/host.ts`: funzioni della demo dentro claude.ai.

@@ -690,7 +690,7 @@ try {
   const editor2 = s2.locator('dialog.schema-editor[open]')
   await s2.locator('.editor-toolbar button[aria-label^="Schema"]').click()
   await editor2.waitFor()
-  const paletteCount = await s2.locator('.schema-shape').count()
+  const paletteCount = await s2.locator('.schema-shape[data-shape]').count()
   check(paletteCount === 14, `nel pannello ci sono 14 forme, con cilindro, nuvola, frecce grandi… (${paletteCount})`)
   const canvasTexts = () => s2.evaluate(() => [...document.querySelectorAll('.schema-canvas foreignObject')].map((f) => f.textContent))
   await s2.locator('.schema-templates button', { hasText: 'Diagramma di flusso' }).click()
@@ -783,6 +783,99 @@ try {
   const previewTexts = await s2.evaluate(() => [...document.querySelectorAll('.preview-pane .schema-block foreignObject')].map((f) => f.textContent))
   check(previewTexts.includes('Fase 4'), 'nell\'anteprima lo schema si vede con le forme nuove')
   await s2context.close()
+
+  // Frecce curve e basi di dati: il gruppo «Basi di dati» (che si ricorda aperto), pallini, tabelle,
+  // linee E-R senza punte, testo della freccia vicino a un capo, il modello «Schema E-R»
+  const db = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+  db.on('pageerror', (e) => errors.push(e.message))
+  await db.goto(url)
+  await db.waitForSelector('.cm-editor')
+  await db.locator('.notes-head button[aria-label="Nuova nota"]').click()
+  await db.keyboard.press('Control+a')
+  await db.keyboard.type('# Basi di dati\n')
+  const dbEditor = db.locator('dialog.schema-editor[open]')
+  await db.locator('.editor-toolbar button[aria-label^="Schema"]').click()
+  await dbEditor.waitFor()
+  const tableItem = db.locator('.schema-shape[data-preset="table"]')
+  const closedAtFirst = !(await tableItem.isVisible())
+  await db.locator('.schema-group[data-group="db"] .schema-group-head').click()
+  check(closedAtFirst && (await tableItem.isVisible()), '«Basi di dati» parte chiuso e si apre con un clic')
+  // Un pallino: cliccando la sua freccia blu ne nasce un altro, collegato da una linea senza punte
+  await db.locator('.schema-shape[data-preset="attribute"]').click()
+  const dot = await db.evaluate(() => {
+    const fo = [...document.querySelectorAll('.schema-canvas foreignObject')].find((f) => f.textContent === 'Attributo')
+    const r = fo.querySelector('div > div > div').getBoundingClientRect()
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 }
+  })
+  await db.mouse.move(dot.x, dot.y)
+  const dotArrow = await db.locator('.schema-arrow-down').boundingBox()
+  await db.mouse.click(dotArrow.x + dotArrow.width / 2, dotArrow.y + dotArrow.height / 2)
+  await db.keyboard.type('Nome')
+  await db.keyboard.press('Escape')
+  // Il nome dall'altra parte del pallino
+  await db.locator('.schema-format button[aria-label="Il nome dall\'altra parte del pallino"]').click()
+  // Una tabella: scrivendo i campi si allunga, PK si sottolinea
+  await tableItem.click()
+  await db.keyboard.press('Enter')
+  await db.keyboard.press('Control+a')
+  await db.keyboard.type('Studente\nPK Matricola\nNome\nCognome\nFK Corso')
+  await db.keyboard.press('Escape')
+  const tableLabel = await db.evaluate(() => {
+    const fo = [...document.querySelectorAll('.schema-canvas foreignObject')].find((f) => f.textContent.startsWith('Studente'))
+    return { underlined: fo?.querySelector('u')?.textContent ?? '', fk: !!fo && fo.textContent.includes('FKCorso') }
+  })
+  // Tutte le frecce curve, con il testo alla fine
+  await db.keyboard.press('Escape')
+  await db.keyboard.press('Control+a')
+  await db.locator('.schema-format button[aria-label="Curva"]').click()
+  await db.locator('.schema-format button[aria-label="Testo alla fine della freccia"]').click()
+  const curvedPath = await db.evaluate(() => [...document.querySelectorAll('.schema-canvas svg path')].some((p) => /Q/.test(p.getAttribute('d') ?? '')))
+  await db.keyboard.press('Escape')
+  // Il modello «Schema E-R» dal menu
+  await db.locator('.schema-menu-button', { hasText: 'Modelli' }).click()
+  await db.locator('.tool-menu-item', { hasText: 'Schema E-R' }).click()
+  await db.locator('dialog.schema-editor .btn-primary', { hasText: 'Fatto' }).click()
+  await dbEditor.waitFor({ state: 'detached' })
+  await db.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  const dbSchema = await db.evaluate(() => {
+    for (let i = 0; i < localStorage.length; i++) {
+      const value = localStorage.getItem(localStorage.key(i)) ?? ''
+      const m = value.startsWith('# Basi di dati') && /```schema\n([\s\S]*?)\n```/.exec(value)
+      if (m) return JSON.parse(m[1])
+    }
+    return { nodes: [], edges: [] }
+  })
+  const dots = dbSchema.nodes.filter((n) => n.shape === 'attribute')
+  const dotLine = dbSchema.edges.find((e) => dots.some((d) => d.id === e.from) && dots.some((d) => d.id === e.to))
+  check(
+    dots.length >= 2 && dotLine?.arrows === 'none' && dots.some((d) => d.text === 'Nome' && d.rot === 2),
+    `una linea tra attributi nasce senza punte, e il nome passa dall'altra parte del pallino (${JSON.stringify(dotLine)})`,
+  )
+  const studente = dbSchema.nodes.find((n) => n.shape === 'table')
+  check(
+    studente?.h === 28 + 4 * 22 + 10 && tableLabel.underlined === 'Matricola' && tableLabel.fk,
+    `la tabella si allunga con i campi, sottolinea la chiave primaria e segna quella esterna (${studente?.h}, ${JSON.stringify(tableLabel)})`,
+  )
+  check(
+    curvedPath && dotLine?.route === 'curved' && dotLine?.at === 'end',
+    `«Curva» disegna la freccia morbida e il testo si sposta alla fine (${dotLine?.route}, ${dotLine?.at})`,
+  )
+  const cardinalities = dbSchema.edges.filter((e) => e.text === '(0,N)')
+  check(
+    cardinalities.length === 2 && cardinalities.every((e) => e.arrows === 'none') && dbSchema.nodes.some((n) => n.shape === 'identifier' && n.text === 'Matricola'),
+    'il modello «Schema E-R» mette entità, relazione, cardinalità e attributi a pallino',
+  )
+  await db.waitForSelector('.preview-pane .schema-block svg')
+  const dbPreview = await db.evaluate(() => [...document.querySelectorAll('.preview-pane .schema-block foreignObject')].map((f) => f.textContent))
+  await db.locator('.preview-pane .schema-block').hover()
+  await db.locator('.preview-pane .schema-edit').click()
+  await dbEditor.waitFor()
+  check(
+    dbPreview.includes('Corso') && (await tableItem.isVisible()),
+    'l\'anteprima disegna le forme dei database, e riaprendo l\'editor «Basi di dati» è ancora aperto',
+  )
+  await db.locator('dialog.schema-editor button', { hasText: 'Chiudi' }).click()
+  await db.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)
 } finally {

@@ -19,19 +19,35 @@ export const SHAPES = [
   'arrow',
   'doubleArrow',
   'text',
+  // Basi di dati: diagrammi E-R (Chen e, con i pallini, Atzeni) e tabelle
+  'weakEntity',
+  'identifyingRelation',
+  'keyAttribute',
+  'multiAttribute',
+  'derivedAttribute',
+  'attribute',
+  'identifier',
+  'table',
 ] as const
 export type ShapeKind = (typeof SHAPES)[number]
+/** Le forme solo per le basi di dati (entità, relazioni e attributi normali sono rettangolo, rombo, ellisse). */
+export const DB_SHAPES: readonly ShapeKind[] = ['weakEntity', 'identifyingRelation', 'keyAttribute', 'multiAttribute', 'derivedAttribute', 'attribute', 'identifier', 'table']
+/** Gli attributi «a pallino»: il verso dice da che parte sta il nome (0 a destra, 2 a sinistra). */
+export const DOT_SHAPES: readonly ShapeKind[] = ['attribute', 'identifier']
 /** Le forme che hanno un verso e si possono girare di un quarto di giro alla volta. */
-export const ROTATABLE: readonly ShapeKind[] = ['triangle', 'arrow', 'doubleArrow']
+export const ROTATABLE: readonly ShapeKind[] = ['triangle', 'arrow', 'doubleArrow', ...DOT_SHAPES]
 /** Quarti di giro in senso orario: 0 è com'è nel pannello (freccia a destra, triangolo in su). */
 export type Rotation = 0 | 1 | 2 | 3
 export const COLORS = ['default', 'blue', 'green', 'yellow', 'red', 'purple', 'gray'] as const
 export type ColorName = (typeof COLORS)[number]
 export const TEXT_SIZES = ['s', 'm', 'l'] as const
 export type TextSize = (typeof TEXT_SIZES)[number]
-/** Freccia dritta o ad angolo retto. */
-export const ROUTES = ['straight', 'orthogonal'] as const
+/** Freccia dritta, ad angolo retto o curva. */
+export const ROUTES = ['straight', 'orthogonal', 'curved'] as const
 export type EdgeRoute = (typeof ROUTES)[number]
+/** Dove sta il testo di una freccia: vicino all'inizio, a metà o vicino alla fine (per le cardinalità). */
+export const TEXT_AT = ['start', 'middle', 'end'] as const
+export type TextAt = (typeof TEXT_AT)[number]
 /** Punta alla fine, a tutte e due le estremità o nessuna (una linea). */
 export const ARROWS = ['end', 'both', 'none'] as const
 export type EdgeArrows = (typeof ARROWS)[number]
@@ -63,6 +79,7 @@ export interface SchemaEdge {
   dashed: boolean
   /** I punti per cui passa la freccia, se li si è spostati. */
   points: [number, number][]
+  at: TextAt
 }
 
 export interface Schema {
@@ -91,9 +108,32 @@ export const SHAPE_SIZE: Record<ShapeKind, [number, number]> = {
   arrow: [130, 60],
   doubleArrow: [150, 60],
   text: [100, 40],
+  weakEntity: [130, 64],
+  identifyingRelation: [140, 86],
+  keyAttribute: [110, 50],
+  multiAttribute: [120, 56],
+  derivedAttribute: [110, 50],
+  attribute: [110, 20],
+  identifier: [110, 20],
+  table: [170, 82],
 }
 
 export const FONT_SIZE: Record<TextSize, number> = { s: 12, m: 14, l: 18 }
+
+/** Nella tabella: l'altezza della riga con il nome e quella di ogni campo, per una dimensione del testo in pixel. */
+export function tableMetricsFor(fontSize: number): { head: number; row: number } {
+  return { head: Math.round(fontSize * 2), row: Math.round(fontSize * 1.6) }
+}
+
+export function tableMetrics(size: TextSize): { head: number; row: number } {
+  return tableMetricsFor(FONT_SIZE[size])
+}
+
+/** L'altezza che serve a una tabella con questo testo: il nome, poi un campo per riga. */
+export function tableHeight(text: string, size: TextSize): number {
+  const { head, row } = tableMetrics(size)
+  return head + Math.max(1, text.split('\n').length - 1) * row + 10
+}
 
 export const SHAPE_NAMES: Record<ShapeKind, string> = {
   rect: 'Rettangolo',
@@ -110,6 +150,14 @@ export const SHAPE_NAMES: Record<ShapeKind, string> = {
   arrow: 'Freccia grande',
   doubleArrow: 'Freccia doppia',
   text: 'Testo',
+  weakEntity: 'Entità debole',
+  identifyingRelation: 'Relazione identificante',
+  keyAttribute: 'Attributo chiave',
+  multiAttribute: 'Attributo multivalore',
+  derivedAttribute: 'Attributo derivato',
+  attribute: 'Attributo (pallino)',
+  identifier: 'Identificatore (pallino pieno)',
+  table: 'Tabella',
 }
 
 export const COLOR_NAMES: Record<ColorName, string> = {
@@ -192,6 +240,12 @@ function point(value: unknown): [number, number] | null {
   return [num(x, -MAX_COORD, MAX_COORD, 0), num(y, -MAX_COORD, MAX_COORD, 0)]
 }
 
+/** Il verso, se la forma ne ha uno: i pallini hanno solo 0 (nome a destra) e 2 (a sinistra). */
+function rotation(shape: ShapeKind, value: unknown): Rotation {
+  if (!ROTATABLE.includes(shape) || ![1, 2, 3].includes(value as number)) return 0
+  return DOT_SHAPES.includes(shape) && value !== 2 ? 0 : (value as Rotation)
+}
+
 /**
  * Lo schema scritto nella nota. I valori sconosciuti diventano quelli normali, le frecce che
  * non collegano due forme si tolgono; se non è proprio uno schema, SchemaError.
@@ -220,7 +274,7 @@ export function parseSchema(source: string): Schema {
       text: text(raw.text),
       color: oneOf(raw.color, COLORS, 'default'),
       size: oneOf(raw.size, TEXT_SIZES, 'm'),
-      rot: ROTATABLE.includes(shape) && [1, 2, 3].includes(raw.rot as number) ? (raw.rot as Rotation) : 0,
+      rot: rotation(shape, raw.rot),
     })
   }
   const ids = new Set(nodes.map((n) => n.id))
@@ -238,6 +292,7 @@ export function parseSchema(source: string): Schema {
       arrows: oneOf(raw.arrows, ARROWS, DEFAULT_EDGE.arrows),
       dashed: raw.dashed === true,
       points: (Array.isArray(raw.points) ? raw.points.slice(0, MAX_POINTS) : []).map(point).filter((p): p is [number, number] => p !== null),
+      at: oneOf(raw.at, TEXT_AT, 'middle'),
     })
   }
   return { nodes, edges }
@@ -267,6 +322,7 @@ export function serializeSchema(schema: Schema): string {
     if (e.arrows !== DEFAULT_EDGE.arrows) out.arrows = e.arrows
     if (e.dashed) out.dashed = true
     if (e.points.length) out.points = e.points.map(([x, y]) => [round(x), round(y)])
+    if (e.at !== 'middle') out.at = e.at
     return JSON.stringify(out)
   })
   const list = (items: string[]) => (items.length ? `[\n${items.join(',\n')}\n]` : '[]')

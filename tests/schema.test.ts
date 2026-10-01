@@ -9,8 +9,8 @@ const sample: Schema = {
     { id: 'b', shape: 'rhombus', x: 300.4, y: 60, w: 120, h: 80, text: 'Vale $x > 0$?', color: 'default', size: 'l', rot: 0 },
   ],
   edges: [
-    { id: 'e1', from: 'a', to: 'b', text: 'quindi', color: 'default', size: 'm', route: 'orthogonal', arrows: 'end', dashed: false, points: [] },
-    { id: 'e2', from: 'b', to: 'a', text: '', color: 'red', size: 's', route: 'straight', arrows: 'both', dashed: true, points: [[200.6, 10]] },
+    { id: 'e1', from: 'a', to: 'b', text: 'quindi', color: 'default', size: 'm', route: 'orthogonal', arrows: 'end', dashed: false, points: [], at: 'middle' },
+    { id: 'e2', from: 'b', to: 'a', text: '', color: 'red', size: 's', route: 'straight', arrows: 'both', dashed: true, points: [[200.6, 10]], at: 'middle' },
   ],
 }
 
@@ -51,7 +51,7 @@ describe('il formato degli schemi', () => {
     expect(schema.nodes.map((n) => n.id)).toEqual(['a', 'a~2', 'n1'])
     expect(schema.nodes[0]).toEqual({ id: 'a', shape: 'rect', x: 0, y: 100000, w: 10, h: 60, text: '', color: 'default', size: 'm', rot: 0 })
     expect(schema.edges).toEqual([
-      { id: 'x', from: 'a', to: 'a~2', text: '', color: 'default', size: 'm', route: 'orthogonal', arrows: 'end', dashed: false, points: [[1, 2]] },
+      { id: 'x', from: 'a', to: 'a~2', text: '', color: 'default', size: 'm', route: 'orthogonal', arrows: 'end', dashed: false, points: [[1, 2]], at: 'middle' },
     ])
   })
 

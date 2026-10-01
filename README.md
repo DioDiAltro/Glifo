@@ -116,16 +116,20 @@ chi sta provando Glifo.*
   documento, cilindro, nota, freccia grande e doppia, testo), da trascinare sul foglio o da
   cliccare; passando sopra una forma compaiono le **frecce blu**: trascinandone una la colleghi
   a un'altra forma (o, nel vuoto, ne nasce una nuova), cliccandola aggiungi una forma collegata.
+- **Basi di dati** (gruppo da aprire nel pannello): entità ed entità debole, relazione e relazione
+  identificante, attributi (chiave sottolineata, multivalore, derivato, e a pallino come nei libri
+  italiani, pieno per l'identificatore), tabella con un campo per riga (`PK` sottolinea la chiave
+  primaria, `FK` segna quella esterna) e database.
 - **Modelli pronti** da cui partire, sul foglio vuoto o dal menu «Modelli»: diagramma di flusso,
-  mappa concettuale, albero, ciclo, linea del tempo.
+  mappa concettuale, albero, ciclo, linea del tempo, schema E-R e tabelle.
 - Con più forme selezionate (trascinando un riquadro sul foglio vuoto, o con Maiusc + clic):
   **allinea** (a sinistra, al centro, in alto…) e **distribuisci** con lo stesso spazio;
   triangolo e frecce grandi si **girano** di un quarto alla volta.
 - **Scarica** lo schema come immagine PNG (nitida, alla misura giusta anche in Word) o SVG,
   oppure **copialo come immagine** e incollalo in Word, Google Docs o nelle slide.
 - Doppio clic (o scrivere con una forma selezionata) per il testo, anche con **formule**
-  `$ … $`; colori, forma, dimensione del testo, frecce dritte o ad angolo, con o senza punte,
-  tratteggiate. Annulla/Ripeti, copia e incolla, zoom, griglia, selezione a rettangolo.
+  `$ … $`; colori, forma, dimensione del testo, frecce dritte, ad angolo o **curve**, con o senza
+  punte, tratteggiate, con il testo all'inizio, a metà o alla fine (per le cardinalità). Annulla/Ripeti, copia e incolla, zoom, griglia, selezione a rettangolo.
 - Lo schema va nella nota come blocco ` ```schema ` (un JSON corto, una forma per riga):
   nell'anteprima si vede il disegno, nel testo una riga con «Modifica». I colori seguono il
   tema chiaro o scuro. Funziona anche offline: è fatto con [maxGraph](https://github.com/maxGraph/maxGraph),
@@ -278,7 +282,7 @@ src/
     model.ts              il formato degli schemi (blocchi ```schema), i controlli e i colori dei due temi
     blocks.ts             trova i blocchi ```schema nella nota
     file.ts               gli schemi nei file .md: immagine SVG più il JSON in un commento, e ritorno
-    shapes.ts             le forme che maxGraph non ha (parallelogramma, documento, nota, frecce grandi)
+    shapes.ts             le forme che maxGraph non ha (parallelogramma, documento, frecce grandi, tabella, pallini…)
     templates.ts          i modelli pronti (diagramma di flusso, mappa concettuale…)
     arrange.ts            allinea e distribuisci (solo i conti)
     image.ts              lo schema come PNG, da scaricare o copiare

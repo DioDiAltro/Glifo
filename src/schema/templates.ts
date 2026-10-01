@@ -2,7 +2,7 @@
  * I modelli pronti da cui partire: schemi già disegnati, con testi da sostituire. Si aprono
  * dal foglio vuoto o dal menu «Modelli» dell'editor, che li aggiunge allo schema.
  */
-import { DEFAULT_EDGE, SHAPE_SIZE, type Schema, type SchemaEdge, type SchemaNode, type ShapeKind } from './model'
+import { DEFAULT_EDGE, SHAPE_SIZE, tableHeight, type Schema, type SchemaEdge, type SchemaNode, type ShapeKind } from './model'
 
 export interface Template {
   id: string
@@ -20,7 +20,7 @@ function node(id: string, shape: ShapeKind, x: number, y: number, text: string, 
 }
 
 function edge(id: string, from: string, to: string, extra: Partial<Omit<SchemaEdge, 'id' | 'from' | 'to'>> = {}): SchemaEdge {
-  return { id, from, to, ...DEFAULT_EDGE, points: [], ...extra }
+  return { id, from, to, ...DEFAULT_EDGE, points: [], at: 'middle', ...extra }
 }
 
 /** Dall'inizio alla fine, con una domanda e un ritorno indietro. */
@@ -110,10 +110,53 @@ const timeline: Schema = {
   edges: [edge('e1', 'a1', 'a2', { route: 'straight' }), edge('e2', 'a2', 'a3', { route: 'straight' }), edge('e3', 'a3', 'a4', { route: 'straight' })],
 }
 
+/**
+ * Uno schema E-R come nei libri di basi di dati italiani (Atzeni): entità, relazione con le
+ * cardinalità vicino alle entità, attributi a pallino (pieno per l'identificatore).
+ */
+const er: Schema = {
+  nodes: [
+    node('studente', 'rect', 150, 100, 'Studente'),
+    node('esame', 'rhombus', 380, 90, 'Esame'),
+    node('corso', 'rect', 610, 100, 'Corso'),
+    node('matricola', 'identifier', 0, 85, 'Matricola', { rot: 2 }),
+    node('nome', 'attribute', 0, 120, 'Nome', { rot: 2 }),
+    node('cognome', 'attribute', 0, 155, 'Cognome', { rot: 2 }),
+    node('voto', 'attribute', 310, 20, 'Voto', { rot: 2 }),
+    node('data', 'attribute', 460, 20, 'Data'),
+    node('codice', 'identifier', 780, 85, 'Codice'),
+    node('titolo', 'attribute', 780, 120, 'Titolo'),
+    node('crediti', 'attribute', 780, 155, 'Crediti'),
+  ],
+  edges: [
+    edge('e1', 'studente', 'esame', { text: '(0,N)', route: 'straight', arrows: 'none', at: 'start' }),
+    edge('e2', 'esame', 'corso', { text: '(0,N)', route: 'straight', arrows: 'none', at: 'end' }),
+    ...['matricola', 'nome', 'cognome'].map((a) => edge(`s-${a}`, 'studente', a, { route: 'straight', arrows: 'none' })),
+    ...['voto', 'data'].map((a) => edge(`e-${a}`, 'esame', a, { route: 'straight', arrows: 'none' })),
+    ...['codice', 'titolo', 'crediti'].map((a) => edge(`c-${a}`, 'corso', a, { route: 'straight', arrows: 'none' })),
+  ],
+}
+
+/** Lo stesso esempio come tabelle (schema relazionale): le frecce vanno dalle chiavi esterne. */
+function table(id: string, x: number, text: string): SchemaNode {
+  return node(id, 'table', x, 0, text, { h: tableHeight(text, 'm') })
+}
+
+const tables: Schema = {
+  nodes: [
+    table('studente', 0, 'Studente\nPK Matricola\nNome\nCognome'),
+    table('esame', 260, 'Esame\nPK Matricola\nPK Corso\nVoto\nData'),
+    table('corso', 520, 'Corso\nPK Codice\nTitolo\nCrediti'),
+  ],
+  edges: [edge('e1', 'esame', 'studente'), edge('e2', 'esame', 'corso')],
+}
+
 export const TEMPLATES: Template[] = [
   { id: 'flusso', name: 'Diagramma di flusso', hint: 'I passi di un procedimento, con le domande e le strade possibili', schema: flowchart },
   { id: 'mappa', name: 'Mappa concettuale', hint: 'Un concetto e quelli collegati, con le parole che li legano', schema: conceptMap },
   { id: 'albero', name: 'Albero', hint: 'Un argomento diviso in parti e dettagli, come una classificazione', schema: tree },
   { id: 'ciclo', name: 'Ciclo', hint: 'Fasi che si ripetono, una dopo l\'altra', schema: cycle },
   { id: 'linea', name: 'Linea del tempo', hint: 'Eventi in ordine, con il loro anno', schema: timeline },
+  { id: 'er', name: 'Schema E-R', hint: 'Entità, relazione con le cardinalità e attributi (basi di dati)', schema: er },
+  { id: 'tabelle', name: 'Tabelle', hint: 'Tabelle con chiavi primarie ed esterne (schema relazionale)', schema: tables },
 ]

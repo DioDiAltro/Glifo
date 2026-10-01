@@ -2450,8 +2450,57 @@ kbd {
   background: var(--accent-soft);
 }
 
-.schema-drag-ellipse {
+.schema-drag-ellipse,
+.schema-drag-keyAttribute,
+.schema-drag-multiAttribute,
+.schema-drag-derivedAttribute {
   border-radius: 50%;
+}
+
+/* I gruppi del pannello delle forme («Forme», «Basi di dati»): il titolo li apre e li chiude. */
+.schema-group + .schema-group {
+  margin-top: 8px;
+}
+
+.schema-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 5px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.schema-group-head:hover {
+  background: var(--frame-hover);
+  color: var(--text);
+}
+
+.schema-group-head svg {
+  transition: transform 0.15s;
+}
+
+.schema-group.is-collapsed .schema-group-head svg {
+  transform: rotate(-90deg);
+}
+
+.schema-group-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.schema-group.is-collapsed .schema-group-items {
+  display: none;
 }
 
 /* Le frecce blu attorno alla forma sotto il puntatore. */
@@ -2659,7 +2708,15 @@ kbd {
     border-bottom: 1px solid var(--border);
   }
 
+  /* Sul telefono le forme stanno tutte in una riga che scorre, senza gruppi. */
+  .schema-group,
+  .schema-group-items,
+  .schema-group.is-collapsed .schema-group-items {
+    display: contents;
+  }
+
   .schema-shapes h3,
+  .schema-group-head,
   .schema-shape span,
   .schema-menu-button span,
   .schema-zoom,

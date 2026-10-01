@@ -1,7 +1,9 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest'
 import { alignBoxes, distributeBoxes, type Box } from '../src/schema/arrange'
 import { crc32, withDensity } from '../src/schema/image'
-import { parseSchema, serializeSchema, SHAPES } from '../src/schema/model'
+import { tableHtml } from '../src/schema/label'
+import { parseSchema, serializeSchema, SHAPES, tableHeight } from '../src/schema/model'
 import { TEMPLATES } from '../src/schema/templates'
 
 const boxes: Box[] = [
@@ -52,7 +54,7 @@ describe('allineare e distribuire', () => {
 
 describe('i modelli pronti', () => {
   it('sono schemi validi, che si salvano e si rileggono uguali, senza forme una sopra l\'altra', () => {
-    expect(TEMPLATES.map((t) => t.name)).toEqual(['Diagramma di flusso', 'Mappa concettuale', 'Albero', 'Ciclo', 'Linea del tempo'])
+    expect(TEMPLATES.map((t) => t.name)).toEqual(['Diagramma di flusso', 'Mappa concettuale', 'Albero', 'Ciclo', 'Linea del tempo', 'Schema E-R', 'Tabelle'])
     for (const t of TEMPLATES) {
       const json = serializeSchema(t.schema)
       const again = parseSchema(json)
@@ -65,8 +67,8 @@ describe('i modelli pronti', () => {
           expect(apart, `${t.name}: ${a.id} e ${b.id}`).toBe(true)
         }
       }
-      expect(again.nodes.length, t.name).toBeGreaterThanOrEqual(4)
-      expect(again.edges.length, t.name).toBeGreaterThanOrEqual(3)
+      expect(again.nodes.length, t.name).toBeGreaterThanOrEqual(3)
+      expect(again.edges.length, t.name).toBeGreaterThanOrEqual(2)
     }
   })
 })
@@ -105,5 +107,44 @@ describe('le immagini PNG', () => {
     expect([phys.getUint32(0), phys.getUint32(4), list[1].data[8]]).toEqual([7559, 7559, 1])
     // Se c'è già, non se ne aggiunge un altro.
     expect(withDensity(dense, 2)).toBe(dense)
+  })
+})
+
+describe('basi di dati e frecce curve', () => {
+  it('le forme E-R, le frecce curve e il testo vicino a un capo si salvano e si rileggono', () => {
+    const json = serializeSchema({
+      nodes: [
+        { id: 'a', shape: 'identifier', x: 0, y: 0, w: 110, h: 20, text: 'Matricola', color: 'default', size: 'm', rot: 2 },
+        { id: 'b', shape: 'table', x: 200, y: 0, w: 170, h: 82, text: 'Studente\\nPK Matricola', color: 'blue', size: 'm', rot: 0 },
+      ],
+      edges: [{ id: 'e', from: 'a', to: 'b', text: '(0,N)', color: 'default', size: 'm', route: 'curved', arrows: 'none', dashed: false, points: [], at: 'end' }],
+    })
+    expect(json).toContain('{"id":"e","from":"a","to":"b","text":"(0,N)","route":"curved","arrows":"none","at":"end"}')
+    const again = parseSchema(json)
+    expect(again.nodes.map((n) => [n.shape, n.rot])).toEqual([
+      ['identifier', 2],
+      ['table', 0],
+    ])
+    expect(again.edges[0]).toMatchObject({ route: 'curved', at: 'end' })
+    // Un pallino ha il nome a destra (0) o a sinistra (2): gli altri versi non valgono.
+    const odd = parseSchema('{"nodes":[{"id":"a","shape":"attribute","rot":1},{"id":"b","shape":"attribute","rot":3}],"edges":[{"from":"a","to":"b","at":"altrove"}]}')
+    expect(odd.nodes.map((n) => n.rot)).toEqual([0, 0])
+    expect(odd.edges[0].at).toBe('middle')
+  })
+
+  it('la tabella ha il nome in alto e un campo per riga; PK si sottolinea, FK si segna', () => {
+    const html = tableHtml('Esame\nPK Matricola\nFK Corso\nVoto <b>', 14)
+    const box = document.createElement('div')
+    box.innerHTML = html
+    const [title, body] = box.children
+    expect(title.textContent).toBe('Esame')
+    const rows = [...body.children].map((r) => r.textContent)
+    expect(rows).toEqual(['PKMatricola', 'FKCorso', 'Voto <b>'])
+    expect(body.querySelector('u')?.textContent).toBe('Matricola')
+    // Il testo resta testo, e le righe hanno l'altezza con cui la forma disegna la fascia.
+    expect(box.querySelector('b')).toBeNull()
+    expect((title as HTMLElement).style.height).toBe('28px')
+    expect(tableHeight('Esame\nPK Matricola\nFK Corso\nVoto', 'm')).toBe(28 + 3 * 22 + 10)
+    expect(tableHeight('Solo il nome', 'l')).toBe(36 + 29 + 10)
   })
 })

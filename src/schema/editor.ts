@@ -23,7 +23,22 @@ import { ICONS, h, icon } from '../ui/dom'
 import { openMenu, type MenuEntry } from '../ui/menu'
 import { toast } from '../ui/toast'
 import { downloadBlob, downloadText, fileNameFor } from '../store/files'
-import { cellText, createEdgeCell, createGraph, edgeLook, edgeStyle, insertSchema, loadSchema, nodeLook, nodeStyle, readSchema, schemaImage, type Look } from './graph'
+import {
+  cellText,
+  createEdgeCell,
+  createGraph,
+  edgeLook,
+  edgeStyle,
+  edgeTextAt,
+  insertSchema,
+  loadSchema,
+  nodeLook,
+  nodeStyle,
+  readSchema,
+  schemaImage,
+  withTextAt,
+  type Look,
+} from './graph'
 import { svgToPng } from './image'
 import { TEMPLATES, type Template } from './templates'
 import { alignBoxes, distributeBoxes, type Alignment, type Box, type Position } from './arrange'
@@ -31,7 +46,9 @@ import {
   ARROWS,
   COLOR_NAMES,
   COLORS,
+  DB_SHAPES,
   DEFAULT_EDGE,
+  DOT_SHAPES,
   FONT_SIZE,
   PALETTE,
   ROTATABLE,
@@ -39,8 +56,10 @@ import {
   SHAPE_NAMES,
   SHAPE_SIZE,
   SHAPES,
+  TEXT_AT,
   TEXT_SIZES,
   serializeSchema,
+  tableHeight,
   type EdgeArrows,
   type EdgeLook,
   type EdgeRoute,
@@ -48,6 +67,7 @@ import {
   type Rotation,
   type Schema,
   type ShapeKind,
+  type TextAt,
   type TextSize,
   type Theme,
 } from './model'
@@ -83,6 +103,11 @@ const PATHS = {
   both: '<path d="M5 12h14M9 7l-5 5 5 5M15 7l5 5-5 5"/>',
   none: '<path d="M4 12h16"/>',
   dashed: '<path d="M3 12h4M10 12h4M17 12h4"/>',
+  curved: '<path d="M4 19c0-9 16-5 16-14"/>',
+  atStart: '<path d="M3 12h18"/><rect x="4" y="8.5" width="7" height="7" rx="1.5" fill="currentColor" stroke="none"/>',
+  atMiddle: '<path d="M3 12h18"/><rect x="8.5" y="8.5" width="7" height="7" rx="1.5" fill="currentColor" stroke="none"/>',
+  atEnd: '<path d="M3 12h18"/><rect x="13" y="8.5" width="7" height="7" rx="1.5" fill="currentColor" stroke="none"/>',
+  chevron: '<path d="m6 9 6 6 6-6"/>',
   handle: '<path d="M12 3.5 19 12h-4.5v8.5h-5V12H5z" fill="currentColor" stroke="none"/>',
   distributeX: '<rect x="3" y="7" width="4" height="10" rx="1"/><rect x="10" y="7" width="4" height="10" rx="1"/><rect x="17" y="7" width="4" height="10" rx="1"/>',
   distributeY: '<rect x="7" y="3" width="10" height="4" rx="1"/><rect x="7" y="10" width="10" height="4" rx="1"/><rect x="7" y="17" width="10" height="4" rx="1"/>',
@@ -113,9 +138,64 @@ const SHAPE_ICONS: Record<ShapeKind, string> = {
   arrow: '<path d="M3 9h10.5V5l7.5 7-7.5 7v-4H3z"/>',
   doubleArrow: '<path d="m2.5 12 5.5-6v3.5h8V6l5.5 6-5.5 6v-3.5H8V18z"/>',
   text: '<path d="M5 7V5h14v2M12 5v14M9 19h6"/>',
+  weakEntity: '<rect x="3" y="6" width="18" height="12"/><rect x="5.5" y="8.5" width="13" height="7"/>',
+  identifyingRelation: '<path d="m12 3 9 9-9 9-9-9z"/><path d="m12 6.6 5.4 5.4-5.4 5.4-5.4-5.4z"/>',
+  keyAttribute: '<ellipse cx="12" cy="12" rx="9" ry="6.5"/><path d="M8.5 14h7"/>',
+  multiAttribute: '<ellipse cx="12" cy="12" rx="9.5" ry="7"/><ellipse cx="12" cy="12" rx="6.5" ry="4"/>',
+  derivedAttribute: '<ellipse cx="12" cy="12" rx="9" ry="6.5" stroke-dasharray="3 2.4"/>',
+  attribute: '<circle cx="6" cy="12" r="3"/><path d="M12 12h9"/>',
+  identifier: '<circle cx="6" cy="12" r="3" fill="currentColor"/><path d="M12 12h9"/>',
+  table: '<rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 9h18M7 13h10M7 16.5h7"/>',
 }
 
-const ROUTE_NAMES: Record<EdgeRoute, string> = { straight: 'Dritta', orthogonal: 'Ad angolo retto' }
+/** Una voce del pannello delle forme: che forma nasce, con che nome e che testo. */
+interface Preset {
+  id: string
+  shape: ShapeKind
+  name: string
+  text: string
+  size?: [number, number]
+}
+
+/** Le forme di sempre: una voce per forma. Un testo vuoto non si vedrebbe: «Testo» nasce scritto. */
+const BASE_PRESETS: Preset[] = SHAPES.filter((s) => !DB_SHAPES.includes(s)).map((s) => ({ id: s, shape: s, name: SHAPE_NAMES[s], text: s === 'text' ? 'Testo' : '' }))
+
+/** Basi di dati: diagrammi E-R (Chen, e Atzeni con i pallini) e tabelle, con un testo da sostituire. */
+const DB_PRESETS: Preset[] = [
+  { id: 'entity', shape: 'rect', name: 'Entità', text: 'Entità' },
+  { id: 'weakEntity', shape: 'weakEntity', name: 'Entità debole', text: 'Entità' },
+  { id: 'relation', shape: 'rhombus', name: 'Relazione', text: 'Relazione' },
+  { id: 'identifyingRelation', shape: 'identifyingRelation', name: 'Relazione identificante', text: 'Relazione' },
+  { id: 'attributeEllipse', shape: 'ellipse', name: 'Attributo', text: 'Attributo', size: [110, 50] },
+  { id: 'keyAttribute', shape: 'keyAttribute', name: 'Attributo chiave', text: 'Codice' },
+  { id: 'multiAttribute', shape: 'multiAttribute', name: 'Attributo multivalore', text: 'Attributo' },
+  { id: 'derivedAttribute', shape: 'derivedAttribute', name: 'Attributo derivato', text: 'Attributo' },
+  { id: 'attribute', shape: 'attribute', name: 'Attributo (pallino)', text: 'Attributo' },
+  { id: 'identifier', shape: 'identifier', name: 'Identificatore (pallino pieno)', text: 'Codice' },
+  { id: 'table', shape: 'table', name: 'Tabella', text: 'Tabella\nPK Codice\nNome' },
+  { id: 'database', shape: 'cylinder', name: 'Database', text: 'Database' },
+]
+
+/** I gruppi del pannello: «Basi di dati» parte chiuso; quelli aperti si ricordano su questo dispositivo. */
+const GROUPS_KEY = 'glifo.schema.groups'
+type GroupId = 'forme' | 'db'
+
+function loadGroups(): Record<GroupId, boolean> {
+  try {
+    const saved: unknown = JSON.parse(localStorage.getItem(GROUPS_KEY) ?? '{}')
+    const open = typeof saved === 'object' && saved !== null ? (saved as Record<string, unknown>) : {}
+    return { forme: open.forme !== false, db: open.db === true }
+  } catch {
+    return { forme: true, db: false }
+  }
+}
+
+/** Le linee che toccano queste forme nascono senza punte, come nei libri di basi di dati. */
+const ER_LINE_SHAPES: readonly ShapeKind[] = DB_SHAPES.filter((s) => s !== 'table')
+
+const ROUTE_NAMES: Record<EdgeRoute, string> = { straight: 'Dritta', orthogonal: 'Ad angolo retto', curved: 'Curva' }
+const AT_NAMES: Record<TextAt, string> = { start: 'Testo all\'inizio della freccia', middle: 'Testo a metà della freccia', end: 'Testo alla fine della freccia' }
+const AT_ICONS: Record<TextAt, string> = { start: PATHS.atStart, middle: PATHS.atMiddle, end: PATHS.atEnd }
 const ARROW_NAMES: Record<EdgeArrows, string> = { end: 'Punta alla fine', both: 'Punte alle due estremità', none: 'Senza punte' }
 const SIZE_NAMES: Record<TextSize, string> = { s: 'Testo piccolo', m: 'Testo normale', l: 'Testo grande' }
 
@@ -161,6 +241,9 @@ class SchemaEditor {
   private closed = false
   private statusTimer = 0
   private readonly cleanups: (() => void)[] = []
+  /** I gruppi aperti nel pannello delle forme. */
+  private readonly groups = loadGroups()
+  private readonly paletteItems: [HTMLElement, Preset][] = []
 
   constructor(
     private readonly options: SchemaEditorOptions,
@@ -216,20 +299,8 @@ class SchemaEditor {
     const palette = h(
       'aside',
       { class: 'schema-shapes', attrs: { 'aria-label': 'Forme' } },
-      h('h3', {}, 'Forme'),
-      SHAPES.map((shape) =>
-        h(
-          'button',
-          {
-            class: 'schema-shape',
-            title: `${SHAPE_NAMES[shape]}: trascinala sul foglio o cliccala`,
-            attrs: { type: 'button', 'data-shape': shape },
-            on: { click: () => this.addShape(shape) },
-          },
-          icon(SHAPE_ICONS[shape], 22),
-          h('span', {}, SHAPE_NAMES[shape]),
-        ),
-      ),
+      this.paletteGroup('forme', 'Forme', BASE_PRESETS),
+      this.paletteGroup('db', 'Basi di dati', DB_PRESETS),
     )
 
     this.canvas = h('div', { class: 'schema-canvas', attrs: { tabindex: 0, 'aria-label': 'Foglio dello schema' } })
@@ -298,7 +369,7 @@ class SchemaEditor {
       this.saved = serializeSchema(readSchema(this.graph))
       this.setUpUndo()
       this.setUpEvents()
-      for (const item of palette.querySelectorAll<HTMLElement>('.schema-shape')) this.makeDraggable(item, item.dataset.shape as ShapeKind)
+      for (const [item, preset] of this.paletteItems) this.makeDraggable(item, preset)
       this.setGrid(true)
       this.fit()
       this.refresh()
@@ -317,7 +388,7 @@ class SchemaEditor {
     // Le frecce si cominciano solo dalle frecce blu: trascinando una forma la si sposta.
     connection.isValidSource = () => false
     connection.createTarget = true
-    connection.factoryMethod = () => createEdgeCell({ ...this.edgeDefaults, text: '' }, this.look)
+    connection.factoryMethod = (source, target) => createEdgeCell(this.newEdgeLook(source, target), this.look)
     // Lasciando la freccia nel vuoto nasce una forma uguale, ma senza testo, già selezionata.
     const createTarget = connection.createTargetVertex.bind(connection)
     connection.createTargetVertex = (evt, source) => {
@@ -351,6 +422,12 @@ class SchemaEditor {
       shape.fillOpacity = 15
       return shape
     }
+  }
+
+  /** L'aspetto di una freccia nuova: quello scelto per ultimo, ma senza punte se tocca una forma E-R. */
+  private newEdgeLook(...ends: (Cell | null | undefined)[]): EdgeLook {
+    const er = ends.some((c) => c?.isVertex() && ER_LINE_SHAPES.includes(nodeLook(c).shape))
+    return { ...this.edgeDefaults, text: '', ...(er && { arrows: 'none' as const }) }
   }
 
   private showArrows(state: CellState): void {
@@ -436,7 +513,7 @@ class SchemaEditor {
     let added: Cell | null = null
     graph.batchUpdate(() => {
       added = graph.insertVertex({ position: [x, y], size: [geometry.width, geometry.height], value, style: nodeStyle(value, this.look) })
-      graph.addEdge(createEdgeCell({ ...this.edgeDefaults, text: '' }, this.look), graph.getDefaultParent(), source, added)
+      graph.addEdge(createEdgeCell(this.newEdgeLook(source, added), this.look), graph.getDefaultParent(), source, added)
     })
     if (added) graph.setSelectionCell(added)
   }
@@ -454,13 +531,58 @@ class SchemaEditor {
 
   // ——— Forme dal pannello ———
 
-  private makeDraggable(item: HTMLElement, shape: ShapeKind): void {
-    const [w, h] = SHAPE_SIZE[shape]
+  /** Un gruppo del pannello delle forme, con il titolo che lo apre e lo chiude. */
+  private paletteGroup(id: GroupId, title: string, presets: Preset[]): HTMLElement {
+    const items = presets.map((preset) => {
+      const item = h(
+        'button',
+        {
+          class: 'schema-shape',
+          title: `${preset.name}: trascinala sul foglio o cliccala`,
+          // data-shape solo sulle forme di sempre: nelle basi di dati entità e relazione sono rettangolo e rombo.
+          attrs: { type: 'button', 'data-preset': preset.id, ...(id === 'forme' && { 'data-shape': preset.shape }) },
+          on: { click: () => this.addShape(preset) },
+        },
+        icon(SHAPE_ICONS[preset.shape], 22),
+        h('span', {}, preset.name),
+      )
+      this.paletteItems.push([item, preset])
+      return item
+    })
+    const head = h(
+      'button',
+      { class: 'schema-group-head', attrs: { type: 'button', 'aria-expanded': String(this.groups[id]) } },
+      h('span', {}, title),
+      icon(PATHS.chevron, 14),
+    )
+    const group = h('section', { class: `schema-group${this.groups[id] ? '' : ' is-collapsed'}`, attrs: { 'data-group': id } }, head, h('div', { class: 'schema-group-items' }, items))
+    head.addEventListener('click', () => {
+      this.groups[id] = !this.groups[id]
+      group.classList.toggle('is-collapsed', !this.groups[id])
+      head.setAttribute('aria-expanded', String(this.groups[id]))
+      try {
+        localStorage.setItem(GROUPS_KEY, JSON.stringify(this.groups))
+      } catch {
+        // Senza memoria del browser si riparte dai gruppi di sempre.
+      }
+      if (id === 'db') this.renderFormat()
+    })
+    return group
+  }
+
+  /** La misura di una forma nuova di quella voce (le tabelle sono alte quanto i loro campi). */
+  private presetSize(preset: Preset): [number, number] {
+    const [w, h] = preset.size ?? SHAPE_SIZE[preset.shape]
+    return [w, preset.shape === 'table' ? tableHeight(preset.text, 'm') : h]
+  }
+
+  private makeDraggable(item: HTMLElement, preset: Preset): void {
+    const [w, h] = this.presetSize(preset)
     const preview = document.createElement('div')
-    preview.className = `schema-drag-preview schema-drag-${shape}`
+    preview.className = `schema-drag-preview schema-drag-${preset.shape}`
     preview.style.width = `${w}px`
     preview.style.height = `${h}px`
-    const source = gestureUtils.makeDraggable(item, this.graph, (_graph, _evt, _target, x, y) => this.addShape(shape, x, y), preview, -w / 2, -h / 2, true, true)
+    const source = gestureUtils.makeDraggable(item, this.graph, (_graph, _evt, _target, x, y) => this.addShape(preset, x, y), preview, -w / 2, -h / 2, true, true)
     // Finché non arriva sul foglio, la forma che segue il puntatore sta nella finestra dell'editor:
     // maxGraph la metterebbe nella pagina, che è sotto (la finestra è modale) e non si vedrebbe.
     const startDrag = source.startDrag.bind(source)
@@ -475,20 +597,44 @@ class SchemaEditor {
   }
 
   /** Aggiunge una forma; senza posizione, al centro di quello che si vede. */
-  private addShape(shape: ShapeKind, x?: number, y?: number): void {
-    const [w, h] = SHAPE_SIZE[shape]
+  private addShape(preset: Preset, x?: number, y?: number): void {
+    const [w, h] = this.presetSize(preset)
     if (x === undefined || y === undefined) {
       const center = this.toSchema(this.canvas.clientWidth / 2, this.canvas.clientHeight / 2)
-      x = this.graph.snap(center.x - w / 2)
-      y = this.graph.snap(center.y - h / 2)
-      // Una dopo l'altra non finiscono una sopra l'altra: si scende finché c'è posto per una freccia.
-      for (let i = 0; i < 30 && this.overlaps(x, y, w, h, GAP); i++) y += this.graph.getGridSize() * 2
+      ;[x, y] = this.freeSpot(this.graph.snap(center.x - w / 2), this.graph.snap(center.y - h / 2), w, h)
     }
-    // Un testo vuoto non si vedrebbe: nasce con «Testo», che si sostituisce scrivendo.
-    const value: NodeLook = Object.freeze({ shape, text: shape === 'text' ? 'Testo' : '', color: 'default', size: 'm', rot: 0 })
+    const value: NodeLook = Object.freeze({ shape: preset.shape, text: preset.text, color: 'default', size: 'm', rot: 0 })
     const cell = this.graph.insertVertex({ position: [x, y], size: [w, h], value, style: nodeStyle(value, this.look) })
     this.graph.setSelectionCell(cell)
+    this.reveal(cell)
     this.canvas.focus()
+  }
+
+  /**
+   * Un posto libero per una forma nuova, a partire da (x, y): una dopo l'altra non finiscono una
+   * sopra l'altra. Si scende finché c'è posto per una freccia, poi si prova una colonna più in là.
+   */
+  private freeSpot(x: number, y: number, w: number, h: number): [number, number] {
+    const step = this.graph.getGridSize() * 2
+    for (let column = 0; column < 6; column++) {
+      for (let row = 0; row < 40; row++) {
+        const [cx, cy] = [x + column * (w + GAP), y + row * step]
+        if (!this.overlaps(cx, cy, w, h, GAP)) return [cx, cy]
+      }
+    }
+    return [x, y]
+  }
+
+  /** Se una forma è fuori dal foglio che si vede, il foglio si sposta per mostrarla. */
+  private reveal(cell: Cell): void {
+    const state = this.graph.view.getState(cell)
+    if (!state) return
+    const margin = 24
+    const width = this.canvas.clientWidth
+    const height = this.canvas.clientHeight
+    const dx = state.x < margin ? margin - state.x : state.x + state.width > width - margin ? width - margin - state.x - state.width : 0
+    const dy = state.y < margin ? margin - state.y : state.y + state.height > height - margin ? height - margin - state.y - state.height : 0
+    if (dx || dy) this.panBy(dx, dy)
   }
 
   // ——— Modelli e menu ———
@@ -626,7 +772,22 @@ class SchemaEditor {
 
   private setText(cell: Cell, text: string): void {
     const value = cell.isEdge() ? { ...edgeLook(cell), text } : { ...nodeLook(cell), text }
-    this.graph.getDataModel().setValue(cell, Object.freeze(value))
+    this.graph.batchUpdate(() => {
+      this.graph.getDataModel().setValue(cell, Object.freeze(value))
+      this.fitTable(cell)
+    })
+  }
+
+  /** Una tabella è alta quanto il nome più i suoi campi, uno per riga. */
+  private fitTable(cell: Cell): void {
+    const look = nodeLook(cell)
+    const geometry = cell.getGeometry()
+    if (!cell.isVertex() || look.shape !== 'table' || !geometry) return
+    const height = tableHeight(look.text, look.size)
+    if (geometry.height === height) return
+    const fitted = geometry.clone()
+    fitted.height = height
+    this.graph.getDataModel().setGeometry(cell, fitted)
   }
 
   // ——— Aspetto: colore, forma, testo, frecce ———
@@ -638,8 +799,9 @@ class SchemaEditor {
         if (cell.isVertex()) {
           const before = nodeLook(cell)
           const { shape, color, size } = patch
-          // Il verso resta passando da una freccia grande all'altra; le altre forme ripartono dritte.
-          const keepRot = !shape || shape === before.shape || (BIG_ARROWS.includes(shape) && BIG_ARROWS.includes(before.shape))
+          // Il verso resta tra forme dello stesso tipo (le due frecce grandi, i due pallini); le altre ripartono dritte.
+          const same = (kinds: readonly ShapeKind[]) => !!shape && kinds.includes(shape) && kinds.includes(before.shape)
+          const keepRot = !shape || shape === before.shape || same(BIG_ARROWS) || same(DOT_SHAPES)
           const value: NodeLook = Object.freeze({
             ...before,
             ...(shape && { shape }),
@@ -649,6 +811,19 @@ class SchemaEditor {
           })
           model.setValue(cell, value)
           model.setStyle(cell, nodeStyle(value, this.look))
+          // Ancora della misura con cui è nata, prende quella della forma nuova (un pallino non diventa un'ellisse minuscola).
+          const geometry = cell.getGeometry()
+          const [oldW, oldH] = SHAPE_SIZE[before.shape]
+          if (shape && shape !== before.shape && geometry && Math.round(geometry.width) === oldW && Math.round(geometry.height) === oldH) {
+            const [w, h] = SHAPE_SIZE[shape]
+            const resized = geometry.clone()
+            resized.x += (geometry.width - w) / 2
+            resized.y += (geometry.height - h) / 2
+            resized.width = w
+            resized.height = h
+            model.setGeometry(cell, resized)
+          }
+          this.fitTable(cell)
         } else if (cell.isEdge()) {
           const before = edgeLook(cell)
           const { color, size, route, arrows, dashed } = patch
@@ -676,6 +851,17 @@ class SchemaEditor {
     if (cells.some((c) => c.isEdge()) && (route || arrows || dashed !== undefined || color)) {
       this.edgeDefaults = { ...this.edgeDefaults, ...(route && { route }), ...(arrows && { arrows }), ...(dashed !== undefined && { dashed }), ...(color && { color }) }
     }
+  }
+
+  /** Il testo delle frecce all'inizio, a metà o alla fine (per esempio le cardinalità vicino alle entità). */
+  private setTextAt(edges: Cell[], at: TextAt): void {
+    const model = this.graph.getDataModel()
+    this.graph.batchUpdate(() => {
+      for (const edge of edges) {
+        const geometry = edge.getGeometry()
+        if (geometry && edgeTextAt(edge) !== at) model.setGeometry(edge, withTextAt(geometry, at))
+      }
+    })
   }
 
   /** Sposta le forme dove dicono i conti di `arrange.ts` (le frecce le seguono). */
@@ -706,9 +892,13 @@ class SchemaEditor {
         const look = nodeLook(cell)
         const geometry = cell.getGeometry()
         if (!cell.isVertex() || !geometry || !ROTATABLE.includes(look.shape)) continue
-        const value: NodeLook = Object.freeze({ ...look, rot: ((look.rot + 1) % 4) as Rotation })
+        // Il pallino passa dall'altra parte del nome; le altre forme girano di un quarto.
+        const dot = DOT_SHAPES.includes(look.shape)
+        const rot = (dot ? (look.rot === 2 ? 0 : 2) : (look.rot + 1) % 4) as Rotation
+        const value: NodeLook = Object.freeze({ ...look, rot })
         model.setValue(cell, value)
         model.setStyle(cell, nodeStyle(value, this.look))
+        if (dot) continue
         // Il riquadro gira con la forma: larghezza e altezza si scambiano.
         const turned = geometry.clone()
         turned.x += (geometry.width - geometry.height) / 2
@@ -757,10 +947,14 @@ class SchemaEditor {
       ),
     )
     if (nodes.length) {
+      const shapes = nodes.map((n) => nodeLook(n).shape)
       const shape = same(nodes.map(nodeLook), 'shape')
-      sections.push(this.section('Forma', SHAPES.map((s) => this.choice(SHAPE_NAMES[s], shape === s, () => this.update(nodes, { shape: s }), icon(SHAPE_ICONS[s], 18)))))
-      if (nodes.every((n) => ROTATABLE.includes(nodeLook(n).shape))) {
-        sections.push(this.section('Verso', [this.action('Gira di un quarto (in senso orario)', () => this.rotate(nodes), icon(PATHS.rotate, 18))]))
+      // Le forme dei database solo a chi le usa: gruppo aperto nel pannello, o una già selezionata.
+      const kinds = this.groups.db || shapes.some((s) => DB_SHAPES.includes(s)) ? SHAPES : SHAPES.filter((s) => !DB_SHAPES.includes(s))
+      sections.push(this.section('Forma', kinds.map((s) => this.choice(SHAPE_NAMES[s], shape === s, () => this.update(nodes, { shape: s }), icon(SHAPE_ICONS[s], 18)))))
+      if (shapes.every((s) => ROTATABLE.includes(s))) {
+        const label = shapes.every((s) => DOT_SHAPES.includes(s)) ? 'Il nome dall\'altra parte del pallino' : 'Gira di un quarto (in senso orario)'
+        sections.push(this.section('Verso', [this.action(label, () => this.rotate(nodes), icon(PATHS.rotate, 18))]))
       }
       if (nodes.length >= 2) {
         sections.push(this.section('Allinea', ALIGN.map((a) => this.action(a.label, () => this.arrange(nodes, (boxes) => alignBoxes(boxes, a.how)), icon(a.paths, 18)))))
@@ -792,6 +986,18 @@ class SchemaEditor {
           this.choice('Tratteggiata', dashed === true, () => this.update(edges, { dashed: dashed !== true }), icon(PATHS.dashed, 18)),
         ]),
         this.section('Punte', ARROWS.map((a) => this.choice(ARROW_NAMES[a], arrows === a, () => this.update(edges, { arrows: a }), icon(PATHS[a], 18)))),
+      )
+      const ats = edges.map(edgeTextAt)
+      const at = ats.every((a) => a === ats[0]) ? ats[0] : undefined
+      sections.push(this.section('Posizione del testo', TEXT_AT.map((a) => this.choice(AT_NAMES[a], at === a, () => this.setTextAt(edges, a), icon(AT_ICONS[a], 18)))))
+    }
+    if (cells.length === 1 && nodes.length === 1 && nodeLook(nodes[0]).shape === 'table') {
+      sections.push(
+        h(
+          'p',
+          { class: 'schema-format-hint' },
+          'Nella tabella la prima riga è il nome, poi un campo per riga. Scrivi «PK» davanti alla chiave primaria (si sottolinea) e «FK» davanti a quelle esterne.',
+        ),
       )
     }
     sections.push(
@@ -982,7 +1188,7 @@ class SchemaEditor {
         // Doppio clic sul foglio vuoto: un rettangolo arrotondato da scrivere.
         const p = this.toSchema(...this.canvasPoint(event))
         const [w, h] = SHAPE_SIZE.rounded
-        this.addShape('rounded', graph.snap(p.x - w / 2), graph.snap(p.y - h / 2))
+        this.addShape(BASE_PRESETS.find((preset) => preset.shape === 'rounded')!, graph.snap(p.x - w / 2), graph.snap(p.y - h / 2))
         const added = graph.getSelectionCell()
         if (added) this.startEditing(added)
       }

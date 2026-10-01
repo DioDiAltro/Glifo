@@ -27,8 +27,14 @@ invece del vero draw.io incorporato, perché funziona offline e non manda niente
   modelli pronti (diagramma di flusso, mappa concettuale, albero, ciclo, linea del tempo,
   `templates.ts`), allinea e distribuisci (`arrange.ts`), «Scarica» come PNG (fitto il doppio,
   con la risoluzione scritta dentro per Word) o SVG, e «Copia come immagine» (`image.ts`);
-- più avanti: stampare con i colori del tema chiaro anche se si usa quello scuro; frecce curve;
-  raggruppare le forme; altri modelli (per esempio una mappa mentale).
+- fatto, su richiesta dello studente: frecce curve («Curva», come in draw.io), il testo di una
+  freccia all'inizio, a metà o alla fine (per le cardinalità), e il gruppo «Basi di dati» nel
+  pannello: entità ed entità debole, relazione e relazione identificante, attributi (chiave,
+  multivalore, derivato, e a pallino come nell'Atzeni), tabella con PK ed FK, database; i
+  modelli «Schema E-R» e «Tabelle»;
+- più avanti: stampare con i colori del tema chiaro anche se si usa quello scuro; raggruppare le
+  forme; altri modelli (per esempio una mappa mentale); le punte «a zampa di gallina» per le
+  cardinalità, se servono al corso di basi di dati.
 
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
