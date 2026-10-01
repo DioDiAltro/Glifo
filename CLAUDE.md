@@ -4,8 +4,9 @@ Web app per prendere appunti universitari in Markdown con formule LaTeX (KaTeX) 
 pannello che suggerisce i simboli. Sito statico (Vite + TypeScript, senza framework),
 installabile come app, pubblicato su GitHub Pages: non c'è un server.
 
-- L'utente è uno studente italiano: rispondi in italiano. Interfaccia, commenti e
-  messaggi di commit sono in italiano.
+- L'utente è uno studente italiano: rispondi **sempre** in italiano, anche nei messaggi brevi
+  mentre lavori (cosa stai facendo, attese, riepiloghi) e nelle descrizioni dei comandi; lo ha
+  chiesto più volte. Interfaccia, commenti e messaggi di commit sono in italiano.
 - Le funzioni da aggiungere sono in [ROADMAP.md](ROADMAP.md): quando si chiede
   «cosa facciamo adesso?» si parte da lì. Aggiornalo quando una voce è fatta o se ne
   aggiunge una.
