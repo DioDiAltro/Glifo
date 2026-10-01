@@ -2276,6 +2276,9 @@ kbd {
   margin: 0;
   padding: 0;
   border: 0;
+  /* La forma presa dal pannello vive qui mentre la si trascina: vicino ai bordi non deve far
+     comparire le barre di scorrimento. */
+  overflow: hidden;
   background: var(--bg);
   color: var(--text);
 }
@@ -2370,6 +2373,10 @@ kbd {
   gap: 2px;
   padding: 10px 8px;
   border-right: 1px solid var(--border);
+  /* Trascinando una forma non si seleziona il testo dei nomi. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .schema-shapes h3,

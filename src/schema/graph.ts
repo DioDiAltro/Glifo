@@ -30,8 +30,9 @@ export interface Look {
 
 const FONT_FAMILY = "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
 const SVG_NS = 'http://www.w3.org/2000/svg'
-/** Lo spazio attorno allo schema nell'anteprima. */
+/** Lo spazio attorno allo schema nell'anteprima e nelle immagini dei file .md. */
 const PADDING = 8
+const IMAGE_PADDING = 16
 
 export function nodeStyle(v: NodeLook, look: Look): CellStyle {
   const swatch = PALETTE[look.theme][v.color]
@@ -204,29 +205,54 @@ export function restyle(graph: Graph, look: Look): void {
   })
 }
 
-/** Lo schema disegnato in SVG, per l'anteprima e la stampa. */
-export function schemaSvg(schema: Schema, look: Look): string {
+/**
+ * Lo schema disegnato in SVG. `image`: un'immagine a sé, che si legge anche fuori da Glifo:
+ * sfondo bianco, più margine e formule in MathML (gli stili di KaTeX lì non ci sono).
+ */
+function drawSchema(schema: Schema, look: Look, image: boolean): SVGSVGElement {
   const container = document.createElement('div')
   container.style.cssText = 'position:absolute;left:-10000px;top:0;width:100px;height:100px;overflow:hidden;visibility:hidden'
   document.body.append(container)
   const graph = createGraph(container, false)
+  if (image) graph.getLabel = (cell) => (cell ? labelHtml(cellText(cell), true) : '')
+  const padding = image ? IMAGE_PADDING : PADDING
   try {
     loadSchema(graph, schema, look)
     // Lo schema si sposta nell'angolo: i testi (in foreignObject) seguono solo così.
     const bounds = graph.getGraphBounds()
-    graph.view.setTranslate(PADDING - Math.floor(bounds.x), PADDING - Math.floor(bounds.y))
-    const width = Math.ceil(bounds.width + 2 * PADDING)
-    const height = Math.ceil(bounds.height + 2 * PADDING)
+    graph.view.setTranslate(padding - Math.floor(bounds.x), padding - Math.floor(bounds.y))
+    const width = Math.ceil(bounds.width + 2 * padding)
+    const height = Math.ceil(bounds.height + 2 * padding)
     const svg = document.createElementNS(SVG_NS, 'svg')
     svg.setAttribute('xmlns', SVG_NS)
     svg.setAttribute('width', String(width))
     svg.setAttribute('height', String(height))
     svg.setAttribute('viewBox', `0 0 ${width} ${height}`)
+    if (image) {
+      const background = document.createElementNS(SVG_NS, 'rect')
+      background.setAttribute('width', '100%')
+      background.setAttribute('height', '100%')
+      background.setAttribute('fill', look.surface)
+      svg.append(background)
+    }
     const state = graph.getView().getState(graph.getDefaultParent())
     if (state) new ImageExport().drawState(state, new SvgCanvas2D(svg, false))
-    return svg.outerHTML
+    return svg
   } finally {
     graph.destroy()
     container.remove()
   }
+}
+
+/** Lo schema disegnato in SVG, per l'anteprima e la stampa. */
+export function schemaSvg(schema: Schema, look: Look): string {
+  return drawSchema(schema, look, false).outerHTML
+}
+
+/**
+ * Lo schema come immagine SVG da mettere nei file .md, che VS Code e gli altri programmi sanno
+ * mostrare: con i colori chiari su bianco, come su un foglio, qualunque sia il tema.
+ */
+export function schemaImage(schema: Schema): string {
+  return new XMLSerializer().serializeToString(drawSchema(schema, { theme: 'light', surface: '#ffffff' }, true))
 }

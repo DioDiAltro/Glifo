@@ -45,6 +45,19 @@ export function renderTex(tex: string, displayMode = false, ui = false): TexRend
   return result
 }
 
+/**
+ * La formula solo in MathML, che i browser disegnano da soli: per le immagini che escono da
+ * Glifo (gli schemi nei file .md), dove gli stili e i caratteri di KaTeX non ci sono. Se la
+ * formula è sbagliata resta il testo.
+ */
+export function renderTexMathml(tex: string, displayMode = false): string {
+  try {
+    return katex.renderToString(tex, { displayMode, throwOnError: true, strict: 'ignore', output: 'mathml', trust: false })
+  } catch {
+    return escapeHtml(tex)
+  }
+}
+
 /** Versione HTML sempre valida: se la formula è sbagliata mostra l'errore. */
 export function renderTexOrError(tex: string, displayMode = false): string {
   const { html, error } = renderTex(tex, displayMode)

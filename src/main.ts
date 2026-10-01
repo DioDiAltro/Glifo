@@ -19,7 +19,8 @@ import {
   type ViewMode,
 } from './store/settings'
 import { downloadText, fileNameFor, openMarkdownFiles, saveMarkdownFile } from './store/files'
-import { findSchemaBlock, schemaBlockAtLine, schemaBlockText } from './schema/blocks'
+import { findSchemaBlock, findSchemaBlocks, schemaBlockAtLine, schemaBlockText } from './schema/blocks'
+import { schemasForFile, schemasFromFile } from './schema/file'
 import { parseSchema, SchemaError, serializeSchema, type Schema } from './schema/model'
 import { loadPaneSizes, savePaneSizes } from './store/layout'
 import { migrateKeyPrefix, storageAvailable } from './store/storage'
@@ -781,7 +782,8 @@ async function openFiles(): Promise<void> {
   let last: Note | null = null
   const folderId = currentFolderId()
   for (const f of files) {
-    last = store.create(f.content, folderId)
+    // Gli schemi salvati come immagini (vedi saveToFile) tornano blocchi da modificare.
+    last = store.create(schemasFromFile(f.content), folderId)
     if (f.handle) fileHandles.set(last.id, f.handle)
   }
   changedHere()
@@ -789,10 +791,26 @@ async function openFiles(): Promise<void> {
   toast(files.length === 1 ? `Aperto «${files[0].name}»` : `Aperti ${files.length} file`)
 }
 
+/**
+ * Il testo per il file .md: ogni schema diventa un'immagine, così si vede anche in VS Code e
+ * negli altri programmi (il suo JSON resta nel file, nascosto). Se maxGraph non si carica, il
+ * file si salva lo stesso, con gli schemi come blocchi di codice.
+ */
+async function markdownForFile(text: string): Promise<string> {
+  if (!findSchemaBlocks(text).length) return text
+  try {
+    const { schemaImage } = await import('./schema/graph')
+    return schemasForFile(text, schemaImage)
+  } catch {
+    return text
+  }
+}
+
 async function saveToFile(): Promise<void> {
   flushSave()
   const handle = fileHandles.get(active.id)
-  const result = await saveMarkdownFile(fileNameFor(active.title), editor.getDoc(), handle)
+  const text = editor.getDoc()
+  const result = await saveMarkdownFile(fileNameFor(active.title), () => markdownForFile(text), handle)
   if (result === null) return
   if (result) {
     fileHandles.set(active.id, result)

@@ -18,6 +18,10 @@ invece del vero draw.io incorporato, perché funziona offline e non manda niente
   testo con formule; colori dei due temi, forma, dimensione del testo, frecce dritte o ad angolo,
   punte, tratteggio; annulla, copia e incolla, zoom, griglia. Nella nota è un blocco ```schema
   (`src/schema/`), disegnato nell'anteprima e mostrato nel testo come una riga con «Modifica»;
+- fatto, dopo le prime prove dello studente: il riquadro che segue una forma trascinata si vede
+  anche sul tema scuro (maxGraph lo faceva nero); con «Salva .md» ogni schema va nel file come
+  immagine SVG, che l'anteprima di VS Code mostra, con il JSON in un commento che Glifo rilegge
+  riaprendo il file (`src/schema/file.ts`);
 - il prossimo, passo 2: più forme (cilindro, nuvola, documento, parallelogramma, frecce
   grandi…), modelli pronti (mappa concettuale, diagramma di flusso), allineare e distribuire,
   scaricare lo schema come immagine (PNG o SVG) per usarlo fuori da Glifo;

@@ -7,6 +7,7 @@
  */
 import { chromium } from 'playwright-core'
 import { preview } from 'vite'
+import MarkdownIt from 'markdown-it'
 
 const server = await preview({ preview: { port: 4174, strictPort: true }, logLevel: 'error' })
 const url = server.resolvedUrls.local[0]
@@ -535,6 +536,108 @@ try {
     return svg && svg.innerHTML !== before && svg.innerHTML.includes('#1b1f2b')
   }, lightFill, { timeout: 10000 })
   check(true, 'cambiando tema lo schema si ridisegna con i colori scuri')
+  // Sul tema scuro si vede quello che si trascina: la forma presa dal pannello già sopra il
+  // pannello, e il riquadro che segue una forma spostata (maxGraph lo farebbe nero)
+  await sp.locator('.preview-pane .schema-block').hover()
+  await sp.locator('.preview-pane .schema-edit').click()
+  await schemaEditor.waitFor()
+  const accent = await sp.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim())
+  // Si prende la forma dal suo nome e si scende sui nomi delle altre
+  const ellipseName = await sp.locator('.schema-shape[data-shape="ellipse"] span').boundingBox()
+  await sp.mouse.move(ellipseName.x + 10, ellipseName.y + ellipseName.height / 2)
+  await sp.mouse.down()
+  await sp.mouse.move(ellipseName.x + 40, ellipseName.y + 60, { steps: 6 })
+  const overPalette = await sp.evaluate(() => {
+    const el = document.querySelector('.schema-drag-preview')
+    return {
+      inDialog: !!el && el.parentElement === document.querySelector('dialog.schema-editor'),
+      visible: !!el && getComputedStyle(el).visibility === 'visible',
+      selected: getSelection().toString(),
+    }
+  })
+  check(
+    overPalette.inDialog && overPalette.visible && overPalette.selected === '',
+    `la forma presa dal pannello si vede già sopra il pannello, senza selezionare i nomi (${JSON.stringify(overPalette)})`,
+  )
+  const sheet = await sp.locator('.schema-canvas').boundingBox()
+  await sp.mouse.move(sheet.x + sheet.width - 120, sheet.y + sheet.height - 100, { steps: 8 })
+  await sp.mouse.up()
+  await sp.keyboard.type('Sesta')
+  await sp.keyboard.press('Escape')
+  check((await labelsOnCanvas()).length === 5, 'lasciata sul foglio, la forma si aggiunge')
+  // Via il testo e la forma
+  await sp.keyboard.press('Control+z')
+  await sp.keyboard.press('Control+z')
+  const tesiOnCanvas = (await labelsOnCanvas()).find((l) => l.text === 'Tesi')
+  await sp.mouse.move(tesiOnCanvas.x, tesiOnCanvas.y)
+  await sp.mouse.down()
+  await sp.mouse.move(tesiOnCanvas.x + 120, tesiOnCanvas.y + 80, { steps: 8 })
+  const movePreview = await sp.evaluate(() =>
+    [...document.querySelectorAll('.schema-canvas svg rect[stroke-dasharray]')].map((r) => ({
+      stroke: r.getAttribute('stroke'),
+      width: r.getAttribute('stroke-width'),
+      fill: r.getAttribute('fill'),
+    })),
+  )
+  await sp.mouse.up()
+  check(
+    movePreview.some((r) => r.stroke === accent && r.width === '2' && r.fill === accent) && !movePreview.some((r) => r.stroke === 'black'),
+    `spostando una forma, il riquadro che la segue è nel colore di Glifo e si vede sul tema scuro (${JSON.stringify(movePreview)})`,
+  )
+  await sp.keyboard.press('Control+z')
+  await sp.locator('dialog.schema-editor button', { hasText: 'Chiudi' }).click()
+  await schemaEditor.waitFor({ state: 'detached' })
+  check((await sp.locator('dialog.dialog-confirm').count()) === 0, 'annullando le prove lo schema resta com\'era')
+
+  // «Salva .md»: nel file ogni schema è un'immagine (che VS Code mostra) con il suo JSON nascosto
+  // in un commento; riaprendo il file con Glifo torna lo schema da modificare
+  const noteBefore = await savedNote()
+  await sp.evaluate(() => {
+    window.showSaveFilePicker = async () => ({
+      name: 'schemi.md',
+      createWritable: async () => ({ write: async (text) => (window.savedFile = text), close: async () => {} }),
+    })
+  })
+  await sp.locator('button', { hasText: 'Salva .md' }).click()
+  await sp.waitForFunction(() => typeof window.savedFile === 'string', null, { timeout: 10000 })
+  const mdFile = await sp.evaluate(() => window.savedFile)
+  const picture = /^!\[Schema\]\(data:image\/svg\+xml;base64,([A-Za-z0-9+/=]+)\)\n<!-- glifo-schema/m.exec(mdFile)
+  const pictureSvg = picture ? Buffer.from(picture[1], 'base64').toString('utf8') : ''
+  check(
+    !!picture && !mdFile.includes('```schema') && mdFile.startsWith('# Schemi'),
+    `nel file .md lo schema è un'immagine con il JSON in un commento (${mdFile.length} caratteri)`,
+  )
+  check(
+    pictureSvg.includes('>Tesi<') && pictureSvg.includes('<math') && !pictureSvg.includes('katex-html') && pictureSvg.includes('fill="#ffffff"') && !pictureSvg.includes('#1b1f2b'),
+    'l\'immagine ha i testi, le formule in MathML e i colori chiari anche col tema scuro',
+  )
+  // Come la mostra l'anteprima di VS Code: markdown-it con l'HTML e le immagini data:image/…;
+  const vsMd = new MarkdownIt({ html: true })
+  const validateLink = vsMd.validateLink
+  vsMd.validateLink = (link) => validateLink(link) || /^data:image\/.*?;/.test(link)
+  const vscode = await browser.newPage()
+  await vscode.setContent(
+    `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' https: data:">${vsMd.render(mdFile)}`,
+  )
+  const inVscode = await vscode.evaluate(async () => {
+    const img = document.querySelector('img')
+    await img?.decode().catch(() => {})
+    return { width: img?.naturalWidth ?? 0, json: document.body.innerText.includes('"nodes"') }
+  })
+  await vscode.close()
+  check(inVscode.width > 100 && !inVscode.json, `in VS Code si vede il disegno e non il JSON (${JSON.stringify(inVscode)})`)
+  await sp.evaluate((text) => {
+    window.showOpenFilePicker = async () => [{ getFile: async () => new File([text], 'schemi.md') }]
+  }, mdFile)
+  await sp.locator('button', { hasText: 'Apri .md' }).click()
+  await sp.waitForFunction(() => document.querySelectorAll('.cm-schema').length === 1 && document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  const reopenedNotes = await sp.evaluate(() =>
+    [...Array(localStorage.length).keys()].map((i) => localStorage.getItem(localStorage.key(i))).filter((v) => v?.startsWith('# Schemi')),
+  )
+  check(
+    reopenedNotes.length === 2 && reopenedNotes.every((v) => v === noteBefore),
+    'riaprendo il file con Glifo lo schema torna un blocco da modificare, uguale a prima',
+  )
   // Gli schemi funzionano anche offline: editor e maxGraph sono tra i file dell'app installata
   const precache = await sp.evaluate(() => fetch('sw.js').then((r) => r.text()))
   check(/assets\/graph-[\w-]+\.js/.test(precache) && /assets\/editor-[\w-]+\.js/.test(precache), 'l\'editor degli schemi è tra i file salvati per usarlo offline')

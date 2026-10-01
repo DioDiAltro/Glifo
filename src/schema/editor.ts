@@ -16,6 +16,7 @@ import {
   type Graph,
   type InternalMouseEvent,
   type PanningHandler,
+  type SelectionHandler,
 } from '@maxgraph/core'
 import { confirmDialog } from '../ui/dialogs'
 import { ICONS, h, icon } from '../ui/dom'
@@ -88,7 +89,7 @@ const DIRECTIONS: Direction[] = ['up', 'right', 'down', 'left']
 const GAP = 60
 const MIN_SCALE = 0.25
 const MAX_SCALE = 4
-const ACCENT = '#6366f1'
+const INVALID = '#c62845'
 
 class SchemaEditor {
   private readonly dialog: HTMLDialogElement
@@ -105,6 +106,8 @@ class SchemaEditor {
   private readonly status: HTMLElement
   private readonly graph: Graph
   private readonly look: Look
+  /** Il colore di Glifo nel tema aperto: per quello che si trascina e le frecce da collegare. */
+  private readonly accent: string
   private readonly undo = new UndoManager()
   private readonly connection: ConnectionHandler
   private readonly panning: PanningHandler | undefined
@@ -225,12 +228,15 @@ class SchemaEditor {
     this.dialog.showModal()
 
     try {
-      this.look = { theme: options.theme, surface: getComputedStyle(this.canvas).backgroundColor }
+      const css = getComputedStyle(this.canvas)
+      this.look = { theme: options.theme, surface: css.backgroundColor }
+      this.accent = css.getPropertyValue('--accent').trim() || '#4f46e5'
       this.graph = createGraph(this.canvas, true)
       InternalEvent.disableContextMenu(this.canvas)
       this.connection = this.graph.getPlugin<ConnectionHandler>('ConnectionHandler')!
       this.panning = this.graph.getPlugin<PanningHandler>('PanningHandler')
       this.setUpConnections()
+      this.setUpMovePreview()
       this.setUpPanning()
 
       loadSchema(this.graph, options.schema, this.look)
@@ -268,10 +274,28 @@ class SchemaEditor {
     }
     connection.selectCells = (edge, target) => graph.setSelectionCell(target ?? edge)
     // La freccia che si sta tirando e la forma d'arrivo: nel viola di Glifo (non nel verde di maxGraph).
-    connection.marker.validColor = ACCENT
-    connection.marker.invalidColor = '#c62845'
-    connection.getEdgeColor = ((valid: boolean) => (valid ? ACCENT : '#c62845')) as unknown as ConnectionHandler['getEdgeColor']
+    connection.marker.validColor = this.accent
+    connection.marker.invalidColor = INVALID
+    connection.getEdgeColor = ((valid: boolean) => (valid ? this.accent : INVALID)) as unknown as ConnectionHandler['getEdgeColor']
     connection.getEdgeWidth = () => 2
+  }
+
+  /**
+   * Il riquadro che segue le forme trascinate: maxGraph lo fa nero e sottile, che sul tema scuro
+   * non si vede. Qui è nel colore di Glifo, più spesso e un po' colorato dentro.
+   */
+  private setUpMovePreview(): void {
+    const selection = this.graph.getPlugin<SelectionHandler>('SelectionHandler')
+    if (!selection) return
+    selection.previewColor = this.accent
+    const create = selection.createPreviewShape.bind(selection)
+    selection.createPreviewShape = (bounds) => {
+      const shape = create(bounds)
+      shape.strokeWidth = 2
+      shape.fill = this.accent
+      shape.fillOpacity = 15
+      return shape
+    }
   }
 
   private showArrows(state: CellState): void {
@@ -381,7 +405,18 @@ class SchemaEditor {
     preview.className = `schema-drag-preview schema-drag-${shape}`
     preview.style.width = `${w}px`
     preview.style.height = `${h}px`
-    gestureUtils.makeDraggable(item, this.graph, (_graph, _evt, _target, x, y) => this.addShape(shape, x, y), preview, -w / 2, -h / 2, true, true)
+    const source = gestureUtils.makeDraggable(item, this.graph, (_graph, _evt, _target, x, y) => this.addShape(shape, x, y), preview, -w / 2, -h / 2, true, true)
+    // Finché non arriva sul foglio, la forma che segue il puntatore sta nella finestra dell'editor:
+    // maxGraph la metterebbe nella pagina, che è sotto (la finestra è modale) e non si vedrebbe.
+    const startDrag = source.startDrag.bind(source)
+    source.startDrag = (evt) => {
+      startDrag(evt)
+      const el = source.dragElement
+      if (!el) return
+      // Nascosta finché maxGraph, al primo movimento, non la mette sotto il puntatore.
+      el.style.visibility = 'hidden'
+      this.dialog.append(el)
+    }
   }
 
   /** Aggiunge una forma; senza posizione, al centro di quello che si vede. */

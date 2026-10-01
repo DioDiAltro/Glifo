@@ -423,7 +423,7 @@ export function openHelpDialog(): void {
       { class: 'field-help' },
       'Schemi: il pulsante con i due riquadri nella barra apre un editor stile draw.io. Trascina le forme sul foglio, passa sopra una forma e trascina una freccia blu per collegarla, fai doppio clic per scriverci (anche formule tra ',
       h('code', {}, '$ … $'),
-      '). Con «Fatto» lo schema va nella nota; per cambiarlo, «Modifica» nel testo o nell\'anteprima.',
+      '). Con «Fatto» lo schema va nella nota; per cambiarlo, «Modifica» nel testo o nell\'anteprima. Con «Salva .md» gli schemi diventano immagini, che si vedono anche in VS Code; riaprendo il file con Glifo si modificano di nuovo.',
     ),
     h(
       'p',

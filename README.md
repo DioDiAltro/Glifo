@@ -122,13 +122,17 @@ chi sta provando Glifo.*
   nell'anteprima si vede il disegno, nel testo una riga con «Modifica». I colori seguono il
   tema chiaro o scuro. Funziona anche offline: è fatto con [maxGraph](https://github.com/maxGraph/maxGraph),
   il motore di draw.io, che si carica solo quando serve.
+- Con **Salva .md** ogni schema finisce nel file come **immagine** (SVG, chiara su bianco), così
+  si vede anche nell'anteprima di VS Code o in Obsidian; il suo JSON resta nel file, in un
+  commento che non si vede, e riaprendo il file con **Apri .md** lo schema torna da modificare.
 
 **Appunti**
 - Salvati automaticamente nel browser, con elenco, filtro e più note; con l'account, anche su
   tutti i tuoi dispositivi.
 - **Cartelle** per organizzarli, per esempio una per corso: le note nuove finiscono nella
   cartella della nota aperta, e il pulsante accanto a ogni nota la sposta.
-- Apri e salva file `.md` dal computer (su Chrome/Edge si risalva sullo stesso file).
+- Apri e salva file `.md` dal computer (su Chrome/Edge si risalva sullo stesso file); nel
+  file gli schemi sono immagini.
 - Anteprima affiancata con scorrimento sincronizzato; doppio clic sull'anteprima porta alla riga.
 - Stampa / PDF dell'anteprima, backup di tutti gli appunti.
 - Sezioni in tonalità diverse (la cornice è più scura del foglio su cui si scrive) e **da
@@ -202,7 +206,10 @@ Il riconoscimento di `$ … $` e `$$ … $$` ricalca quello dell'anteprima Markd
 - gli elenchi con lettere, numeri romani ed etichette (`a)`, `ii)`, `es)`) e il pallino `•` sono
   di Glifo: altrove si vedono come testo normale (`-`, `*`, `1.` e `1)` vanno bene ovunque);
 - in Glifo il rientro serve agli elenchi: il codice si scrive tra ` ``` ` (i blocchi di codice
-  fatti solo con quattro spazi di rientro non ci sono).
+  fatti solo con quattro spazi di rientro non ci sono);
+- gli schemi, salvati con **Salva .md**, nel file sono immagini scritte dentro il file stesso
+  (`data:image/svg+xml`): VS Code le mostra, GitHub no. Il JSON dello schema è subito sotto, in
+  un commento `<!-- glifo-schema … -->`: si può leggere, e Glifo lo usa quando riapre il file.
 
 ## Com'è fatto
 
@@ -262,6 +269,7 @@ src/
   schema/
     model.ts              il formato degli schemi (blocchi ```schema), i controlli e i colori dei due temi
     blocks.ts             trova i blocchi ```schema nella nota
+    file.ts               gli schemi nei file .md: immagine SVG più il JSON in un commento, e ritorno
     graph.ts              il collegamento con maxGraph: forme, frecce, disegno per l'anteprima
     editor.ts             l'editor a tutto schermo (forme, frecce blu, testo, colori, zoom)
     preview.ts, label.ts  il disegno nell'anteprima; il testo delle forme con le formule

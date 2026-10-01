@@ -87,29 +87,31 @@ export function fileNameFor(title: string, ext = '.md'): string {
 /**
  * Salva il testo: sullo stesso file se abbiamo già un handle, altrimenti
  * chiede dove salvarlo (o lo scarica). Restituisce l'handle usato, se c'è.
+ * Il testo si prepara solo dopo aver chiesto dove salvare: la finestra del
+ * browser va aperta subito dopo il clic, e se si annulla non serve.
  */
 export async function saveMarkdownFile(
   name: string,
-  content: string,
+  content: () => Promise<string>,
   handle?: FileSystemFileHandle,
 ): Promise<FileSystemFileHandle | undefined | null> {
   const w = fsWindow()
-  if (inClaudeViewer()) return (await downloadText(name, content, 'text/markdown')) ? undefined : null
+  if (inClaudeViewer()) return (await downloadText(name, await content(), 'text/markdown')) ? undefined : null
   try {
     if (handle && typeof handle.createWritable === 'function') {
-      await writeTo(handle, content)
+      await writeTo(handle, await content())
       return handle
     }
     if (w.showSaveFilePicker) {
       const h = await w.showSaveFilePicker({ suggestedName: name, types: MD_TYPES })
-      await writeTo(h, content)
+      await writeTo(h, await content())
       return h
     }
   } catch (err) {
     if (isAbort(err)) return null
     // In caso di errore si ripiega sul download.
   }
-  return (await downloadText(name, content, 'text/markdown')) ? undefined : null
+  return (await downloadText(name, await content(), 'text/markdown')) ? undefined : null
 }
 
 async function writeTo(handle: FileSystemFileHandle, content: string): Promise<void> {
