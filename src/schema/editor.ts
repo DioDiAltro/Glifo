@@ -736,6 +736,7 @@ class SchemaEditor {
           'ul',
           { class: 'schema-help' },
           h('li', {}, 'Doppio clic su una forma per scriverci dentro, anche formule tra ', h('code', {}, '$…$'), '.'),
+          h('li', {}, 'Per sceglierne più di una (e allinearle): trascina un riquadro sul foglio vuoto, oppure ', h('kbd', {}, 'Maiusc'), ' + clic.'),
           h('li', {}, 'Passa sopra una forma: trascina una freccia blu per collegarla, cliccala per aggiungerne una collegata.'),
           h('li', {}, 'Rotellina per spostarti, Ctrl + rotellina per lo zoom; tieni premuto spazio per trascinare il foglio.'),
           h('li', {}, h('kbd', {}, 'Ctrl'), ' ', h('kbd', {}, 'Z'), ' annulla, ', h('kbd', {}, 'Canc'), ' elimina, ', h('kbd', {}, 'Ctrl'), ' ', h('kbd', {}, 'D'), ' duplica.'),

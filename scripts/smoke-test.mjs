@@ -710,6 +710,26 @@ try {
   await s2.locator('.tool-menu-item', { hasText: 'Ciclo' }).click()
   await s2.locator('.schema-format button[aria-label^="Distribuisci in verticale"]').click()
   await s2.locator('.schema-format button[aria-label="Allinea a sinistra"]').click()
+  // Maiusc + clic aggiunge una forma alla selezione: con due compare «Allinea» (non «Distribuisci»)
+  await s2.keyboard.press('Escape')
+  const phaseAt = (text) =>
+    s2.evaluate((t) => {
+      const fo = [...document.querySelectorAll('.schema-canvas foreignObject')].find((f) => f.textContent === t)
+      const r = fo.querySelector('div > div > div').getBoundingClientRect()
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 }
+    }, text)
+  const fase1 = await phaseAt('Fase 1')
+  const fase3 = await phaseAt('Fase 3')
+  await s2.mouse.click(fase1.x, fase1.y)
+  await s2.keyboard.down('Shift')
+  await s2.mouse.click(fase3.x, fase3.y)
+  await s2.keyboard.up('Shift')
+  const twoSelected = await s2.locator('.schema-format h3').allInnerTexts()
+  check(
+    twoSelected.some((t) => /allinea/i.test(t)) && !twoSelected.some((t) => /distribuisci/i.test(t)),
+    `Maiusc + clic aggiunge una forma alla selezione, e con due si possono allineare (${twoSelected})`,
+  )
+  await s2.keyboard.press('Escape')
   await s2.keyboard.press('Control+s')
   await s2.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
   const s2schema = await s2.evaluate(() => {

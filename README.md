@@ -118,8 +118,9 @@ chi sta provando Glifo.*
   a un'altra forma (o, nel vuoto, ne nasce una nuova), cliccandola aggiungi una forma collegata.
 - **Modelli pronti** da cui partire, sul foglio vuoto o dal menu «Modelli»: diagramma di flusso,
   mappa concettuale, albero, ciclo, linea del tempo.
-- Con più forme selezionate: **allinea** (a sinistra, al centro, in alto…) e **distribuisci**
-  con lo stesso spazio; triangolo e frecce grandi si **girano** di un quarto alla volta.
+- Con più forme selezionate (trascinando un riquadro sul foglio vuoto, o con Maiusc + clic):
+  **allinea** (a sinistra, al centro, in alto…) e **distribuisci** con lo stesso spazio;
+  triangolo e frecce grandi si **girano** di un quarto alla volta.
 - **Scarica** lo schema come immagine PNG (nitida, alla misura giusta anche in Word) o SVG,
   oppure **copialo come immagine** e incollalo in Word, Google Docs o nelle slide.
 - Doppio clic (o scrivere con una forma selezionata) per il testo, anche con **formule**

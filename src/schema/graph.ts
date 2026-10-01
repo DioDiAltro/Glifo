@@ -185,6 +185,9 @@ export function createGraph(container: HTMLElement, editable: boolean): Graph {
     graph.setEnabled(false)
     return graph
   }
+  // Maiusc + clic (o Maiusc + riquadro) aggiunge alla selezione, come Ctrl + clic e come in PowerPoint.
+  const isToggle = graph.isToggleEvent.bind(graph)
+  graph.isToggleEvent = (evt) => evt.shiftKey || isToggle(evt)
   graph.setConnectable(true)
   graph.setPanning(true)
   graph.setGridEnabled(true)
