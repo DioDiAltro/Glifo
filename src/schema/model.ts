@@ -148,16 +148,57 @@ export function joinTable(name: string, fields: string): string {
 }
 
 export interface TableField {
-  /** «PK» (chiave primaria) o «FK» (esterna), scritto all'inizio della riga; '' per gli altri campi. */
-  key: '' | 'PK' | 'FK'
+  /** Chiave primaria: «PK» all'inizio della riga (nel disegno, il nome sottolineato). */
+  pk: boolean
+  /** Chiave esterna: «FK»; con «PK» è una chiave primaria che è anche esterna (come in Esame). */
+  fk: boolean
   name: string
-  /** Dove comincia il nome nella riga, dopo «PK » o «FK ». */
+  /** Il tipo, per l'SQL: dopo i due punti («Matricola: CHAR(6)»); '' se non c'è. */
+  type: string
+  /** Dove comincia il nome nella riga, dopo «PK» e «FK». */
   start: number
 }
 
+/** «PK» e «FK» all'inizio della riga, in qualsiasi ordine (anche da soli, con il nome ancora da scrivere). */
+const FIELD_KEYS = /^\s*(?:(?:PK|FK)(?:\s+|$))*/i
+/** Il nome e, dopo i due punti, il tipo; non nelle formule ($a:b$ resta un nome). */
+const FIELD_TYPE = /^(.*?)\s*:\s*([^$]*?)\s*$/
+
+/** Una riga dei campi: «PK», «FK» o tutte e due davanti, poi il nome e, dopo «:», il tipo. */
 export function tableField(line: string): TableField {
-  const m = /^(\s*(PK|FK)\s+)(.*)$/i.exec(line)
-  return m ? { key: m[2].toUpperCase() as 'PK' | 'FK', name: m[3], start: m[1].length } : { key: '', name: line, start: 0 }
+  const keys = FIELD_KEYS.exec(line)![0]
+  const rest = line.slice(keys.length)
+  const typed = FIELD_TYPE.exec(rest)
+  return {
+    pk: /\bPK\b/i.test(keys),
+    fk: /\bFK\b/i.test(keys),
+    name: typed ? typed[1] : rest,
+    type: typed ? typed[2] : '',
+    start: keys.length,
+  }
+}
+
+/** La riga di un campo, come la legge tableField. */
+export function fieldLine(field: Pick<TableField, 'pk' | 'fk' | 'name' | 'type'>): string {
+  const keys = `${field.pk ? 'PK ' : ''}${field.fk ? 'FK ' : ''}`
+  const type = field.type.trim()
+  return `${keys}${field.name}${type ? `: ${type}` : ''}`
+}
+
+export interface Table {
+  name: string
+  fields: TableField[]
+}
+
+/** Il testo di una tabella letto campo per campo. */
+export function parseTable(text: string): Table {
+  const { name, fields } = splitTable(text)
+  return { name, fields: fields ? fields.split('\n').map(tableField) : [] }
+}
+
+/** Il testo di una tabella dal nome e dai campi. */
+export function tableText(table: { name: string; fields: Pick<TableField, 'pk' | 'fk' | 'name' | 'type'>[] }): string {
+  return joinTable(table.name, table.fields.map(fieldLine).join('\n'))
 }
 
 export const SHAPE_NAMES: Record<ShapeKind, string> = {

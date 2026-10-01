@@ -423,7 +423,7 @@ export function openHelpDialog(): void {
       { class: 'field-help' },
       'Schemi: il pulsante con i due riquadri nella barra apre un editor stile draw.io. Trascina le forme sul foglio, passa sopra una forma e trascina una freccia blu per collegarla, fai doppio clic per scriverci (anche formule tra ',
       h('code', {}, '$ … $'),
-      '). Con «Fatto» lo schema va nella nota; per cambiarlo, «Modifica» nel testo o nell\'anteprima. Nel gruppo «Basi di dati» ci sono le figure dei diagrammi E-R e le tabelle: il nome in alto e i campi sotto, uno per riga, con PK o FK davanti alle chiavi. Sul foglio vuoto (o dal menu «Modelli») puoi partire da un modello pronto; con più forme selezionate le allinei e le distribuisci; «Scarica» le salva come immagine PNG o SVG, o le copia per incollarle in Word. Con «Salva .md» gli schemi diventano immagini, che si vedono anche in VS Code; riaprendo il file con Glifo si modificano di nuovo.',
+      '). Con «Fatto» lo schema va nella nota; per cambiarlo, «Modifica» nel testo o nell\'anteprima. Nel gruppo «Basi di dati» ci sono le figure dei diagrammi E-R e le tabelle: il nome in alto e i campi sotto, uno per riga, con PK o FK davanti alle chiavi; selezionando una tabella, nel pannello a destra la cambi campo per campo, anche con i tipi, e da «Scarica» ne ottieni il codice SQL per il database che usi. Sul foglio vuoto (o dal menu «Modelli») puoi partire da un modello pronto; con più forme selezionate le allinei e le distribuisci; «Scarica» le salva come immagine PNG o SVG, o le copia per incollarle in Word. Con «Salva .md» gli schemi diventano immagini, che si vedono anche in VS Code; riaprendo il file con Glifo si modificano di nuovo.',
     ),
     h(
       'p',

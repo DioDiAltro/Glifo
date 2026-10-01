@@ -18,7 +18,7 @@ import {
   type PanningHandler,
   type SelectionHandler,
 } from '@maxgraph/core'
-import { confirmDialog } from '../ui/dialogs'
+import { confirmDialog, dialogShell } from '../ui/dialogs'
 import { ICONS, h, icon } from '../ui/dom'
 import { openMenu, type MenuEntry } from '../ui/menu'
 import { toast } from '../ui/toast'
@@ -40,6 +40,7 @@ import {
   type Look,
 } from './graph'
 import { svgToPng } from './image'
+import { schemaSql, SQL_DIALECTS, type SqlDialect } from './sql'
 import { TEMPLATES, type Template } from './templates'
 import { alignBoxes, distributeBoxes, type Alignment, type Box, type Position } from './arrange'
 import {
@@ -60,11 +61,13 @@ import {
   TEXT_AT,
   TEXT_SIZES,
   joinTable,
+  parseTable,
   serializeSchema,
   splitTable,
   tableField,
   tableHeight,
   tableMetrics,
+  tableText,
   type EdgeArrows,
   type EdgeLook,
   type EdgeRoute,
@@ -72,6 +75,7 @@ import {
   type Rotation,
   type Schema,
   type ShapeKind,
+  type Table,
   type TextAt,
   type TextSize,
   type Theme,
@@ -213,6 +217,36 @@ const MAX_SCALE = 4
 const INVALID = '#c62845'
 const BIG_ARROWS: readonly ShapeKind[] = ['arrow', 'doubleArrow']
 
+let measure: CanvasRenderingContext2D | null = null
+
+/** Quanto è largo un testo scritto con questo carattere, in pixel. */
+function textWidth(text: string, font: string): number {
+  measure ??= document.createElement('canvas').getContext('2d')
+  if (!measure) return text.length * 8
+  measure.font = font
+  return measure.measureText(text).width
+}
+
+/** Il database scelto per il codice SQL: si ricorda su questo dispositivo. */
+const SQL_KEY = 'glifo.schema.sql'
+
+function loadDialect(): SqlDialect {
+  try {
+    const saved = localStorage.getItem(SQL_KEY)
+    return SQL_DIALECTS.find((d) => d.id === saved)?.id ?? 'standard'
+  } catch {
+    return 'standard'
+  }
+}
+
+/** Un campo di testo del pannello, per la tabella. */
+function fieldInput(placeholder: string, label: string, extra: string): HTMLInputElement {
+  return h('input', {
+    class: `schema-field-input ${extra}`,
+    attrs: { type: 'text', placeholder, 'aria-label': label, spellcheck: 'false', autocomplete: 'off' },
+  })
+}
+
 class SchemaEditor {
   private readonly dialog: HTMLDialogElement
   private readonly wrap: HTMLElement
@@ -251,6 +285,11 @@ class SchemaEditor {
   private editingTable = false
   /** Cambia solo il testo: il pannello dell'aspetto resta com'è (vedi setText). */
   private keepFormat = false
+  /** La tabella nel pannello, da aggiornare sul posto quando cambia il suo testo. */
+  private fieldsView: { cell: Cell; update(): void } | null = null
+  /** Un tasto del puntatore è premuto: la tabella nel pannello si aggiorna dopo il clic (vedi refresh). */
+  private pointerHeld = false
+  private fieldsStale = false
   private grid = true
   private spaceDown = false
   private closed = false
@@ -306,6 +345,7 @@ class SchemaEditor {
         { label: 'Immagine PNG', run: () => void this.exportImage('png') },
         { label: 'Immagine SVG', run: () => void this.exportImage('svg') },
         { label: 'Copia come immagine', run: () => void this.exportImage('copy') },
+        { label: 'Codice SQL delle tabelle…', run: () => this.openSql() },
       ]),
       h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => void this.requestClose() } }, 'Chiudi'),
       h('button', { class: 'btn btn-primary', attrs: { type: 'button' }, on: { click: () => this.finish() } }, 'Fatto'),
@@ -724,6 +764,64 @@ class SchemaEditor {
     this.canvas.focus()
   }
 
+  /**
+   * Il codice SQL delle tabelle dello schema: si sceglie il database (Glifo se lo ricorda), si
+   * vede il codice e lo si scarica come file .sql o lo si copia.
+   */
+  private openSql(): void {
+    const schema = this.current()
+    if (!schema.nodes.some((n) => n.shape === 'table')) {
+      toast('Nello schema non ci sono tabelle: le trovi nel gruppo «Basi di dati», a sinistra.')
+      return
+    }
+    let dialect = loadDialect()
+    const select = h('select', { attrs: { 'aria-label': 'Database' } }, SQL_DIALECTS.map((d) => h('option', { attrs: { value: d.id } }, d.name)))
+    select.value = dialect
+    const code = h('code', {})
+    const sql = () => schemaSql(schema, dialect)
+    select.addEventListener('change', () => {
+      dialect = select.value as SqlDialect
+      try {
+        localStorage.setItem(SQL_KEY, dialect)
+      } catch {
+        // Senza memoria del browser, la prossima volta si riparte da «SQL standard».
+      }
+      code.textContent = sql()
+    })
+    const fileName = fileNameFor(this.options.title ? `${this.options.title} tabelle` : 'tabelle', '.sql')
+    const copy = async () => {
+      try {
+        await navigator.clipboard.writeText(sql())
+        toast('Codice SQL copiato')
+      } catch {
+        toast('Il codice non si è riuscito a copiare: scaricalo come file.', 'error')
+      }
+    }
+    const download = async () => {
+      if (await downloadText(fileName, sql(), 'application/sql')) toast(`Scaricato «${fileName}»`)
+    }
+    code.textContent = sql()
+    dialogShell(
+      'Codice SQL delle tabelle',
+      [
+        h('label', { class: 'sql-dialect' }, h('span', {}, 'Per quale database?'), select),
+        h('pre', { class: 'sql-code', attrs: { tabindex: 0, 'aria-label': 'Codice SQL' } }, code),
+        h(
+          'p',
+          { class: 'field-help' },
+          'Le chiavi esterne trovano la loro tabella con le frecce tra le tabelle, o con i nomi: un campo FK che si chiama come la chiave primaria dell\'altra tabella, o come l\'altra tabella. Le righe che cominciano con «--» sono note.',
+        ),
+        h(
+          'div',
+          { class: 'dialog-actions' },
+          h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => void copy() } }, 'Copia'),
+          h('button', { class: 'btn btn-primary', attrs: { type: 'button' }, on: { click: () => void download() } }, 'Scarica .sql'),
+        ),
+      ],
+      'dialog-sql',
+    ).showModal()
+  }
+
   /** Aggiunge un modello: sul foglio vuoto e basta, altrimenti a destra di quello che c'è. */
   private insertTemplate(template: Template): void {
     this.stopEditing(true)
@@ -876,14 +974,15 @@ class SchemaEditor {
     return Math.max(0, Math.min(count - 1, Math.floor((local - head - 5) / row)))
   }
 
-  /** Nei campi della tabella: seleziona il nome del campo `i` (senza «PK» o «FK»), pronto da riscrivere. */
+  /** Nei campi della tabella: seleziona il nome del campo `i` (senza «PK», «FK» e il tipo), pronto da riscrivere. */
   private selectField(i: number): void {
     const fields = this.tableFields
     const lines = fields.value.split('\n')
     const line = Math.max(0, Math.min(i, lines.length - 1))
     const from = lines.slice(0, line).reduce((n, l) => n + l.length + 1, 0)
+    const field = tableField(lines[line])
     fields.focus()
-    fields.setSelectionRange(from + tableField(lines[line]).start, from + lines[line].length)
+    fields.setSelectionRange(from + field.start, from + field.start + field.name.length)
   }
 
   private stopEditing(apply: boolean): void {
@@ -960,8 +1059,8 @@ class SchemaEditor {
 
   private setText(cell: Cell, text: string): void {
     const value = cell.isEdge() ? { ...edgeLook(cell), text } : { ...nodeLook(cell), text }
-    // Il pannello dell'aspetto non dipende dal testo, e non si rifà: si finisce di scrivere anche
-    // cliccando una sua scelta (un colore…), che rifacendolo sparirebbe sotto il puntatore.
+    // Il pannello dell'aspetto non si rifà (si aggiorna solo la tabella, sul posto): si finisce di
+    // scrivere anche cliccando una sua scelta (un colore…), che rifacendolo sparirebbe sotto il puntatore.
     this.keepFormat = true
     try {
       this.graph.batchUpdate(() => {
@@ -1106,6 +1205,7 @@ class SchemaEditor {
   }
 
   private renderFormat(): void {
+    this.fieldsView = null
     const cells = this.graph.getSelectionCells()
     const nodes = cells.filter((c) => c.isVertex())
     const edges = cells.filter((c) => c.isEdge())
@@ -1131,6 +1231,9 @@ class SchemaEditor {
     }
 
     const sections: HTMLElement[] = []
+    // Una tabella sola: prima di tutto il nome e i campi.
+    const table = cells.length === 1 && nodes.length === 1 && nodeLook(nodes[0]).shape === 'table' ? this.tableSection(nodes[0]) : null
+    if (table) sections.push(table.section)
     const color = same(looks, 'color')
     sections.push(
       this.section(
@@ -1186,15 +1289,6 @@ class SchemaEditor {
       const at = ats.every((a) => a === ats[0]) ? ats[0] : undefined
       sections.push(this.section('Posizione del testo', TEXT_AT.map((a) => this.choice(AT_NAMES[a], at === a, () => this.setTextAt(edges, a), icon(AT_ICONS[a], 18)))))
     }
-    if (cells.length === 1 && nodes.length === 1 && nodeLook(nodes[0]).shape === 'table') {
-      sections.push(
-        h(
-          'p',
-          { class: 'schema-format-hint' },
-          'Doppio clic sul nome della tabella o su un campo per cambiarlo. I campi sono uno per riga: Invio ne comincia uno nuovo. Scrivi «PK» davanti alla chiave primaria (si sottolinea) e «FK» davanti a quelle esterne.',
-        ),
-      )
-    }
     sections.push(
       h(
         'div',
@@ -1206,6 +1300,173 @@ class SchemaEditor {
       ),
     )
     this.format.replaceChildren(...sections)
+    // Nel pannello, la colonna dei tipi si può misurare.
+    this.fieldsView = table
+    table?.update()
+  }
+
+  /**
+   * La tabella selezionata nel pannello: il nome e un campo per riga, con «PK» ed «FK» da premere,
+   * il tipo (facoltativo, per l'SQL) e la × per toglierlo; in fondo «Aggiungi campo». Cambia lo
+   * stesso testo che si scrive sul foglio, e si aggiorna sul posto (vedi setText): i pulsanti
+   * restano sotto il puntatore anche finendo di scrivere sul foglio con un clic qui.
+   */
+  private tableSection(cell: Cell): { cell: Cell; section: HTMLElement; update(): void } {
+    const read = () => parseTable(nodeLook(cell).text)
+    // Ogni modifica è un passo da annullare.
+    const write = (change: (table: Table) => void) => {
+      const table = read()
+      change(table)
+      const text = tableText(table)
+      if (text !== nodeLook(cell).text) this.setText(cell, text)
+    }
+    interface Row {
+      pk: HTMLButtonElement
+      fk: HTMLButtonElement
+      name: HTMLInputElement
+      type: HTMLInputElement
+      remove: HTMLButtonElement
+      el: HTMLElement
+    }
+    const rows: Row[] = []
+    const list = h('div', { class: 'schema-fields', attrs: { role: 'list', 'aria-label': 'Campi della tabella' } })
+    const title = fieldInput('Nome della tabella', 'Nome della tabella', 'schema-table-title')
+    const missing = h('p', { class: 'schema-format-hint schema-fields-missing' }, 'Manca la chiave primaria: premi «PK» sui campi che la formano.')
+    const add = h('button', { class: 'btn btn-small schema-field-add', attrs: { type: 'button' } }, icon(ICONS.plus, 14), 'Aggiungi campo')
+
+    const focusRow = (i: number, column: 'name' | 'type' = 'name') => {
+      const input = rows[i]?.[column]
+      input?.focus()
+      input?.select()
+    }
+    const addField = () => {
+      write((t) => t.fields.push(tableField('Campo')))
+      focusRow(rows.length - 1)
+    }
+    /** Invio va al campo dopo (dopo l'ultimo ne aggiunge uno), le frecce su e giù, Esc lascia com'era. */
+    const keys = (input: HTMLInputElement, i: number, column: 'name' | 'type', commit: () => void) => {
+      input.addEventListener('change', commit)
+      input.addEventListener('keydown', (ev) => {
+        if (ev.isComposing) return
+        const go = (run: () => void) => {
+          ev.preventDefault()
+          commit()
+          run()
+        }
+        if (ev.key === 'Enter') go(() => (i + 1 < rows.length ? focusRow(i + 1) : addField()))
+        else if (ev.key === 'ArrowDown' && i + 1 < rows.length) go(() => focusRow(i + 1, column))
+        else if (ev.key === 'ArrowUp' && i >= 0) go(() => (i > 0 ? focusRow(i - 1, column) : (title.focus(), title.select())))
+        else if (ev.key === 'Escape') {
+          ev.preventDefault()
+          update()
+          this.canvas.focus()
+        }
+      })
+    }
+    const makeRow = (i: number): Row => {
+      const key = (flag: 'pk' | 'fk') =>
+        h(
+          'button',
+          {
+            class: 'schema-field-key',
+            attrs: { type: 'button', 'aria-pressed': 'false' },
+            on: {
+              click: () =>
+                write((t) => {
+                  if (t.fields[i]) t.fields[i][flag] = !t.fields[i][flag]
+                }),
+            },
+          },
+          flag.toUpperCase(),
+        )
+      const row: Row = {
+        pk: key('pk'),
+        fk: key('fk'),
+        name: fieldInput('', 'Nome del campo', 'schema-field-name'),
+        type: fieldInput('tipo', 'Tipo del campo, per l\'SQL (facoltativo)', 'schema-field-type'),
+        remove: h('button', { class: 'icon-button schema-field-remove', attrs: { type: 'button' } }, icon(ICONS.x, 14)),
+        el: h('div', { class: 'schema-field', attrs: { role: 'listitem' } }),
+      }
+      keys(row.name, i, 'name', () =>
+        write((t) => {
+          if (t.fields[i]) t.fields[i].name = row.name.value
+        }),
+      )
+      keys(row.type, i, 'type', () =>
+        write((t) => {
+          if (t.fields[i]) t.fields[i].type = row.type.value
+        }),
+      )
+      row.remove.addEventListener('click', (ev) => {
+        write((t) => t.fields.splice(i, 1))
+        // Con la tastiera si va al campo che ha preso il suo posto (mai su un'altra ×); col mouse, al foglio.
+        if (ev.detail === 0) (rows[Math.min(i, rows.length - 1)]?.name ?? add).focus()
+        else this.canvas.focus()
+      })
+      row.el.append(row.pk, row.fk, row.name, row.type, row.remove)
+      return row
+    }
+    /** Il pannello come la tabella adesso: le righe che ci sono restano, e si aggiunge o si toglie solo la differenza. */
+    const update = () => {
+      const table = read()
+      title.value = table.name
+      while (rows.length > table.fields.length) rows.pop()!.el.remove()
+      while (rows.length < table.fields.length) {
+        const row = makeRow(rows.length)
+        rows.push(row)
+        list.append(row.el)
+      }
+      table.fields.forEach((field, i) => {
+        const row = rows[i]
+        const label = field.name || `campo ${i + 1}`
+        row.pk.setAttribute('aria-pressed', String(field.pk))
+        row.fk.setAttribute('aria-pressed', String(field.fk))
+        row.pk.title = `Chiave primaria: ${label}`
+        row.fk.title = `Chiave esterna: ${label}`
+        row.pk.setAttribute('aria-label', row.pk.title)
+        row.fk.setAttribute('aria-label', row.fk.title)
+        row.name.value = field.name
+        row.type.value = field.type
+        row.remove.title = `Togli il campo «${label}»`
+        row.remove.setAttribute('aria-label', row.remove.title)
+      })
+      missing.hidden = !table.fields.length || table.fields.some((f) => f.pk)
+      fitTypes()
+    }
+    /** La colonna del tipo larga quanto il tipo più lungo (fino a un massimo): il resto è per i nomi. */
+    const fitTypes = () => {
+      if (!section.isConnected || !rows.length) return
+      const font = getComputedStyle(rows[0].type).font
+      const text = Math.max(...rows.map((r) => textWidth(r.type.value || r.type.placeholder, font)))
+      // In più: i margini interni (10), il bordo (2) e il cursore.
+      section.style.setProperty('--type-width', `${Math.min(124, Math.max(56, Math.ceil(text) + 16))}px`)
+    }
+    keys(title, -1, 'name', () =>
+      write((t) => {
+        t.name = title.value
+      }),
+    )
+    add.addEventListener('click', addField)
+    list.addEventListener('input', (ev) => {
+      if ((ev.target as Element).classList.contains('schema-field-type')) fitTypes()
+    })
+    const section = h(
+      'section',
+      { class: 'schema-format-section schema-table-section' },
+      h('h3', {}, 'Tabella'),
+      title,
+      h('div', { class: 'schema-fields-head', attrs: { 'aria-hidden': 'true' } }, h('span', {}, 'Chiave'), h('span', {}, 'Campo'), h('span', {}, 'Tipo')),
+      list,
+      missing,
+      add,
+      h(
+        'p',
+        { class: 'schema-format-hint' },
+        'Il tipo serve per l\'SQL (per esempio INTEGER, VARCHAR(50), DATE). Sul foglio, con un doppio clic, si scrive un campo per riga: «PK» e «FK» davanti, il tipo dopo i due punti (Matricola: CHAR(6)).',
+      ),
+    )
+    update()
+    return { cell, section, update }
   }
 
   private section(title: string, items: HTMLElement[]): HTMLElement {
@@ -1365,8 +1626,10 @@ class SchemaEditor {
 
     graph.addMouseListener({
       mouseDown: () => {
-        // Un clic sul foglio finisce di scrivere: maxGraph ferma il clic, e il riquadro del testo non perderebbe il cursore.
+        // Un clic sul foglio finisce di scrivere: maxGraph ferma il clic, e il riquadro del testo (o
+        // un campo del pannello) non perderebbe il cursore.
         this.stopEditing(true)
+        if (document.activeElement !== this.canvas) this.canvas.focus({ preventScroll: true })
         this.hideArrows()
       },
       mouseMove: (_sender: unknown, me: InternalMouseEvent) => {
@@ -1435,11 +1698,33 @@ class SchemaEditor {
       if (ev.key === ' ') this.setSpace(false)
     }
     const blur = () => this.setSpace(false)
+    const hold = () => (this.pointerHeld = true)
+    const release = () => {
+      this.pointerHeld = false
+      if (!this.fieldsStale) return
+      // Dopo il clic che segue (e quello che fa), o fra poco se il clic non arriva.
+      const flush = () => {
+        window.removeEventListener('click', flush)
+        clearTimeout(timer)
+        if (!this.pointerHeld && this.fieldsStale) {
+          this.fieldsStale = false
+          this.fieldsView?.update()
+        }
+      }
+      window.addEventListener('click', flush)
+      const timer = window.setTimeout(flush, 500)
+    }
     window.addEventListener('keyup', keyUp)
     window.addEventListener('blur', blur)
+    window.addEventListener('pointerdown', hold, true)
+    window.addEventListener('pointerup', release, true)
+    window.addEventListener('pointercancel', release, true)
     this.cleanups.push(() => {
       window.removeEventListener('keyup', keyUp)
       window.removeEventListener('blur', blur)
+      window.removeEventListener('pointerdown', hold, true)
+      window.removeEventListener('pointerup', release, true)
+      window.removeEventListener('pointercancel', release, true)
     })
   }
 
@@ -1455,8 +1740,6 @@ class SchemaEditor {
 
   private onKey(ev: KeyboardEvent): void {
     const target = ev.target as HTMLElement
-    // I tasti nei menu (frecce, Esc) sono per il menu, non per il foglio.
-    if (target.closest('textarea, input, select, .tool-menu')) return
     const mod = ev.ctrlKey || ev.metaKey
     const key = ev.key.toLowerCase()
     const { graph } = this
@@ -1464,14 +1747,21 @@ class SchemaEditor {
       ev.preventDefault()
       ev.stopPropagation()
     }
+    // Ctrl+S salva nella nota anche da un campo del pannello, con quello che c'è scritto (lasciandolo
+    // si conferma); senza, arriverebbe a «Salva .md» della pagina.
+    if (mod && key === 's' && !target.closest('.tool-menu')) {
+      handled()
+      const field = target instanceof HTMLInputElement ? target : null
+      field?.blur()
+      this.save()
+      field?.focus()
+      return
+    }
+    // I tasti nei menu (frecce, Esc) sono per il menu, non per il foglio.
+    if (target.closest('textarea, input, select, .tool-menu')) return
     if (ev.key === 'Escape') {
       handled()
       graph.clearSelection()
-      return
-    }
-    if (mod && key === 's') {
-      handled()
-      this.save()
       return
     }
     // Sui pulsanti, Invio e spazio li premono.
@@ -1542,7 +1832,16 @@ class SchemaEditor {
     this.redoButton.disabled = !this.undo.canRedo()
     this.empty.hidden = this.graph.getDefaultParent().getChildCount() > 0
     if (this.closed) return
-    if (!this.keepFormat) this.renderFormat()
+    if (!this.keepFormat) {
+      this.fieldsStale = false
+      this.renderFormat()
+    } else if (this.pointerHeld) {
+      // Si è finito di scrivere premendo un pulsante del pannello: se ora la tabella crescesse, il
+      // pulsante scivolerebbe via da sotto il puntatore e il clic andrebbe perso.
+      this.fieldsStale = true
+    } else {
+      this.fieldsView?.update()
+    }
     // Sugli schermi touch le frecce blu seguono la forma selezionata (anche quando la si sposta).
     if (this.touch) this.hideArrows()
   }

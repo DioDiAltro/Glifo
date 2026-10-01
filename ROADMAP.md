@@ -37,10 +37,13 @@ invece del vero draw.io incorporato, perché funziona offline e non manda niente
   provando, per tutte le forme: un clic sul foglio finisce di scrivere (prima il riquadro del testo
   restava aperto); un clic su un colore, mentre si scrive, non va più perso; Ctrl+S, mentre si
   scrive, salva nella nota invece di aprire «Salva pagina con nome» del browser;
-- da decidere con lo studente (sua proposta): i campi delle tabelle con dei pulsanti, cioè chiave
-  primaria ed esterna da attivare (anche tutte e due, come in Esame), il tipo del campo e
-  «+ Aggiungi campo»; poi, se serve, lo schema trasformato in SQL (`CREATE TABLE`, con le chiavi
-  esterne prese dalle frecce tra le tabelle);
+- fatto, su proposta dello studente: i campi delle tabelle nel pannello a destra, con PK ed FK
+  da premere (anche tutte e due, come in Esame), il tipo e «Aggiungi campo»; «Scarica» → «Codice
+  SQL delle tabelle», per il database scelto (SQL standard, PostgreSQL, MySQL/MariaDB, SQLite,
+  Oracle, SQL Server: lo studente non sa ancora quale userà il corso), con le chiavi esterne prese
+  dalle frecce tra le tabelle o dai nomi (`sql.ts`, provato davvero in PostgreSQL e SQLite);
+- più avanti, se servono: il contrario (da un file SQL alle tabelle disegnate) e il passaggio dallo
+  schema E-R alle tabelle (la progettazione logica);
 - più avanti: stampare con i colori del tema chiaro anche se si usa quello scuro; raggruppare le
   forme; altri modelli (per esempio una mappa mentale); le punte «a zampa di gallina» per le
   cardinalità, se servono al corso di basi di dati.

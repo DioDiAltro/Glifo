@@ -119,8 +119,15 @@ chi sta provando Glifo.*
 - **Basi di dati** (gruppo da aprire nel pannello): entità ed entità debole, relazione e relazione
   identificante, attributi (chiave sottolineata, multivalore, derivato, e a pallino come nei libri
   italiani, pieno per l'identificatore), tabella con un campo per riga (`PK` sottolinea la chiave
-  primaria, `FK` segna quella esterna) e database. La tabella si scrive com'è disegnata: il nome
-  nella fascia in alto e i campi sotto, con un doppio clic sul nome o sul campo da cambiare.
+  primaria, `FK` segna quella esterna, anche insieme; il tipo dopo i due punti, `Matricola:
+  CHAR(6)`) e database. La tabella si scrive com'è disegnata: il nome nella fascia in alto e i
+  campi sotto, con un doppio clic sul nome o sul campo da cambiare. Selezionandola, nel pannello a
+  destra la si cambia **campo per campo**: PK ed FK da premere, il nome, il tipo, la × per
+  toglierlo e «Aggiungi campo».
+- **Codice SQL** delle tabelle, da «Scarica»: `CREATE TABLE` con chiavi primarie ed esterne, per
+  SQL standard, PostgreSQL, MySQL/MariaDB, SQLite, Oracle o SQL Server, da scaricare come file
+  `.sql` o copiare. Le chiavi esterne trovano la loro tabella con le frecce tra le tabelle o con i
+  nomi; quello che non si capisce resta in una nota nel codice.
 - **Modelli pronti** da cui partire, sul foglio vuoto o dal menu «Modelli»: diagramma di flusso,
   mappa concettuale, albero, ciclo, linea del tempo, schema E-R e tabelle.
 - Con più forme selezionate (trascinando un riquadro sul foglio vuoto, o con Maiusc + clic):
@@ -287,6 +294,7 @@ src/
     templates.ts          i modelli pronti (diagramma di flusso, mappa concettuale…)
     arrange.ts            allinea e distribuisci (solo i conti)
     image.ts              lo schema come PNG, da scaricare o copiare
+    sql.ts                il codice SQL delle tabelle, per ogni database
     graph.ts              il collegamento con maxGraph: forme, frecce, disegno per l'anteprima
     editor.ts             l'editor a tutto schermo (forme, frecce blu, testo, colori, zoom)
     preview.ts, label.ts  il disegno nell'anteprima; il testo delle forme con le formule

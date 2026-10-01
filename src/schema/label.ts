@@ -1,6 +1,6 @@
 import { escapeHtml, renderTexMathml, renderTexOrError } from '../render/katex'
 import { matchInlineMath } from '../render/mathDelims'
-import { splitTable, tableField, tableMetricsFor } from './model'
+import { parseTable, tableMetricsFor } from './model'
 
 /** Testo semplice in HTML: `\$` è un dollaro, gli a capo restano. */
 function plainHtml(text: string): string {
@@ -32,20 +32,23 @@ export function labelHtml(text: string, mathml = false): string {
 const LINE = 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis'
 
 /**
- * Il testo di una tabella: la prima riga è il nome, le altre i campi, uno per riga. «PK» o «FK»
- * all'inizio di un campo lo segnano come chiave primaria (sottolineata) o esterna. Le altezze
- * sono quelle con cui la forma disegna la fascia del nome (tableMetricsFor).
+ * Il testo di una tabella: la prima riga è il nome, le altre i campi, uno per riga. «PK» e «FK»
+ * all'inizio di un campo lo segnano come chiave primaria (sottolineata) o esterna, anche tutte e
+ * due; il tipo, dopo i due punti, sta a destra, più chiaro. Le altezze sono quelle con cui la
+ * forma disegna la fascia del nome (tableMetricsFor).
  */
 export function tableHtml(text: string, fontSize: number, mathml = false): string {
   const { head, row } = tableMetricsFor(fontSize)
-  const { name, fields: lines } = splitTable(text)
-  const fields = lines ? lines.split('\n').map(tableField) : []
+  const { name, fields } = parseTable(text)
   // Se c'è almeno una chiave, i nomi dei campi stanno tutti in colonna dopo «PK» e «FK».
-  const tags = fields.some((f) => f.key)
+  const tags = fields.some((f) => f.pk || f.fk)
+  const width = fields.some((f) => f.pk && f.fk) ? 4.2 : 2.4
   const rows = fields.map((f) => {
-    const tag = tags ? `<span style="display:inline-block;width:2.4em;font-size:0.72em;font-weight:700;opacity:0.7">${f.key}</span>` : ''
+    const keys = [f.pk ? 'PK' : '', f.fk ? 'FK' : ''].filter(Boolean).join(' ')
+    const tag = tags ? `<span style="flex:none;width:${width}em;font-size:0.72em;font-weight:700;opacity:0.7">${keys}</span>` : ''
     const body = labelHtml(f.name, mathml)
-    return `<div style="height:${row}px;line-height:${row}px;padding:0 8px;text-align:left;${LINE}">${tag}${f.key === 'PK' ? `<u>${body}</u>` : body}</div>`
+    const type = f.type ? `<span style="flex:none;margin-left:8px;font-size:0.8em;opacity:0.6">${labelHtml(f.type, mathml)}</span>` : ''
+    return `<div style="display:flex;align-items:baseline;height:${row}px;line-height:${row}px;padding:0 8px;text-align:left;white-space:nowrap">${tag}<span style="flex:1;min-width:0;${LINE}">${f.pk ? `<u>${body}</u>` : body}</span>${type}</div>`
   })
   const title = `<div style="height:${head}px;line-height:${head}px;padding:0 8px;text-align:center;font-weight:600;${LINE}">${labelHtml(name, mathml)}</div>`
   return `${title}<div style="padding:5px 0">${rows.join('')}</div>`

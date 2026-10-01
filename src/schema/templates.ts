@@ -137,16 +137,19 @@ const er: Schema = {
   ],
 }
 
-/** Lo stesso esempio come tabelle (schema relazionale): le frecce vanno dalle chiavi esterne. */
+/**
+ * Lo stesso esempio come tabelle (schema relazionale), con i tipi per l'SQL: le frecce vanno
+ * dalle chiavi esterne. In Esame la chiave primaria è fatta di due chiavi esterne.
+ */
 function table(id: string, x: number, text: string): SchemaNode {
-  return node(id, 'table', x, 0, text, { h: tableHeight(text, 'm') })
+  return node(id, 'table', x, 0, text, { w: 210, h: tableHeight(text, 'm') })
 }
 
 const tables: Schema = {
   nodes: [
-    table('studente', 0, 'Studente\nPK Matricola\nNome\nCognome'),
-    table('esame', 260, 'Esame\nPK Matricola\nPK Corso\nVoto\nData'),
-    table('corso', 520, 'Corso\nPK Codice\nTitolo\nCrediti'),
+    table('studente', 0, 'Studente\nPK Matricola: CHAR(6)\nNome: VARCHAR(50)\nCognome: VARCHAR(50)'),
+    table('esame', 290, 'Esame\nPK FK Matricola: CHAR(6)\nPK FK Corso: CHAR(5)\nVoto: INTEGER\nData: DATE'),
+    table('corso', 580, 'Corso\nPK Codice: CHAR(5)\nTitolo: VARCHAR(100)\nCrediti: INTEGER'),
   ],
   edges: [edge('e1', 'esame', 'studente'), edge('e2', 'esame', 'corso')],
 }

@@ -51,7 +51,9 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   Le forme in più (anche quelle delle basi di dati: entità debole, attributi a pallino, tabella)
   sono in `shapes.ts`; il testo delle tabelle (nome, campi, PK/FK) lo fa `tableHtml` in
   `label.ts`, e nell'editor si scrive in due parti, il nome e i campi (`splitTable`/`joinTable`
-  in `model.ts`). I modelli pronti sono in `templates.ts`, allinea e
+  in `model.ts`). Una riga di campo è `PK FK Nome: TIPO` (`tableField`/`fieldLine`); il pannello a
+  destra cambia gli stessi campi (`tableSection` nell'editor) e `sql.ts` ne fa il codice SQL per
+  ogni database (i test lo eseguono in PGlite e in SQLite). I modelli pronti sono in `templates.ts`, allinea e
   distribuisci in `arrange.ts`, PNG e «Copia come immagine» in `image.ts`. Menu e messaggi
   dentro l'editor vanno messi nella sua finestra (è modale: fuori restano sotto).
 - `src/ai/`: assistente AI. `src/host.ts`: funzioni della demo dentro claude.ai.

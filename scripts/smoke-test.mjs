@@ -956,7 +956,92 @@ try {
     dbPreview.includes('Corso') && (await tableItem.isVisible()),
     'l\'anteprima disegna le forme dei database, e riaprendo l\'editor «Basi di dati» è ancora aperto',
   )
-  await db.locator('dialog.schema-editor button', { hasText: 'Chiudi' }).click()
+  // Il pannello «Tabella»: il tipo, «Aggiungi campo» (Invio sull'ultimo ne aggiunge un altro), la ×,
+  // PK ed FK insieme; Ctrl+S da un campo del pannello salva nella nota, un clic sul foglio conferma.
+  const studenteHead = await rowAt('Studente')
+  await db.mouse.click(studenteHead.x, studenteHead.y)
+  // Il nome cambiato sul foglio si vede subito nel pannello; e dal pannello torna com'era.
+  await db.mouse.dblclick(studenteHead.x, studenteHead.y)
+  await db.keyboard.type('Allievo')
+  await db.keyboard.press('Escape')
+  const titleFromSheet = await db.locator('.schema-table-section .schema-table-title').inputValue()
+  await db.locator('.schema-table-section .schema-table-title').fill('Studente')
+  await db.keyboard.press('Enter')
+  const fieldRow = (i) => db.locator('.schema-table-section .schema-field').nth(i)
+  const panelRows = () =>
+    db.evaluate(() =>
+      [...document.querySelectorAll('.schema-table-section .schema-field')].map((r) =>
+        [r.children[0].getAttribute('aria-pressed') === 'true' ? 'PK' : '', r.children[1].getAttribute('aria-pressed') === 'true' ? 'FK' : '', r.children[2].value, r.children[3].value].join('|'),
+      ),
+    )
+  const panelBefore = await panelRows()
+  await fieldRow(0).locator('.schema-field-type').fill('CHAR(6)')
+  await db.keyboard.press('Enter')
+  const afterEnter = await db.evaluate(() => document.activeElement?.value)
+  await db.locator('.schema-table-section .schema-field-add').click()
+  await db.keyboard.type('Email')
+  await db.keyboard.press('Enter')
+  const added = await panelRows()
+  await fieldRow(5).locator('.schema-field-remove').click()
+  await fieldRow(3).locator('.schema-field-key').first().click()
+  await fieldRow(1).locator('.schema-field-type').fill('VARCHAR(30)')
+  await db.evaluate(() => window.addEventListener('keydown', (e) => e.key === 's' && (window.__panelS = e), true))
+  await db.keyboard.press('Control+s')
+  const panelSave = await db.evaluate(() => ({ prevented: window.__panelS?.defaultPrevented, status: document.querySelector('.schema-status').textContent }))
+  await fieldRow(2).locator('.schema-field-type').fill('VARCHAR(40)')
+  // Un clic sulla tabella stessa: resta selezionata (il pannello non si rifà), ma il campo si conferma.
+  const studenteAgain = await rowAt('Studente')
+  await db.mouse.click(studenteAgain.x, studenteAgain.y)
+  const committedByClick = await db.evaluate(() => [...document.querySelectorAll('.schema-canvas foreignObject')].some((f) => f.textContent.includes('VARCHAR(40)')))
+  check(
+    titleFromSheet === 'Allievo' && committedByClick,
+    `il pannello segue la tabella scritta sul foglio, e un clic sul foglio (anche sulla tabella) conferma subito un campo del pannello (${titleFromSheet}, ${committedByClick})`,
+  )
+  check(
+    panelBefore.join() === 'PK||Matricola|,||Nome|,||Cognome|,|FK|Corso|' &&
+      afterEnter === 'Nome' &&
+      added.slice(4).join() === '||Email|,||Campo|' &&
+      panelSave.prevented &&
+      panelSave.status === 'Salvato nella nota',
+    `nel pannello si danno i tipi, si aggiungono e si tolgono i campi, e Ctrl+S salva nella nota (${JSON.stringify({ panelBefore, afterEnter, added, panelSave })})`,
+  )
+  // Il codice SQL: si sceglie il database, si scarica; Glifo si ricorda la scelta.
+  await db.locator('.schema-menu-button', { hasText: 'Scarica' }).click()
+  await db.locator('.tool-menu-item', { hasText: 'Codice SQL' }).click()
+  await db.locator('dialog.dialog-sql select').selectOption('postgresql')
+  const [sqlDownload] = await Promise.all([db.waitForEvent('download'), db.locator('dialog.dialog-sql button', { hasText: 'Scarica .sql' }).click()])
+  const sqlFile = readFileSync(await sqlDownload.path(), 'utf8')
+  await db.keyboard.press('Escape')
+  await db.locator('dialog.dialog-sql').waitFor({ state: 'detached' })
+  await db.locator('.schema-menu-button', { hasText: 'Scarica' }).click()
+  await db.locator('.tool-menu-item', { hasText: 'Codice SQL' }).click()
+  const remembered = await db.locator('dialog.dialog-sql select').inputValue()
+  await db.keyboard.press('Escape')
+  await db.locator('dialog.dialog-sql').waitFor({ state: 'detached' })
+  check(
+    sqlDownload.suggestedFilename() === 'Basi-di-dati-tabelle.sql' &&
+      sqlFile.startsWith('-- Tabelle per PostgreSQL') &&
+      sqlFile.includes('CREATE TABLE Studente (\n  Matricola CHAR(6) NOT NULL,') &&
+      sqlFile.includes('  PRIMARY KEY (Matricola, Corso)') &&
+      sqlFile.includes('«Studente.Corso» è una chiave esterna, ma non si capisce di quale tabella') &&
+      remembered === 'postgresql',
+    `«Scarica» → «Codice SQL delle tabelle» scarica il codice per il database scelto, e lo ricorda (${sqlDownload.suggestedFilename()}: ${JSON.stringify(sqlFile.slice(0, 400))})`,
+  )
+  await db.locator('dialog.schema-editor .btn-primary', { hasText: 'Fatto' }).click()
+  await dbEditor.waitFor({ state: 'detached' })
+  await db.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  const studenteText = await db.evaluate(() => {
+    for (let i = 0; i < localStorage.length; i++) {
+      const value = localStorage.getItem(localStorage.key(i)) ?? ''
+      const m = value.startsWith('# Basi di dati') && /```schema\n([\s\S]*?)\n```/.exec(value)
+      if (m) return JSON.parse(m[1]).nodes.find((n) => n.shape === 'table')?.text
+    }
+    return ''
+  })
+  check(
+    studenteText === 'Studente\nPK Matricola: CHAR(6)\nNome: VARCHAR(30)\nCognome: VARCHAR(40)\nPK FK Corso\nEmail',
+    `nella nota la tabella ha i tipi e PK FK, anche il tipo confermato con un clic sul foglio (${JSON.stringify(studenteText)})`,
+  )
   await db.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)

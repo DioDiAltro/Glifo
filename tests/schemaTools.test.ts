@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { alignBoxes, distributeBoxes, type Box } from '../src/schema/arrange'
 import { crc32, withDensity } from '../src/schema/image'
 import { tableHtml } from '../src/schema/label'
-import { joinTable, parseSchema, serializeSchema, SHAPES, splitTable, tableField, tableHeight } from '../src/schema/model'
+import { fieldLine, joinTable, parseSchema, parseTable, serializeSchema, SHAPES, splitTable, tableField, tableHeight, tableText } from '../src/schema/model'
 import { TEMPLATES } from '../src/schema/templates'
 
 const boxes: Box[] = [
@@ -163,12 +163,49 @@ describe('basi di dati e frecce curve', () => {
     }
   })
 
-  it('PK e FK davanti a un campo: dove comincia il nome, per selezionarlo', () => {
-    expect(tableField('PK Matricola')).toEqual({ key: 'PK', name: 'Matricola', start: 3 })
-    expect(tableField('  fk   Corso di laurea')).toEqual({ key: 'FK', name: 'Corso di laurea', start: 7 })
-    expect(tableField('Voto')).toEqual({ key: '', name: 'Voto', start: 0 })
-    // «PK» da solo, o attaccato al nome, è un campo che si chiama così.
-    expect(tableField('PK')).toEqual({ key: '', name: 'PK', start: 0 })
-    expect(tableField('PKey')).toEqual({ key: '', name: 'PKey', start: 0 })
+  it('un campo: PK, FK o tutte e due davanti, il nome e, dopo i due punti, il tipo', () => {
+    const field = (pk: boolean, fk: boolean, name: string, type: string, start: number) => ({ pk, fk, name, type, start })
+    expect(tableField('PK Matricola')).toEqual(field(true, false, 'Matricola', '', 3))
+    expect(tableField('  fk   Corso di laurea')).toEqual(field(false, true, 'Corso di laurea', '', 7))
+    expect(tableField('PK FK Matricola: CHAR(6)')).toEqual(field(true, true, 'Matricola', 'CHAR(6)', 6))
+    expect(tableField('fk pk Corso :  decimal(8, 2) ')).toEqual(field(true, true, 'Corso', 'decimal(8, 2)', 6))
+    expect(tableField('Voto')).toEqual(field(false, false, 'Voto', '', 0))
+    // «PK» da solo è una chiave ancora senza nome; attaccato al nome è un nome.
+    expect(tableField('PK')).toEqual(field(true, false, '', '', 2))
+    expect(tableField('PKey')).toEqual(field(false, false, 'PKey', '', 0))
+    // I due punti dentro una formula non fanno un tipo.
+    expect(tableField('Rapporto $a:b$')).toEqual(field(false, false, 'Rapporto $a:b$', '', 0))
+  })
+
+  it('la riga di un campo e il testo di una tabella tornano come erano', () => {
+    for (const line of ['PK Matricola', 'PK FK Matricola: CHAR(6)', 'FK Corso', 'Voto: INTEGER', 'Nome']) {
+      expect(fieldLine(tableField(line))).toBe(line)
+    }
+    expect(fieldLine({ pk: false, fk: true, name: 'Corso', type: '  ' })).toBe('FK Corso')
+    const text = 'Esame\nPK FK Matricola: CHAR(6)\nPK FK Corso\nVoto: INTEGER'
+    const table = parseTable(text)
+    expect(table.name).toBe('Esame')
+    expect(table.fields.map((f) => [f.pk, f.fk, f.name, f.type])).toEqual([
+      [true, true, 'Matricola', 'CHAR(6)'],
+      [true, true, 'Corso', ''],
+      [false, false, 'Voto', 'INTEGER'],
+    ])
+    expect(tableText(table)).toBe(text)
+    expect(parseTable('Solo il nome').fields).toEqual([])
+    // Scritti in un altro ordine o in minuscolo, tornano nella forma solita.
+    expect(tableText(parseTable('Esame\nfk pk Corso :INTEGER'))).toBe('Esame\nPK FK Corso: INTEGER')
+  })
+
+  it('nel disegno della tabella PK e FK stanno insieme e il tipo è a destra', () => {
+    const box = document.createElement('div')
+    box.innerHTML = tableHtml('Esame\nPK FK Matricola: CHAR(6)\nVoto: INTEGER', 14)
+    const rows = [...box.children[1].children] as HTMLElement[]
+    expect(rows.map((r) => [...r.children].map((c) => c.textContent))).toEqual([
+      ['PK FK', 'Matricola', 'CHAR(6)'],
+      ['', 'Voto', 'INTEGER'],
+    ])
+    expect(rows[0].querySelector('u')?.textContent).toBe('Matricola')
+    // Con una chiave doppia la colonna di PK e FK è più larga.
+    expect((rows[0].children[0] as HTMLElement).style.width).toBe('4.2em')
   })
 })
