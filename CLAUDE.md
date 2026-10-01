@@ -95,3 +95,19 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
 - Solo servizi gratuiti, finché lo studente non decide diversamente.
 - Se cambia quali dati Glifo tiene o a quali servizi li manda (per esempio l'accesso con
   Google), aggiorna `privacy.html` e la sua data.
+
+## Come controllare il lavoro
+
+- Online si dice solo dopo averlo visto: dopo il push, sul branch `gh-pages` deve arrivare il
+  commit «Pubblica <sha>» e su GitHub l'azione «pages build and deployment» deve finire con
+  successo.
+- Controprove: dopo una correzione rimetti apposta il difetto e guarda che un test fallisca. Per
+  tornare indietro copia i file da una copia di riserva fatta prima: mai `git checkout` o
+  `git stash` con modifiche non ancora nel commit (si perderebbero). Niente commit né build
+  mentre una controprova è in corso.
+- `tsc` controlla anche `tests/`, ma i tipi di Node non ci sono: i moduli `node:` nei test si
+  importano con un nome composto al momento (vedi `sqlite()` in `tests/schemaSql.test.ts`).
+- Gli strumenti che modificano i file trasformano `\u003c` scritto con una barra sola nel
+  carattere vero: per scriverlo così com'è usa Python con `chr(92)` o lo strumento Write.
+- Le prove nel browser si fanno con script Playwright (Chromium in `CHROMIUM_PATH`), anche per
+  fotografare l'app e mostrare allo studente come viene.

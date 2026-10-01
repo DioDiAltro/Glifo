@@ -144,8 +144,8 @@ Perché non gli altri:
 
 ### Schemi: idee in più
 
-Gli schemi sono fatti, con lo studente (ottobre 2026): editor stile draw.io con maxGraph, che
-funziona offline; forme, frecce curve, modelli pronti, allinea e distribuisci, immagini PNG e SVG;
+Gli schemi sono fatti, con lo studente (ottobre 2026): editor stile draw.io con maxGraph (scelto
+al posto del vero draw.io incorporato perché funziona offline e non manda niente a nessuno); forme, frecce curve, modelli pronti, allinea e distribuisci, immagini PNG e SVG;
 le figure delle basi di dati (E-R come nell'Atzeni, tabelle con PK, FK e tipi) e il codice SQL
 delle tabelle per più database. Tutto è descritto nel README. Se serviranno:
 
