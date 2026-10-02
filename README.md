@@ -401,6 +401,6 @@ all'app, in `licenze/`.
 
 ## Idee per il futuro
 
-Gli **account** ci sono, in prova. In programma: aprirli a tutti (anche con l'accesso con
-Google), poi mandare note ad altri e cartelle condivise. I dettagli, con le altre idee, sono
+Gli **account** ci sono, in prova: si entra con Google o con un'email. In programma: aprirli a
+tutti, poi mandare note ad altri e cartelle condivise. I dettagli, con le altre idee, sono
 in [ROADMAP.md](ROADMAP.md).

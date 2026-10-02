@@ -113,27 +113,45 @@ L'email per entrare:
 
 ### Accesso con Google
 
-Glifo chiama `signInWithOAuth({ provider: 'google' })` e torna con `?code=…`, come il link
-dell'email. Prima legge `/auth/v1/settings`: se Google non è attivo, lo dice nella finestra
-invece di mandare su una pagina di errore. Con la stessa email di un account già esistente,
-Supabase collega Google a quell'account: note e impostazioni restano le stesse.
+Attivo dal 2 ottobre 2026. Glifo chiama `signInWithOAuth({ provider: 'google' })` e torna con
+`?code=…`, come il link dell'email. Prima legge `/auth/v1/settings`: se Google non è attivo, lo
+dice nella finestra invece di mandare su una pagina di errore. Con la stessa email di un account
+già esistente, Supabase collega Google a quell'account: note e impostazioni restano le stesse.
 
-Per attivarlo (gratis, senza carta di credito):
+Come è stato attivato (gratis, senza carta di credito), anche per rifarlo:
 
-1. In [Google Cloud](https://console.cloud.google.com/) si crea un progetto «Glifo». Nella
-   [Google Auth Platform](https://console.cloud.google.com/auth/overview), «Get started»:
+1. In [Google Cloud](https://console.cloud.google.com/) c'è il progetto «Glifo», con «Nessuna
+   organizzazione». Se un giorno S&Z avrà un'organizzazione Google (Workspace, o Cloud Identity
+   Free sul suo dominio), il progetto si sposta dentro senza rifarlo.
+2. Nella [Google Auth Platform](https://console.cloud.google.com/auth/overview), «Get started»:
    - nome dell'app «Glifo», email di assistenza;
    - pubblico «External»;
    - email di contatto.
-2. In **Audience** l'app resta «Testing»: entrano solo gli indirizzi aggiunti tra i «Test
+
+   In **Branding** niente logo: il logo va fatto verificare da Google.
+3. In **Audience** l'app resta «Testing»: entrano solo gli indirizzi aggiunti tra i «Test
    users» (fino a 100). Quando l'account si apre a tutti, «Publish app».
-3. In **Clients** → «Create client», tipo «Web application»:
+4. In **Data Access** → «Add or remove scopes»: `openid`, `.../auth/userinfo.email` e
+   `.../auth/userinfo.profile`, come chiede la guida di Supabase.
+5. In **Clients** → «Create client», tipo «Web application»:
    - *Authorized JavaScript origins*: `https://diodialtro.github.io`;
    - *Authorized redirect URIs*: `https://fgsuonetdmcgojbvrsxi.supabase.co/auth/v1/callback`.
 
-   Poi si copiano «Client ID» e «Client secret».
-4. In Supabase, Authentication → Sign In / Providers → **Google**: si attiva, e si incollano
-   Client ID e Client secret. Il secret va solo lì.
+   Poi si copiano subito «Client ID» e «Client secret»: il secret Google lo mostra per intero
+   solo quando crea il client. Se si perde, se ne crea un altro dalla pagina del client e lo si
+   rimette in Supabase.
+6. In Supabase, Authentication → Sign In / Providers → **Google**: si attiva, e si incollano
+   Client ID e Client secret. Il secret va solo lì. Il Site URL resta quello di Glifo (vedi
+   sopra).
+
+Un client nuovo, anche in un altro progetto Google, non cambia gli account: Google dà a ogni
+persona lo stesso identificativo in tutti i progetti.
+
+Per controllare che funzioni si guardano i registri di Supabase (Logs → Auth, o `query_logs` del
+connettore). Un accesso riuscito passa da `/authorize` («Redirecting to external provider»),
+`/callback` e `/token`, con `provider: google`; la prima volta per un account che c'era già
+compare anche `identity_linked`. Le chiamate a `/callback` con «OAuth state parameter missing»
+non sono accessi veri: qualcuno, o un programma, ha aperto quell'indirizzo direttamente.
 
 La pagina di Google mostra l'indirizzo di Supabase (`fgsuonetdmcgojbvrsxi.supabase.co`) al posto
 di «Glifo». Si può cambiare in due modi: con la verifica del marchio da parte di Google, o con

@@ -91,9 +91,6 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
 
 Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui quando sono fatte):
 
-- Attivare l'accesso con Google: progetto in Google Cloud e attivazione in Supabase, con i
-  passi in `supabase/README.md` («Accesso con Google»). Poi controlla nei registri di Supabase
-  (`query_logs`, servizio auth) che l'accesso con Google sia riuscito.
 - Decidere se Glifo passa sotto S&Z (dominio `seznet.net`) e dare un'email di contatto per
   l'informativa (`privacy.html`): vedi il passo 4 in ROADMAP.md.
 

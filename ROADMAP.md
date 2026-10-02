@@ -14,10 +14,11 @@ il lavoro si parte da qui, e quando una voce è fatta si toglie.
 Gli appunti si possono mandare a un'altra persona o tenere in una cartella condivisa. Più
 avanti l'account servirà anche per l'abbonamento (vedi «Più avanti»).
 
-**Oggi:** l'account c'è, in prova. Si entra con un'email e gli appunti si sincronizzano tra
-i dispositivi (passi 1-3 qui sotto). Le email però arrivano solo ai membri del team
-Supabase, quindi per ora lo può usare solo il proprietario del progetto. Chi non accede
-continua a usare Glifo come prima, con gli appunti nel browser.
+**Oggi:** l'account c'è, in prova. Si entra con Google o con un'email e gli appunti si
+sincronizzano tra i dispositivi (passi 1-3 e l'accesso con Google del passo 4). Per ora entrano
+in pochi: con Google gli indirizzi aggiunti tra i «Test users» dell'app Google (fino a 100),
+con l'email i membri del team Supabase. Chi non accede continua a usare Glifo come prima, con
+gli appunti nel browser.
 
 **Servizio scelto: Supabase**, sul piano gratuito (progetto `glifo`, vedi
 [supabase/README.md](supabase/README.md)). Dà già pronti database (Postgres), login e
@@ -44,8 +45,8 @@ Da sapere (dati controllati il 30/09/2026):
 - Per mandare le email di accesso agli utenti serve un servizio di posta nostro (SMTP):
   gratis con un account Gmail, oppure con un dominio (es. glifo.app, circa 10-20 € l'anno,
   che può ospitare anche il sito) e un servizio come Resend. Per le prove basta l'email del
-  proprietario, a cui Supabase scrive da solo. Senza email si può aprire l'accesso con
-  Google (vedi il passo 4).
+  proprietario, a cui Supabase scrive da solo. Intanto si entra anche con Google (vedi il
+  passo 4).
 
 Perché non gli altri:
 
@@ -92,11 +93,10 @@ Perché non gli altri:
    - i test usano le vere migrazioni in un Postgres in memoria (PGlite), anche nella prova
      nel browser con un Supabase finto (`scripts/fake-supabase.mjs`).
 4. **Aprire l'account a tutti** (il prossimo, gratis):
-   - accesso con Google: nell'app è fatto («Continua con Google» nella finestra di accesso;
-     con la stessa email si ritrova lo stesso account). Da fare, dallo studente: il progetto
-     Google Cloud e l'attivazione in Supabase, con i passi in
-     [supabase/README.md](supabase/README.md) («Accesso con Google»). Finché l'app Google è
-     «Testing» entrano solo gli indirizzi aggiunti come «Test users»;
+   - fatto (2 ottobre 2026): accesso con Google, attivo («Continua con Google» nella finestra
+     di accesso; con la stessa email si ritrova lo stesso account). L'app Google è ancora
+     «Testing»: entrano solo gli indirizzi aggiunti come «Test users». Per aprirla a tutti,
+     «Publish app» (vedi [supabase/README.md](supabase/README.md), «Accesso con Google»);
    - fatto: informativa sulla privacy (`privacy.html`, collegata dalla finestra di accesso,
      dall'account e dalle impostazioni), «Scarica i miei dati» (tutto l'account in un file
      che «Ripristina backup» rilegge) ed «Elimina account» (funzione `delete_account` nel
@@ -114,7 +114,7 @@ Perché non gli altri:
      - indirizzo: `glifo.seznet.net` è gratis con GitHub Pages. Attenzione: le note salvate
        solo nel browser restano legate al vecchio indirizzo, quindi prima del cambio serve un
        modo per portarle (l'account o un backup), e vanno aggiornati Site URL e Redirect URLs
-       di Supabase;
+       di Supabase e le «Authorized JavaScript origins» del client Google;
    - CAPTCHA contro le iscrizioni automatiche (Cloudflare Turnstile, gratis) e limiti di
      spazio da rivedere (oggi 20 MB di note per account);
    - un servizio di posta nostro (SMTP): serve per scrivere a chi non è nel team e per
