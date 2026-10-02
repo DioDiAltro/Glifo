@@ -1232,6 +1232,23 @@ try {
     [...Array(localStorage.length).keys()].map((i) => localStorage.getItem(localStorage.key(i))).filter((v) => v?.startsWith('# Grafici')),
   )
   check(reopened[0] === reopened[1], 'riaprendo il file i grafici tornano blocchi ```grafico, come prima')
+  // Un integrale: il risultato dopo «=», la sua area nel pannello e, con «Inserisci il grafico», nella nota
+  await gp.locator('.notes-head button[aria-label="Nuova nota"]').click()
+  await gp.keyboard.press('Control+a')
+  await gp.keyboard.type('# Area\n\nVale $\\int_0^2 x^2 \\, dx =')
+  await gp.waitForSelector('.cm-calc-result')
+  await gp.waitForSelector('.formula-graph:not([hidden]) svg path[data-area]', { timeout: 5000 })
+  await gp.locator('.formula-graph-insert').click()
+  await gp.waitForSelector('.preview-pane .graph-block .graph-swatch.is-area', { timeout: 5000 })
+  await gp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  const areaLegend = await gp.locator('.preview-pane .graph-legend').innerText()
+  const areaNote = await gp.evaluate(() =>
+    [...Array(localStorage.length).keys()].map((i) => localStorage.getItem(localStorage.key(i)) ?? '').find((v) => v.startsWith('# Area')),
+  )
+  check(
+    areaNote?.includes('```grafico\n\\int_0^2 x^2 \\, dx\n```') && areaLegend.includes('2,666666') && (await gp.locator('.preview-pane .graph-block path[data-area]').count()) === 1,
+    `un integrale ha la sua area nel pannello e nella nota, con il valore nella legenda (${JSON.stringify({ areaLegend, note: areaNote?.slice(-50) })})`,
+  )
   await gp.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)

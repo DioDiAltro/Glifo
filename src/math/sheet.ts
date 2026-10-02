@@ -83,7 +83,7 @@ export function splitPieces(tex: string): string[] {
 }
 
 /** Le parti di una catena a = b = c, divise agli uguali fuori dalle parentesi. */
-function splitEquals(tex: string): string[] {
+export function splitEquals(tex: string): string[] {
   const parts: string[] = []
   let depth = 0
   let start = 0

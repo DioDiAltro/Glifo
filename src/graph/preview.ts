@@ -515,7 +515,7 @@ class GraphView {
       .map(({ item, color }) => {
         const { html, error } = renderTex(item.label)
         const label = error ? `<code>${escapeHtml(item.label)}</code>` : html
-        const swatch = item.kind === 'point' ? 'graph-swatch is-point' : 'graph-swatch'
+        const swatch = item.kind === 'point' ? 'graph-swatch is-point' : item.kind === 'area' ? 'graph-swatch is-area' : 'graph-swatch'
         const coords = item.kind === 'point' ? ` <span class="graph-coords">${escapeHtml(`(${coord(item.x, 1e-3)}; ${coord(item.y, 1e-3)})`)}</span>` : ''
         return `<li><span class="${swatch}" style="--graph-color:${color}"></span>${label}${coords}</li>`
       })
@@ -707,7 +707,7 @@ class GraphView {
     let best: { sx: number; sy: number; x: number; y: number; color: string } | null = null
     let bestDistance = 22
     this.spec.items.forEach((item, i) => {
-      if (item.kind === 'function') {
+      if (item.kind === 'function' || (item.kind === 'area' && item.curve)) {
         const y = item.f(x)
         if (!Number.isFinite(y)) return
         const sy = (v.y1 - y) * ky

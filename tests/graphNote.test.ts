@@ -109,6 +109,18 @@ describe('i grafici nell\'anteprima', () => {
     expect(error).toContain('Manca l\'esponente')
   })
 
+  it('l\'area di un integrale ha nella legenda la sua velatura e il valore', () => {
+    const host = preview('```grafico\n' + r`\int_0^2 x^2 \, dx` + '\n```\n')
+    hydrateGraphs(host, light)
+    const block = host.querySelector<HTMLElement>('.graph-block')!
+    expect(block.querySelector('svg path[data-area="0"]')).not.toBeNull()
+    expect(block.querySelector('svg path[data-item="0"]')).not.toBeNull()
+    const legend = block.querySelector('.graph-legend li')!
+    expect(legend.querySelector('.graph-swatch.is-area')).not.toBeNull()
+    expect(legend.textContent).toContain('2,666666')
+    expect(block.querySelector('.graph-errors')).toBeNull()
+  })
+
   it('un blocco vuoto dice cosa scrivere', () => {
     const host = preview('```grafico\n```\n')
     hydrateGraphs(host, { theme: 'dark', surface: '#000' })
@@ -349,6 +361,15 @@ describe('il pulsante «Grafico» e la formula sotto il cursore', () => {
     expect(formulaAtCursor(v)).toBeNull()
   })
 
+  it('con il cursore su un integrale mette nel blocco l\'integrale, senza l\'uguale e il risultato', () => {
+    const doc = r`$f(x) = x^2$ e $\int_0^2 f(x)\,dx = 2{,}666666\ldots$`
+    const v = makeView(doc, doc.indexOf('dx'))
+    const f = formulaAtCursor(v)!
+    expect(f).toEqual({ tex: r`\int_0^2 f(x)\,dx`, defs: ['f(x) = x^2'], to: doc.length })
+    insertGraphBlock(v, f.tex, f.to)
+    expect(v.state.doc.toString()).toBe(doc + '\n\n```grafico\n' + r`\int_0^2 f(x)\,dx` + '\n```\n')
+  })
+
   it('mette il grafico su righe sue, dopo la riga della formula', () => {
     const doc = 'Sia $y = x^2$ la parabola.\nAltro'
     const v = makeView(doc, 6)
@@ -397,6 +418,13 @@ describe('i grafici nei file .md', () => {
     expect(svg).toContain('<foreignObject')
     expect(svg).toContain('<math')
     expect(svg).toContain('fill="#ffffff"')
+  })
+
+  it('nella legenda dell\'immagine l\'area ha la sua velatura', () => {
+    const svg = graphImage(r`\int_0^2 x^2 \, dx`)
+    expect(svg).toContain('data-area="0"')
+    expect(svg).toContain('background:rgba(42, 120, 214, 0.18)')
+    expect(new DOMParser().parseFromString(svg, 'image/svg+xml').querySelector('parsererror')).toBeNull()
   })
 
   it('i grafici nel file usano le definizioni della nota', () => {

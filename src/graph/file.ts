@@ -17,7 +17,7 @@ import { findFencedBlocks } from '../schema/blocks'
 import { base64 } from '../schema/file'
 import { chooseWindow } from './plot'
 import { parseGraph } from './spec'
-import { graphSvg, graphTitle, itemColors, PALETTES, escapeXml } from './svg'
+import { areaColor, graphSvg, graphTitle, itemColors, PALETTES, escapeXml } from './svg'
 
 const MARKER = 'glifo-grafico'
 const HINT = 'per modificare il grafico apri questo file con Glifo'
@@ -62,7 +62,9 @@ export function graphImage(source: string, defs: readonly string[] = []): string
         const swatch =
           item.kind === 'point'
             ? `<span style="width:9px;height:9px;border-radius:50%;background:${color}"></span>`
-            : `<span style="width:18px;height:3px;border-radius:2px;background:${color}"></span>`
+            : item.kind === 'area'
+              ? `<span style="width:18px;height:12px;box-sizing:border-box;border-top:3px solid ${color};border-radius:2px 2px 0 0;background:${areaColor(color, palette)}"></span>`
+              : `<span style="width:18px;height:3px;border-radius:2px;background:${color}"></span>`
         return `<div style="display:flex;align-items:center;gap:8px;height:28px">${swatch}${renderTexMathml(item.label)}</div>`
       })
       .concat(numbers.length ? [`<div style="display:flex;align-items:center;height:28px">${renderTexMathml(numbers.join(', \\quad '))}</div>`] : [])

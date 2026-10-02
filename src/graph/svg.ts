@@ -3,7 +3,7 @@
  * Lo stesso disegno serve all'anteprima (con i colori del tema) e alle immagini nei file .md.
  */
 import { withWorkLimit } from '../math/evaluate'
-import { sampleFunction, sampleImplicit, sampleParametric, ticks, type Polyline, type Viewport } from './plot'
+import { sampleArea, sampleFunction, sampleImplicit, sampleParametric, ticks, type Polyline, type Viewport } from './plot'
 import { GRAPH_WORK, type GraphItem, type GraphSpec } from './spec'
 
 export interface Palette {
@@ -17,6 +17,8 @@ export interface Palette {
   text: string
   /** I colori delle curve, nell'ordine (vedi la skill dataviz: validati per i due temi). */
   series: readonly string[]
+  /** Quanto si vede il colore delle aree degli integrali: una velatura, la griglia resta visibile. */
+  area: number
 }
 
 export const PALETTES: Record<'light' | 'dark', Palette> = {
@@ -28,6 +30,7 @@ export const PALETTES: Record<'light' | 'dark', Palette> = {
     axis: '#4a5068',
     text: '#5b6178',
     series: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'],
+    area: 0.18,
   },
   dark: {
     surface: null,
@@ -37,6 +40,7 @@ export const PALETTES: Record<'light' | 'dark', Palette> = {
     axis: '#a3a9bd',
     text: '#9aa0b5',
     series: ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767'],
+    area: 0.28,
   },
 }
 
@@ -51,6 +55,12 @@ function path(line: Polyline): string {
   let d = `M${f1(line[0])} ${f1(line[1])}`
   for (let i = 2; i < line.length; i += 2) d += `L${f1(line[i])} ${f1(line[i + 1])}`
   return d
+}
+
+/** Il colore di un'area (#rrggbb) con la sua trasparenza, per le legende. */
+export function areaColor(color: string, palette: Palette): string {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16))
+  return `rgba(${r}, ${g}, ${b}, ${palette.area})`
 }
 
 export function escapeXml(s: string): string {
@@ -98,6 +108,16 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
   out.push(`<path d="${vertical(tx.minor)}${horizontal(ty.minor)}" stroke="${palette.gridMinor}" stroke-width="1" fill="none"/>`)
   out.push(`<path d="${vertical(tx.major.map((t) => t.value))}${horizontal(ty.major.map((t) => t.value))}" stroke="${palette.grid}" stroke-width="1" fill="none"/>`)
 
+  // Le aree degli integrali, sotto gli assi e le curve
+  const colors = itemColors(spec.items, palette)
+  const areas: string[] = []
+  spec.items.forEach((item, i) => {
+    if (item.kind !== 'area') return
+    const pieces = sampleArea(item.f, item.from, item.to, vp)
+    if (pieces.length) areas.push(`<path d="${pieces.map((p) => `${path(p)}Z`).join('')}" fill="${colors[i]}" data-area="${i}"/>`)
+  })
+  if (areas.length) out.push(`<g clip-path="url(#${clip})" fill-opacity="${palette.area}" stroke="none">${areas.join('')}</g>`)
+
   // Assi: dove c'è lo zero; se è fuori, i numeri vanno sul bordo.
   const ax = sx(0)
   const ay = sy(0)
@@ -134,13 +154,12 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
   out.push(`<g font-size="11.5" fill="${palette.text}" ${halo}>${labels.join('')}</g>`)
 
   // Le curve, ritagliate sul riquadro
-  const colors = itemColors(spec.items, palette)
   const curves: string[] = []
   const dashed: string[] = []
   spec.items.forEach((item, i) => {
     const color = colors[i]
     let lines: Polyline[] = []
-    if (item.kind === 'function') {
+    if (item.kind === 'function' || (item.kind === 'area' && item.curve)) {
       const s = sampleFunction(item.f, vp)
       lines = s.lines
       for (const p of s.poles) dashed.push(`M${f1(sx(p))} 0V${H}`)

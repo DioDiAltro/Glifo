@@ -3105,6 +3105,15 @@ kbd {
   border-radius: 50%;
 }
 
+/* L'area di un integrale: la curva sopra e la velatura sotto, come nel grafico. */
+.graph-swatch.is-area {
+  box-sizing: border-box;
+  height: 12px;
+  border-top: 3px solid var(--graph-color);
+  border-radius: 2px 2px 0 0;
+  background: color-mix(in srgb, var(--graph-color) 22%, transparent);
+}
+
 .graph-coords {
   color: var(--muted);
   font-size: 0.9em;

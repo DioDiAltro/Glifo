@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { chooseWindow, sampleFunction, sampleImplicit, sampleParametric, tickLabel, ticks, type Viewport } from '../src/graph/plot'
-import { formulaGraph, graphNames, parseGraph, typedSliderValue, widenSlider, type GraphItem } from '../src/graph/spec'
+import { chooseWindow, sampleArea, sampleFunction, sampleImplicit, sampleParametric, tickLabel, ticks, type Viewport } from '../src/graph/plot'
+import { formulaGraph, formulaGraphLine, graphNames, parseGraph, typedSliderValue, widenSlider, type GraphItem } from '../src/graph/spec'
 import { graphSvg, itemColors, PALETTES } from '../src/graph/svg'
 
 const r = String.raw
@@ -97,12 +97,134 @@ describe('il blocco ```grafico: una riga per ogni cosa da disegnare', () => {
     expect(formulaGraph('y = x^2')).not.toBeNull()
     expect(formulaGraph('f(x) = \\sin x')).not.toBeNull()
     expect(formulaGraph('x^2 + y^2 = 1')).not.toBeNull()
+    // Gli integrali: la loro area.
+    expect(formulaGraph('\\int_0^1 x \\, dx')).not.toBeNull()
+    expect(formulaGraph('\\int_0^2 f(x) \\, dx =', ['f(x) = x^2'])).not.toBeNull()
     expect(formulaGraph('f(x) = a x', ['a = 2'])).not.toBeNull()
     expect(formulaGraph('f(x) = a x')).toBeNull()
     expect(formulaGraph('a = 2')).toBeNull()
     expect(formulaGraph('x = 3')).toBeNull()
     expect(formulaGraph('y = 3')).toBeNull()
-    expect(formulaGraph('\\int_0^1 x \\, dx')).toBeNull()
+  })
+})
+
+describe('gli integrali: l\'area sotto la curva', () => {
+  const area = (src: string, defs: string[] = []) => only(src, 'area', defs)
+  const slots = (src: string, values?: Map<string, number>) =>
+    parseGraph(src, [], values).items.map((i) => [i.kind, i.slot, i.kind === 'area' ? i.curve : null])
+
+  it('\\int_a^b f(x) \\, dx colora l\'area tra la curva e l\'asse x, e la legenda dice quanto vale', () => {
+    const a = area(r`\int_0^2 x^2 \, dx`)
+    expect(a).toMatchObject({ from: 0, to: 2, curve: true, label: r`\int_{0}^{2} x^{2} \, dx = 2{,}666666\ldots` })
+    expect(a.value).toBeCloseTo(8 / 3, 12)
+    // La curva è quella di x^2, anche fuori dall'area.
+    expect(a.f(3)).toBe(9)
+    // Con un'altra variabile, gli estremi infiniti, con π.
+    expect(area(r`\int_0^{\pi} \sin t \, dt`)).toMatchObject({ to: Math.PI, label: r`\int_{0}^{\pi} \sin t \, dt = 2` })
+    expect(area(r`\int_0^\infty e^{-x} dx`)).toMatchObject({ to: Infinity, label: r`\int_{0}^{\infty} e^{-x} \, dx = 1` })
+    // Un integrale che non converge: l'area c'è, il valore no.
+    const diverges = area(r`\int_0^1 \frac{1}{x} \, dx`)
+    expect(diverges.value).toBeNaN()
+    expect(diverges.label).toBe(r`\int_{0}^{1} \frac{1}{x} \, dx`)
+    // Gli estremi al contrario: l'area è la stessa, l'integrale cambia segno.
+    expect(area(r`\int_2^0 x \, dx`).value).toBeCloseTo(-2, 12)
+  })
+
+  it('l\'uguale finale e il risultato copiato dalla nota non danno fastidio', () => {
+    for (const src of [r`\int_0^2 x^2 \, dx =`, r`\int_0^2 x^2 \, dx = \frac{8}{3}`, r`\int_0^2 x^2 \, dx = 2{,}666666\ldots`, r`\int_0^2 x^2 \, dx \approx 2{,}67`]) {
+      expect(area(src).value).toBeCloseTo(8 / 3, 12)
+    }
+    // Il nome dell'integrale va nella legenda; il suo valore si usa nelle altre righe, senza slider.
+    const named = parseGraph(r`A = \int_0^2 x^2 \, dx` + '\ny = A')
+    expect(named.errors).toEqual([])
+    expect(named.items[0]).toMatchObject({ kind: 'area', label: r`A = \int_{0}^{2} x^{2} \, dx = 2{,}666666\ldots` })
+    expect((named.items[1] as Extract<GraphItem, { kind: 'function' }>).f(0)).toBeCloseTo(8 / 3, 12)
+    expect(named.sliders).toEqual([])
+    expect(parseGraph('y = A\nA \\in [0, 5]', [r`A = \int_0^1 x \, dx`]).errors[0].message).toMatch(/A si calcola da altri numeri/)
+  })
+
+  it('un integrale che dipende da x è una funzione di x, non un\'area; le condizioni non servono', () => {
+    expect(only(r`\int_0^x t^2 \, dt`, 'function').f(3)).toBeCloseTo(9, 9)
+    expect(parseGraph(r`\int_0^2 x^2 \, dx, x > 1`).errors[0].message).toMatch(/Un integrale non ha condizioni/)
+    // Un estremo che manca: lo slider per averlo.
+    expect(parseGraph(r`\int_0^k x \, dx`).errors[0].add).toEqual([{ name: 'k', line: 'k = 1' }])
+  })
+
+  it('gli estremi e la funzione possono usare i numeri con lo slider e le funzioni della nota', () => {
+    const spec = parseGraph(r`\int_a^b f(x) \, dx` + '\na = 0\nb = 2', ['f(x) = x^2'])
+    expect(spec.sliders.map((s) => s.name)).toEqual(['a', 'b'])
+    const moved = parseGraph(r`\int_a^b f(x) \, dx` + '\na = 0\nb = 2', ['f(x) = x^2'], new Map([['b', 3]]))
+    expect(moved.items[0]).toMatchObject({ kind: 'area', from: 0, to: 3 })
+    expect((moved.items[0] as Extract<GraphItem, { kind: 'area' }>).value).toBeCloseTo(9, 12)
+    expect([...graphNames(r`\int_0^2 f(x) \, dx =`)]).toEqual(['f'])
+  })
+
+  it('sotto una curva disegnata da un\'altra riga prende il suo colore e non la ridisegna', () => {
+    expect(slots('y = x^2\n' + r`\int_0^2 x^2 \, dx` + '\ny = x')).toEqual([
+      ['function', 0, null],
+      ['area', 0, false],
+      ['function', 1, null],
+    ])
+    // Anche scritta prima della funzione, con il nome della funzione o scritta in un altro modo.
+    expect(slots(r`\int_0^2 f(x) \, dx` + '\nf(x) = x^2')).toEqual([
+      ['area', 0, false],
+      ['function', 0, null],
+    ])
+    expect(slots(r`\int_0^2 2 \cdot t \, dt` + '\ny = 2x')).toEqual([
+      ['area', 0, false],
+      ['function', 0, null],
+    ])
+    // Due aree sotto la stessa curva: la disegna la prima.
+    expect(slots(r`\int_0^1 x^2 \, dx` + '\n' + r`\int_1^2 x^2 \, dx` + '\ny = x')).toEqual([
+      ['area', 0, true],
+      ['area', 0, false],
+      ['function', 1, null],
+    ])
+    // Sotto curve diverse, colori diversi.
+    expect(slots(r`\int_0^1 x \, dx` + '\n' + r`\int_0^1 x^2 \, dx`)).toEqual([
+      ['area', 0, true],
+      ['area', 1, true],
+    ])
+  })
+
+  it('i colori non cambiano muovendo uno slider, anche se la curva non si può disegnare', () => {
+    const src = 'b = \\frac{1}{a}\ny = b x^2\n' + r`\int_0^2 b x^2 \, dx` + '\ny = x\na = 1'
+    expect(slots(src)).toEqual([
+      ['function', 0, null],
+      ['area', 0, false],
+      ['function', 1, null],
+    ])
+    expect(slots(src, new Map([['a', 2]]))).toEqual(slots(src))
+    // Con a = 0, b non c'è: la parabola e l'area non si disegnano, e y = x resta del suo colore.
+    expect(slots(src, new Map([['a', 0]]))).toEqual([['function', 1, null]])
+  })
+
+  it('la parte da mostrare: tutta l\'area, con l\'asse x; verso ∞ un pezzo', () => {
+    const v = chooseWindow(parseGraph(r`\int_0^\pi \sin x \, dx`), 600, 375)
+    expect(v.x0).toBeLessThan(0)
+    expect(v.x1).toBeGreaterThan(Math.PI)
+    // Non i due giri dei seni: conta l'area.
+    expect(v.x1 - v.x0).toBeLessThan(8)
+    const far = chooseWindow(parseGraph(r`\int_{10}^{12} x \, dx`), 600, 375)
+    expect(far.x0).toBeLessThanOrEqual(0)
+    expect(far.x1).toBeGreaterThan(12)
+    expect(far.y0).toBeLessThanOrEqual(0)
+    expect(far.y1).toBeGreaterThan(10)
+    expect(chooseWindow(parseGraph(r`\int_0^\infty e^{-x} \, dx`), 600, 375).x1).toBeGreaterThanOrEqual(5)
+  })
+
+  it('l\'area si chiude sull\'asse x e si stacca agli asintoti', () => {
+    const [piece, ...rest] = sampleArea((x) => x, 0, 2, VIEW)
+    expect(rest).toEqual([])
+    // Dall'asse in x = 0 (250, 250), su lungo la retta fino a x = 2, e giù all'asse.
+    expect(piece.slice(0, 4)).toEqual([250, 250, 250, 250])
+    expect(piece.slice(-4)).toEqual([350, 150, 350, 250])
+    // Anche dove la curva passa sotto l'asse è un pezzo solo; con un asintoto in mezzo, due.
+    expect(sampleArea((x) => x, -1, 1, VIEW)).toHaveLength(1)
+    expect(sampleArea((x) => 1 / (x * x), -1, 1, VIEW)).toHaveLength(2)
+    // Gli estremi al contrario e quelli infiniti vanno bene lo stesso.
+    expect(sampleArea((x) => x, 2, 0, VIEW)).toEqual([piece])
+    expect(sampleArea(Math.exp, -Infinity, 0, VIEW)).toHaveLength(1)
   })
 })
 
@@ -342,6 +464,19 @@ describe('le tacche sugli assi', () => {
   })
 })
 
+describe('la riga del blocco per una formula della nota', () => {
+  it('è la formula; per un integrale senza l\'uguale finale e senza il risultato', () => {
+    expect(formulaGraphLine(' y = x^2 ')).toBe('y = x^2')
+    expect(formulaGraphLine(r`\int_0^2 x^2\,dx =`)).toBe(r`\int_0^2 x^2\,dx`)
+    expect(formulaGraphLine(r`\int_0^2 x^2\,dx = 2{,}666666\ldots`)).toBe(r`\int_0^2 x^2\,dx`)
+    expect(formulaGraphLine(r`\int_0^2 x^2\,dx = \frac{8}{3}`)).toBe(r`\int_0^2 x^2\,dx`)
+    expect(formulaGraphLine(r`A = \int_0^2 x^2\,dx = 2{,}6\ldots`)).toBe(r`A = \int_0^2 x^2\,dx`)
+    // Le altre formule restano come sono.
+    expect(formulaGraphLine('a = 2 =')).toBe('a = 2 =')
+    expect(formulaGraphLine(r`\int_0^x t \, dt = \frac{x^2}{2}`)).toBe(r`\int_0^x t \, dt = \frac{x^2}{2}`)
+  })
+})
+
 describe('il disegno in SVG', () => {
   it('ha assi, numeri, curve e punti, e i testi non diventano codice', () => {
     const spec = parseGraph('y = x^2\nP_1 = (1, 1)')
@@ -354,5 +489,19 @@ describe('il disegno in SVG', () => {
     expect(svg).toContain('>x</text>')
     expect(svg).toContain('>O</text>')
     expect(svg).toContain('clip-path="url(#g-clip)"')
+  })
+
+  it('le aree sono velate, sotto gli assi; sotto una curva già disegnata non la ridisegnano', () => {
+    const spec = parseGraph('y = x^2\n' + r`\int_0^2 x^2 \, dx`)
+    const svg = graphSvg(spec, chooseWindow(spec, 600, 375), PALETTES.light, { id: 'g' })
+    expect(svg).toMatch(/<g clip-path="url\(#g-clip\)" fill-opacity="0\.18" stroke="none"><path d="M[^"]+Z" fill="#2a78d6" data-area="1"\/><\/g>/)
+    expect(svg.indexOf('data-area')).toBeLessThan(svg.indexOf('stroke-width="1.25"'))
+    expect(svg.match(/data-item=/g)).toHaveLength(1)
+    // Da sola, l'area disegna anche la sua curva, dello stesso colore.
+    const alone = parseGraph(r`\int_0^2 x^2 \, dx`)
+    const both = graphSvg(alone, chooseWindow(alone, 600, 375), PALETTES.dark, { id: 'g' })
+    expect(both).toContain('fill-opacity="0.28"')
+    expect(both).toContain(`fill="${PALETTES.dark.series[0]}" data-area="0"`)
+    expect(both).toContain(`stroke="${PALETTES.dark.series[0]}" data-item="0"`)
   })
 })

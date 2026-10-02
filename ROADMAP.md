@@ -196,12 +196,16 @@ delle tabelle per più database. Tutto è descritto nel README. Se serviranno:
 
 Calcoli e grafici sono fatti (ottobre 2026, primo giro «vediamo cosa esce»): risultati dopo `=` con
 le definizioni della nota, blocchi ```grafico con funzioni, curve, punti, asintoti, trascinare e
-ingrandire, grafici nei file .md come immagini, e gli **slider** per i numeri (in `y = a x^2`,
+ingrandire, grafici nei file .md come immagini, gli **slider** per i numeri (in `y = a x^2`,
 trascinare `a`, o scriverne il valore accanto, e vedere il grafico cambiare, come in GeoGebra e nelle
-Note matematiche). Tutto è descritto nel README. Se serviranno:
+Note matematiche) e l'**area degli integrali** (`\int_0^2 x^2 \, dx` colora l'area sotto la curva, con
+il valore nella legenda). Tutto è descritto nel README. Se serviranno:
 
 - le **zone colorate** con le disuguaglianze (`y > x^2`, il dominio di una funzione di due
-  variabili in Analisi 2);
+  variabili in Analisi 2) e l'area tra due curve (`\int_0^1 (f(x) - g(x)) \, dx` oggi colora
+  quella sotto la differenza);
+- nelle aree degli integrali, le parti sotto l'asse x di un altro aspetto (oggi hanno lo stesso
+  colore: nell'integrale contano con il meno);
 - segnare da soli zeri, massimi, minimi e intersezioni (con un clic sulla curva);
 - le derivate scritte come formula (oggi `f'(x)` si calcola, ma non si vede come espressione) e i limiti;
 - i calcoli anche fuori dalle formule (`12 * 3 =` nel testo) e con le unità di misura (`3 m/s`);

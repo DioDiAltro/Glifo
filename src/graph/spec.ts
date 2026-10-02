@@ -9,6 +9,7 @@
  *     r = 1 + \cos\theta          in coordinate polari
  *     (\cos t, \sin t)            una curva con un parametro t
  *     P = (1, 2)                  un punto (anche P(1, 2) o solo (1, 2))
+ *     \int_0^2 x^2 \, dx          l'area tra la curva e l'asse x, con il valore (anche A = \int…)
  *     a = 2                       un numero da usare nelle altre righe (con uno slider)
  *     a \in [0, 5]                da dove a dove va lo slider di a (anche 0 \le a \le 5)
  *     x \in [-5, 5]               la parte da mostrare (anche -1 \le y \le 3)
@@ -20,9 +21,10 @@
  * quelli scritti, senza cambiare la nota.
  */
 import { compile, compileCondition, EMPTY_SCOPE, errorMessage, MathError, scopeWith, UndefinedName, withWorkLimit, type Compiled, type Scope, type UserFunction } from '../math/evaluate'
+import { formatNumber } from '../math/format'
 import { nameLatex, toLatex } from '../math/latex'
-import { children, namesIn, parseMath, parseStatement, tokenize, type MathNode } from '../math/parse'
-import { Sheet } from '../math/sheet'
+import { children, namesIn, parseMath, parseStatement, tokenize, type MathNode, type Statement } from '../math/parse'
+import { calculationRequest, Sheet, splitEquals } from '../math/sheet'
 
 export type Range = [number, number]
 
@@ -44,6 +46,12 @@ export type GraphItem =
   | (ItemBase & { kind: 'implicit'; F: (x: number, y: number) => number })
   | (ItemBase & { kind: 'parametric'; fx: (t: number) => number; fy: (t: number) => number; param: 't' | 'θ'; t: Range })
   | (ItemBase & { kind: 'point'; x: number; y: number; name: string | null })
+  /**
+   * L'area tra la curva y = f(x) e l'asse x, da `from` a `to` (\int_0^2 x^2 \, dx); `value` è
+   * l'integrale (NaN se non converge). `curve`: disegna anche la curva, se nessun'altra riga la
+   * disegna (se no l'area prende il colore di quella riga).
+   */
+  | (ItemBase & { kind: 'area'; f: (x: number) => number; from: number; to: number; value: number; curve: boolean })
 
 export interface GraphError {
   line: number
@@ -230,11 +238,92 @@ function condLabel(cond: MathNode | null): string {
   return cond ? `, \\quad ${toLatex(cond)}` : ''
 }
 
+type Integral = Extract<MathNode, { k: 'int' }>
+
+/**
+ * Un integrale definito da disegnare come area: `\int_0^2 x^2 \, dx`, anche con un nome
+ * (`A = \int…`) o con il risultato scritto dopo (`\int… = \frac{8}{3}`). Se dipende da x
+ * (\int_0^x t^2 \, dt) è una funzione di x, non un'area.
+ */
+function areaOf(main: MathNode): { int: Integral; name: string | null } | null {
+  const plain = (n: MathNode) => !dependsOn(n, 'x') && !dependsOn(n, 'y')
+  if (main.k === 'int') return plain(main) ? { int: main, name: null } : null
+  if (main.k !== 'rel' || !main.ops.every((op) => op === '=' || op === '≈') || !main.items.every(plain)) return null
+  const [first, second] = main.items
+  if (first.k === 'int') return { int: first, name: null }
+  return first.k === 'name' && second.k === 'int' ? { int: second, name: first.name } : null
+}
+
+/** La riga senza l'uguale finale, e poi senza l'ultima parte dopo un uguale, una alla volta. */
+function withoutResult(text: string): string[] {
+  const request = calculationRequest(text) ?? text
+  const parts = splitEquals(request)
+  const out = request === text ? [] : [request]
+  for (let k = parts.length - 1; k >= 1; k--) out.push(parts.slice(0, k).join('='))
+  return out
+}
+
+/**
+ * Legge una riga del blocco. Dopo un integrale si può lasciare l'uguale (`\int_0^2 x^2 \, dx =`)
+ * o il risultato copiato dalla nota (`= 2{,}666666\ldots`): conta l'integrale.
+ */
+function parseLine(text: string): Statement {
+  try {
+    return parseStatement(text)
+  } catch (err) {
+    for (const shorter of withoutResult(text)) {
+      try {
+        const statement = parseStatement(shorter)
+        if (areaOf(statement.main)) return statement
+      } catch {
+        // Neanche così: si prova più corta.
+      }
+    }
+    throw err
+  }
+}
+
 interface Line {
   line: number
   text: string
   main: MathNode
   cond: MathNode | null
+}
+
+/**
+ * La forma di un'espressione nella variabile `v`: due righe con la stessa forma disegnano la
+ * stessa curva, anche scritte in modo diverso (2x e 2 \cdot x, \frac{1}{x} e 1/x, t^2 in dt e x^2).
+ */
+function shapeOf(node: MathNode, v: string): string {
+  return JSON.stringify(node, (key, value: unknown) => {
+    if (key === 'text' || key === 'comma' || key === 'implicit' || key === 'frac') return undefined
+    const n = value as MathNode | null
+    return n && typeof n === 'object' && n.k === 'name' && n.name === v ? { k: 'name', name: '' } : value
+  })
+}
+
+/** `f(v)`: solo la funzione f, nella variabile v. */
+function callOf(node: MathNode, v: string): string | null {
+  return node.k === 'apply' && !node.primes && node.args.length === 1 && node.args[0].k === 'name' && node.args[0].name === v ? node.name : null
+}
+
+/** Come riconoscere la curva y = expr (nella variabile v): `e:` con la sua forma, `f:` con il nome della funzione. */
+function shapeKeys(expr: MathNode, v: string, name = callOf(expr, v)): string[] {
+  return [`e:${shapeOf(expr, v)}`, ...(name ? [`f:${name}`] : [])]
+}
+
+/** La curva y = f(x) che una riga disegna (f(x) = …, y = …, x^2, f), per riconoscerla. */
+function curveKeys(main: MathNode, scope: Scope): string[] {
+  const def = definitionOf(main)
+  if (def) return def.params?.length === 1 ? shapeKeys(def.value, def.params[0], def.name) : []
+  if (main.k === 'name') return scope.fns.get(main.name)?.params.length === 1 ? [`f:${main.name}`] : []
+  if (main.k === 'rel') {
+    const [lhs, rhs] = main.items
+    const y = main.ops.length === 1 && main.ops[0] === '=' && lhs.k === 'name' && lhs.name === 'y' && !dependsOn(rhs, 'y')
+    return y ? shapeKeys(rhs, 'x') : []
+  }
+  const expression = main.k !== 'tuple' && main.k !== 'in' && main.k !== 'and' && main.k !== 'or' && !(main.k === 'apply' && main.args.length === 2)
+  return expression && dependsOn(main, 'x') ? shapeKeys(main, 'x') : []
 }
 
 function define(def: Definition, cond: MathNode | null, scope: Scope, consts: Map<string, number>, fns: Map<string, UserFunction>, values?: ReadonlyMap<string, number>): void {
@@ -294,7 +383,7 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   const trig = new Set<number>()
   for (const l of blockLines(source)) {
     try {
-      const { main, cond } = parseStatement(l.text)
+      const { main, cond } = parseLine(l.text)
       lines.push({ ...l, main, cond })
       if (usesTrig(main)) trig.add(l.line)
     } catch (err) {
@@ -329,8 +418,8 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
       }
       pending.delete(l)
       progress = true
-      // Le funzioni di una variabile si disegnano.
-      if (def.params?.length === 1) drawn.push(l)
+      // Le funzioni di una variabile si disegnano, e le aree con un nome (A = \int_0^2 x^2 \, dx).
+      if (def.params?.length === 1 || areaOf(l.main)) drawn.push(l)
     }
   }
   // Quelle rimaste: o sbagliate, o in un giro (f usa g che usa f).
@@ -359,6 +448,23 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   const ranges = new Map<Axis, Range>()
   const sliderRanges = new Map<string, { range: Range; ends: [string, string]; line: Line }>()
   drawn.sort((a, b) => a.line - b.line)
+  // Un'area sotto una curva che un'altra riga disegna (y = x^2 e \int_0^2 x^2 \, dx, f(x) = … e
+  // \int_0^2 f(x) \, dx) prende il colore di quella riga e non la ridisegna. Si guarda solo come
+  // sono scritte le righe: così i colori non cambiano muovendo uno slider.
+  const under = new Map<number, number>()
+  const curves = drawn.filter((l) => !rangeLine(l.main) && !areaOf(l.main)).map((l) => ({ line: l.line, keys: curveKeys(l.main, scope()) }))
+  const areaCurves: typeof curves = []
+  for (const l of drawn) {
+    const area = areaOf(l.main)
+    if (!area) continue
+    const keys = shapeKeys(area.int.body, area.int.v)
+    const same = (c: { keys: string[] }) => c.keys.some((k) => keys.includes(k))
+    const curve = curves.find(same) ?? areaCurves.find(same)
+    if (curve) under.set(l.line, curve.line)
+    else areaCurves.push({ line: l.line, keys })
+  }
+  /** Il colore di ogni riga che ne ha uno suo. */
+  const slots = new Map<number, number>()
   let slot = 0
   for (const l of drawn) {
     const r = rangeLine(l.main)
@@ -376,18 +482,23 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
       }
       continue
     }
+    const own = !under.has(l.line)
     try {
-      const item = itemFor(l, scope(), slot)
-      if (item.kind !== 'point') slot++
+      const item = itemFor(l, scope(), slot, own)
+      if (item.kind !== 'point' && own) slots.set(l.line, slot++)
       spec.items.push(item)
     } catch (err) {
-      if (!looksLikePoint(l.main)) slot++
+      if (!looksLikePoint(l.main) && own) slots.set(l.line, slot++)
       failLine(l, err)
     }
   }
+  for (const item of spec.items) {
+    const curve = under.get(item.line)
+    if (curve !== undefined) item.slot = slots.get(curve) ?? item.slot
+  }
   spec.x = ranges.get('x') ?? null
   spec.y = ranges.get('y') ?? null
-  const functions = spec.items.filter((i) => i.kind === 'function')
+  const functions = spec.items.filter((i) => i.kind === 'function' || i.kind === 'area')
   spec.trig = functions.some((i) => trig.has(i.line)) || (functions.length > 0 && defs.some((d) => /\\?(sin|cos|tan|tg)\b/.test(d)))
   for (const item of spec.items) {
     if (item.kind === 'parametric') item.t = ranges.get(item.param) ?? item.t
@@ -408,10 +519,11 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
     if (b) return namesIn(b.def.value, new Set(), new Set(b.def.params ?? []))
     return new Set(sheet.definitions.filter((d) => d.name === name).flatMap((d) => [...d.uses]))
   }
+  // Il valore di un integrale (A = \int_0^2 x^2 \, dx) si calcola: non ha uno slider.
   const isNumber = (name: string): boolean => {
     if (!consts.has(name)) return false
     const b = blockDefs.get(name)?.def ?? lastNoteDef(name)
-    return !!b && !b.params && onlyDigits(usesOf(name))
+    return !!b && !b.params && b.value.k !== 'int' && onlyDigits(usesOf(name))
   }
   const used = new Set<string>()
   for (const l of drawn) {
@@ -445,7 +557,7 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
     if (isNumber(name) || name === 't' || name === 'θ') continue
     const def = blockDefs.get(name)?.def ?? lastNoteDef(name)
     if (fns.has(name) || def?.params) failLine(r.line, new MathError(`${name} è una funzione: lo slider è per i numeri, come a = 2`))
-    else if (def && !onlyDigits(usesOf(name))) failLine(r.line, new MathError(`${name} si calcola da altri numeri: lo slider è per quelli scritti con le cifre, come a = 2`))
+    else if (def && (def.value.k === 'int' || !onlyDigits(usesOf(name)))) failLine(r.line, new MathError(`${name} si calcola da altri numeri: lo slider è per quelli scritti con le cifre, come a = 2`))
     else failLine(r.line, new UndefinedName(name))
   }
 
@@ -511,8 +623,26 @@ function missingNumbers(l: Line, scope: Scope): string[] {
   return [...out]
 }
 
-function itemFor(l: Line, scope: Scope, slot: number): GraphItem {
+/** L'area di un integrale: la funzione da integrare (nella x del grafico), gli estremi e il valore. */
+function areaFor(l: Line, { int, name }: NonNullable<ReturnType<typeof areaOf>>, scope: Scope, slot: number, curve: boolean): GraphItem {
+  if (l.cond) throw new MathError('Un integrale non ha condizioni: dicono dove gli estremi, es. \\int_0^2')
+  const from = constantValue(int.from, scope)
+  const to = constantValue(int.to, scope)
+  if (Number.isNaN(from) || Number.isNaN(to)) throw new MathError('Gli estremi dell\'integrale non sono numeri')
+  const body = compile(int.body, scopeWith(scope, [int.v]))
+  const v: Record<string, number> = { [int.v]: 0 }
+  const value = compile(int, scope, { calc: true })({})
+  // Il valore come nei risultati della nota (2,666666…); se l'integrale non converge, niente.
+  const shown = formatNumber(value, { comma: true, decimal: true, digits: 9 })
+  const label = `${name ? `${nameLatex(name)} = ` : ''}${toLatex(int)}${shown ? ` = ${shown.tex}` : ''}`
+  return { kind: 'area', line: l.line, label, slot, f: (x) => ((v[int.v] = x), body(v)), from, to, value, curve }
+}
+
+/** Quello che disegna una riga; `curve`: un'area disegna anche la sua curva (vedi readGraph). */
+function itemFor(l: Line, scope: Scope, slot: number, curve = true): GraphItem {
   const { main, cond, line } = l
+  const area = areaOf(main)
+  if (area) return areaFor(l, area, scope, slot, curve)
 
   // Un punto: (1, 2), P = (1, 2), P(1, 2). Con t (o θ) è una curva con un parametro.
   let coords: MathNode[] | null = null
@@ -625,7 +755,7 @@ export function graphNames(source: string): Set<string> {
   const names = new Set<string>()
   for (const l of blockLines(source)) {
     try {
-      const { main, cond } = parseStatement(l.text)
+      const { main, cond } = parseLine(l.text)
       namesIn(main, names)
       if (cond) namesIn(cond, names)
     } catch {
@@ -637,11 +767,31 @@ export function graphNames(source: string): Set<string> {
 }
 
 /**
+ * La riga del blocco per una formula della nota: la formula stessa o, se è un integrale, solo
+ * l'integrale (con il nome, se c'è), senza l'uguale finale né il risultato.
+ */
+export function formulaGraphLine(tex: string): string {
+  const text = tex.trim()
+  for (const t of [text, ...withoutResult(text)]) {
+    let area: ReturnType<typeof areaOf>
+    try {
+      area = areaOf(parseStatement(t).main)
+    } catch {
+      continue
+    }
+    if (area) return splitEquals(t).slice(0, area.name ? 2 : 1).join('=').trim()
+    if (t === text) break
+  }
+  return text
+}
+
+/**
  * La formula è una funzione (o una curva) da disegnare? `y = …` o `f(x) = …` con la x, `r = …` con
- * θ, un'equazione in x e y. Se sì, il suo grafico (con le definizioni della nota `defs`).
+ * θ, un'equazione in x e y, un integrale (la sua area). Se sì, il suo grafico (con le definizioni
+ * della nota `defs`).
  */
 export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSpec | null {
-  const text = tex.trim()
+  const text = formulaGraphLine(tex)
   if (!text || text.includes('\n')) return null
   let main: MathNode
   try {
@@ -649,15 +799,17 @@ export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSp
   } catch {
     return null
   }
-  if (main.k !== 'rel' || main.ops.length !== 1 || main.ops[0] !== '=') return null
-  const [lhs, rhs] = main.items
-  const all = namesIn(main)
-  const plottable =
-    (lhs.k === 'name' && lhs.name === 'y' && namesIn(rhs).has('x')) ||
-    (lhs.k === 'apply' && !lhs.primes && lhs.args.length === 1 && lhs.args[0].k === 'name' && namesIn(rhs).has(lhs.args[0].name)) ||
-    (lhs.k === 'name' && lhs.name === 'r' && namesIn(rhs).has('θ')) ||
-    (all.has('x') && all.has('y') && !(lhs.k === 'name' && (lhs.name === 'x' || lhs.name === 'y')))
-  if (!plottable) return null
+  if (!areaOf(main)) {
+    if (main.k !== 'rel' || main.ops.length !== 1 || main.ops[0] !== '=') return null
+    const [lhs, rhs] = main.items
+    const all = namesIn(main)
+    const plottable =
+      (lhs.k === 'name' && lhs.name === 'y' && namesIn(rhs).has('x')) ||
+      (lhs.k === 'apply' && !lhs.primes && lhs.args.length === 1 && lhs.args[0].k === 'name' && namesIn(rhs).has(lhs.args[0].name)) ||
+      (lhs.k === 'name' && lhs.name === 'r' && namesIn(rhs).has('θ')) ||
+      (all.has('x') && all.has('y') && !(lhs.k === 'name' && (lhs.name === 'x' || lhs.name === 'y')))
+    if (!plottable) return null
+  }
   const spec = parseGraph(text, defs)
   return spec.errors.length || spec.items.length !== 1 ? null : spec
 }

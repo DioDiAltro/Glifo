@@ -140,6 +140,17 @@ export function sampleFunction(f: (x: number) => number, vp: Viewport): Sampled 
   return { lines: lines.filter((l) => l.length >= 4), poles }
 }
 
+/**
+ * L'area tra la curva y = f(x) e l'asse x per x tra a e b (\int_a^b f(x) \, dx): i pezzi da
+ * colorare, ognuno chiuso lungo l'asse, staccati dove la curva salta o non c'è.
+ */
+export function sampleArea(f: (x: number) => number, a: number, b: number, vp: Viewport): Polyline[] {
+  const lo = Math.min(a, b)
+  const hi = Math.max(a, b)
+  const axis = screen(vp).sy(0)
+  return sampleFunction((x) => (x >= lo && x <= hi ? f(x) : NaN), vp).lines.map((line) => [line[0], axis, ...line, line[line.length - 2], axis])
+}
+
 /** Una curva con un parametro t (o θ), più fitta dove i punti si allontanano. */
 export function sampleParametric(fx: (t: number) => number, fy: (t: number) => number, t: Range, vp: Viewport): Polyline[] {
   const { sx, sy } = screen(vp)
@@ -315,7 +326,8 @@ export function chooseWindow(spec: GraphSpec, width: number, height: number): Vi
 
 function findWindow(spec: GraphSpec, width: number, height: number): Viewport {
   const items = spec.items
-  const functions = items.filter((i): i is Extract<GraphItem, { kind: 'function' }> => i.kind === 'function')
+  // Anche le curve delle aree: la loro forma deve vedersi.
+  const functions = items.filter((i): i is Extract<GraphItem, { kind: 'function' | 'area' }> => i.kind === 'function' || i.kind === 'area')
   const curves = items.filter((i) => i.kind === 'implicit' || i.kind === 'parametric')
   const xs: number[] = []
   const ys: number[] = []
@@ -324,7 +336,14 @@ function findWindow(spec: GraphSpec, width: number, height: number): Viewport {
       xs.push(item.x)
       ys.push(item.y)
     } else if (item.kind === 'vertical') xs.push(item.x)
-    else if (item.kind === 'parametric') {
+    else if (item.kind === 'area') {
+      // L'area intera, chiusa dall'asse x; verso un estremo infinito, un pezzo (\int_0^\infty: fino a 5).
+      const lo = Math.min(item.from, item.to)
+      const hi = Math.max(item.from, item.to)
+      if (finite(lo)) xs.push(lo, finite(hi) ? hi : lo + 5)
+      else if (finite(hi)) xs.push(hi - 5, hi)
+      ys.push(0)
+    } else if (item.kind === 'parametric') {
       for (let i = 0; i <= 400; i++) {
         const t = item.t[0] + ((item.t[1] - item.t[0]) * i) / 400
         const x = item.fx(t)
@@ -345,12 +364,14 @@ function findWindow(spec: GraphSpec, width: number, height: number): Viewport {
     }
   }
 
-  // x: dove succede qualcosa (con l'origine), con un po' di margine.
+  // x: dove succede qualcosa (con l'origine), con un po' di margine. Con un integrale (non da −∞
+  // a +∞) conta la sua area, non quello che fanno le funzioni più in là.
   let x: Range
   if (spec.x) x = spec.x
   else {
+    const area = items.some((i) => i.kind === 'area' && (finite(i.from) || finite(i.to)))
     const found: number[] = []
-    for (const f of functions) found.push(...features(f.f, -10, 10))
+    if (!area) for (const f of functions) found.push(...features(f.f, -10, 10))
     let near = found
     if (found.length > 16) {
       if (spec.trig) near = []

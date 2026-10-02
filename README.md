@@ -131,14 +131,22 @@ chi sta provando Glifo.*
   ma anche come in una calcolatrice: `sqrt(x)`, `sin(x)`, `2*x`, `pi`; e con i nomi italiani (`\tg`,
   `\arctg`, `\operatorname{sen}`, `settsinh`).
 - Il pulsante con gli **assi** nella barra mette nella nota un **grafico**: con il cursore su una
-  funzione (`$f(x) = …$`) disegna quella, se no prepara il blocco da scrivere. Il grafico della
-  formula sotto il cursore si vede anche nel pannello a destra, con «Inserisci il grafico».
+  funzione (`$f(x) = …$`) disegna quella, su un integrale (`$\int_0^2 x^2 \, dx =$`) la sua area, se
+  no prepara il blocco da scrivere. Il grafico della formula sotto il cursore si vede anche nel
+  pannello a destra, con «Inserisci il grafico».
 - Il blocco ` ```grafico ` ha una riga per ogni cosa da disegnare: funzioni (`y = x^2`, `f(x) = \frac{1}{x}`,
   o solo `x^2`), anche dove vale una condizione (`y = \sqrt{x}, 0 \le x \le 4`), rette verticali
   (`x = 2`), curve qualsiasi (`x^2 + y^2 = 4`), in coordinate polari (`r = 1 + \cos\theta`) o con un
   parametro (`(\cos t, \sin t)`), punti (`P = (1, 2)`, anche `(0,5; 2)`), numeri da usare
   (`a = 2`) e la parte da mostrare (`x \in [-5, 5]`, `-1 \le y \le 3`). Usa anche le definizioni della
   nota scritte prima; `%` comincia un commento.
+- Un **integrale** definito nel blocco (`\int_0^2 x^2 \, dx`, anche `\int_0^2 f(x) \, dx`, fino a
+  `\infty`, o con un nome: `A = \int_0^2 x^2 \, dx`) colora l'**area** tra la curva e l'asse x, da un
+  estremo all'altro, e la legenda dice quanto vale (`= 2,666666…`). Le parti sotto l'asse contano con
+  il meno, come nell'integrale. Se la curva è già nel grafico (`y = x^2` o `f(x) = x^2` in un'altra
+  riga) l'area prende il suo colore; se no il grafico disegna anche la curva. Gli estremi possono
+  essere numeri con lo slider (`\int_0^b`): muovendolo l'area cambia. Si può lasciare l'uguale
+  finale o il risultato copiato dalla nota.
 - Glifo sceglie da solo la parte da mostrare (dove la funzione si annulla, ha massimi e minimi, gli
   asintoti; per seni e coseni due giri con le tacche in π; le circonferenze restano rotonde), stacca
   la curva dove salta e segna gli **asintoti verticali** tratteggiati. Assi con la freccia, i numeri
@@ -360,8 +368,8 @@ src/
     sheet.ts              il «foglio» della nota: definizioni dall'alto in basso e risultati dopo «=»
     latex.ts              un'espressione riscritta in LaTeX (le legende dei grafici)
   graph/
-    spec.ts               le righe di un blocco ```grafico: funzioni, curve, punti, la parte da mostrare, gli slider
-    plot.ts               dove calcolare le curve (salti, asintoti), la finestra, le tacche
+    spec.ts               le righe di un blocco ```grafico: funzioni, curve, punti, aree degli integrali, la parte da mostrare, gli slider
+    plot.ts               dove calcolare le curve (salti, asintoti) e le aree, la finestra, le tacche
     svg.ts                il disegno in SVG, con i colori dei due temi
     preview.ts            nell'anteprima: legenda, errori, slider, trascinare, ingrandire, coordinate
     file.ts               i grafici nei file .md: immagine SVG più il testo nascosto, e ritorno

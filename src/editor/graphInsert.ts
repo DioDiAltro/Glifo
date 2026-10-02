@@ -1,20 +1,20 @@
 import { syntaxTree } from '@codemirror/language'
 import { EditorSelection } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
-import { formulaGraph, graphBlockText, graphNames } from '../graph/spec'
+import { formulaGraph, formulaGraphLine, graphBlockText, graphNames } from '../graph/spec'
 import { sheetBefore } from './calcResults'
 import { mathRegionAt } from './mathContext'
 
 /**
- * La formula sotto il cursore, se è una funzione da disegnare (y = …, f(x) = …): il suo testo e
- * le definizioni della nota scritte prima, che usa.
+ * La formula sotto il cursore, se è una funzione da disegnare (y = …, f(x) = …) o un integrale (la
+ * sua area): la riga per il blocco ```grafico e le definizioni della nota scritte prima, che usa.
  */
 export function formulaAtCursor(view: EditorView): { tex: string; defs: string[]; to: number } | null {
   const { state } = view
   const head = state.selection.main.head
   const region = mathRegionAt(state, head)
   if (!region || !region.closed || head < region.contentFrom || head > region.contentTo) return null
-  const tex = region.tex.trim()
+  const tex = formulaGraphLine(region.tex)
   const defs = sheetBefore(state, region.from).definitionsFor(graphNames(tex))
   return formulaGraph(tex, defs) ? { tex, defs, to: region.to } : null
 }
