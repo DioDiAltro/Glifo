@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { chooseWindow, sampleFunction, sampleImplicit, sampleParametric, tickLabel, ticks, type Viewport } from '../src/graph/plot'
-import { formulaGraph, graphNames, parseGraph, type GraphItem } from '../src/graph/spec'
+import { formulaGraph, graphNames, parseGraph, typedSliderValue, widenSlider, type GraphItem } from '../src/graph/spec'
 import { graphSvg, itemColors, PALETTES } from '../src/graph/svg'
 
 const r = String.raw
@@ -111,7 +111,7 @@ describe('gli slider: i numeri del grafico', () => {
 
   it('ogni numero scritto con le cifre che il grafico usa ha il suo slider, da −10 a 10', () => {
     const spec = parseGraph('y = a x^2 + b', ['a = 2', 'b = 2a', 'c = 5'])
-    expect(spec.sliders).toEqual([{ name: 'a', value: 2, range: [-10, 10], ends: ['-10', '10'], step: 0.1 }])
+    expect(spec.sliders).toEqual([{ name: 'a', value: 2, range: [-10, 10], ends: ['-10', '10'], step: 0.1, integer: false }])
     // Anche attraverso le funzioni, e quelli scritti nel blocco.
     expect(parseGraph('f(x)\nk = -\\frac{1}{2}', ['a = 3', 'f(x) = a x + k']).sliders.map((s) => [s.name, s.value])).toEqual([
       ['a', 3],
@@ -146,8 +146,40 @@ describe('gli slider: i numeri del grafico', () => {
 
   it('i numeri che contano i termini di una somma vanno di 1', () => {
     const spec = parseGraph('T(x)', ['n = 3', 'T(x) = \\sum_{k=0}^{n} \\frac{x^k}{k!}'])
-    expect(spec.sliders[0]).toMatchObject({ name: 'n', range: [0, 10], step: 1 })
+    expect(spec.sliders[0]).toMatchObject({ name: 'n', range: [0, 10], step: 1, integer: true })
     expect(fn(parseGraph('T(x)', ['n = 3', 'T(x) = \\sum_{k=0}^{n} \\frac{x^k}{k!}'], new Map([['n', 1]]))).f(2)).toBe(3)
+  })
+
+  it('il valore si può scrivere a mano: con la virgola, come frazione, con π; i contatori interi', () => {
+    const real = { integer: false }
+    expect(['1,5', '0.25', '−2', '1/3', '\\pi/2', '2pi', '\\sqrt{2}', '3,'].map((t) => typedSliderValue(t, real))).toEqual([
+      1.5,
+      0.25,
+      -2,
+      1 / 3,
+      Math.PI / 2,
+      2 * Math.PI,
+      Math.SQRT2,
+      3,
+    ])
+    // Non sono numeri: vuoto, lettere, 1/0, un nome.
+    expect(['', '  ', 'abc', '1/0', 'a + 1', '-'].map((t) => typedSliderValue(t, real))).toEqual([null, null, null, null, null, null])
+    expect(typedSliderValue('2,6', { integer: true })).toBe(3)
+  })
+
+  it('un valore scritto fuori dallo slider lo allarga, con gli estremi sul passo', () => {
+    expect(widenSlider([-3, 3], 0.01, 1, false)).toEqual({ range: [-3, 3], step: 0.01 })
+    expect(widenSlider([-3, 3], 0.01, 5, false)).toEqual({ range: [-3, 5], step: 0.01 })
+    expect(widenSlider([-3, 3], 0.01, 3.07, false)).toEqual({ range: [-3, 3.07], step: 0.01 })
+    // 0,07 / 0,01 con la virgola mobile fa 7,000000000000001: l'estremo resta 0,07, non 0,08.
+    expect(widenSlider([-1, 0.05], 0.01, 0.07, false)).toEqual({ range: [-1, 0.07], step: 0.01 })
+    expect(widenSlider([-0.05, 1], 0.01, -0.07, false)).toEqual({ range: [-0.07, 1], step: 0.01 })
+    // L'altro estremo resta com'è scritto (2π), se il passo non cambia.
+    expect(widenSlider([0, 2 * Math.PI], 0.01, -1, false)).toEqual({ range: [-1, 2 * Math.PI], step: 0.01 })
+    // Molto più lungo: il passo cresce, e tutti e due gli estremi vanno sul passo nuovo.
+    expect(widenSlider([-3, 3], 0.01, -7.123, false)).toEqual({ range: [-7.2, 3], step: 0.1 })
+    expect(widenSlider([-3, 3], 0.01, 1000, false)).toEqual({ range: [-10, 1000], step: 10 })
+    expect(widenSlider([0, 10], 1, 25, true)).toEqual({ range: [0, 25], step: 1 })
   })
 
   it('i colori restano quelli delle righe, anche quando una riga non si può disegnare', () => {

@@ -145,11 +145,15 @@ describe('gli slider sotto il grafico', () => {
     hydrateGraphs(host, light)
     const block = host.querySelector<HTMLElement>('.graph-block')!
     const row = block.querySelector<HTMLElement>('.graph-slider')!
+    const field = row.querySelector<HTMLInputElement>('.graph-slider-value')!
     return {
       block,
       row,
-      input: row.querySelector('input')!,
-      value: () => row.querySelector('output')!.textContent,
+      input: row.querySelector<HTMLInputElement>('.graph-slider-input')!,
+      field,
+      value: () => field.value,
+      /** Gli estremi accanto allo slider, in LaTeX. */
+      ends: () => [...row.querySelectorAll('.graph-slider-end')].map((e) => e.querySelector('annotation')?.textContent),
       back: row.querySelector<HTMLButtonElement>('[data-action="written"]')!,
       play: row.querySelector<HTMLButtonElement>('[data-action="play"]')!,
       curve: () => block.querySelector('path[data-item="0"]')!.getAttribute('d'),
@@ -160,6 +164,7 @@ describe('gli slider sotto il grafico', () => {
     input.value = value
     input.dispatchEvent(new Event('input', { bubbles: true }))
   }
+  const press = (field: HTMLInputElement, key: string) => field.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
 
   it('ogni numero che il grafico usa ha il suo slider; trascinandolo il grafico cambia, la freccia torna al valore scritto', async () => {
     const g = drawn(NOTE)
@@ -179,6 +184,82 @@ describe('gli slider sotto il grafico', () => {
     again.back.click()
     await frame()
     expect([again.value(), again.point(), again.back.disabled, again.curve()]).toEqual(['2', '(2; 4)', true, written])
+  })
+
+  it('il valore si può scrivere: il grafico segue mentre si scrive, Invio lo tiene, Esc torna a prima', async () => {
+    const g = drawn(NOTE)
+    const written = g.curve()
+    g.field.focus()
+    // Scrivendo si sostituisce il numero di prima.
+    expect([g.field.selectionStart, g.field.selectionEnd]).toEqual([0, 1])
+    move(g.field, '1,')
+    await frame()
+    // Mentre si scrive la casella resta com'è (non diventa «1»), ma il grafico segue già.
+    expect([g.value(), g.point()]).toEqual(['1,', '(1; 1)'])
+    move(g.field, '1,5')
+    await frame()
+    expect([g.point(), g.input.value, g.value()]).toEqual(['(1,5; 2,25)', '1.5', '1,5'])
+    press(g.field, 'Enter')
+    expect(document.activeElement).not.toBe(g.field)
+    expect([g.value(), g.back.disabled]).toEqual(['1,5', false])
+    // Esc rimette il valore di prima.
+    g.field.focus()
+    move(g.field, '3')
+    await frame()
+    expect(g.point()).toBe('(3; 9)')
+    press(g.field, 'Escape')
+    await frame()
+    expect([g.value(), g.point(), document.activeElement === g.field]).toEqual(['1,5', '(1,5; 2,25)', false])
+    // Non è un numero: con Invio la casella diventa rossa e resta lì; uscendo torna il valore.
+    g.field.focus()
+    move(g.field, 'abc')
+    press(g.field, 'Enter')
+    expect([g.field.getAttribute('aria-invalid'), document.activeElement === g.field]).toEqual(['true', true])
+    g.field.blur()
+    expect([g.value(), g.field.hasAttribute('aria-invalid')]).toEqual(['1,5', false])
+    // Anche π/2 o 1/3; uscendo dalla casella vale come Invio.
+    g.field.focus()
+    move(g.field, '\\pi/2')
+    g.field.blur()
+    expect(g.value()).toBe('1,5708')
+    g.back.click()
+    await frame()
+    expect([g.value(), g.curve(), g.back.disabled]).toEqual(['2', written, true])
+  })
+
+  it('un valore scritto fuori dallo slider lo allarga; la freccia rimette anche gli estremi', async () => {
+    const g = drawn(NOTE)
+    expect(g.ends()).toEqual(['-10', '10'])
+    g.field.focus()
+    move(g.field, '25')
+    press(g.field, 'Enter')
+    await frame()
+    expect([g.input.min, g.input.max, g.input.step, g.input.value]).toEqual(['-10', '25', '0.1', '25'])
+    expect([g.ends(), g.point()]).toEqual([['-10', '25'], '(25; 625)'])
+    // Trascinandolo resta allargato, anche tornando al valore scritto e se l'anteprima si ridisegna.
+    move(g.input, '2')
+    await frame()
+    const again = drawn(NOTE)
+    expect([again.value(), again.input.max, again.ends(), again.back.disabled]).toEqual(['2', '25', ['-10', '25'], false])
+    // Molto più lontano: il passo cresce.
+    again.field.focus()
+    move(again.field, '1000')
+    again.field.blur()
+    expect([again.input.min, again.input.max, again.input.step, again.value()]).toEqual(['-10', '1000', '10', '1000'])
+    again.back.click()
+    await frame()
+    expect([again.input.min, again.input.max, again.input.step, again.ends(), again.value(), again.back.disabled]).toEqual(['-10', '10', '0.1', ['-10', '10'], '2', true])
+  })
+
+  it('i numeri che contano i termini di una somma si scrivono interi', async () => {
+    const g = drawn('```grafico\nn = 2\ny = \\sum_{k=0}^{n} x^k\n```\n')
+    expect([g.input.step, g.ends()]).toEqual(['1', ['0', '10']])
+    g.field.focus()
+    move(g.field, '2,6')
+    press(g.field, 'Enter')
+    expect(g.value()).toBe('3')
+    g.back.click()
+    await frame()
   })
 
   it('la nota non cambia: il file .md e la stampa usano il valore scritto', async () => {

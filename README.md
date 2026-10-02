@@ -148,10 +148,12 @@ chi sta provando Glifo.*
 - Ogni numero scritto con le cifre che il grafico usa (`$a = 2$` nella nota o `a = 2` nel blocco,
   anche attraverso una funzione come `$f(x) = a x^2$`; non `b = 2a`, che segue a) ha uno **slider**
   sotto il grafico: trascinandolo il grafico cambia subito, ▶ lo muove da solo avanti e indietro, la
-  freccia torna al valore scritto. Va da −10 a 10 (di 1 in 1 se conta i termini di una somma, come
-  `n` in `\sum_{k=0}^{n}`); `a \in [0, 5]` nel blocco dice da dove a dove. La nota non cambia: il
-  file .md e la stampa usano i valori scritti. Se una lettera non è definita (`y = kx + 1` senza
-  `k`), accanto all'errore c'è «Aggiungi lo slider per k», che scrive `k = 1` nel blocco.
+  freccia torna al valore scritto. Il valore si può anche **scrivere** nella casella accanto (`1,5`,
+  `1/3`, `\pi/2`; Invio lo conferma, Esc torna a prima): un valore fuori dallo slider lo allarga.
+  Va da −10 a 10 (di 1 in 1 se conta i termini di una somma, come `n` in `\sum_{k=0}^{n}`);
+  `a \in [0, 5]` nel blocco dice da dove a dove. La nota non cambia: il file .md e la stampa usano
+  i valori scritti. Se una lettera non è definita (`y = kx + 1` senza `k`), accanto all'errore c'è
+  «Aggiungi lo slider per k», che scrive `k = 1` nel blocco.
 - Con **Salva .md** ogni grafico diventa un'immagine (con il testo del blocco nascosto sotto), come
   gli schemi; riaprendo il file con **Apri .md** torna un blocco da modificare. Funziona offline:
   è tutto scritto per Glifo, senza librerie esterne.

@@ -5,15 +5,17 @@
  * pulsanti (o con Ctrl + rotellina, o con due dita) e, passandoci sopra, dice le coordinate.
  *
  * Sotto il grafico, uno slider per ogni numero che usa (a = 2): trascinandolo il grafico cambia
- * subito, ▶ lo muove da solo, la freccia torna al valore scritto. La nota non cambia: il file .md
+ * subito, il valore si può anche scrivere (1,5, 1/3, \pi/2; fuori dallo slider, lo slider si
+ * allarga), ▶ lo muove da solo, la freccia torna al valore scritto. La nota non cambia: il file .md
  * e la stampa usano i valori scritti. A un nome che manca (k non è definita) il pulsante
  * «Aggiungi lo slider per k» aggiunge k = 1 al blocco (lo fa src/ui/preview.ts).
  */
+import { formatNumber } from '../math/format'
 import { nameLatex } from '../math/latex'
 import { escapeHtml, renderTex } from '../render/katex'
 import type { Theme } from '../schema/model'
 import { chooseWindow, type Viewport } from './plot'
-import { parseGraph, type GraphError, type GraphSlider, type GraphSpec } from './spec'
+import { parseGraph, typedSliderValue, widenSlider, type GraphError, type GraphSlider, type GraphSpec, type Range } from './spec'
 import { graphSvg, graphTitle, itemColors, PALETTES, pointName, type Palette } from './svg'
 
 export interface GraphLook {
@@ -49,6 +51,8 @@ interface SliderState {
   /** Mentre si muove da solo: dove è (senza arrotondare al passo) e in che verso va. */
   pos: number
   dir: 1 | -1
+  /** Allargato per un valore scritto fuori (a = 15, con a da −10 a 10): da dove a dove va adesso. */
+  wide?: { range: Range; step: number }
 }
 /** Gli slider spostati (o che si muovono da soli): restano mentre l'anteprima si ridisegna. */
 const sliderStates = new Map<string, SliderState>()
@@ -112,10 +116,24 @@ function sliderText(v: number, step: number): string {
 }
 
 /** Il valore più vicino tra quelli dello slider (gli estremi, più un passo alla volta). */
-function snap(v: number, s: GraphSlider): number {
-  const [lo, hi] = s.range
-  const k = Math.round((v - lo) / s.step)
-  return Math.min(hi, Math.max(lo, Number((lo + k * s.step).toPrecision(12))))
+function snap(v: number, [lo, hi]: Range, step: number): number {
+  const k = Math.round((v - lo) / step)
+  return Math.min(hi, Math.max(lo, Number((lo + k * step).toPrecision(12))))
+}
+
+/** Un estremo dello slider: come è scritto nel blocco (2\pi) o, se lo slider si è allargato, il numero. */
+function endTex(slider: GraphSlider, range: Range, i: number): string {
+  if (range[i] === slider.range[i]) return slider.ends[i]
+  return formatNumber(range[i], { comma: true, decimal: true, digits: 6 })?.tex ?? String(range[i])
+}
+
+/**
+ * La casella del valore: larga quanto il numero più lungo dello slider (−2,99 da −3 a 3), così
+ * mentre lo si trascina la barra non si sposta; di più se ci si scrive un numero più lungo.
+ */
+function fitField(row: SliderRow): void {
+  const width = `calc(${Math.max(row.chars, row.field.value.length) + 1}ch + 14px)`
+  if (row.field.style.width !== width) row.field.style.width = width
 }
 
 /** «Aggiungi lo slider per k», «Aggiungi gli slider per a, b e c». */
@@ -141,9 +159,22 @@ interface SliderRow {
   /** Dove si ricorda lo stato (vedi sliderStates). */
   key: string
   input: HTMLInputElement
-  output: HTMLElement
+  /** La casella dove si scrive il valore. */
+  field: HTMLInputElement
+  ends: HTMLElement[]
   play: HTMLButtonElement
   back: HTMLButtonElement
+  /** Gli estremi e il passo mostrati, per rifarli solo quando cambiano. */
+  shown: string
+  /** Le cifre del numero più lungo dello slider (vedi fitField). */
+  chars: number
+  /** Mentre si scrive nella casella: il valore di prima (Esc lo rimette). */
+  before: number | null
+}
+
+/** Da dove a dove va adesso uno slider (allargato, se si è scritto un valore fuori) e di quanto si muove. */
+function travel(row: SliderRow): { range: Range; step: number } {
+  return row.state.wide ?? row.slider
 }
 
 class GraphView {
@@ -238,10 +269,10 @@ class GraphView {
       return (
         `<div class="graph-slider" data-index="${i}">` +
         toolButton(`Muovi ${name} da solo`, ICON.play, 'play', ' graph-play') +
-        `<span class="graph-slider-label">${texHtml(nameLatex(s.name))} = <output class="graph-slider-value"></output></span>` +
-        `<span class="graph-slider-end">${texHtml(s.ends[0])}</span>` +
-        `<input type="range" class="graph-slider-input" min="${s.range[0]}" max="${s.range[1]}" step="${s.step}" aria-label="Valore di ${name}">` +
-        `<span class="graph-slider-end">${texHtml(s.ends[1])}</span>` +
+        `<label class="graph-slider-label">${texHtml(nameLatex(s.name))} = <input type="text" class="graph-slider-value" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" title="Scrivi il valore di ${name}" aria-label="Scrivi il valore di ${name}"></label>` +
+        '<span class="graph-slider-end"></span>' +
+        `<input type="range" class="graph-slider-input" aria-label="Valore di ${name}">` +
+        '<span class="graph-slider-end"></span>' +
         toolButton(`Torna al valore scritto: ${name} = ${escapeHtml(sliderText(s.value, s.step))}`, ICON.reset, 'written', ' graph-slider-back') +
         '</div>'
       )
@@ -261,10 +292,14 @@ class GraphView {
         slider,
         state,
         key,
-        input: row.querySelector<HTMLInputElement>('input')!,
-        output: row.querySelector<HTMLElement>('output')!,
+        input: row.querySelector<HTMLInputElement>('.graph-slider-input')!,
+        field: row.querySelector<HTMLInputElement>('.graph-slider-value')!,
+        ends: [...row.querySelectorAll<HTMLElement>('.graph-slider-end')],
         play: row.querySelector<HTMLButtonElement>('[data-action="play"]')!,
         back: row.querySelector<HTMLButtonElement>('[data-action="written"]')!,
+        shown: '',
+        chars: 3,
+        before: null,
       })
       this.showSlider(this.rows[i])
     })
@@ -275,9 +310,48 @@ class GraphView {
     el.addEventListener('input', (ev) => {
       const row = rowOf(ev)
       if (!row) return
+      if (ev.target === row.field) {
+        // Mentre si scrive il grafico segue già; Invio (o uscire dalla casella) allarga lo slider, se serve.
+        fitField(row)
+        row.field.removeAttribute('aria-invalid')
+        const value = typedSliderValue(row.field.value, row.slider)
+        if (value !== null && value !== row.state.value) this.setSlider(row, value)
+        return
+      }
       // Trascinato a mano: smette di muoversi da solo.
       row.state.playing = false
-      this.setSlider(row, snap(row.input.valueAsNumber, row.slider))
+      const { range, step } = travel(row)
+      this.setSlider(row, snap(row.input.valueAsNumber, range, step))
+    })
+    el.addEventListener('focusin', (ev) => {
+      const row = rowOf(ev)
+      if (!row || ev.target !== row.field || row.before !== null) return
+      row.before = row.state.value
+      if (row.state.playing) {
+        row.state.playing = false
+        this.setSlider(row, row.state.value)
+      }
+      // Scrivendo si sostituisce il numero di prima.
+      row.field.select()
+    })
+    el.addEventListener('focusout', (ev) => {
+      const row = rowOf(ev)
+      if (row && ev.target === row.field && row.before !== null) this.useField(row, true)
+    })
+    el.addEventListener('keydown', (ev) => {
+      const row = rowOf(ev)
+      if (!row || ev.target !== row.field || row.before === null) return
+      if (ev.key === 'Enter') {
+        ev.preventDefault()
+        if (this.useField(row, false)) row.field.blur()
+      } else if (ev.key === 'Escape') {
+        ev.preventDefault()
+        const before = row.before
+        row.before = null
+        row.field.removeAttribute('aria-invalid')
+        this.setSlider(row, before)
+        row.field.blur()
+      }
     })
     el.addEventListener('click', (ev) => {
       const row = rowOf(ev)
@@ -285,12 +359,13 @@ class GraphView {
       if (!row || !action) return
       if (action === 'written') {
         row.state.playing = false
+        row.state.wide = undefined
         this.setSlider(row, row.slider.value)
       } else if (action === 'play') {
         const { state } = row
         state.playing = !state.playing
         if (state.playing) {
-          const [lo, hi] = row.slider.range
+          const [lo, hi] = travel(row).range
           state.pos = Math.min(hi, Math.max(lo, state.value))
           if (state.pos >= hi) state.dir = -1
           else if (state.pos <= lo) state.dir = 1
@@ -305,14 +380,29 @@ class GraphView {
 
   /** Mostra lo slider com'è adesso: la posizione, il valore (quello scritto, mentre si stampa), i pulsanti. */
   private showSlider(row: SliderRow): void {
-    const { slider, state, input, output, play, back } = row
+    const { slider, state, input, field, play, back } = row
+    const { range, step } = travel(row)
+    const shown = `${range[0]} ${range[1]} ${step}`
+    if (shown !== row.shown) {
+      row.shown = shown
+      // Prima gli estremi, poi il valore: se no il browser lo terrebbe dentro quelli di prima.
+      input.min = String(range[0])
+      input.max = String(range[1])
+      input.step = String(step)
+      row.ends.forEach((end, i) => (end.innerHTML = texHtml(endTex(slider, range, i))))
+      row.chars = Math.max(3, ...[range[0], range[1], range[0] + step, range[1] - step].map((v) => sliderText(v, step).length))
+    }
     const value = printing ? slider.value : state.value
-    const text = sliderText(value, slider.step)
+    const text = sliderText(value, step)
     input.value = String(value)
     input.setAttribute('aria-valuetext', text)
-    output.textContent = text
+    // Mentre si scrive nella casella, resta quello che si sta scrivendo.
+    if (row.before === null || printing) {
+      field.value = text
+      fitField(row)
+    }
     // Nascosto ma al suo posto (vedi app.css): la barra non salta quando compare.
-    const unchanged = state.value === slider.value
+    const unchanged = state.value === slider.value && !state.wide
     back.disabled = unchanged
     back.classList.toggle('is-idle', unchanged)
     const pressed = String(state.playing)
@@ -326,16 +416,37 @@ class GraphView {
   }
 
   private setSlider(row: SliderRow, value: number): void {
-    row.state.value = value
-    if (!row.state.playing) row.state.pos = value
-    if (value === row.slider.value && !row.state.playing) sliderStates.delete(row.key)
+    const { state } = row
+    state.value = value
+    if (!state.playing) state.pos = value
+    if (value === row.slider.value && !state.playing && !state.wide) sliderStates.delete(row.key)
     else {
       if (sliderStates.size >= MAX_CACHE) sliderStates.delete(sliderStates.keys().next().value!)
-      sliderStates.set(row.key, row.state)
+      sliderStates.set(row.key, state)
     }
     this.showSlider(row)
     this.hideTip()
     this.schedule()
+  }
+
+  /**
+   * Usa il valore scritto nella casella (Invio, o uscendo dalla casella); se è fuori dallo slider,
+   * lo slider si allarga fino a lì. Se non è un numero: con Invio la casella diventa rossa (false),
+   * uscendo torna il valore di prima.
+   */
+  private useField(row: SliderRow, leaving: boolean): boolean {
+    const typed = typedSliderValue(row.field.value, row.slider)
+    if (typed === null && !leaving) {
+      row.field.setAttribute('aria-invalid', 'true')
+      return false
+    }
+    row.before = null
+    row.field.removeAttribute('aria-invalid')
+    const value = typed ?? row.state.value
+    const { range, step } = travel(row)
+    if (value < range[0] || value > range[1]) row.state.wide = widenSlider(range, step, value, row.slider.integer)
+    this.setSlider(row, value)
+    return true
   }
 
   /** Gli slider che si muovono da soli: avanti e indietro tra gli estremi, finché non si fermano. */
@@ -350,10 +461,11 @@ class GraphView {
       this.lastTime = now
       let moving = false
       for (const row of this.rows) {
-        const { state, slider } = row
+        const { state } = row
         if (!state.playing) continue
         moving = true
-        const [lo, hi] = slider.range
+        const { range, step } = travel(row)
+        const [lo, hi] = range
         state.pos += (state.dir * (hi - lo) * dt) / SWEEP
         if (state.pos >= hi) {
           state.pos = hi
@@ -362,7 +474,7 @@ class GraphView {
           state.pos = lo
           state.dir = 1
         }
-        const value = snap(state.pos, slider)
+        const value = snap(state.pos, range, step)
         if (value !== state.value) this.setSlider(row, value)
       }
       if (moving) this.animation = requestAnimationFrame(tick)

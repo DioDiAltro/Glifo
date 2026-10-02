@@ -68,9 +68,10 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   gli schemi). Le definizioni della nota arrivano al blocco in `data-defs` (vedi `render/markdown.ts`).
   Gli slider: ogni numero scritto con le cifre che il grafico usa ne ha uno (`spec.sliders`);
   `parseGraph(…, values)` rifà il grafico con altri valori senza cambiare la nota (file .md e stampa
-  usano quelli scritti). «Aggiungi lo slider per k» passa da `onAddToGraph` (`src/ui/preview.ts`) a
-  `addToGraphBlock`. Il pulsante «Grafico» e il grafico nel pannello della formula:
-  `src/editor/graphInsert.ts`.
+  usano quelli scritti). Il valore si può anche scrivere nella casella accanto (`typedSliderValue`;
+  fuori dallo slider, `widenSlider` lo allarga). «Aggiungi lo slider per k» passa da `onAddToGraph`
+  (`src/ui/preview.ts`) a `addToGraphBlock`. Il pulsante «Grafico» e il grafico nel pannello della
+  formula: `src/editor/graphInsert.ts`.
 - `src/ai/`: assistente AI. `src/host.ts`: funzioni della demo dentro claude.ai.
 - `src/account/`: account e sincronizzazione. `sync.ts` è il motore (manda, scarica, nei
   conflitti tiene tutte e due le versioni), `controller.ts` decide quando sincronizzare,

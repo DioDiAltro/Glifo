@@ -19,9 +19,9 @@
  * slider sotto il grafico: `parseGraph` con `values` rifà il grafico con quei valori al posto di
  * quelli scritti, senza cambiare la nota.
  */
-import { compile, compileCondition, errorMessage, MathError, scopeWith, UndefinedName, withWorkLimit, type Compiled, type Scope, type UserFunction } from '../math/evaluate'
+import { compile, compileCondition, EMPTY_SCOPE, errorMessage, MathError, scopeWith, UndefinedName, withWorkLimit, type Compiled, type Scope, type UserFunction } from '../math/evaluate'
 import { nameLatex, toLatex } from '../math/latex'
-import { children, namesIn, parseStatement, tokenize, type MathNode } from '../math/parse'
+import { children, namesIn, parseMath, parseStatement, tokenize, type MathNode } from '../math/parse'
 import { Sheet } from '../math/sheet'
 
 export type Range = [number, number]
@@ -64,6 +64,8 @@ export interface GraphSlider {
   ends: [string, string]
   /** Di quanto si muove: di 1 i numeri che contano i termini di una somma. */
   step: number
+  /** Conta i termini di una somma (n in \sum_{k=0}^{n}): solo numeri interi. */
+  integer: boolean
 }
 
 export interface GraphSpec {
@@ -141,6 +143,40 @@ function defaultRange(value: number, integer: boolean): Range {
 /** Il passo dello slider: tra 100 e 1000 posizioni. */
 function sliderStep(range: Range): number {
   return 10 ** Math.floor(Math.log10((range[1] - range[0]) / 100))
+}
+
+/**
+ * Il numero scritto a mano accanto allo slider (2, −1,5, 3/4, \pi/2, 2pi): null se non è un
+ * numero. Quelli che contano i termini di una somma si arrotondano all'intero.
+ */
+export function typedSliderValue(text: string, slider: Pick<GraphSlider, 'integer'>): number | null {
+  // Mentre si scrive 3,5, «3,» vale già 3.
+  const src = text.trim().replace(/[,.]$/, '')
+  if (!src) return null
+  let value: number
+  try {
+    value = withWorkLimit(GRAPH_WORK, () => compile(parseMath(src), EMPTY_SCOPE, { calc: true })({}))
+  } catch {
+    return null
+  }
+  if (!Number.isFinite(value)) return null
+  return slider.integer ? Math.round(value) : value
+}
+
+/**
+ * Lo slider allargato fino a un valore scritto a mano fuori da dove va (a = 15, con a da −10 a 10):
+ * l'estremo nuovo è sul passo, e se lo slider diventa molto più lungo il passo cresce (tra 100 e
+ * 1000 posizioni, come gli altri).
+ */
+export function widenSlider(range: Range, step: number, value: number, integer: boolean): { range: Range; step: number } {
+  const [lo, hi] = range
+  if (value >= lo && value <= hi) return { range, step }
+  const s = integer ? 1 : Math.max(step, sliderStep([Math.min(lo, value), Math.max(hi, value)]))
+  const down = (v: number) => Number((Math.floor(v / s + 1e-9) * s).toPrecision(12))
+  const up = (v: number) => Number((Math.ceil(v / s - 1e-9) * s).toPrecision(12))
+  // Con un passo nuovo anche l'altro estremo va sul passo: lo slider arriva fino in fondo.
+  const again = s !== step
+  return { range: [value < lo || again ? down(Math.min(lo, value)) : lo, value > hi || again ? up(Math.max(hi, value)) : hi], step: s }
 }
 
 /** I nomi che contano i termini di una somma o di un prodotto (\sum_{k=0}^{n}): i loro slider vanno di 1. */
@@ -402,7 +438,7 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
       const integer = counters.has(name)
       const written = sliderRanges.get(name)
       const range = written?.range ?? defaultRange(value, integer)
-      return { name, value, range, ends: written?.ends ?? [String(range[0]), String(range[1])], step: integer ? 1 : sliderStep(range) }
+      return { name, value, range, ends: written?.ends ?? [String(range[0]), String(range[1])], step: integer ? 1 : sliderStep(range), integer }
     })
   // Un intervallo per un nome che non è un numero da muovere.
   for (const [name, r] of sliderRanges) {
