@@ -59,7 +59,8 @@ export function isComplexLine(node: MathNode, scope: ComplexScope, realNames: Re
         else if (scope.consts.has(n.name) && isComplexValue(scope.consts.get(n.name)!)) found = true
         return
       case 'fn':
-        if (COMPLEX_FUNCTIONS.has(n.name)) found = true
+        // \overline{AB} con due punti (maiuscole) è un segmento, non il coniugato.
+        if (COMPLEX_FUNCTIONS.has(n.name) && !(n.name === 'conj' && isSegmentNode(n.args[0]))) found = true
         break
       case 'abs':
         if (!planar && namesIn(n.a, new Set(), bound).has(Z) && !realNames.has(Z)) found = true
@@ -79,6 +80,12 @@ export function isComplexLine(node: MathNode, scope: ComplexScope, realNames: Re
   }
   visit(node, new Set())
   return found
+}
+
+/** Due punti scritti attaccati (AB, con le maiuscole): \overline{AB} è un segmento. */
+function isSegmentNode(n: MathNode | undefined): boolean {
+  const upper = (m: MathNode) => m.k === 'name' && /^[A-Z](_.+)?$/.test(m.name)
+  return !!n && n.k === 'bin' && n.op === '*' && !!n.implicit && upper(n.a) && upper(n.b)
 }
 
 /** Il nome di un insieme di z (D = \{z \in \mathbb{C} : |z| \le 1\}). */

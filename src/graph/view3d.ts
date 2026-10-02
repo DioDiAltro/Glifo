@@ -14,6 +14,7 @@ import {
   FINE,
   implicitFaces,
   layeredFaces,
+  polygonNormal,
   patchFaces,
   planeFace,
   regionFaces,
@@ -142,6 +143,21 @@ export function buildScene(spec: GraphSpec, box: Box, quality: Quality = 'fine')
         case 'vector':
           scene.vectors.push({ from: item.from, to: item.to, item: i, name: item.name })
           break
+        case 'segment':
+          scene.lines.push({ points: straight(item.a, item.b), item: i, sides: [] })
+          break
+        case 'polygon': {
+          // La faccia, velata, e il bordo.
+          add([{ polygons: [item.points], normal: polygonNormal(item.points), mesh: [] }], i, -1, { flat: true })
+          item.points.forEach((p, k) => scene.lines.push({ points: straight(p, item.points[(k + 1) % item.points.length]), item: i, sides: [] }))
+          break
+        }
+        case 'angle':
+          scene.lines.push({ points: arcPoints(item.vertex, item.a, item.b), item: i, sides: [] })
+          break
+        case 'points':
+          for (const p of item.points) scene.points.push({ p, item: i, name: null, sides: [] })
+          break
       }
     })
     // Ogni pezzo diviso da ogni piano, così sta tutto da una parte.
@@ -155,6 +171,31 @@ export function buildScene(spec: GraphSpec, box: Box, quality: Quality = 'fine')
     })
     for (const p of scene.points) p.sides = sidesOf(p.p, scene.planes, box)
     return scene
+  })
+}
+
+/** Un tratto dritto da a a b, in pezzi (ognuno con la sua profondità). */
+function straight(a: Vec3, b: Vec3, pieces = 12): Vec3[] {
+  return Array.from({ length: pieces + 1 }, (_, k) => a.map((c, i) => c + ((b[i] - c) * k) / pieces) as Vec3)
+}
+
+/** L'arco di un angolo nel vertice v, da verso a a verso b, nel piano dei due lati. */
+function arcPoints(v: Vec3, a: Vec3, b: Vec3): Vec3[] {
+  const ua = a.map((c, i) => c - v[i])
+  const ub = b.map((c, i) => c - v[i])
+  const la = Math.hypot(...ua)
+  const lb = Math.hypot(...ub)
+  if (!la || !lb) return []
+  const u = ua.map((c) => c / la)
+  const dotUB = (u[0] * ub[0] + u[1] * ub[1] + u[2] * ub[2]) / lb
+  const angle = Math.acos(Math.max(-1, Math.min(1, dotUB)))
+  const perp = ub.map((c, i) => c / lb - dotUB * u[i])
+  const lp = Math.hypot(...perp)
+  const e = lp ? perp.map((c) => c / lp) : [0, 0, 0]
+  const r = 0.3 * Math.min(la, lb)
+  return Array.from({ length: 17 }, (_, k) => {
+    const t = (angle * k) / 16
+    return v.map((c, i) => c + r * (Math.cos(t) * u[i] + Math.sin(t) * e[i])) as Vec3
   })
 }
 

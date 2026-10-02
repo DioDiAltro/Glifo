@@ -147,6 +147,18 @@ chi sta provando Glifo.*
   (`u \times v`), norma (`\|v\|`), **autovalori** e **autovettori** (`\operatorname{autovalori}(A) =`,
   `\operatorname{autovettori}(A) =`, anche complessi e con la molteplicità) e il polinomio caratteristico
   (`\det(A - \lambda I) =`). I risultati con le matrici si vedono disegnati anche nell'editor.
+- **Geometria**, con i punti scritti prima (`$A = (0, 0)$`, `$B = (4, 0)$`, anche con tre coordinate):
+  lunghezze (`\overline{AB} =`, `d(A, B) =`, con le radici esatte: √2 ≈ 1,414213…), il vettore da A a B
+  (`\overrightarrow{AB}`, `\vec{AB}`), punto medio e baricentro (`\operatorname{medio}(A, B)`,
+  `\operatorname{baricentro}(A, B, C)`), la retta per due punti (`\operatorname{retta}(A, B) =` dà
+  `y = 2x`; anche `\overleftrightarrow{AB}`; nello spazio in forma parametrica), triangoli e poligoni con
+  area e perimetro (`\triangle ABC =`, `\operatorname{area}(A, B, C)`, `\operatorname{poligono}(A, B, C, D)`,
+  `\operatorname{perimetro}(\triangle ABC)`), angoli in gradi (`\widehat{BAC} =`, `\angle ABC`, e
+  `\operatorname{angolo}(u, v)` tra due vettori), circonferenze con centro e raggio o per tre punti
+  (`\operatorname{circonferenza}(O, 3) =` dà `(x − 1)² + (y − 2)² = 9`), il piano per tre punti
+  (`\operatorname{piano}(A, B, C) =`), le distanze di un punto da una retta e da un piano (`d(P, r) =`) e
+  le intersezioni di rette, circonferenze e piani (`\operatorname{intersezione}(r, c) =`, con le radici
+  esatte: `(−√2, −√2); (√2, √2)`). Le figure con un nome (`r = \operatorname{retta}(A, B)`) si usano dopo.
 - **Integrali doppi e tripli**, con il dominio sotto: disuguaglianze (`\iint_{x^2 + y^2 \le 1} (x^2 + y^2) \, dA =`,
   `\iiint_{x^2 + y^2 \le 1, 0 \le z \le 2} dV =`), rettangoli (`\iint_{[0, 1] \times [0, 2]} x y \, dx \, dy =`,
   `[0, 1]^3`) o il nome di un insieme scritto prima (`$D = \{(x, y) : 0 \le y \le x \le 1\}$` e poi
@@ -202,6 +214,13 @@ chi sta provando Glifo.*
   (`u + v`, `A u`, con le componenti nella legenda), e una curva con il
   parametro di primo grado (`(1 + t, 2t)`) è una retta intera, da un bordo all'altro (con
   `t \in [0, 1]` solo quel pezzo).
+- Le figure della **geometria** si disegnano come si scrivono: punti con il nome (`A = (0, 0)`,
+  `M = \operatorname{medio}(B, C)`), segmenti (`\overline{AM}`), triangoli e poligoni colorati
+  (`\triangle ABC`), angoli con l'arco e l'ampiezza (`\widehat{BAC}`; quello retto con il quadratino),
+  rette per due punti, circonferenze, i punti dove si incontrano (`\operatorname{intersezione}(r, c)`) e,
+  con tre coordinate, piani e triangoli nello spazio. La legenda dice le misure (l'area, la lunghezza,
+  l'equazione); i punti della nota che una figura usa si disegnano anche loro, e i nomi dei vertici
+  stanno fuori dalla figura, lontano dai numeri degli assi.
 - Glifo sceglie da solo la parte da mostrare (dove la funzione si annulla, ha massimi e minimi, gli
   asintoti; per seni e coseni due giri con le tacche in π; le circonferenze restano rotonde), stacca
   la curva dove salta e segna gli **asintoti verticali** tratteggiati. Assi con la freccia, i numeri
@@ -230,6 +249,8 @@ chi sta provando Glifo.*
 ![Numeri complessi: i conti nella nota e il piano di Gauss con frecce, radici e zone](docs/numeri-complessi.png)
 
 ![Matrici e vettori: inversa, autovalori, autovettori e polinomio caratteristico, e i vettori come frecce](docs/matrici.png)
+
+![Geometria: lunghezze, area, angoli, rette e circonferenze nella nota, e il triangolo con l'angolo e la mediana nel grafico](docs/geometria.png)
 
 **Schemi stile draw.io**
 - Il pulsante con i due riquadri nella barra apre un editor a tutto schermo: forme a sinistra
@@ -429,7 +450,7 @@ src/
     evaluate.ts           le calcola: funzioni, somme, integrali, derivate, condizioni
     domain.ts             i domini degli integrali doppi e tripli (margine, condizioni, strati) e come si integrano
     complex.ts            i numeri complessi: conti (anche esatti), radici, forme a + bi e ρe^{iθ}, equazioni
-    linear.ts             vettori e matrici: conti esatti o con la virgola, determinante, inversa, rango, nucleo, autovalori
+    linear.ts             vettori e matrici: conti esatti o con la virgola, determinante, inversa, rango, nucleo, autovalori; la geometria (segmenti, rette, circonferenze, piani, angoli, intersezioni)
     exact.ts, format.ts   i conti esatti con le frazioni; i risultati scritti all'italiana
     sheet.ts              il «foglio» della nota: definizioni dall'alto in basso e risultati dopo «=»
     latex.ts              un'espressione riscritta in LaTeX (le legende dei grafici)

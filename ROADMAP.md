@@ -44,8 +44,14 @@ pubblicata appena è pronta e qui si segna come fatta.
    nell'editor) e nei grafici le frecce dei vettori della nota e dei loro conti (`u + v`, `A u`).
    Da migliorare se serve: i sistemi lineari si risolvono con l'inversa (`A^{-1} b`); i sistemi
    scritti per esteso arrivano con la tappa 7.
-5. **Geometria**: segmenti, triangoli e poligoni, rette per due punti, circonferenze, distanze,
-   angoli, punti medi; piani e rette nello spazio.
+5. Fatto (2 ottobre 2026): **geometria** nella nota con i punti scritti prima (lunghezze dei
+   segmenti con le radici esatte, punto medio e baricentro, retta per due punti, area e perimetro di
+   triangoli e poligoni, angoli in gradi, circonferenze con centro e raggio o per tre punti, piano per
+   tre punti, distanze punto-retta e punto-piano, intersezioni di rette, circonferenze e piani, anche
+   con le radici: `(−√2, −√2); (√2, √2)`) e nei grafici (punti con il nome, segmenti, poligoni colorati,
+   angoli con l'arco e l'ampiezza, rette, circonferenze, intersezioni, piani e triangoli nello spazio;
+   i nomi dei vertici fuori dalle figure). Da migliorare se serve: le coniche (ellisse, parabola,
+   iperbole) come figure con i loro elementi (fuochi, assi).
 6. **Integrali di linea e di superficie** su curve e superfici date con i loro parametri, lavoro e
    flusso; campi vettoriali disegnati con le frecce, gradiente, divergenza e rotore.
 7. **Il resto di Analisi**: derivate scritte come formula, limiti, serie, polinomi di Taylor,

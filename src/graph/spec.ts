@@ -32,7 +32,7 @@
  * quelli scritti, senza cambiare la nota.
  */
 import { compileComplex, type Complex, type ComplexFunction, type ComplexScope } from '../math/complex'
-import { evaluateLinear, FLOAT, type LinearScope } from '../math/linear'
+import { degreesText, evaluateLinear, EXACT, FLOAT, formatLinear, type Lin, type LinearScope, type LinearValue } from '../math/linear'
 import { compile, compileCondition, EMPTY_SCOPE, errorMessage, MathError, scopeWith, UndefinedName, withWorkLimit, type Compiled, type Scope, type UserFunction } from '../math/evaluate'
 import { formatNumber } from '../math/format'
 import { nameLatex, toLatex } from '../math/latex'
@@ -80,6 +80,11 @@ interface ItemBase {
    * disegna una volta sola, e questa riga ne prende il colore. Resta nella legenda.
    */
   same?: boolean
+  /**
+   * Un punto della nota che una figura del blocco usa (\triangle ABC con A, B, C definiti nella
+   * nota): si disegna con il suo nome, ma non è una riga del blocco.
+   */
+  fromNote?: boolean
 }
 
 export type GraphItem =
@@ -126,6 +131,14 @@ export type GraphItem =
       parts: ((x: number, y: number, z: number) => number)[] | null
       layers: LayeredSolid | null
     })
+  /** Un segmento AB (\overline{AB}), nel piano o nello spazio. */
+  | (ItemBase & { kind: 'segment'; a: Vec3; b: Vec3 })
+  /** Un poligono (\triangle ABC, \operatorname{poligono}(A, B, C, D)): colorato dentro. */
+  | (ItemBase & { kind: 'polygon'; points: Vec3[] })
+  /** Un angolo (\widehat{ABC}): l'arco nel vertice, con l'ampiezza in gradi. */
+  | (ItemBase & { kind: 'angle'; vertex: Vec3; a: Vec3; b: Vec3; degrees: number })
+  /** Dei punti (dove una retta taglia una circonferenza). */
+  | (ItemBase & { kind: 'points'; points: Vec3[] })
   /**
    * Numeri complessi nel piano di Gauss (1 + 2i, w = e^{i\pi/3}, le radici di \sqrt[3]{8i}, le
    * soluzioni di z^3 = 8i): `arrows` le frecce dall'origine (per un numero solo), se no i punti.
@@ -630,57 +643,195 @@ function define(
   })
 }
 
-/** La riga usa vettori o matrici della nota (v = (1, 2), A = \begin{pmatrix} … \end{pmatrix}) o scrive una matrice. */
+/** Le funzioni della geometria (e delle matrici): una riga che le usa si calcola come figura. */
+const FIGURES = new Set(['segment', 'arrow', 'line', 'triangle', 'polygon', 'circle', 'mid', 'centroid', 'angle', 'plane', 'intersect', 'dist', 'span', 'ker'])
+
+/** Il coniugato di due lettere (\overline{AB}) è il segmento AB, se A e B sono punti. */
+function isSegment(n: MathNode, scope: LinearScope): boolean {
+  if (n.k !== 'fn' || n.name !== 'conj' || n.args.length !== 1) return false
+  const a = n.args[0]
+  return a.k === 'bin' && a.op === '*' && !!a.implicit && a.a.k === 'name' && a.b.k === 'name' && scope.values.has(a.a.name) && scope.values.has(a.b.name)
+}
+
+/** La riga usa vettori, matrici o figure (v = (1, 2), A = \begin{pmatrix} … \end{pmatrix}, \overline{AB}). */
 function usesLinear(main: MathNode, scope: LinearScope): boolean {
   if ([...namesIn(main)].some((n) => scope.values.has(n))) return true
-  let matrix = false
+  let found = false
   const visit = (n: MathNode) => {
-    if (n.k === 'matrix') matrix = true
+    if (n.k === 'matrix' || (n.k === 'fn' && FIGURES.has(n.name)) || isSegment(n, scope)) found = true
     else children(n).forEach(visit)
   }
   visit(main)
-  return matrix
+  return found
 }
 
-/** Le componenti del vettore di una riga (u + v, A v, la colonna di una matrice), o null se non è un vettore. */
-function linearVector(main: MathNode, scope: LinearScope): number[] | null {
+/** Il valore (con la virgola) di una riga con vettori e figure, o null se non lo è o non si calcola. */
+function linearValue(main: MathNode, scope: LinearScope): Lin<number> | null {
   if (!usesLinear(main, scope)) return null
   try {
-    const value = evaluateLinear(main, scope, FLOAT)
-    if (value.k !== 'matrix' || value.m[0].length !== 1) return null
-    const v = value.m.map((r) => r[0])
-    return v.length === 2 || v.length === 3 ? v : null
+    return evaluateLinear(main, scope, FLOAT)
   } catch {
     return null
   }
 }
 
-/**
- * Un vettore della nota nel grafico: una freccia dall'origine (u + v, A v, \vec{v}). Un nome con la
- * maiuscola (P, A_1) è un punto, come nei libri.
- */
-function linearItem(l: Line, scope: LinearScope, slot: number, space: boolean): GraphItem | null {
-  const v = linearVector(l.main, scope)
-  if (!v) {
-    if (usesLinear(l.main, scope)) {
-      try {
-        const value = evaluateLinear(l.main, scope, FLOAT)
-        if (value.k === 'matrix') throw new MathError('Una matrice non si disegna: disegna i vettori, come A v')
-      } catch (err) {
-        if (err instanceof MathError) throw err
-      }
-    }
+/** In quante dimensioni sta una figura: 3 se ha punti con tre coordinate (o è un piano). */
+function linearDims(main: MathNode, scope: LinearScope): number {
+  const value = linearValue(main, scope)
+  if (!value) return 0
+  switch (value.k) {
+    case 'matrix':
+      return value.m[0].length === 1 ? value.m.length : 0
+    case 'plane':
+      return 3
+    case 'segment':
+    case 'arrow':
+      return value.a.length
+    case 'line':
+      return value.p.length
+    case 'polygon':
+      return value.points[0].length
+    case 'angle':
+      return value.v.length
+    case 'points':
+      return value.list[0]?.length ?? 0
+    case 'circle':
+      return 2
+    case 'span':
+      return value.basis[0]?.length ?? 0
+  }
+  return 0
+}
+
+/** Il nome e il valore di una riga come r = \operatorname{retta}(A, B); se no null. */
+function namedFigure(main: MathNode): { name: string; value: MathNode } | null {
+  if (main.k !== 'rel' || main.ops.length !== 1 || main.ops[0] !== '=' || main.items[0].k !== 'name') return null
+  return { name: main.items[0].name, value: main.items[1] }
+}
+
+const vec3 = (m: number[][]): Vec3 => [m[0][0], m[1][0], m[2]?.[0] ?? 0]
+
+function tryFormat<T>(run: () => T | null): T | null {
+  try {
+    return run()
+  } catch {
     return null
   }
-  const [x, y, z = 0] = v
-  const name = l.main.k === 'name' ? l.main.name : null
-  // Nella legenda anche le componenti, se la riga non le scrive già: u + v = (4, 1).
-  const parts = v.map((c) => formatNumber(c, { comma: true, decimal: true, digits: 9 })?.tex ?? String(c))
-  const components = `\\left(${parts.join(parts.some((p) => p.includes('{,}')) ? '; ' : ', ')}\\right)`
-  const label = l.main.k === 'matrix' ? toLatex(l.main) : `${toLatex(l.main)} = ${components}`
-  if (name && /^[A-Z]/.test(name)) return space ? { kind: 'point3', line: l.line, label: nameLatex(name), slot: -1, x, y, z, name } : { kind: 'point', line: l.line, label: nameLatex(name), slot: -1, x, y, name }
-  if (!space && v.length === 3) throw new MathError('Un vettore con tre componenti va in un grafico 3D')
-  return { kind: 'vector', line: l.line, label, slot, from: [0, 0, 0], to: [x, y, z], name }
+}
+
+/** Il valore di una figura per l'etichetta: con le frazioni, se si può. */
+function figureText(node: MathNode, scope: LinearScope, float: Lin<number>): string | null {
+  const options = { comma: true, decimal: false, digits: 9 }
+  const exact = tryFormat(() => formatLinear(EXACT, evaluateLinear(node, scope, EXACT), options))
+  return (exact ?? formatLinear(FLOAT, float, { ...options, decimal: true }))?.tex ?? null
+}
+
+/**
+ * Quello che disegna una riga con vettori e figure: frecce (u + v, A v, \overrightarrow{AB}), punti
+ * (con la maiuscola: P, M = \operatorname{medio}(A, B)), segmenti, rette, circonferenze, piani,
+ * poligoni, angoli. Null se la riga è altro.
+ */
+function linearItem(l: Line, scope: LinearScope, slot: number, space: boolean): GraphItem | null {
+  // I punti e i vettori scritti con le coordinate (P = (1, 2)) li disegna itemFor.
+  if (tupleOf(l.main)) return null
+  const named = namedFigure(l.main)
+  const node = named && usesLinear(named.value, scope) ? named.value : l.main
+  const name = named && node === named.value ? named.name : l.main.k === 'name' ? l.main.name : null
+  if (!usesLinear(node, scope)) return null
+  const value = evaluateLinear(node, scope, FLOAT)
+  const written = toLatex(l.main)
+  const shown = () => figureText(node, scope, value) ?? ''
+  const line = l.line
+  const flat = (v: Vec3[]) => {
+    if (!space && v.some((p) => p[2] !== 0)) throw new MathError('Una figura con tre coordinate va in un grafico 3D')
+  }
+  switch (value.k) {
+    case 'matrix': {
+      if (value.m[0].length !== 1) throw new MathError('Una matrice non si disegna: disegna i vettori, come A v')
+      const v = value.m.map((r) => r[0])
+      if (v.length < 2 || v.length > 3) throw new MathError('Si disegnano i vettori con due o tre componenti')
+      const [x, y, z = 0] = v
+      if (name && /^[A-Z]/.test(name)) return space ? { kind: 'point3', line, label: nameLatex(name), slot: -1, x, y, z, name } : { kind: 'point', line, label: nameLatex(name), slot: -1, x, y, name }
+      if (!space && v.length === 3) throw new MathError('Un vettore con tre componenti va in un grafico 3D')
+      // Nella legenda anche le componenti, se la riga non le scrive già: u + v = (4, 1).
+      const label = l.main.k === 'matrix' || l.main.k === 'tuple' ? written : `${written} = ${shown()}`
+      return { kind: 'vector', line, label, slot, from: [0, 0, 0], to: [x, y, z], name }
+    }
+    case 'arrow': {
+      const from = vec3(value.a)
+      const to = vec3(value.b)
+      flat([from, to])
+      return { kind: 'vector', line, label: `${written} = ${shown()}`, slot, from, to, name }
+    }
+    case 'segment': {
+      const a = vec3(value.a)
+      const b = vec3(value.b)
+      flat([a, b])
+      return { kind: 'segment', line, label: `${written} = ${shown()}`, slot, a, b }
+    }
+    case 'line': {
+      const p = vec3(value.p)
+      const d = vec3(value.dir)
+      const label = `${written}: ${shown()}`
+      if (value.p.length === 3) {
+        if (!space) throw new MathError('Una retta nello spazio va in un grafico 3D')
+        return { kind: 'curve3', line, label, slot, param: 't', t: [0, 1], straight: true, fx: (t) => p[0] + t * d[0], fy: (t) => p[1] + t * d[1], fz: (t) => p[2] + t * d[2] }
+      }
+      return { kind: 'parametric', line, label, slot, param: 't', t: [0, 1], straight: true, fx: (t) => p[0] + t * d[0], fy: (t) => p[1] + t * d[1] }
+    }
+    case 'circle': {
+      const [cx, cy] = [value.c[0][0], value.c[1][0]]
+      const r2 = value.r2
+      return { kind: 'implicit', line, label: `${written}: ${shown()}`, slot, F: (x, y) => (x - cx) ** 2 + (y - cy) ** 2 - r2 }
+    }
+    case 'plane': {
+      if (!space) throw new MathError('Un piano va in un grafico 3D')
+      const [a, b, c] = value.n.map((r) => r[0])
+      const d = value.d
+      return { kind: 'implicit3', line, label: `${written}: ${shown()}`, slot, F: (x, y, z) => a * x + b * y + c * z - d, plane: [a, b, c, d] }
+    }
+    case 'polygon': {
+      const points = value.points.map(vec3)
+      flat(points)
+      const area = space ? '' : shown()
+      return { kind: 'polygon', line, label: area ? `${written},\\ \\text{area} = ${area}` : written, slot, points }
+    }
+    case 'angle': {
+      const vertex = vec3(value.v)
+      const a = vec3(value.a)
+      const b = vec3(value.b)
+      flat([vertex, a, b])
+      const ua = a.map((c, i) => c - vertex[i])
+      const ub = b.map((c, i) => c - vertex[i])
+      const cos = (ua[0] * ub[0] + ua[1] * ub[1] + ua[2] * ub[2]) / (Math.hypot(...ua) * Math.hypot(...ub))
+      const degrees = (Math.acos(Math.max(-1, Math.min(1, cos))) * 180) / Math.PI
+      return { kind: 'angle', line, label: `${written} = ${degreesText(degrees, { comma: true, decimal: true, digits: 9 })?.tex ?? ''}`, slot, vertex, a, b, degrees }
+    }
+    case 'points': {
+      const points = value.list.map(vec3)
+      flat(points)
+      return { kind: 'points', line, label: `${written} = ${shown()}`, slot, points }
+    }
+    case 'span': {
+      // Lo span di un vettore è una retta per l'origine, di due (nello spazio) un piano.
+      const basis = value.basis.map(vec3)
+      if (basis.length === 1) {
+        const d = basis[0]
+        if (space) return { kind: 'curve3', line, label: written, slot, param: 't', t: [0, 1], straight: true, fx: (t) => t * d[0], fy: (t) => t * d[1], fz: (t) => t * d[2] }
+        return { kind: 'parametric', line, label: written, slot, param: 't', t: [0, 1], straight: true, fx: (t) => t * d[0], fy: (t) => t * d[1] }
+      }
+      if (basis.length === 2 && space) {
+        const [u, w] = basis
+        const n: Vec3 = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]]
+        return { kind: 'implicit3', line, label: written, slot, F: (x, y, z) => n[0] * x + n[1] * y + n[2] * z, plane: [n[0], n[1], n[2], 0] }
+      }
+      throw new MathError('Si disegnano gli span di uno o due vettori')
+    }
+    case 'scalar':
+    case 'length':
+      throw new MathError('È un numero: si calcola nella nota (con «=»), non si disegna')
+  }
+  return null
 }
 
 /** Il valore con i numeri complessi, o null se non c'è. */
@@ -751,10 +902,37 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   const realNames = new Set(sheet.scope().consts.keys())
   const realValue = (n: MathNode) => compile(n, sheet.scope(), { calc: true })({})
   const gauss = lines.some((l) => isComplexLine(l.main, noteComplex, realNames) || onlyComplex(l.main, realValue, noteComplex))
-  const linear = sheet.linearScope()
+  // I punti e le figure del blocco (A = (1, 2), r = \operatorname{retta}(A, B)), per le righe dopo.
+  const noteLinear = sheet.linearScope()
+  const linearValues = new Map<string, LinearValue>(noteLinear.values)
+  const linear: LinearScope = { ...noteLinear, values: linearValues }
+  const figureLines = new Set<Line>()
+  /** I nomi dei punti e delle figure definiti nel blocco. */
+  const blockFigures = new Set<string>()
+  for (const l of lines) {
+    const tuple = tupleOf(l.main)
+    const named = namedFigure(l.main)
+    let target: { name: string; node: MathNode } | null = null
+    if (tuple?.name && tuple.coords.length >= 2 && tuple.coords.length <= 3 && !tuple.coords.some((c) => namesIn(c).size)) {
+      target = { name: tuple.name, node: { k: 'tuple', items: tuple.coords } }
+    } else if (named && usesLinear(named.value, linear)) {
+      target = { name: named.name, node: named.value }
+      figureLines.add(l)
+    }
+    if (!target) continue
+    blockFigures.add(target.name)
+    try {
+      const float = evaluateLinear(target.node, linear, FLOAT)
+      const exact = tryFormat(() => evaluateLinear(target!.node, linear, EXACT))
+      linearValues.set(target.name, { exact, float })
+    } catch {
+      // L'errore lo dice la riga, quando si disegna.
+    }
+  }
   let space =
     !gauss &&
-    lines.some((l) => isSpaceLine(l.main, zFree) || zPlane(l) || (l.main.k === 'name' && xyParams(noteFns.get(l.main.name)?.params)) || linearVector(l.main, linear)?.length === 3)
+    lines.some((l) => isSpaceLine(l.main, zFree) || zPlane(l) || (l.main.k === 'name' && xyParams(noteFns.get(l.main.name)?.params)) || linearDims(l.main, linear) === 3)
+
   // Un integrale doppio con solo numeri e insiemi attorno: si vede il volume sotto la superficie,
   // nello spazio (se la funzione è 1, cioè l'area del dominio, il dominio nel piano).
   if (!space && !gauss) {
@@ -790,7 +968,7 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   const pending = new Map<Line, Definition>()
   const drawn: Line[] = []
   for (const l of lines) {
-    const def = definitionOf(l.main, space)
+    const def = figureLines.has(l) ? null : definitionOf(l.main, space)
     if (def) {
       pending.set(l, def)
       defined.add(def.name)
@@ -898,6 +1076,23 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   for (const item of spec.items) {
     const curve = under.get(item.line)
     if (curve !== undefined) item.slot = slots.get(curve) ?? item.slot
+  }
+  // I punti della nota usati dalle figure (\triangle ABC, \operatorname{retta}(A, B)): anche loro,
+  // con il nome, così si vede quale vertice è quale.
+  // Quelli che il blocco disegna già (una riga con solo M) non si ripetono.
+  const vertices = new Set<string>(spec.items.flatMap((i) => ((i.kind === 'point' || i.kind === 'point3') && i.name ? [i.name] : [])))
+  for (const l of drawn) {
+    const item = spec.items.find((i) => i.line === l.line)
+    if (!item || item.kind === 'point' || item.kind === 'point3' || !usesLinear(l.main, linear)) continue
+    for (const name of namesIn(namedFigure(l.main)?.value ?? l.main)) {
+      const value = noteLinear.values.get(name)?.float
+      if (!/^[A-Z]/.test(name) || blockFigures.has(name) || vertices.has(name) || value?.k !== 'matrix' || value.m[0].length !== 1) continue
+      const c = value.m.map((r) => r[0])
+      if (c.length !== (space ? 3 : 2) || !c.every(Number.isFinite)) continue
+      vertices.add(name)
+      const base = { line: l.line, label: nameLatex(name), slot: -1, name, fromNote: true }
+      spec.items.push(space ? { ...base, kind: 'point3', x: c[0], y: c[1], z: c[2] } : { ...base, kind: 'point', x: c[0], y: c[1] })
+    }
   }
   // Un integrale su un insieme che il blocco disegna già (D = \{…\} e \iint_D 1 \, dA): una zona sola.
   const itemAt = (line: number) => spec.items.find((i) => i.line === line)
@@ -1472,7 +1667,9 @@ export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSp
   const complex = isComplexLine(main, sheet.complexScope(), new Set(sheet.scope().consts.keys()))
   // Un vettore (u + v, A v): la sua freccia; un punto o un vettore scritto con le coordinate.
   const tuple = tupleOf(main)
-  const vector = !!linearVector(main, sheet.linearScope()) || (!!tuple && (tuple.coords.length === 2 || tuple.coords.length === 3) && !tuple.coords.some((c) => namesIn(c).size))
+  const figure = linearValue(namedFigure(main)?.value ?? main, sheet.linearScope())
+  const drawable = !!figure && figure.k !== 'scalar' && figure.k !== 'length' && !(figure.k === 'matrix' && figure.m[0].length !== 1)
+  const vector = drawable || (!!tuple && (tuple.coords.length === 2 || tuple.coords.length === 3) && !tuple.coords.some((c) => namesIn(c).size))
   if (!areaOf(main) && !multipleOf(main) && !setOf(main) && !zone && !complex && !vector) {
     if (main.k !== 'rel' || main.ops.length !== 1 || main.ops[0] !== '=') return null
     const [lhs, rhs] = main.items
@@ -1487,7 +1684,7 @@ export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSp
     if (!plottable) return null
   }
   const spec = parseGraph(text, defs)
-  return spec.errors.length || spec.items.length !== 1 ? null : spec
+  return spec.errors.length || spec.items.filter((i) => !i.fromNote).length !== 1 ? null : spec
 }
 
 /** Il blocco da mettere nella nota. */

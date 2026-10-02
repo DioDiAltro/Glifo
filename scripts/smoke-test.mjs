@@ -1341,6 +1341,29 @@ try {
   await gp.waitForSelector('.formula-graph:not([hidden]) svg', { timeout: 5000 })
   const arrows = await gp.locator('.formula-graph svg path[fill]:not([fill="none"])').count()
   check(inverse === '(2/3  −1/3 ; −1/3  2/3)' && arrows > 0, `l'inversa di una matrice ha le frazioni ed è disegnata; un vettore è una freccia (${JSON.stringify({ inverse, arrows })})`)
+  // La geometria: l'area del triangolo dopo «=»; nel pannello il triangolo con i vertici della nota
+  // (con il nome) e, con «Inserisci il grafico», nella nota con l'area nella legenda.
+  await gp.locator('.notes-head button[aria-label="Nuova nota"]').click()
+  await gp.keyboard.press('Control+a')
+  await gp.keyboard.type("# Geometria\n\nSiano $A = (0, 0)$, $B = (4, 0)$ e $C = (1, 3)$: l'area è $\\triangle ABC =")
+  await gp.waitForSelector('.cm-calc-result')
+  const triangleArea = await gp.locator('.cm-calc-result').first().innerText()
+  await gp.waitForSelector('.formula-graph:not([hidden]) svg path[data-area]', { timeout: 5000 })
+  const vertexNames = await gp.locator('.formula-graph svg text').evaluateAll((els) => els.map((e) => e.textContent))
+  await gp.locator('.formula-graph-insert').click()
+  await gp.waitForSelector('.preview-pane .graph-block .graph-legend', { timeout: 5000 })
+  await gp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  const triangleLegend = await gp.locator('.preview-pane .graph-legend').innerText()
+  const triangleNote = await gp.evaluate(() =>
+    [...Array(localStorage.length).keys()].map((i) => localStorage.getItem(localStorage.key(i)) ?? '').find((v) => v.startsWith('# Geometria')),
+  )
+  check(
+    triangleArea.replace('Tab', '') === '6' &&
+      ['A', 'B', 'C'].every((n) => vertexNames.includes(n)) &&
+      triangleLegend.includes('area') &&
+      triangleNote?.includes('```grafico\n\\triangle ABC\n```'),
+    `un triangolo ha l'area, e nel grafico i vertici con il nome (${JSON.stringify({ triangleArea, vertexNames, triangleLegend, note: triangleNote?.slice(-40) })})`,
+  )
   await gp.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)

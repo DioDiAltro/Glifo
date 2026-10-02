@@ -782,6 +782,17 @@ function findBox(spec: GraphSpec): Box {
         insideExtent((x, y) => item.M(x, y), extents, 2)
         extents[2].push(0)
         break
+      case 'segment':
+        push(extents, item.a)
+        push(extents, item.b)
+        break
+      case 'polygon':
+      case 'points':
+        for (const p of item.points) push(extents, p)
+        break
+      case 'angle':
+        for (const p of [item.vertex, item.a, item.b]) push(extents, p)
+        break
     }
   }
   const spanOf = (values: number[]): Range | null => {

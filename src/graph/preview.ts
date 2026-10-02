@@ -170,7 +170,8 @@ function addLabel(add: NonNullable<GraphError['add']>): string {
 /** Il quadratino della legenda: una linea per le curve, un pallino per i punti, un riquadro per aree e superfici. */
 function swatchClass(item: GraphSpec['items'][number]): string {
   const kind = item.kind
-  if (kind === 'point' || kind === 'point3' || (kind === 'complex' && !item.arrows)) return 'graph-swatch is-point'
+  if (kind === 'point' || kind === 'point3' || kind === 'points' || (kind === 'complex' && !item.arrows)) return 'graph-swatch is-point'
+  if (kind === 'polygon') return 'graph-swatch is-region'
   if (kind === 'area') return 'graph-swatch is-area'
   if (kind === 'region') return 'graph-swatch is-region'
   if (kind === 'surface' || kind === 'implicit3' || kind === 'patch' || kind === 'solid') return 'graph-swatch is-surface'

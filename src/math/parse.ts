@@ -91,6 +91,10 @@ const FUNCTION_NAMES: Record<string, string> = {
   det: 'det', rank: 'rank', rk: 'rank', rg: 'rank', rango: 'rank', tr: 'tr', Tr: 'tr', trace: 'tr', traccia: 'tr',
   ker: 'ker', Ker: 'ker', dim: 'dim', rref: 'rref', scala: 'rref', gauss: 'rref', autovalori: 'eig', eig: 'eig',
   autovettori: 'eigvec', eigvec: 'eigvec', span: 'span', Span: 'span',
+  // La geometria: triangoli e poligoni, angoli, rette, circonferenze, piani, punti medi, distanze.
+  triangle: 'triangle', poligono: 'polygon', angle: 'angle', measuredangle: 'angle', angolo: 'angle', retta: 'line',
+  circonferenza: 'circle', cerchio: 'circle', medio: 'mid', puntomedio: 'mid', baricentro: 'centroid', area: 'area',
+  perimetro: 'perimeter', piano: 'plane', intersezione: 'intersect', distanza: 'dist', segmento: 'segment',
 }
 
 /** Le parole riconosciute anche senza barra (`sin x`, `sqrt(x)`, `pi`), come in una calcolatrice. */
@@ -398,15 +402,10 @@ function readCommand(src: string, i: number, out: Tok[], depth: () => number, ad
       const inner = arg.text.trim()
       const greek = /^\\([A-Za-z]+)$/.exec(inner)
       letter = /^[A-Za-z]$/.test(inner) ? inner : greek && greek[1] in GREEK ? GREEK[greek[1]] : null
-      // \overline{1 + i}, \bar{z w}: il coniugato di un'espressione, come conj(…).
-      if (!letter && inner && (name === 'bar' || name === 'overline')) {
-        const open = arg.end - arg.text.length - 1
-        push('fn', 'conj', open)
-        out.push({ k: 'open', v: '(', pos: open, end: open + 1 })
-        for (const t of tokenize(arg.text)) out.push({ ...t, pos: t.pos + open + 1, end: t.end + open + 1 })
-        out.push({ k: 'close', v: ')', pos: arg.end - 1, end: arg.end })
-        return arg.end
-      }
+      // \overline{1 + i}, \bar{z w}: il coniugato di un'espressione, come conj(…) (con due punti,
+      // \overline{AB}, è il segmento); \widehat{ABC} è l'angolo; \vec{AB} il vettore da A a B.
+      const wrapping: Record<string, string> = { bar: 'conj', overline: 'conj', widehat: 'angle', hat: 'angle', vec: 'arrow' }
+      if (!letter && inner && name in wrapping) return pushWrapped(i, arg, wrapping[name], out)
       end = arg.end
     } else {
       let j = end
@@ -461,6 +460,15 @@ function readCommand(src: string, i: number, out: Tok[], depth: () => number, ad
     } else push('bad', `\\${name}{${env}}`)
     return end
   }
+  if (name === 'overrightarrow' || name === 'overleftrightarrow' || name === 'overleftarrow') {
+    // \overrightarrow{AB}: il vettore da A a B; \overleftrightarrow{AB}: la retta per A e B.
+    const arg = readBraces(src, end)
+    if (!arg) {
+      push('bad', '\\' + name)
+      return end
+    }
+    return pushWrapped(i, arg, name === 'overleftrightarrow' ? 'line' : 'arrow', out)
+  }
   if (name === 'top' || name === 'intercal') {
     // A^\top: la trasposta.
     push('name', 'T')
@@ -473,6 +481,16 @@ function readCommand(src: string, i: number, out: Tok[], depth: () => number, ad
   }
   push('bad', '\\' + name)
   return end
+}
+
+/** Una funzione applicata a quello che c'è tra le graffe (\overline{z + w} → conj(z + w)), come se fosse tra parentesi. */
+function pushWrapped(at: number, arg: { text: string; end: number }, fn: string, out: Tok[]): number {
+  const open = arg.end - arg.text.length - 1
+  out.push({ k: 'fn', v: fn, pos: at, end: open })
+  out.push({ k: 'open', v: '(', pos: open, end: open + 1 })
+  for (const t of tokenize(arg.text)) out.push({ ...t, pos: t.pos + open + 1, end: t.end + open + 1 })
+  out.push({ k: 'close', v: ')', pos: arg.end - 1, end: arg.end })
+  return arg.end
 }
 
 function tokenizeDelim(delim: string, at: number, out: Tok[], addDepth: (d: number) => void): void {

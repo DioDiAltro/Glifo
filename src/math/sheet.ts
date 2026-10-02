@@ -303,7 +303,8 @@ export class Sheet {
     }
     if (!result) return
     if ('linear' in result) {
-      if (result.linear.float.k === 'matrix') this.linearValues.set(name, result.linear)
+      // Matrici, vettori e figure (rette, circonferenze…): per le formule dopo.
+      if (result.linear.float.k !== 'scalar' && result.linear.float.k !== 'identity') this.linearValues.set(name, result.linear)
     } else if ('float' in result) {
       this.consts.set(name, result.float)
       this.exactConsts.set(name, result.exact)

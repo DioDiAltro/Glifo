@@ -481,7 +481,8 @@ function findWindow(spec: GraphSpec, width: number, height: number): Viewport {
   const items = spec.items
   // Anche le curve delle aree: la loro forma deve vedersi.
   const functions = items.filter((i): i is Extract<GraphItem, { kind: 'function' | 'area' }> => i.kind === 'function' || i.kind === 'area')
-  const curves = items.filter((i) => i.kind === 'implicit' || i.kind === 'parametric' || i.kind === 'region')
+  // Le curve e le figure: con le stesse unità sui due assi, se no si deformano (e gli angoli non tornano).
+  const curves = items.filter((i) => ['implicit', 'parametric', 'region', 'segment', 'polygon', 'angle', 'points'].includes(i.kind))
   const xs: number[] = []
   const ys: number[] = []
   for (const item of items) {
@@ -523,7 +524,20 @@ function findWindow(spec: GraphSpec, width: number, height: number): Viewport {
       }
       nearOrigin(points, xs, ys)
     } else if (item.kind === 'region') regionExtent(item.M, xs, ys)
-    else if (item.kind === 'complex') {
+    else if (item.kind === 'segment') {
+      xs.push(item.a[0], item.b[0])
+      ys.push(item.a[1], item.b[1])
+    } else if (item.kind === 'polygon' || item.kind === 'points') {
+      for (const p of item.points) {
+        xs.push(p[0])
+        ys.push(p[1])
+      }
+    } else if (item.kind === 'angle') {
+      for (const p of [item.vertex, item.a, item.b]) {
+        xs.push(p[0])
+        ys.push(p[1])
+      }
+    } else if (item.kind === 'complex') {
       // I numeri complessi, con l'origine (da dove partono le frecce).
       xs.push(0, ...item.values.map((z) => z.re))
       ys.push(0, ...item.values.map((z) => z.im))
@@ -552,8 +566,8 @@ function findWindow(spec: GraphSpec, width: number, height: number): Viewport {
       let hi = Math.max(...all)
       // Solo zone (con punti e curve come x^2 + y^2 = 1): la finestra si stringe attorno a loro.
       const zones =
-        (items.some((i) => i.kind === 'region') || !!spec.gauss) &&
-        items.every((i) => i.kind === 'region' || i.kind === 'implicit' || i.kind === 'point' || i.kind === 'complex' || i.kind === 'parametric')
+        (items.some((i) => ['region', 'segment', 'polygon', 'angle', 'points'].includes(i.kind)) || !!spec.gauss) &&
+        items.every((i) => ['region', 'implicit', 'point', 'complex', 'parametric', 'segment', 'polygon', 'angle', 'points', 'vector'].includes(i.kind))
       const pad = Math.max((hi - lo) * 0.2, zones ? 0.5 : 1)
       const least = zones ? 2 : 6
       lo -= pad

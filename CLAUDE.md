@@ -63,7 +63,8 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   una, gli strati quando ogni variabile sta tra due estremi; `complex.ts` i numeri complessi: si usano
   quando una formula ha la i o non ha un valore reale, con le frazioni esatte `GaussRational`, le radici
   tutte, le forme a + bi e ρe^{iθ}; `linear.ts` vettori e matrici, con le frazioni esatte (`EXACT`) o
-  con la virgola (`FLOAT`): determinante, inversa, rango, nucleo, autovalori, polinomio caratteristico; i
+  con la virgola (`FLOAT`): determinante, inversa, rango, nucleo, autovalori, polinomio caratteristico, e la
+  geometria (segmenti, rette, circonferenze, piani, poligoni, angoli, intersezioni: `geometryOf`); i
   risultati con le matrici hanno `rich` e l'editor li disegna con KaTeX), `sheet.ts` è il
   «foglio» della nota: le formule dall'alto in basso, `$a = 2$` e `$f(x) = …$` definiscono, una formula
   che finisce con `=` ha il risultato (nell'editor `src/editor/calcResults.ts`, Tab lo scrive;
@@ -88,7 +89,11 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   condizione (`solidFaces`) o, se il dominio è a strati, faccia per faccia (`layeredFaces`, anche in
   coordinate cilindriche e sferiche). Con i numeri complessi il grafico è il piano di Gauss (`gauss.ts`,
   `spec.gauss`): numeri come frecce (`kind: 'complex'`), radici e soluzioni come punti, equazioni e
-  disuguaglianze in z come curve e zone (i lati si calcolano con `compileComplex`).
+  disuguaglianze in z come curve e zone (i lati si calcolano con `compileComplex`). Le figure della
+  geometria (`\triangle ABC`, `\overline{AB}`, `\widehat{BAC}`, `\operatorname{retta}(A, B)`) passano da
+  `linearItem` in `spec.ts`; `\overline{AB}` con due maiuscole è un segmento, non il coniugato (vedi
+  `isComplexLine`). I punti della nota che una figura usa si aggiungono con `fromNote`; i nomi dei punti
+  li mette `nameSpot` in `svg.ts`, nella direzione libera più lontana dalla figura.
 - `src/ai/`: assistente AI. `src/host.ts`: funzioni della demo dentro claude.ai.
 - `src/account/`: account e sincronizzazione. `sync.ts` è il motore (manda, scarica, nei
   conflitti tiene tutte e due le versioni), `controller.ts` decide quando sincronizzare,

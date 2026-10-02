@@ -85,6 +85,23 @@ const COMPLEX_FUNCTIONS: Record<string, string> = {
   arg: '\\arg',
   eig: '\\operatorname{autovalori}',
   eigvec: '\\operatorname{autovettori}',
+  line: '\\operatorname{retta}',
+  circle: '\\operatorname{circonferenza}',
+  mid: '\\operatorname{medio}',
+  centroid: '\\operatorname{baricentro}',
+  perimeter: '\\operatorname{perimetro}',
+  plane: '\\operatorname{piano}',
+  intersect: '\\operatorname{intersezione}',
+  polygon: '\\operatorname{poligono}',
+  dist: '\\operatorname{distanza}',
+  segment: '\\operatorname{segmento}',
+  angle: '\\operatorname{angolo}',
+}
+
+/** I nomi scritti attaccati di una figura (AB, ABC): \overline{AB}, \widehat{ABC}. */
+function lettersOnly(n: MathNode): boolean {
+  if (n.k === 'name') return true
+  return n.k === 'bin' && n.op === '*' && !!n.implicit && lettersOnly(n.a) && lettersOnly(n.b)
 }
 
 function fnName(name: string): string {
@@ -216,6 +233,27 @@ function fnLatex(node: Extract<MathNode, { k: 'fn' }>, pow?: MathNode): string {
       break
     case 'conj':
       out = `\\overline{${inner}}`
+      break
+    case 'triangle':
+      if (arg && lettersOnly(arg)) return `\\triangle ${inner}`
+      out = `\\operatorname{triangolo}${paren(inner)}`
+      break
+    case 'arrow':
+      out = arg && lettersOnly(arg) ? `\\overrightarrow{${inner}}` : `\\overrightarrow{${inner}}`
+      break
+    case 'angle':
+      if (arg && lettersOnly(arg)) {
+        out = `\\widehat{${inner}}`
+        break
+      }
+      out = `\\operatorname{angolo}${paren(inner)}`
+      break
+    case 'line':
+      if (arg && lettersOnly(arg)) {
+        out = `\\overleftrightarrow{${inner}}`
+        break
+      }
+      out = `\\operatorname{retta}${paren(inner)}`
       break
     case 'dot':
       out = `\\langle ${args.map(toLatex).join(', ')} \\rangle`
