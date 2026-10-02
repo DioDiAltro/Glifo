@@ -92,7 +92,9 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
 Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui quando sono fatte):
 
 - Decidere se Glifo passa sotto S&Z (dominio `seznet.net`) e dare un'email di contatto per
-  l'informativa (`privacy.html`): vedi il passo 4 in ROADMAP.md.
+  l'informativa (`privacy.html`). Poi, aggiornata l'informativa, premere «Publish app» nella
+  Google Auth Platform (Audience) per aprire a tutti l'accesso con Google. I passi sono in
+  «Come si riprende», al passo 4 di ROADMAP.md.
 
 ## Regole
 

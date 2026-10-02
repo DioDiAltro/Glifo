@@ -92,7 +92,20 @@ Perché non gli altri:
    - uscendo, le note dell'account vengono tolte dal browser;
    - i test usano le vere migrazioni in un Postgres in memoria (PGlite), anche nella prova
      nel browser con un Supabase finto (`scripts/fake-supabase.mjs`).
-4. **Aprire l'account a tutti** (il prossimo, gratis):
+4. **Aprire l'account a tutti** (il prossimo, gratis). **In attesa** dal 2 ottobre 2026: si
+   riprende quando lo studente ha deciso su S&Z. Come si riprende:
+   1. lo studente decide su S&Z (vedi sotto) e dà un'email di contatto per l'informativa
+      (va bene anche una sua, provvisoria);
+   2. Claude aggiorna l'informativa (titolare e contatto) e rivede i limiti di spazio: oggi
+      20 MB di note per account, ma il database gratuito ha 500 MB in tutto;
+   3. lo studente preme «Publish app» (Google Auth Platform → Audience): da lì entra con
+      Google chiunque, non solo i «Test users».
+
+   Dopo viene l'email per tutti: servizio di posta nostro e CAPTCHA insieme, meglio con il
+   dominio, quindi dopo la decisione su S&Z. La condivisione (passo 5) non dipende da S&Z: si
+   può iniziare anche prima.
+
+   Le singole parti:
    - fatto (2 ottobre 2026): accesso con Google, attivo («Continua con Google» nella finestra
      di accesso; con la stessa email si ritrova lo stesso account). L'app Google è ancora
      «Testing»: entrano solo gli indirizzi aggiunti come «Test users». Per aprirla a tutti,
