@@ -3,7 +3,9 @@
  * scatola che il grafico mostra (`Box`), e la scatola si sceglie da sola se il blocco non dice da
  * dove a dove (x \in [a, b], z \in [c, d]). Il disegno lo fa view3d.ts.
  */
-import { withWorkLimit } from '../math/evaluate'
+import { withWorkLimit, type Vars } from '../math/evaluate'
+import { sampleRegion } from './plot'
+import type { LayeredSolid } from './regions'
 import { GRAPH_WORK, type GraphSpec, type Plane, type Range, type Vec3 } from './spec'
 
 const finite = Number.isFinite
@@ -23,6 +25,8 @@ export interface Face {
   normal: Vec3
   /** I tratti della griglia sulla superficie che stanno su questo pezzo, da ripassare sopra. */
   mesh: [Vec3, Vec3][]
+  /** Sta su un lato della scatola: lì la scatola taglia un solido che continua fuori. */
+  boxSide?: boolean
 }
 
 type Axis = 0 | 1 | 2
@@ -398,7 +402,7 @@ const CORNERS: Vec3[] = [
  * n³ cubetti, ogni cubetto in sei tetraedri, e dove F cambia segno tra i vertici passa la superficie.
  * Dove F salta (un asintoto) il cambio di segno non è la superficie e non conta.
  */
-export function implicitFaces(F: (x: number, y: number, z: number) => number, box: Box, n: number): Face[] {
+export function implicitFaces(F: (x: number, y: number, z: number) => number, box: Box, n: number, orient = true): Face[] {
   const r = ranges(box)
   const step = r.map(([lo, hi]) => (hi - lo) / n)
   const N = n + 1
@@ -408,6 +412,20 @@ export function implicitFaces(F: (x: number, y: number, z: number) => number, bo
   const faces: Face[] = []
   const cv = new Array<number>(8)
   const cp = new Array<Vec3>(8)
+  const ci = new Array<number>(8)
+  // Dove la superficie taglia un lato: lo stesso punto per i tetraedri che hanno quel lato.
+  const crossings = new Map<number, Vec3>()
+  const total = N * N * N
+  const cross = (a: number, b: number): Vec3 => {
+    const [lo, hi] = ci[a] < ci[b] ? [a, b] : [b, a]
+    const key = ci[lo] * total + ci[hi]
+    let p = crossings.get(key)
+    if (!p) {
+      p = zeroOn(F, cp[lo], cp[hi], cv[lo], cv[hi])
+      crossings.set(key, p)
+    }
+    return p
+  }
   for (let k = 0; k < n; k++) {
     for (let j = 0; j < n; j++) {
       for (let i = 0; i < n; i++) {
@@ -416,35 +434,103 @@ export function implicitFaces(F: (x: number, y: number, z: number) => number, bo
         let ok = true
         for (let c = 0; c < 8; c++) {
           const [di, dj, dk] = CORNERS[c]
-          const value = values[((k + dk) * N + j + dj) * N + i + di]
+          const index = ((k + dk) * N + j + dj) * N + i + di
+          const value = values[index]
           if (!finite(value)) ok = false
           if (value > 0) pos0 = true
           else neg0 = true
           cv[c] = value
+          ci[c] = index
           cp[c] = pos(i + di, j + dj, k + dk)
         }
         if (!ok || !pos0 || !neg0) continue
         const triangles: Vec3[][] = []
-        for (const tet of TETS) addTet(tet, cv, cp, triangles)
+        for (const tet of TETS) addTet(tet, cv, cross, triangles)
         if (!triangles.length) continue
         const center = centroid(triangles)
         const m = F(...center)
         const largest = Math.max(...cv.map(Math.abs))
         if (!finite(m) || Math.abs(m) > largest) continue
-        const border = outline(triangles)
-        faces.push({ polygons: border ? [border] : triangles, normal: gradient(F, center, step, triangles), mesh: [] })
+        const normal = gradient(F, center, step, triangles)
+        for (const group of creases(triangles, normal)) {
+          const border = outline(group.triangles)
+          faces.push({ polygons: border ? [border] : group.triangles, normal: group.normal, mesh: [] })
+        }
       }
     }
   }
-  return outward(faces)
+  return orient ? outward(faces) : faces
+}
+
+/**
+ * I triangoli di un cubetto divisi dove la superficie fa uno spigolo (un solido fatto di più
+ * disuguaglianze: il tetraedro x, y, z ≥ 0, x + y + z ≤ 1): ogni parte con la sua normale, così lo
+ * spigolo resta netto. Se non c'è spigolo, un pezzo solo con la normale `normal` (quella liscia).
+ */
+function creases(triangles: Vec3[][], normal: Vec3): { triangles: Vec3[][]; normal: Vec3 }[] {
+  const unit = (v: Vec3): Vec3 | null => {
+    const len = Math.hypot(v[0], v[1], v[2])
+    return len > 0 ? [v[0] / len, v[1] / len, v[2] / len] : null
+  }
+  const g = unit(normal)
+  const cos = Math.cos((25 * Math.PI) / 180)
+  const oriented = triangles.map((t) => {
+    let n = unit(polygonNormal(t))
+    if (n && g && n[0] * g[0] + n[1] * g[1] + n[2] * g[2] < 0) n = [-n[0], -n[1], -n[2]]
+    return n
+  })
+  const flat = (n: Vec3 | null) => !n || !g || n[0] * g[0] + n[1] * g[1] + n[2] * g[2] > cos
+  if (oriented.every(flat)) return [{ triangles, normal }]
+  const groups: { triangles: Vec3[][]; normal: Vec3 }[] = []
+  triangles.forEach((t, i) => {
+    const n = oriented[i] ?? g ?? normal
+    const group = groups.find((q) => q.normal[0] * n[0] + q.normal[1] * n[1] + q.normal[2] * n[2] > cos)
+    if (group) group.triangles.push(t)
+    else groups.push({ triangles: [t], normal: n })
+  })
+  return groups
+}
+
+/**
+ * Il punto tra a e b dove F vale 0 (F(a) = fa e F(b) = fb hanno segni diversi): la «regula falsi»
+ * con il trucco di Illinois, pochi passi. Con la sola media pesata, dove la superficie ha uno
+ * spigolo (un solido fatto di più disuguaglianze) il bordo verrebbe a scalini.
+ */
+function zeroOn(F: (x: number, y: number, z: number) => number, a: Vec3, b: Vec3, fa: number, fb: number): Vec3 {
+  let lo = 0
+  let hi = 1
+  let flo = fa
+  let fhi = fb
+  let t = fa / (fa - fb)
+  let side = 0
+  for (let k = 0; k < 8; k++) {
+    const p = lerp(a, b, t)
+    const f = F(p[0], p[1], p[2])
+    if (!finite(f) || f === 0) break
+    if (f > 0 === flo > 0) {
+      lo = t
+      flo = f
+      if (side === -1) fhi /= 2
+      side = -1
+    } else {
+      hi = t
+      fhi = f
+      if (side === 1) flo /= 2
+      side = 1
+    }
+    const next = (lo * fhi - hi * flo) / (fhi - flo)
+    if (!(next > lo && next < hi)) break
+    t = next
+    if (hi - lo < 1e-6) break
+  }
+  return lerp(a, b, t)
 }
 
 /** I triangoli della superficie in un tetraedro: uno se un vertice è da una parte e tre dall'altra, due se due e due. */
-function addTet(tet: number[], cv: number[], cp: Vec3[], out: Vec3[][]): void {
+function addTet(tet: number[], cv: number[], cross: (a: number, b: number) => Vec3, out: Vec3[][]): void {
   const inside = tet.filter((c) => cv[c] > 0)
   if (inside.length === 0 || inside.length === 4) return
   const outside = tet.filter((c) => cv[c] <= 0)
-  const cross = (a: number, b: number) => lerp(cp[a], cp[b], cv[a] / (cv[a] - cv[b]))
   if (inside.length === 1 || inside.length === 3) {
     const [lone, others] = inside.length === 1 ? [inside[0], outside] : [outside[0], inside]
     out.push(others.map((o) => cross(lone, o)))
@@ -688,6 +774,14 @@ function findBox(spec: GraphSpec): Box {
       case 'surface':
         surfaces.push(item.f)
         break
+      case 'solid':
+        if (item.layers) for (const p of layeredPoints(item.layers)) push(extents, p)
+        else insideExtent((x, y, z) => item.M(x, y, z), extents)
+        break
+      case 'region':
+        insideExtent((x, y) => item.M(x, y), extents, 2)
+        extents[2].push(0)
+        break
     }
   }
   const spanOf = (values: number[]): Range | null => {
@@ -795,4 +889,256 @@ function implicitExtent(F: (x: number, y: number, z: number) => number, extents:
     }
     return
   }
+}
+
+/**
+ * Dove sta una zona (M ≥ 0): i punti dentro su una griglia, prima vicino all'origine e poi più in
+ * là. Gli assi su cui arriva al bordo della ricerca (un cilindro pieno lungo z) non contano.
+ * `dims` 2: una zona del piano xy.
+ */
+function insideExtent(M: (x: number, y: number, z: number) => number, extents: Extents, dims: 2 | 3 = 3): void {
+  for (const R of [6, 1.5, 24]) {
+    const n = dims === 3 ? 24 : 96
+    const step = (2 * R) / n
+    const lo = [Infinity, Infinity, Infinity]
+    const hi = [-Infinity, -Infinity, -Infinity]
+    for (let k = 0; k <= (dims === 3 ? n : 0); k++) {
+      for (let j = 0; j <= n; j++) {
+        for (let i = 0; i <= n; i++) {
+          const p = [-R + i * step, -R + j * step, dims === 3 ? -R + k * step : 0]
+          if (!(M(p[0], p[1], p[2]) >= 0)) continue
+          for (let a = 0; a < dims; a++) {
+            lo[a] = Math.min(lo[a], p[a])
+            hi[a] = Math.max(hi[a], p[a])
+          }
+        }
+      }
+    }
+    if (lo[0] === Infinity) continue
+    for (let a = 0; a < dims; a++) {
+      if (lo[a] > -R + step / 2 && hi[a] < R - step / 2) extents[a].push(lo[a] - step / 2, hi[a] + step / 2)
+    }
+    return
+  }
+}
+
+/** Una funzione dello spazio: le condizioni dei solidi (≥ 0 dentro). */
+export type Field = (x: number, y: number, z: number) => number
+
+/** Se F è di primo grado nella scatola (F = a x + b y + c z − d): il piano a x + b y + c z = d. */
+export function affinePlane(F: Field, box: Box): Plane | null {
+  const r = ranges(box)
+  const at = (u: number, v: number, w: number) => F(r[0][0] + (r[0][1] - r[0][0]) * u, r[1][0] + (r[1][1] - r[1][0]) * v, r[2][0] + (r[2][1] - r[2][0]) * w)
+  const f0 = at(0, 0, 0)
+  const du = at(1, 0, 0) - f0
+  const dv = at(0, 1, 0) - f0
+  const dw = at(0, 0, 1) - f0
+  if (![f0, du, dv, dw].every(finite) || (du === 0 && dv === 0 && dw === 0)) return null
+  const scale = Math.max(Math.abs(f0), Math.abs(du), Math.abs(dv), Math.abs(dw))
+  for (const [u, v, w] of [[0.37, 0.61, 0.13], [0.83, 0.12, 0.71], [0.5, 0.5, 0.5], [1, 1, 1], [0.08, 0.93, 0.44]]) {
+    const value = at(u, v, w)
+    if (!finite(value) || Math.abs(value - (f0 + du * u + dv * v + dw * w)) > 1e-9 * scale) return null
+  }
+  const size = r.map(([lo, hi]) => hi - lo)
+  const [a, b, c] = [du / size[0], dv / size[1], dw / size[2]]
+  return [a, b, c, a * r[0][0] + b * r[1][0] + c * r[2][0] - f0]
+}
+
+/** La parte di un poligono dove F ≥ 0, con i punti del taglio cercati sul bordo del poligono. */
+function clipBy(poly: Vec3[], F: Field): Vec3[] {
+  const values = poly.map((p) => F(p[0], p[1], p[2]))
+  if (values.every((v) => v >= 0)) return poly
+  if (!values.some((v) => v >= 0)) return []
+  const out: Vec3[] = []
+  for (let i = 0; i < poly.length; i++) {
+    const j = (i + 1) % poly.length
+    const inA = values[i] >= 0
+    if (inA) out.push(poly[i])
+    if (inA !== values[j] >= 0) out.push(finite(values[i]) && finite(values[j]) ? zeroOn(F, poly[i], poly[j], values[i], values[j]) : inA ? poly[i] : poly[j])
+  }
+  return out.length >= 3 ? out : []
+}
+
+/** Un poligono piano diviso in quadretti (n per lato del suo rettangolo), per tagliarlo lungo una superficie curva. */
+function gridOf(corners: [Vec3, Vec3, Vec3, Vec3], n: number): Vec3[][] {
+  const [a, b, , d] = corners
+  const u: Vec3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]]
+  const v: Vec3 = [d[0] - a[0], d[1] - a[1], d[2] - a[2]]
+  const at = (i: number, j: number): Vec3 => [a[0] + (u[0] * i + v[0] * j) / n, a[1] + (u[1] * i + v[1] * j) / n, a[2] + (u[2] * i + v[2] * j) / n]
+  const out: Vec3[][] = []
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) out.push([at(i, j), at(i + 1, j), at(i + 1, j + 1), at(i, j + 1)])
+  return out
+}
+
+/**
+ * Un solido dove tutte le condizioni `parts` valgono (ognuna ≥ 0 dentro), dentro la scatola: ogni
+ * condizione dà la sua superficie (un piano, o una superficie curva con i tetraedri in marcia),
+ * tagliata dove le altre non valgono; dove la scatola taglia il solido, i lati della scatola. Così
+ * gli spigoli tra una condizione e l'altra restano netti. Senza le condizioni una per una (con un
+ * «o»), la superficie di M = 0 chiusa dalla scatola. Le normali guardano fuori.
+ */
+export function solidFaces(M: Field, parts: Field[] | null, box: Box, n: number): Face[] {
+  const [x0, x1] = box.x
+  const [y0, y1] = box.y
+  const [z0, z1] = box.z
+  if (!parts || !parts.length || parts.length > 12) {
+    const inBox: Field = (x, y, z) => Math.min(M(x, y, z), x - x0, x1 - x, y - y0, y1 - y, z - z0, z1 - z)
+    const r = ranges(box)
+    const eps = Math.max(x1 - x0, y1 - y0, z1 - z0) * 1e-7
+    // I pezzi tutti su un lato della scatola.
+    const onSide = (f: Face) => r.some(([lo, hi], k) => [lo, hi].some((c) => f.polygons.every((poly) => poly.every((p) => Math.abs(p[k] - c) <= eps))))
+    return implicitFaces(inBox, box, n).map((f) => (onSide(f) ? { ...f, boxSide: true } : f))
+  }
+  const planes = parts.map((F) => affinePlane(F, box))
+  // Le facce piane si dividono in quadretti solo se una condizione curva le può tagliare in mezzo.
+  const curved = planes.some((p) => !p)
+  const cells = curved ? n : 1
+  const keep = (poly: Vec3[], skip: number): Vec3[] => {
+    let out = poly
+    for (let j = 0; j < parts.length && out.length >= 3; j++) if (j !== skip) out = clipBy(out, parts[j])
+    return out.length >= 3 ? clipPolygon(out, box) : []
+  }
+  const faces: Face[] = []
+  const add = (polygons: Vec3[][], normal: Vec3, skip: number) => {
+    const kept = polygons.map((p) => keep(p, skip)).filter((p) => p.length >= 3)
+    if (kept.length) faces.push({ polygons: kept, normal, mesh: [], ...(skip < 0 && { boxSide: true }) })
+  }
+  parts.forEach((F, i) => {
+    const plane = planes[i]
+    if (plane) {
+      const face = planeFace(plane, box)
+      if (!face) return
+      // La condizione cresce verso dentro: fuori è il contrario.
+      const normal: Vec3 = [-plane[0], -plane[1], -plane[2]]
+      const polygon = face.polygons[0]
+      if (cells === 1) add([polygon], normal, i)
+      else for (const quad of planeQuads(plane, box, cells)) add([quad], normal, i)
+      return
+    }
+    for (const face of implicitFaces(F, box, n, false)) add(face.polygons, [-face.normal[0], -face.normal[1], -face.normal[2]], i)
+  })
+  // Dove la scatola taglia il solido.
+  const sides: [[Vec3, Vec3, Vec3, Vec3], Vec3][] = [
+    [[[x0, y0, z0], [x0, y1, z0], [x0, y1, z1], [x0, y0, z1]], [-1, 0, 0]],
+    [[[x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [x1, y0, z1]], [1, 0, 0]],
+    [[[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]], [0, -1, 0]],
+    [[[x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1]], [0, 1, 0]],
+    [[[x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0]], [0, 0, -1]],
+    [[[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]], [0, 0, 1]],
+  ]
+  for (const [corners, normal] of sides) add(cells === 1 ? [corners] : gridOf(corners, cells), normal, -1)
+  return faces
+}
+
+/**
+ * Un solido a strati (vedi LayeredSolid): le facce sono gli estremi delle variabili, uno alla volta,
+ * con le altre due che scorrono tra i loro estremi (n quadretti per lato). Gli spigoli sono netti
+ * anche in coordinate cilindriche e sferiche. Le facce che si riducono a una linea o a un punto
+ * (r = 0, φ = 0) non si disegnano, e neanche le due di θ quando fa un giro intero: si toccano.
+ * Le normali guardano fuori: dalla faccia di sotto di una variabile verso dove la variabile cala.
+ */
+export function layeredFaces(L: LayeredSolid, box: Box, n: number): Face[] {
+  const count = L.vars.length
+  const v: Vars = {}
+  const r = ranges(box)
+  const tiny = (Math.hypot(...r.map(([lo, hi]) => hi - lo)) / n) ** 2 * 1e-8
+  /** Le variabili per (s, t) tra 0 e 1, con la variabile `level` sul suo estremo `side` (0 sotto, 1 sopra). */
+  const place = (level: number, side: number, s: number, t: number): number => {
+    let free = 0
+    let width = 0
+    for (let m = 0; m < count; m++) {
+      const name = L.vars[m]
+      const a = L.lo[m](v)
+      const b = L.hi[m](v)
+      if (m === level) {
+        v[name] = side ? b : a
+        width = b - a
+      } else v[name] = a + (b - a) * (free++ === 0 ? s : t)
+    }
+    return width
+  }
+  const faces: Face[] = []
+  for (let level = 0; level < count; level++) {
+    const name = L.vars[level]
+    for (const side of [0, 1]) {
+      const points: Vec3[] = []
+      let full = false
+      for (let j = 0; j <= n; j++) {
+        for (let i = 0; i <= n; i++) {
+          const width = place(level, side, i / n, j / n)
+          if (name === L.angle && width >= 2 * Math.PI - 1e-9) full = true
+          points.push(L.point(v))
+        }
+      }
+      if (full) continue
+      const at = (i: number, j: number) => points[j * (n + 1) + i]
+      for (let j = 0; j < n; j++) {
+        for (let i = 0; i < n; i++) {
+          const corners = [at(i, j), at(i + 1, j), at(i + 1, j + 1), at(i, j + 1)]
+          if (!corners.every((p) => p.every(finite))) continue
+          const normal = polygonNormal(corners)
+          if (normal[0] ** 2 + normal[1] ** 2 + normal[2] ** 2 <= tiny) continue
+          // Verso fuori: dove la variabile esce dai suoi estremi (le altre ferme).
+          place(level, side, (i + 0.5) / n, (j + 0.5) / n)
+          const p0 = L.point(v)
+          const value = v[name]
+          v[name] = value + (side ? 1 : -1) * 1e-6 * Math.max(1, Math.abs(value))
+          const p1 = L.point(v)
+          const out = p1[0] - p0[0] || p1[1] - p0[1] || p1[2] - p0[2] ? [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]] : null
+          if (out && normal[0] * out[0] + normal[1] * out[1] + normal[2] * out[2] < 0) for (let k = 0; k < 3; k++) normal[k] = -normal[k]
+          const clipped = clipPolygon(corners, box)
+          if (clipped.length >= 3) faces.push({ polygons: [clipped], normal, mesh: [] })
+        }
+      }
+    }
+  }
+  return faces
+}
+
+/** Alcuni punti di un solido a strati, per scegliere la scatola. */
+export function layeredPoints(L: LayeredSolid, steps = 8): Vec3[] {
+  const v: Vars = {}
+  const out: Vec3[] = []
+  const count = L.vars.length
+  const total = (steps + 1) ** count
+  for (let k = 0; k < total; k++) {
+    let rest = k
+    for (let m = 0; m < count; m++) {
+      const f = (rest % (steps + 1)) / steps
+      rest = Math.floor(rest / (steps + 1))
+      const a = L.lo[m](v)
+      v[L.vars[m]] = a + (L.hi[m](v) - a) * f
+    }
+    out.push(L.point(v))
+  }
+  return out
+}
+
+/** I quadretti di un piano dentro la scatola, n per lato, lungo i due assi su cui è più disteso. */
+function planeQuads([a, b, c, d]: Plane, box: Box, n: number): Vec3[][] {
+  const coef = [a, b, c]
+  const abs = coef.map(Math.abs)
+  const k: Axis = abs[0] >= abs[1] && abs[0] >= abs[2] ? 0 : abs[1] >= abs[2] ? 1 : 2
+  const [p, q] = ([0, 1, 2] as Axis[]).filter((i) => i !== k)
+  const r = ranges(box)
+  const point = (s: number, t: number): Vec3 => {
+    const out: Vec3 = [0, 0, 0]
+    out[p] = s
+    out[q] = t
+    out[k] = (d - coef[p] * s - coef[q] * t) / coef[k]
+    return out
+  }
+  return gridOf([point(r[p][0], r[q][0]), point(r[p][1], r[q][0]), point(r[p][1], r[q][1]), point(r[p][0], r[q][1])], n)
+}
+
+/** Una zona del piano xy (M ≥ 0) come poligoni piatti nella scatola, all'altezza z = 0 (o sul fondo, se lo zero è fuori). */
+export function regionFaces(M: (x: number, y: number) => number, box: Box, cells: number): Face[] {
+  const size = cells * 4
+  const vp = { x0: box.x[0], x1: box.x[1], y0: box.y[0], y1: box.y[1], width: size, height: size }
+  const z = Math.min(box.z[1], Math.max(box.z[0], 0))
+  return sampleRegion(M, vp, 4).map((poly) => {
+    const points: Vec3[] = []
+    for (let i = 0; i < poly.length; i += 2) points.push([vp.x0 + (poly[i] / size) * (vp.x1 - vp.x0), vp.y1 - (poly[i + 1] / size) * (vp.y1 - vp.y0), z])
+    return { polygons: [points], normal: [0, 0, 1], mesh: [] }
+  })
 }

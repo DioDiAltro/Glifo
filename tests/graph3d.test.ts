@@ -140,7 +140,7 @@ z = x^2, x > 1, y`)
     expect(spec.errors[0]).toMatchObject({ line: 0, add: [{ name: 'k', line: 'k = 1' }] })
     expect(messages[1]).toContain('tre coordinate')
     expect(messages[2]).toContain('Troppi parametri')
-    expect(messages[3]).toContain('integrali')
+    expect(messages[3]).toContain('area sotto una curva')
     expect(spec.errors.length).toBe(5)
   })
 

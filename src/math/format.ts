@@ -37,9 +37,14 @@ interface Digits {
 }
 
 function fromNumber(v: number, significant: number): Digits {
-  const [mantissa, exp] = Math.abs(v).toExponential(significant - 1).split('e')
-  const digits = mantissa.replace('.', '').replace(/0+$/, '') || '0'
-  return { negative: v < 0, digits, point: Number(exp) + 1, more: false }
+  const abs = Math.abs(v)
+  const [mantissa, exp] = abs.toExponential(significant - 1).split('e')
+  // Un numero che è (quasi) uno corto, come 0,125, si scrive corto; se no le cifre continuano e gli
+  // zeri in fondo restano: 4,188790… (non 4,18879, che sembrerebbe esatto).
+  const short = Number(abs.toExponential(Math.max(0, significant - 3)))
+  const exact = Math.abs(short - abs) <= abs * 10 ** -significant
+  const raw = mantissa.replace('.', '')
+  return { negative: v < 0, digits: (exact ? raw.replace(/0+$/, '') : raw) || '0', point: Number(exp) + 1, more: !exact }
 }
 
 /** Le prime cifre decimali esatte di una frazione (con `more` se non finisce lì). */

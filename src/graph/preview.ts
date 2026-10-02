@@ -161,7 +161,8 @@ function addLabel(add: NonNullable<GraphError['add']>): string {
 function swatchClass(kind: GraphSpec['items'][number]['kind']): string {
   if (kind === 'point' || kind === 'point3') return 'graph-swatch is-point'
   if (kind === 'area') return 'graph-swatch is-area'
-  if (kind === 'surface' || kind === 'implicit3' || kind === 'patch') return 'graph-swatch is-surface'
+  if (kind === 'region') return 'graph-swatch is-region'
+  if (kind === 'surface' || kind === 'implicit3' || kind === 'patch' || kind === 'solid') return 'graph-swatch is-surface'
   return 'graph-swatch'
 }
 

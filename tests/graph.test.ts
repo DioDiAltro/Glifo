@@ -74,13 +74,13 @@ describe('il blocco ```grafico: una riga per ogni cosa da disegnare', () => {
 
   it('i commenti non contano; le righe sbagliate dicono perché, e le altre si disegnano lo stesso', () => {
     const spec = parseGraph('% la parabola\ny = x^2\ny = x^\n\ny = q x\nx > 0\nf(x) = f(x) + 1\ny = 3 < x')
-    expect(spec.items).toHaveLength(1)
+    // x > 0 è una zona: il semipiano a destra dell'asse y.
+    expect(spec.items.map((i) => i.kind)).toEqual(['function', 'region'])
     expect(spec.errors.map((e) => [e.line, e.message])).toEqual([
       [2, 'Manca l\'esponente dopo ^'],
       [4, 'q non è definita'],
-      [5, 'Una condizione da sola non si disegna: per la parte da mostrare scrivi x \\in [a, b]'],
       [6, 'f usa sé stessa (anche attraverso un\'altra definizione)'],
-      [7, 'Le zone (con < e >) non si sanno ancora colorare: scrivi un\'uguaglianza'],
+      [7, 'Un\'uguaglianza e una disuguaglianza insieme: scrivile in due righe'],
     ])
   })
 

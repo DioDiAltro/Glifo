@@ -124,18 +124,20 @@ function walk(node: MathNode, visit: (n: MathNode) => void): void {
 function styleOf(node: MathNode): { comma: boolean; decimal: boolean; digits: number } {
   let comma: boolean | null = null
   let decimal = false
-  let numeric = false
+  let digits = 12
   walk(node, (n) => {
     if (n.k === 'num' && n.text.includes('.')) {
       decimal = true
       comma ??= n.comma
     }
-    if (n.k === 'int' || (n.k === 'apply' && n.primes)) numeric = true
+    // Integrali e derivate si calcolano con meno cifre sicure; i doppi e i tripli ancora meno.
+    if (n.k === 'int' || (n.k === 'apply' && n.primes)) digits = Math.min(digits, 9)
+    if (n.k === 'mint') digits = Math.min(digits, n.vars.length === 2 ? 8 : 7)
   })
   // Una frazione da sola (\frac{1}{3} =) si vuole in decimali.
   const bare = node.k === 'neg' ? node.a : node
   const single = bare.k === 'bin' && bare.op === '/' && bare.a.k === 'num' && bare.b.k === 'num'
-  return { comma: comma ?? true, decimal: decimal || single, digits: numeric ? 9 : 12 }
+  return { comma: comma ?? true, decimal: decimal || single, digits }
 }
 
 export class Sheet {
@@ -143,6 +145,8 @@ export class Sheet {
   private exactConsts = new Map<string, Rational | null>()
   private fns = new Map<string, UserFunction>()
   private exactFns = new Map<string, ExactFunction | null>()
+  /** Gli insiemi definiti ($D = \{(x, y) : x^2 + y^2 \le 1\}$), per gli integrali doppi e tripli. */
+  private sets = new Map<string, MathNode>()
   readonly definitions: Definition[] = []
 
   /**
@@ -153,7 +157,7 @@ export class Sheet {
 
   /** Lo stato di adesso, per calcolare un'espressione con le definizioni fatte fin qui. */
   scope(): Scope {
-    return { vars: EMPTY_SCOPE.vars, consts: new Map(this.consts), fns: new Map(this.fns) }
+    return { vars: EMPTY_SCOPE.vars, consts: new Map(this.consts), fns: new Map(this.fns), sets: new Map(this.sets) }
   }
 
   private exactScope(): ExactScope {
@@ -196,6 +200,11 @@ export class Sheet {
     this.exactConsts.delete(name)
     this.fns.delete(name)
     this.exactFns.delete(name)
+    this.sets.delete(name)
+    if (!params && value.k === 'set') {
+      this.sets.set(name, value)
+      return
+    }
     if (params) {
       try {
         const body = compile(value, scopeWith(this.scope(), params), { calc: true })

@@ -48,6 +48,7 @@ function level(n: MathNode): number {
       return 1.5
     case 'big':
     case 'int':
+    case 'mint':
       return 1.8
     case 'fn':
       return n.args.length === 1 && isAtom(n.args[0]) ? 3 : 5
@@ -115,6 +116,7 @@ export function toLatex(node: MathNode): string {
         case '*': {
           const a = wrap(node.a, 1.9)
           const b = wrap(node.b, 2)
+          if (node.cross) return `${a} \\times ${b}`
           const dot = !node.implicit || startsWithDigit(node.b) || (node.a.k === 'post' && node.a.op === '!')
           return dot ? `${a} \\cdot ${b}` : `${a}${/^[A-Za-z]/.test(b) && /\\[A-Za-z]+$/.test(a) ? ' ' : ''}${b}`
         }
@@ -149,7 +151,14 @@ export function toLatex(node: MathNode): string {
     case 'big':
       return `\\${node.op}_{${nameLatex(node.v)}=${toLatex(node.from)}}^{${toLatex(node.to)}} ${wrap(node.body, 2)}`
     case 'int':
-      return `\\int_{${toLatex(node.from)}}^{${toLatex(node.to)}} ${toLatex(node.body)} \\, d${nameLatex(node.v)}`
+      // Una somma tra parentesi: \int_0^1 (x + y) \, dx; un integrale dentro l'altro no.
+      return `\\int_{${toLatex(node.from)}}^{${toLatex(node.to)}} ${node.body.k === 'int' ? toLatex(node.body) : wrap(node.body, 1.5)} \\, d${nameLatex(node.v)}`
+    case 'mint': {
+      const symbol = node.vars.length === 2 ? '\\iint' : '\\iiint'
+      return `${symbol}_{${domainLatex(node.domain)}} ${wrap(node.body, 1.5)} \\, ${node.vars.map((v) => `d${nameLatex(v)}`).join(' \\, ')}`
+    }
+    case 'set':
+      return setLatex(node)
     case 'cases':
       return `\\begin{cases} ${node.rows.map((r) => `${toLatex(r.value)} & ${r.cond ? toLatex(r.cond) : '\\text{altrimenti}'}`).join(' \\\\ ')} \\end{cases}`
     case 'tuple':
@@ -164,6 +173,19 @@ export function toLatex(node: MathNode): string {
       return node.items.map(toLatex).join('\\ \\text{o}\\ ')
   }
   return ''
+}
+
+function setLatex(node: Extract<MathNode, { k: 'set' }>): string {
+  const head = node.vars ? `${node.vars.length === 1 ? nameLatex(node.vars[0]) : `(${node.vars.map(nameLatex).join(', ')})`} : ` : ''
+  return `\\left\\{ ${head}${toLatex(node.cond)} \\right\\}`
+}
+
+/** Il dominio di un integrale doppio o triplo: gli intervalli di un rettangolo con le quadre ([0, 1] \times [0, 2]). */
+function domainLatex(node: MathNode): string {
+  if (node.k === 'tuple' && node.items.length === 2) return `[${node.items.map(toLatex).join(', ')}]`
+  if (node.k === 'bin' && node.op === '*') return `${domainLatex(node.a)} \\times ${domainLatex(node.b)}`
+  if (node.k === 'bin' && node.op === '^' && node.a.k === 'tuple') return `${domainLatex(node.a)}^{${toLatex(node.b)}}`
+  return toLatex(node)
 }
 
 function fnLatex(node: Extract<MathNode, { k: 'fn' }>, pow?: MathNode): string {

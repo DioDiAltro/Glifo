@@ -13,8 +13,11 @@ import {
   FAST,
   FINE,
   implicitFaces,
+  layeredFaces,
   patchFaces,
   planeFace,
+  regionFaces,
+  solidFaces,
   planeSide,
   planeTolerance,
   splitFace,
@@ -56,6 +59,15 @@ interface SceneFace {
   sides: Sides
   /** Il piano di cui è un pezzo (il suo indice in `planes`), o −1. */
   plane: number
+  /** Una zona del piano xy: velata come i piani, si vede attraverso. */
+  flat?: boolean
+  /** Un pezzo di un solido (chiuso): girato dall'altra parte non si vede, e non si disegna. */
+  solid?: boolean
+  /**
+   * Un pezzo di un solido che la scatola taglia (z \ge 0), in un grafico con altre cose: velato,
+   * così non le copre. I suoi lati sulla scatola si disegnano per ultimi: tutto il resto è dietro.
+   */
+  open?: boolean
 }
 
 /** Quello da disegnare di un grafico 3D, nello spazio: si calcola una volta e si guarda da dove si vuole. */
@@ -83,8 +95,8 @@ export function buildScene(spec: GraphSpec, box: Box, quality: Quality = 'fine')
   return withWorkLimit(GRAPH_WORK, () => {
     const detail = DETAILS[quality]
     const scene: Scene = { box, planes: [], faces: [], lines: [], points: [], vectors: [] }
-    const add = (faces: Face[], item: number, plane = -1) => {
-      for (const face of faces) scene.faces.push({ face, item, sides: [], plane })
+    const add = (faces: Face[], item: number, plane = -1, flags: Pick<SceneFace, 'flat' | 'solid' | 'open'> = {}) => {
+      for (const face of faces) scene.faces.push({ face, item, sides: [], plane, ...flags })
     }
     const addPlane = (plane: Plane, item: number) => {
       const face = planeFace(plane, box)
@@ -93,6 +105,8 @@ export function buildScene(spec: GraphSpec, box: Box, quality: Quality = 'fine')
       add([face], item, scene.planes.length - 1)
     }
     spec.items.forEach((item, i) => {
+      // La stessa zona di un'altra riga: è già disegnata.
+      if (item.same) return
       switch (item.kind) {
         case 'surface': {
           const plane = surfacePlane(item.f, box)
@@ -106,6 +120,15 @@ export function buildScene(spec: GraphSpec, box: Box, quality: Quality = 'fine')
           break
         case 'patch':
           add(patchFaces(item.fx, item.fy, item.fz, item.u, item.v, detail.patch, detail.patch, box), i)
+          break
+        case 'solid': {
+          const faces = item.layers ? layeredFaces(item.layers, box, detail.implicit) : solidFaces(item.M, item.parts, box, detail.implicit)
+          const open = spec.items.length > 1 && faces.some((f) => f.boxSide)
+          add(faces, i, -1, open ? { solid: true, open: true } : { solid: true })
+          break
+        }
+        case 'region':
+          add(regionFaces(item.M, box, detail.patch), i, -1, { flat: true })
           break
         case 'curve3':
           for (const points of curveLines(item.fx, item.fy, item.fz, item.t, box, item.straight)) scene.lines.push({ points, item: i, sides: [] })
@@ -318,7 +341,8 @@ class Coverage {
 const f1 = (v: number) => (Math.round(v * 10) / 10).toString()
 
 type Prim = { depth: number; sides: Sides } & (
-  | { k: 'face'; fill: string; d: string; mesh: [Vec3, Vec3][]; veil: boolean }
+  /** `veil`: quanto si vede il pezzo (1 pieno; meno per i piani e le zone, che lasciano vedere dietro). */
+  | { k: 'face'; fill: string; d: string; mesh: [Vec3, Vec3][]; veil: number }
   | { k: 'line'; stroke: string; width: number; d: string; item?: number }
   | { k: 'fill'; fill: string; d: string }
   | { k: 'dot'; x: number; y: number; fill: string }
@@ -386,29 +410,36 @@ function drawScene(scene: Scene, spec: GraphSpec, camera: Camera, palette: Palet
   const sidesAt = (p: readonly number[]) => sidesOf(p, planes, box)
 
   const coverage = new Coverage()
+  /** I lati sulla scatola dei solidi tagliati (vedi SceneFace.open): sopra a tutto. */
+  const late: Prim[] = []
   // Le superfici: ogni pezzo con la luce che prende, il retro più spento.
-  for (const { face, item, sides, plane } of scene.faces) {
+  for (const { face, item, sides, plane, flat, solid, open } of scene.faces) {
     let n = proj.normal(face.normal)
     const front = dot(n, proj.toward) >= 0
+    // Di un solido si vede solo il davanti: i pezzi dietro, vicino agli spigoli, finirebbero sopra.
+    if (solid && !front) continue
     if (!front) n = [-n[0], -n[1], -n[2]]
     const fill = shade(colors[item], Math.max(0, dot(n, proj.light)), front)
     let d = ''
     let depth = 0
     let count = 0
+    const isFlat = !!flat
     for (const poly of face.polygons) {
-      const flat: number[] = []
+      const points: number[] = []
       poly.forEach((p, i) => {
         const [x, y, z] = proj.at(p)
         d += `${i ? 'L' : 'M'}${f1(x)} ${f1(y)}`
-        flat.push(x, y)
+        points.push(x, y)
         depth += z
         count++
       })
       d += 'Z'
-      // I piani sono velati: sopra di loro i numeri si leggono.
-      if (plane < 0) coverage.add(flat)
+      // I piani, le zone del piano e i solidi tagliati sono velati: sopra di loro i numeri si leggono.
+      if (plane < 0 && !isFlat && !open) coverage.add(points)
     }
-    prims.push({ depth: depth / count, sides, k: 'face', fill, d, mesh: face.mesh, veil: plane >= 0 })
+    const prim: Prim = { depth: depth / count, sides, k: 'face', fill, d, mesh: face.mesh, veil: plane >= 0 || isFlat ? 0.72 : open ? 0.42 : 1 }
+    if (open && face.boxSide) late.push(prim)
+    else prims.push(prim)
   }
 
   // Gli assi, dove c'è lo zero (se no sul bordo della scatola), con le frecce e le tacche.
@@ -501,7 +532,7 @@ function drawScene(scene: Scene, spec: GraphSpec, camera: Camera, palette: Palet
     for (const p of list) (p.sides[level] === 0 ? on : p.sides[level] === near[level] ? close : far).push(p)
     return [...order(far, level + 1), ...on.sort((p, q) => p.depth - q.depth), ...order(close, level + 1)]
   }
-  const sorted = order(prims, 0)
+  const sorted = [...order(prims, 0), ...late.sort((p, q) => p.depth - q.depth)]
 
   // Una linea della griglia tra due pezzi si ripassa con quello disegnato dopo: se no il bordo di
   // quello la coprirebbe a metà.
@@ -546,7 +577,7 @@ function drawScene(scene: Scene, spec: GraphSpec, camera: Camera, palette: Palet
         j++
       }
       // I piani velati: si vede quello che hanno dietro.
-      out.push(p.veil ? `<path d="${d}" fill="${p.fill}" fill-opacity="0.72" stroke="none"/>` : `<path d="${d}" fill="${p.fill}" stroke="${p.fill}"/>`)
+      out.push(p.veil < 1 ? `<path d="${d}" fill="${p.fill}" fill-opacity="${p.veil}" stroke="none"/>` : `<path d="${d}" fill="${p.fill}" stroke="${p.fill}"/>`)
       if (mesh) out.push(`<path d="${mesh}" fill="none" stroke="${palette.mesh}" stroke-width="0.8"/>`)
       i = j
       continue

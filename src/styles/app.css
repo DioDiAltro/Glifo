@@ -3119,6 +3119,16 @@ kbd {
   background: color-mix(in srgb, var(--graph-color) 22%, transparent);
 }
 
+/* Una zona: il quadratino velato, con il bordo. */
+.graph-swatch.is-region {
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--graph-color);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--graph-color) 22%, transparent);
+}
+
 /* Una superficie dei grafici 3D: un quadratino pieno. */
 .graph-swatch.is-surface {
   width: 14px;

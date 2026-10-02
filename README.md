@@ -130,6 +130,13 @@ chi sta provando Glifo.*
   funzioni definite (`f'(2)`, `f''(2)`) e funzioni a tratti con `\begin{cases}`. Si scrivono in LaTeX
   ma anche come in una calcolatrice: `sqrt(x)`, `sin(x)`, `2*x`, `pi`; e con i nomi italiani (`\tg`,
   `\arctg`, `\operatorname{sen}`, `settsinh`).
+- **Integrali doppi e tripli**, con il dominio sotto: disuguaglianze (`\iint_{x^2 + y^2 \le 1} (x^2 + y^2) \, dA =`,
+  `\iiint_{x^2 + y^2 \le 1, 0 \le z \le 2} dV =`), rettangoli (`\iint_{[0, 1] \times [0, 2]} x y \, dx \, dy =`,
+  `[0, 1]^3`) o il nome di un insieme scritto prima (`$D = \{(x, y) : 0 \le y \le x \le 1\}$` e poi
+  `\iint_D x y \, dA =`); oppure uno dentro l'altro con gli estremi (`\int_0^1 \int_0^x x y \, dy \, dx =`),
+  anche in coordinate polari (`\int_0^{2\pi} \int_0^1 r \, dr \, d\theta`) e sferiche. I differenziali sono
+  `dx \, dy`, `dA`, `dV` o `d(x, y)`. Il risultato ha qualche cifra in meno degli integrali semplici
+  (sono quelle sicure).
 - Il pulsante con gli **assi** nella barra mette nella nota un **grafico**: con il cursore su una
   funzione (`$f(x) = …$`) disegna quella, su un integrale (`$\int_0^2 x^2 \, dx =$`) la sua area, se
   no prepara il blocco da scrivere. Il grafico della formula sotto il cursore si vede anche nel
@@ -147,6 +154,15 @@ chi sta provando Glifo.*
   riga) l'area prende il suo colore; se no il grafico disegna anche la curva. Gli estremi possono
   essere numeri con lo slider (`\int_0^b`): muovendolo l'area cambia. Si può lasciare l'uguale
   finale o il risultato copiato dalla nota.
+- Le **disuguaglianze** colorano una **zona**: `y > x^2`, `x^2 + y^2 \le 4`, `y \le 4 - x^2, y \ge 0`; il
+  bordo è tratteggiato dove non ne fa parte (con < e >). Anche gli **insiemi**
+  (`D = \{(x, y) : 0 \le x \le 1, x^2 \le y \le x\}`, o il nome di uno della nota) e i **domini degli
+  integrali doppi**, con il valore nella legenda (`\iint_D 1 \, dA = 0,166666…`; scritto in r e θ, il
+  dominio si disegna dove sta nel piano). Con la z sono **solidi**: `x^2 + y^2 + z^2 \le 1`, gli insiemi con
+  tre variabili, il dominio di un integrale triplo (anche in coordinate cilindriche e sferiche), e un
+  integrale doppio con una funzione di x e y diventa il **volume sotto la superficie** (sotto lo zero
+  dove la funzione è negativa). Gli spigoli restano netti: ogni condizione disegna la sua faccia.
+  Un solido che la scatola taglia (`z \ge 0`) con altre cose nel grafico è velato, per non coprirle.
 - Con la **z** (o una funzione di x e y, o un punto con tre coordinate) il grafico è in **3D**:
   superfici sopra il piano xy (`z = x^2 + y^2`, `f(x, y) = \sin x \cos y`, o solo `x^2 - y^2`),
   superfici date da un'equazione (`x^2 + y^2 + z^2 = 4`, il cilindro `x^2 + y^2 = 1`) e piani
@@ -182,6 +198,8 @@ chi sta provando Glifo.*
 ![Risultati dopo «=» e grafici nell'anteprima](docs/grafici.png)
 
 ![Grafici 3D: la sella tagliata da un piano e una sfera tagliata da un piano](docs/grafici-3d.png)
+
+![Integrali doppi e tripli: il dominio nel piano, il volume sotto la superficie e un solido in coordinate sferiche](docs/integrali-multipli.png)
 
 **Schemi stile draw.io**
 - Il pulsante con i due riquadri nella barra apre un editor a tutto schermo: forme a sinistra
@@ -379,14 +397,16 @@ src/
   math/
     parse.ts              legge le espressioni (LaTeX o come in una calcolatrice) in un albero
     evaluate.ts           le calcola: funzioni, somme, integrali, derivate, condizioni
+    domain.ts             i domini degli integrali doppi e tripli (margine, condizioni, strati) e come si integrano
     exact.ts, format.ts   i conti esatti con le frazioni; i risultati scritti all'italiana
     sheet.ts              il «foglio» della nota: definizioni dall'alto in basso e risultati dopo «=»
     latex.ts              un'espressione riscritta in LaTeX (le legende dei grafici)
   graph/
-    spec.ts               le righe di un blocco ```grafico: funzioni, curve, punti, vettori, aree degli integrali, superfici, la parte da mostrare, gli slider
+    spec.ts               le righe di un blocco ```grafico: funzioni, curve, punti, vettori, aree degli integrali, superfici, zone e solidi, la parte da mostrare, gli slider
+    regions.ts            le zone e i solidi: disuguaglianze, insiemi, domini degli integrali doppi e tripli, volumi sotto le superfici
     plot.ts               dove calcolare le curve (salti, asintoti) e le aree, la finestra, le tacche
     svg.ts                il disegno in SVG, con i colori dei due temi
-    space.ts              i conti del 3D: superfici a quadretti e a tetraedri, piani, curve nello spazio, la scatola da mostrare
+    space.ts              i conti del 3D: superfici a quadretti e a tetraedri, piani, solidi, curve nello spazio, la scatola da mostrare
     view3d.ts             il disegno 3D in SVG: la luce, i pezzi dal più lontano al più vicino, i piani, gli assi
     picture.ts            il disegno fermo di un grafico, per il pannello a destra e i file .md
     preview.ts            nell'anteprima: legenda, errori, slider, trascinare, ingrandire, coordinate

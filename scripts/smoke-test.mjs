@@ -1278,6 +1278,34 @@ try {
     spaceNote?.includes('```grafico\nz = x^2 - y^2\n```') && turned && (await gp.locator('.preview-pane .graph-block.is-space .graph-swatch.is-surface').count()) === 1,
     `una superficie si disegna in 3D, nel pannello e nella nota, e si gira trascinandola (${JSON.stringify({ turned, note: spaceNote?.slice(-40) })})`,
   )
+  // Un integrale doppio: il risultato dopo «=», il volume sotto la superficie nel pannello e, con
+  // «Inserisci il grafico», nella nota; una disuguaglianza è una zona con il bordo tratteggiato.
+  await gp.locator('.notes-head button[aria-label="Nuova nota"]').click()
+  await gp.keyboard.press('Control+a')
+  await gp.keyboard.type('# Volume\n\nVale $\\iint_{x^2 + y^2 \\le 1} (2 - x^2 - y^2) \\, dA =')
+  await gp.waitForSelector('.cm-calc-result')
+  const volumeResult = await gp.locator('.cm-calc-result').first().innerText()
+  await gp.waitForSelector('.formula-graph:not([hidden]) svg.graph-3d', { timeout: 5000 })
+  await gp.locator('.formula-graph-insert').click()
+  await gp.waitForSelector('.preview-pane .graph-block.is-space .graph-swatch.is-surface', { timeout: 5000 })
+  await gp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  const volumeLegend = await gp.locator('.preview-pane .graph-legend').innerText()
+  const volumeNote = await gp.evaluate(() =>
+    [...Array(localStorage.length).keys()].map((i) => localStorage.getItem(localStorage.key(i)) ?? '').find((v) => v.startsWith('# Volume')),
+  )
+  await gp.locator('.cm-content').click()
+  await gp.keyboard.press('Control+End')
+  await gp.keyboard.type('\n\nLa zona $y > x^2$')
+  await gp.keyboard.press('ArrowLeft')
+  await gp.waitForSelector('.formula-graph:not([hidden]) svg path[data-area]', { timeout: 5000 })
+  const dashed = await gp.locator('.formula-graph svg path[stroke-dasharray]').count()
+  check(
+    volumeResult.includes('4,712389') &&
+      volumeNote?.includes('```grafico\n\\iint_{x^2 + y^2 \\le 1} (2 - x^2 - y^2) \\, dA\n```') &&
+      volumeLegend.includes('4,712389') &&
+      dashed === 1,
+    `un integrale doppio ha il valore e il volume, nel pannello e nella nota; y > x^2 è una zona tratteggiata (${JSON.stringify({ volumeResult, volumeLegend, dashed, note: volumeNote?.slice(-70) })})`,
+  )
   await gp.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)

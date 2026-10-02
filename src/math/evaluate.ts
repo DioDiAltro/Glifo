@@ -3,6 +3,7 @@
  * (`compile`), veloce da chiamare migliaia di volte per disegnare un grafico. Si lavora con i
  * numeri reali: dove una funzione non è definita (√-1, log 0, 1/0) il risultato è NaN o ±∞.
  */
+import { compileMultiple } from './domain'
 import { MathSyntaxError, type MathNode } from './parse'
 
 export type Vars = Record<string, number>
@@ -23,6 +24,8 @@ export interface Scope {
   consts: ReadonlyMap<string, number>
   /** Le funzioni definite (f(x) = …). */
   fns: ReadonlyMap<string, UserFunction>
+  /** Gli insiemi definiti (D = \{(x, y) : x^2 + y^2 \le 1\}), per gli integrali doppi e tripli. */
+  sets?: ReadonlyMap<string, MathNode>
 }
 
 export interface CompileOptions {
@@ -223,14 +226,17 @@ function kronrod(f: (x: number) => number, a: number, b: number): { value: numbe
   return { value: k * h, error: Math.abs((k - g) * h) }
 }
 
-/** L'integrale di f da a a b (anche con estremi infiniti), o NaN se non converge. */
-export function integrate(f: (x: number) => number, a: number, b: number): number {
+/**
+ * L'integrale di f da a a b (anche con estremi infiniti), o NaN se non converge. `tolerance`:
+ * l'errore relativo che basta (gli integrali doppi e tripli ne chiedono meno a quelli di fuori).
+ */
+export function integrate(f: (x: number) => number, a: number, b: number, tolerance = 1e-11): number {
   if (Number.isNaN(a) || Number.isNaN(b)) return NaN
   if (a === b) return 0
-  if (a > b) return -integrate(f, b, a)
-  if (a === -Infinity && b === Infinity) return integrate((t) => { const d = 1 - t * t; return f(t / d) * (1 + t * t) / (d * d) }, -1, 1)
-  if (b === Infinity) return integrate((t) => f(a + t / (1 - t)) / ((1 - t) * (1 - t)), 0, 1)
-  if (a === -Infinity) return integrate((t) => f(b - (1 - t) / t) / (t * t), 0, 1)
+  if (a > b) return -integrate(f, b, a, tolerance)
+  if (a === -Infinity && b === Infinity) return integrate((t) => { const d = 1 - t * t; return f(t / d) * (1 + t * t) / (d * d) }, -1, 1, tolerance)
+  if (b === Infinity) return integrate((t) => f(a + t / (1 - t)) / ((1 - t) * (1 - t)), 0, 1, tolerance)
+  if (a === -Infinity) return integrate((t) => f(b - (1 - t) / t) / (t * t), 0, 1, tolerance)
   const parts = [{ a, b, ...kronrod(f, a, b) }]
   for (let n = 0; n < 2000; n++) {
     let total = 0
@@ -242,7 +248,7 @@ export function integrate(f: (x: number) => number, a: number, b: number): numbe
       if (parts[i].error > parts[worst].error) worst = i
     }
     if (!Number.isFinite(total)) return NaN
-    if (error <= Math.max(1e-13, 1e-11 * Math.abs(total))) return total
+    if (error <= Math.max(1e-13, tolerance * Math.abs(total))) return total
     const p = parts[worst]
     const m = (p.a + p.b) / 2
     parts.splice(worst, 1, { a: p.a, b: m, ...kronrod(f, p.a, m) }, { a: m, b: p.b, ...kronrod(f, m, p.b) })
@@ -395,6 +401,10 @@ export function compile(node: MathNode, scope: Scope, options: CompileOptions = 
         }, from(v), to(v))
       }
     }
+    case 'mint':
+      return compileMultiple(node, scope, options)
+    case 'set':
+      throw new MathError('Un insieme non è un numero: si usa sotto un integrale, \\iint_D')
     case 'cases': {
       const rows = node.rows.map((r) => ({ value: c(r.value), cond: r.cond ? compileCondition(r.cond, scope, options) : null }))
       return (v) => {
@@ -415,8 +425,8 @@ export function compile(node: MathNode, scope: Scope, options: CompileOptions = 
   throw new MathError('Espressione non valida')
 }
 
-/** Un estremo di somma o integrale: può essere ±∞. */
-function bound(node: MathNode, scope: Scope, options: CompileOptions): Compiled {
+/** Un estremo di somma o integrale (o di una disuguaglianza): può essere ±∞. */
+export function bound(node: MathNode, scope: Scope, options: CompileOptions = {}): Compiled {
   if (node.k === 'infty') return constant(Infinity)
   if (node.k === 'neg' && node.a.k === 'infty') return constant(-Infinity)
   if (node.k === 'bin' && node.op === '+' && node.b.k === 'infty') return constant(Infinity)

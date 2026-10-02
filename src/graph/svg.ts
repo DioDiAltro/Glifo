@@ -3,7 +3,7 @@
  * Lo stesso disegno serve all'anteprima (con i colori del tema) e alle immagini nei file .md.
  */
 import { withWorkLimit } from '../math/evaluate'
-import { lineAcross, sampleArea, sampleFunction, sampleImplicit, sampleParametric, ticks, type Polyline, type Viewport } from './plot'
+import { lineAcross, regionEdges, sampleArea, sampleFunction, sampleImplicit, sampleParametric, sampleRegion, ticks, type Polyline, type Viewport } from './plot'
 import { GRAPH_WORK, type GraphItem, type GraphSpec } from './spec'
 
 export interface Palette {
@@ -123,12 +123,14 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
   out.push(`<path d="${vertical(tx.minor)}${horizontal(ty.minor)}" stroke="${palette.gridMinor}" stroke-width="1" fill="none"/>`)
   out.push(`<path d="${vertical(tx.major.map((t) => t.value))}${horizontal(ty.major.map((t) => t.value))}" stroke="${palette.grid}" stroke-width="1" fill="none"/>`)
 
-  // Le aree degli integrali, sotto gli assi e le curve
+  // Le aree degli integrali e le zone, sotto gli assi e le curve
   const colors = itemColors(spec.items, palette)
   const areas: string[] = []
   spec.items.forEach((item, i) => {
-    if (item.kind !== 'area') return
-    const pieces = sampleArea(item.f, item.from, item.to, vp)
+    let pieces: Polyline[] = []
+    if (item.kind === 'area') pieces = sampleArea(item.f, item.from, item.to, vp)
+    else if (item.kind === 'region' && !item.same) pieces = sampleRegion(item.M, vp)
+    else return
     if (pieces.length) areas.push(`<path d="${pieces.map((p) => `${path(p)}Z`).join('')}" fill="${colors[i]}" data-area="${i}"/>`)
   })
   if (areas.length) out.push(`<g clip-path="url(#${clip})" fill-opacity="${palette.area}" stroke="none">${areas.join('')}</g>`)
@@ -181,6 +183,12 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
       lines = s.lines
       for (const p of s.poles) dashed.push(`M${f1(sx(p))} 0V${H}`)
     } else if (item.kind === 'implicit') lines = sampleImplicit(item.F, vp)
+    else if (item.kind === 'region' && !item.same) {
+      // Il bordo della zona: tratteggiato dove non ne fa parte (< e >).
+      for (const edge of regionEdges(item, vp)) {
+        if (edge.lines.length) curves.push(`<path d="${edge.lines.map(path).join('')}" stroke="${color}" stroke-width="2"${edge.strict ? ' stroke-dasharray="6 4"' : ''} data-item="${i}"/>`)
+      }
+    }
     else if (item.kind === 'parametric') lines = item.straight ? lineAcross(item.fx, item.fy, vp) : sampleParametric(item.fx, item.fy, item.t, vp)
     else if (item.kind === 'vertical') lines = [[sx(item.x), -2, sx(item.x), H + 2]]
     else if (item.kind === 'vector') {

@@ -4,6 +4,7 @@
  * Le coordinate sullo schermo vanno da (0, 0) in alto a sinistra a (width, height).
  */
 import { withWorkLimit } from '../math/evaluate'
+import type { PlanePart } from './regions'
 import { GRAPH_WORK, type GraphItem, type GraphSpec, type Range } from './spec'
 
 export interface Viewport {
@@ -314,6 +315,134 @@ export function sampleImplicit(F: (x: number, y: number) => number, vp: Viewport
   return lines
 }
 
+/**
+ * Le linee (in pixel) solo dove `keep` ≥ 0: dove si esce, il punto del taglio si cerca dimezzando
+ * il tratto. Serve al bordo di una zona: ogni condizione disegna la sua curva dove valgono le altre.
+ */
+export function clipLines(lines: Polyline[], keep: (x: number, y: number) => number, vp: Viewport): Polyline[] {
+  const wx = (px: number) => vp.x0 + (px / vp.width) * (vp.x1 - vp.x0)
+  const wy = (py: number) => vp.y1 - (py / vp.height) * (vp.y1 - vp.y0)
+  const inside = (px: number, py: number) => keep(wx(px), wy(py)) >= 0
+  const out: Polyline[] = []
+  for (const line of lines) {
+    let current: Polyline = []
+    const flush = () => {
+      if (current.length >= 4) out.push(current)
+      current = []
+    }
+    let prevIn = false
+    for (let k = 0; k < line.length; k += 2) {
+      const x = line[k]
+      const y = line[k + 1]
+      const isIn = inside(x, y)
+      if (k > 0 && isIn !== prevIn) {
+        // Il punto dove si entra o si esce, tra il punto di prima e questo.
+        let ax = line[k - 2]
+        let ay = line[k - 1]
+        let bx = x
+        let by = y
+        for (let it = 0; it < 30; it++) {
+          const mx = (ax + bx) / 2
+          const my = (ay + by) / 2
+          if (inside(mx, my) === prevIn) {
+            ax = mx
+            ay = my
+          } else {
+            bx = mx
+            by = my
+          }
+        }
+        const cx = prevIn ? ax : bx
+        const cy = prevIn ? ay : by
+        if (prevIn) {
+          current.push(cx, cy)
+          flush()
+        } else current.push(cx, cy)
+      }
+      if (isIn) current.push(x, y)
+      prevIn = isIn
+    }
+    flush()
+  }
+  return out
+}
+
+/**
+ * Il bordo di una zona, in pezzi: con le condizioni una per una, ognuna disegna la sua curva dove
+ * valgono le altre (così gli angoli restano netti, e una condizione stretta ha il suo tratteggio);
+ * se no la curva M = 0.
+ */
+export function regionEdges(item: { M: (x: number, y: number) => number; strict: boolean; parts: PlanePart[] | null }, vp: Viewport): { lines: Polyline[]; strict: boolean }[] {
+  const parts = item.parts
+  if (!parts) return [{ lines: sampleImplicit(item.M, vp), strict: item.strict }]
+  return parts.map((part, i) => {
+    const lines = sampleImplicit(part.F, vp)
+    if (parts.length === 1) return { lines, strict: part.strict }
+    const keep = (x: number, y: number) => {
+      let m = Infinity
+      for (let j = 0; j < parts.length; j++) if (j !== i) m = Math.min(m, parts[j].F(x, y))
+      return m
+    }
+    return { lines: clipLines(lines, keep, vp), strict: part.strict }
+  })
+}
+
+/**
+ * Una zona del piano (dove M ≥ 0), a quadretti di `cell` pixel: i poligoni da colorare. I quadretti
+ * tutti dentro si uniscono in strisce, quelli sul bordo si tagliano dove M cambia segno.
+ */
+export function sampleRegion(M: (x: number, y: number) => number, vp: Viewport, cell = 3): Polyline[] {
+  const nx = Math.max(1, Math.ceil(vp.width / cell))
+  const ny = Math.max(1, Math.ceil(vp.height / cell))
+  const px = vp.width / nx
+  const py = vp.height / ny
+  const values = new Float64Array((nx + 1) * (ny + 1))
+  for (let j = 0; j <= ny; j++) {
+    const y = vp.y1 - ((vp.y1 - vp.y0) * j) / ny
+    for (let i = 0; i <= nx; i++) values[j * (nx + 1) + i] = M(vp.x0 + ((vp.x1 - vp.x0) * i) / nx, y)
+  }
+  const at = (i: number, j: number) => values[j * (nx + 1) + i]
+  const inside = (v: number) => v >= 0
+  const polygons: Polyline[] = []
+  for (let j = 0; j < ny; j++) {
+    let run = -1
+    const flush = (end: number) => {
+      if (run < 0) return
+      polygons.push([run * px, j * py, end * px, j * py, end * px, (j + 1) * py, run * px, (j + 1) * py])
+      run = -1
+    }
+    for (let i = 0; i < nx; i++) {
+      const corners: [number, number, number][] = [
+        [i, j, at(i, j)],
+        [i + 1, j, at(i + 1, j)],
+        [i + 1, j + 1, at(i + 1, j + 1)],
+        [i, j + 1, at(i, j + 1)],
+      ]
+      const count = corners.filter((c) => inside(c[2])).length
+      if (count === 4) {
+        if (run < 0) run = i
+        continue
+      }
+      flush(i)
+      if (!count) continue
+      // Il pezzo dentro: i vertici dentro e, tra un vertice dentro e uno fuori, il punto del bordo.
+      const poly: Polyline = []
+      for (let k = 0; k < 4; k++) {
+        const [ai, aj, av] = corners[k]
+        const [bi, bj, bv] = corners[(k + 1) % 4]
+        if (inside(av)) poly.push(ai * px, aj * py)
+        if (inside(av) !== inside(bv)) {
+          const t = Number.isFinite(av) && Number.isFinite(bv) ? av / (av - bv) : 0.5
+          poly.push((ai + (bi - ai) * t) * px, (aj + (bj - aj) * t) * py)
+        }
+      }
+      if (poly.length >= 6) polygons.push(poly)
+    }
+    flush(nx)
+  }
+  return polygons
+}
+
 // ——— La parte da mostrare ———
 
 /** Dove succede qualcosa a una funzione: zeri, massimi e minimi, salti, bordi del dominio. */
@@ -351,7 +480,7 @@ function findWindow(spec: GraphSpec, width: number, height: number): Viewport {
   const items = spec.items
   // Anche le curve delle aree: la loro forma deve vedersi.
   const functions = items.filter((i): i is Extract<GraphItem, { kind: 'function' | 'area' }> => i.kind === 'function' || i.kind === 'area')
-  const curves = items.filter((i) => i.kind === 'implicit' || i.kind === 'parametric')
+  const curves = items.filter((i) => i.kind === 'implicit' || i.kind === 'parametric' || i.kind === 'region')
   const xs: number[] = []
   const ys: number[] = []
   for (const item of items) {
@@ -393,7 +522,7 @@ function findWindow(spec: GraphSpec, width: number, height: number): Viewport {
           ys.push(search.y1 - (line[k + 1] / 240) * 24)
         }
       }
-    }
+    } else if (item.kind === 'region') regionExtent(item.M, xs, ys)
   }
 
   // x: dove succede qualcosa (con l'origine), con un po' di margine. Con un integrale (non da −∞
@@ -416,13 +545,16 @@ function findWindow(spec: GraphSpec, width: number, height: number): Viewport {
       const all = [0, ...near, ...xs]
       let lo = Math.min(...all)
       let hi = Math.max(...all)
-      const pad = Math.max((hi - lo) * 0.2, 1)
+      // Solo zone (con punti e curve come x^2 + y^2 = 1): la finestra si stringe attorno a loro.
+      const zones = items.some((i) => i.kind === 'region') && items.every((i) => i.kind === 'region' || i.kind === 'implicit' || i.kind === 'point')
+      const pad = Math.max((hi - lo) * 0.2, zones ? 0.5 : 1)
+      const least = zones ? 2 : 6
       lo -= pad
       hi += pad
-      if (hi - lo < 6) {
+      if (hi - lo < least) {
         const c = (lo + hi) / 2
-        lo = c - 3
-        hi = c + 3
+        lo = c - least / 2
+        hi = c + least / 2
       }
       x = [lo, hi]
     }
@@ -446,6 +578,57 @@ function findWindow(spec: GraphSpec, width: number, height: number): Viewport {
   // Le curve (circonferenze, ellissi…) con le stesse unità sui due assi, se no si deformano.
   if (curves.length && !functions.length && !spec.x && !spec.y) [x, y] = sameUnits(x, ys.length ? [Math.min(...ys), Math.max(...ys)] : y, width, height)
   return { x0: x[0], x1: x[1], y0: y[0], y1: y[1], width, height }
+}
+
+/**
+ * Dove sta una zona. Se è limitata, i suoi punti (cercati di nuovo, più fitti, nel rettangolo
+ * trovato); se è piccola e vicina all'origine, con una griglia più fitta. Se non è limitata (y > x^2,
+ * x + y < 1) il suo bordo, ma solo vicino all'origine: fin dove arriva il punto del bordo più vicino,
+ * e un po' più in là (almeno fino a 3).
+ */
+function regionExtent(M: (x: number, y: number) => number, xs: number[], ys: number[]): void {
+  const scan = (x0: number, x1: number, y0: number, y1: number, n: number) => {
+    const hx = (x1 - x0) / n
+    const hy = (y1 - y0) / n
+    const found = { x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity, hx, hy }
+    for (let j = 0; j <= n; j++) {
+      for (let i = 0; i <= n; i++) {
+        const x = x0 + i * hx
+        const y = y0 + j * hy
+        if (!(M(x, y) >= 0)) continue
+        found.x0 = Math.min(found.x0, x)
+        found.x1 = Math.max(found.x1, x)
+        found.y0 = Math.min(found.y0, y)
+        found.y1 = Math.max(found.y1, y)
+      }
+    }
+    return found
+  }
+  const R = 12
+  let box = scan(-R, R, -R, R, 120)
+  // Niente: forse è piccola, vicino all'origine.
+  if (box.x0 > box.x1) box = scan(-1.2, 1.2, -1.2, 1.2, 120)
+  if (box.x0 > box.x1) return
+  if (box.x0 > -R && box.x1 < R && box.y0 > -R && box.y1 < R) {
+    const fine = scan(box.x0 - box.hx, box.x1 + box.hx, box.y0 - box.hy, box.y1 + box.hy, 120)
+    if (fine.x0 <= fine.x1) box = fine
+    xs.push(box.x0 - box.hx / 2, box.x1 + box.hx / 2)
+    ys.push(box.y0 - box.hy / 2, box.y1 + box.hy / 2)
+    return
+  }
+  const search: Viewport = { x0: -R, x1: R, y0: -R, y1: R, width: 240, height: 240 }
+  const points: [number, number][] = []
+  for (const line of sampleImplicit(M, search, 2)) {
+    for (let k = 0; k < line.length; k += 2) points.push([search.x0 + (line[k] / 240) * 2 * R, search.y1 - (line[k + 1] / 240) * 2 * R])
+  }
+  if (!points.length) return
+  const nearest = Math.min(...points.map(([x, y]) => Math.hypot(x, y)))
+  const radius = Math.max(3, 1.5 * nearest)
+  for (const [x, y] of points) {
+    if (Math.hypot(x, y) > radius) continue
+    xs.push(x)
+    ys.push(y)
+  }
 }
 
 /** I valori della funzione, e se ha asintoti verticali (cambia segno passando per valori enormi). */

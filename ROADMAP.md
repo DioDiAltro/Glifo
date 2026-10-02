@@ -20,10 +20,16 @@ pubblicata appena è pronta e qui si segna come fatta.
    vettori (anche nel piano). Si girano trascinandoli e hanno gli slider come quelli 2D. Da
    migliorare se serve: dove due superfici curve si tagliano il bordo è a dentini (i piani invece
    tagliano giusto).
-2. **Integrali doppi e tripli**: il valore (`\int_0^1 \int_0^x xy \, dy \, dx`, anche su un dominio
-   scritto come insieme) e il disegno: il dominio colorato nel piano, il volume sotto la superficie
-   nel 3D. Insieme arrivano le **zone colorate** delle disuguaglianze (`y > x^2`,
-   `x^2 + y^2 \le 4`).
+2. Fatto (2 ottobre 2026): **integrali doppi e tripli** nella nota, uno dentro l'altro
+   (`\int_0^1 \int_0^x xy \, dy \, dx`, anche in polari e sferiche) o sul dominio scritto sotto
+   (`\iint_{x^2 + y^2 \le 1}`, `[0, 1] \times [0, 2]`, il nome di un insieme `D = \{(x, y) : …\}`), e
+   nel grafico: il dominio colorato nel piano, il volume sotto la superficie e i solidi nel 3D
+   (anche cilindrici e sferici). Le **zone colorate** delle disuguaglianze (`y > x^2`,
+   `x^2 + y^2 \le 4`), tratteggiate dove il bordo è escluso, e i solidi (`x^2 + y^2 + z^2 \le 1`).
+   Da migliorare se serve: un dominio in coordinate cilindriche o sferiche con condizioni che non
+   tengono una variabile da sola tra due estremi (come `0 \le \rho \le 2\cos\varphi`) si disegna a
+   gradini; il volume sotto una superficie data in r e θ non si disegna (dentro la funzione c'è lo
+   jacobiano r).
 3. **Numeri complessi**: `i`, coniugato, modulo, argomento, forma esponenziale, potenze e radici.
    Nel grafico il piano di Gauss, con punti, circonferenze (`|z - i| = 2`) e zone.
 4. **Vettori e matrici**: matrici scritte con `pmatrix`, determinante, inversa, trasposta, rango,

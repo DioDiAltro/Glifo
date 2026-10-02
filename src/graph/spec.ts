@@ -36,6 +36,23 @@ import { formatNumber } from '../math/format'
 import { nameLatex, toLatex } from '../math/latex'
 import { children, namesIn, parseMath, parseStatement, tokenize, type MathNode, type Statement } from '../math/parse'
 import { calculationRequest, Sheet, splitEquals } from '../math/sheet'
+import {
+  constantIntegrand,
+  inequalityMargin,
+  integralRegion,
+  multipleOf,
+  planeMargin,
+  spaceLayers,
+  spaceMargin,
+  spaceParts,
+  volumeLayers,
+  volumeMargin,
+  volumeParts,
+  planeParts,
+  type LayeredSolid,
+  type Multiple,
+  type PlanePart,
+} from './regions'
 
 export type Range = [number, number]
 
@@ -55,6 +72,11 @@ interface ItemBase {
    * sbagliate: così i colori non cambiano mentre si corregge o si muove uno slider.
    */
   slot: number
+  /**
+   * La stessa zona (o lo stesso solido) di un'altra riga del blocco (D = \{…\} e \iint_D): si
+   * disegna una volta sola, e questa riga ne prende il colore. Resta nella legenda.
+   */
+  same?: boolean
 }
 
 export type GraphItem =
@@ -83,6 +105,24 @@ export type GraphItem =
   /** Una curva nello spazio con un parametro; `straight` come per le curve nel piano. */
   | (ItemBase & { kind: 'curve3'; fx: (t: number) => number; fy: (t: number) => number; fz: (t: number) => number; param: string; t: Range; straight: boolean })
   | (ItemBase & { kind: 'point3'; x: number; y: number; z: number; name: string | null })
+  /**
+   * Una zona del piano (y > x^2, un insieme, il dominio di un integrale doppio): dove M(x, y) ≥ 0;
+   * `strict` se il bordo non ne fa parte (< e >); `parts` le sue condizioni una per una, per
+   * disegnare il bordo pezzo per pezzo con gli angoli netti (null se ha un «o», o è in r e θ).
+   * Nei grafici 3D sta nel piano xy.
+   */
+  | (ItemBase & { kind: 'region'; M: (x: number, y: number) => number; strict: boolean; parts: PlanePart[] | null })
+  /**
+   * Un solido (x^2 + y^2 + z^2 \le 1, il dominio di un integrale triplo, il volume sotto una
+   * superficie): dove M ≥ 0; `parts` le sue condizioni una per una (null se ha un «o»); `layers`
+   * le variabili una dentro l'altra, se il dominio è scritto così (si disegna faccia per faccia).
+   */
+  | (ItemBase & {
+      kind: 'solid'
+      M: (x: number, y: number, z: number) => number
+      parts: ((x: number, y: number, z: number) => number)[] | null
+      layers: LayeredSolid | null
+    })
   /**
    * L'area tra la curva y = f(x) e l'asse x, da `from` a `to` (\int_0^2 x^2 \, dx); `value` è
    * l'integrale (NaN se non converge). `curve`: disegna anche la curva, se nessun'altra riga la
@@ -329,6 +369,10 @@ function xyParams(params: readonly string[] | null | undefined): boolean {
 function isSpaceLine(main: MathNode, zFree: boolean): boolean {
   const range = rangeLine(main)
   if (range) return zFree && range.name === 'z'
+  // Un integrale triplo, un insieme con tre variabili.
+  if (multipleOf(main)?.dims === 3) return true
+  const set = setOf(main)
+  if (set) return setDims(set.node) === 3
   const tuple = tupleOf(main)
   if (tuple) return tuple.coords.length === 3 || (main.k === 'apply' && xyArgs(main.args))
   if (main.k === 'rel' && main.ops.length === 1 && main.ops[0] === '=') {
@@ -391,11 +435,52 @@ type Integral = Extract<MathNode, { k: 'int' }>
  */
 function areaOf(main: MathNode): { int: Integral; name: string | null } | null {
   const plain = (n: MathNode) => !dependsOn(n, 'x') && !dependsOn(n, 'y')
-  if (main.k === 'int') return plain(main) ? { int: main, name: null } : null
+  // Un integrale dentro l'altro è un integrale doppio (vedi regions.ts).
+  const single = (n: MathNode): n is Integral => n.k === 'int' && n.body.k !== 'int'
+  if (main.k === 'int') return plain(main) && single(main) ? { int: main, name: null } : null
   if (main.k !== 'rel' || !main.ops.every((op) => op === '=' || op === '≈') || !main.items.every(plain)) return null
   const [first, second] = main.items
-  if (first.k === 'int') return { int: first, name: null }
-  return first.k === 'name' && second.k === 'int' ? { int: second, name: first.name } : null
+  if (single(first)) return { int: first, name: null }
+  return first.k === 'name' && single(second) ? { int: second, name: first.name } : null
+}
+
+/** Un insieme scritto nella riga (D = \{…\}, o da solo), o il nome di uno definito. */
+function setOf(main: MathNode, scope?: Scope): { node: MathNode; name: string | null } | null {
+  if (main.k === 'set') return { node: main, name: null }
+  if (main.k === 'name' && scope?.sets?.has(main.name)) return { node: main, name: main.name }
+  if (main.k === 'rel' && main.ops.length === 1 && main.ops[0] === '=' && main.items[0].k === 'name' && main.items[1].k === 'set') {
+    return { node: main.items[1], name: main.items[0].name }
+  }
+  return null
+}
+
+/** Quante variabili ha un insieme: quelle scritte, o x, y (e z) che usa. */
+function setDims(set: MathNode): number {
+  if (set.k !== 'set') return 2
+  if (set.vars) return set.vars.length
+  return dependsOn(set.cond, 'z') ? 3 : 2
+}
+
+/** Una riga fatta di disuguaglianze (y > x^2, 0 \le y \le x, anche con «e» e «o»). */
+function inequalities(main: MathNode): boolean {
+  if (main.k === 'rel') return main.ops.every((op) => op !== '=' && op !== '≈')
+  return (main.k === 'and' || main.k === 'or') && main.items.every(inequalities)
+}
+
+/** La funzione da integrare di un integrale doppio o triplo (quella dentro tutti gli \int). */
+function integrandOf(m: Multiple): MathNode {
+  let n: MathNode = m.node
+  if (n.k === 'mint') return n.body
+  while (n.k === 'int') n = n.body
+  return n
+}
+
+/** Le variabili di un integrale doppio o triplo, da fuori a dentro. */
+function multipleVars(m: Multiple): string[] {
+  if (m.node.k === 'mint') return m.node.vars
+  const vars: string[] = []
+  for (let n: MathNode = m.node; n.k === 'int'; n = n.body) vars.push(n.v)
+  return vars
 }
 
 /** La riga senza l'uguale finale, e poi senza l'ultima parte dopo un uguale, una alla volta. */
@@ -470,7 +555,22 @@ function curveKeys(main: MathNode, scope: Scope): string[] {
   return expression && dependsOn(main, 'x') ? shapeKeys(main, 'x') : []
 }
 
-function define(def: Definition, cond: MathNode | null, scope: Scope, consts: Map<string, number>, fns: Map<string, UserFunction>, values?: ReadonlyMap<string, number>): void {
+function define(
+  def: Definition,
+  cond: MathNode | null,
+  scope: Scope,
+  consts: Map<string, number>,
+  fns: Map<string, UserFunction>,
+  sets: Map<string, MathNode>,
+  values?: ReadonlyMap<string, number>,
+): void {
+  if (!def.params && def.value.k === 'set') {
+    if (cond) throw new MathError('Le condizioni vanno dentro l\'insieme')
+    consts.delete(def.name)
+    fns.delete(def.name)
+    sets.set(def.name, def.value)
+    return
+  }
   if (!def.params) {
     if (cond) throw new MathError('Un numero non ha condizioni')
     const value = values?.get(def.name) ?? compile(def.value, scope, { calc: true })({})
@@ -542,13 +642,28 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   // z = 3 che nessun'altra riga usa: è il piano, non un numero (x^2 + y^2 = 1 e z = 0,5).
   const zPlane = (l: Line) =>
     zFree && l.main.k === 'rel' && l.main.items[0].k === 'name' && l.main.items[0].name === 'z' && !lines.some((o) => o !== l && dependsOn(o.main, 'z'))
-  const space = lines.some((l) => isSpaceLine(l.main, zFree) || zPlane(l) || (l.main.k === 'name' && xyParams(noteFns.get(l.main.name)?.params)))
+  let space = lines.some((l) => isSpaceLine(l.main, zFree) || zPlane(l) || (l.main.k === 'name' && xyParams(noteFns.get(l.main.name)?.params)))
+  // Un integrale doppio con solo numeri e insiemi attorno: si vede il volume sotto la superficie,
+  // nello spazio (se la funzione è 1, cioè l'area del dominio, il dominio nel piano).
+  if (!space) {
+    const neutral = (l: Line) => {
+      const def = definitionOf(l.main)
+      return !!multipleOf(l.main) || (!!def && !def.params) || !!rangeLine(l.main) || l.main.k === 'set'
+    }
+    const volume = (l: Line) => {
+      const m = multipleOf(l.main)
+      const vars = m ? multipleVars(m) : []
+      return m?.dims === 2 && vars.includes('x') && vars.includes('y') && (dependsOn(integrandOf(m), 'x') || dependsOn(integrandOf(m), 'y'))
+    }
+    space = lines.length > 0 && lines.every(neutral) && lines.some(volume)
+  }
   spec.dim = space ? 3 : 2
 
   // Prima le definizioni (a = 2, f(x) = …), in qualsiasi ordine: ognuna appena ha quello che le serve.
   const consts = new Map(sheet.scope().consts)
   const fns = new Map(sheet.scope().fns)
-  const scope = (): Scope => ({ vars: new Set(), consts, fns })
+  const sets = new Map(sheet.scope().sets)
+  const scope = (): Scope => ({ vars: new Set(), consts, fns, sets })
   const pending = new Map<Line, Definition>()
   const drawn: Line[] = []
   for (const l of lines) {
@@ -565,16 +680,16 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
       const uses = namesIn(def.value, new Set(), new Set(def.params ?? []))
       if ([...pending.values()].some((other) => other.name !== def.name && uses.has(other.name))) continue
       try {
-        define(def, l.cond, scope(), consts, fns, values)
+        define(def, l.cond, scope(), consts, fns, sets, values)
       } catch {
         // Riprova dopo le altre: forse usa qualcosa definito più sotto.
         continue
       }
       pending.delete(l)
       progress = true
-      // Le funzioni di una variabile si disegnano (nello spazio quelle di x e y), e le aree con un
-      // nome (A = \int_0^2 x^2 \, dx).
-      if ((space ? xyParams(def.params) : def.params?.length === 1) || areaOf(l.main)) drawn.push(l)
+      // Le funzioni di una variabile si disegnano (nello spazio quelle di x e y), le aree e i volumi
+      // con un nome (A = \int_0^2 x^2 \, dx) e gli insiemi (D = \{…\}).
+      if ((space ? xyParams(def.params) : def.params?.length === 1) || areaOf(l.main) || multipleOf(l.main) || def.value.k === 'set') drawn.push(l)
     }
   }
   // Quelle rimaste: o sbagliate, o in un giro (f usa g che usa f).
@@ -593,7 +708,7 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   }
   for (const [l, def] of pending) {
     try {
-      define(def, l.cond, scope(), consts, fns, values)
+      define(def, l.cond, scope(), consts, fns, sets, values)
     } catch (err) {
       failLine(l, reaches(def.name, def.name, new Set()) ? new MathError(`${def.name} usa sé stessa (anche attraverso un'altra definizione)`) : err)
     }
@@ -655,6 +770,24 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
     const curve = under.get(item.line)
     if (curve !== undefined) item.slot = slots.get(curve) ?? item.slot
   }
+  // Un integrale su un insieme che il blocco disegna già (D = \{…\} e \iint_D 1 \, dA): una zona sola.
+  const itemAt = (line: number) => spec.items.find((i) => i.line === line)
+  const setItems = new Map<string, GraphItem>()
+  for (const l of drawn) {
+    const set = setOf(l.main, scope())
+    const item = set?.name ? itemAt(l.line) : undefined
+    if (set?.name && item) setItems.set(set.name, item)
+  }
+  for (const l of drawn) {
+    const m = multipleOf(l.main)
+    const domain = m?.node.k === 'mint' ? m.node.domain : null
+    const target = domain?.k === 'name' ? setItems.get(domain.name) : undefined
+    const item = itemAt(l.line)
+    if (target && item && item !== target && item.kind === target.kind) {
+      item.slot = target.slot
+      item.same = true
+    }
+  }
   spec.x = ranges.get('x') ?? null
   spec.y = ranges.get('y') ?? null
   spec.z = space ? ranges.get('z') ?? null : null
@@ -702,7 +835,7 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   const isNumber = (name: string): boolean => {
     if (!consts.has(name)) return false
     const b = blockDefs.get(name)?.def ?? lastNoteDef(name)
-    return !!b && !b.params && b.value.k !== 'int' && onlyDigits(usesOf(name))
+    return !!b && !b.params && b.value.k !== 'int' && b.value.k !== 'mint' && onlyDigits(usesOf(name))
   }
   const used = new Set<string>()
   for (const l of drawn) {
@@ -737,7 +870,7 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
     if (isNumber(name) || name === 't' || name === 'θ' || params.has(name)) continue
     const def = blockDefs.get(name)?.def ?? lastNoteDef(name)
     if (fns.has(name) || def?.params) failLine(r.line, new MathError(`${name} è una funzione: lo slider è per i numeri, come a = 2`))
-    else if (def && (def.value.k === 'int' || !onlyDigits(usesOf(name)))) failLine(r.line, new MathError(`${name} si calcola da altri numeri: lo slider è per quelli scritti con le cifre, come a = 2`))
+    else if (def && (def.value.k === 'int' || def.value.k === 'mint' || !onlyDigits(usesOf(name)))) failLine(r.line, new MathError(`${name} si calcola da altri numeri: lo slider è per quelli scritti con le cifre, come a = 2`))
     else failLine(r.line, new UndefinedName(name))
   }
 
@@ -795,6 +928,11 @@ function missingNumbers(l: Line, scope: Scope, space = false): string[] {
       visit(n.body, new Set([...bound, n.v]))
       return
     }
+    if (n.k === 'mint' || n.k === 'set') {
+      const inner = new Set([...bound, ...((n.k === 'mint' ? n.vars : n.vars) ?? []), 'x', 'y', 'z'])
+      for (const child of children(n)) visit(child, inner)
+      return
+    }
     for (const child of children(n)) visit(child, bound)
   }
   const def = definitionOf(l.main, space)
@@ -821,11 +959,116 @@ function areaFor(l: Line, { int, name }: NonNullable<ReturnType<typeof areaOf>>,
   return { kind: 'area', line: l.line, label, slot, f: (x) => ((v[int.v] = x), body(v)), from, to, value, curve }
 }
 
+/** Il valore di un integrale doppio o triplo come nei risultati della nota (meno cifre di quelli semplici). */
+function multipleLabel(m: Multiple, scope: Scope): string {
+  const value = compile(m.node, scope, { calc: true })({})
+  const shown = formatNumber(value, { comma: true, decimal: true, digits: m.dims === 2 ? 8 : 7 })
+  return `${m.name ? `${nameLatex(m.name)} = ` : ''}${toLatex(m.node)}${shown ? ` = ${shown.tex}` : ''}`
+}
+
+/** Il rettangolo dove sta una zona del piano (dove M ≥ 0), cercato su una griglia: per sapere il segno della funzione lì. */
+function planeExtent(M: (x: number, y: number) => number): { x: Range; y: Range } {
+  let x0 = Infinity
+  let x1 = -Infinity
+  let y0 = Infinity
+  let y1 = -Infinity
+  for (let j = 0; j <= 60; j++) {
+    for (let i = 0; i <= 60; i++) {
+      const x = -12 + i * 0.4
+      const y = -12 + j * 0.4
+      if (!(M(x, y) >= 0)) continue
+      x0 = Math.min(x0, x)
+      x1 = Math.max(x1, x)
+      y0 = Math.min(y0, y)
+      y1 = Math.max(y1, y)
+    }
+  }
+  return x0 <= x1 ? { x: [x0 - 0.4, x1 + 0.4], y: [y0 - 0.4, y1 + 0.4] } : { x: [-1, 1], y: [-1, 1] }
+}
+
+/** Il margine nel piano xy, o l'errore se le variabili non sono x e y (o r e θ). */
+function flatMargin(vars: string[], margin: Compiled): (x: number, y: number) => number {
+  const M = planeMargin(vars, margin)
+  if (!M) throw new MathError(`Le variabili sono ${vars.join(', ')}: nel piano si disegnano i domini in x e y (o r e θ)`)
+  return M
+}
+
+/**
+ * Una zona del piano: le disuguaglianze in x e y (y > x^2), un insieme (D = \{…\}, o il suo nome)
+ * o il dominio di un integrale doppio (con il valore nella legenda). Null se la riga è altro.
+ */
+function planeRegionFor(l: Line, scope: Scope, slot: number): GraphItem | null {
+  const { main, cond, line } = l
+  const multiple = multipleOf(main)
+  if (multiple) {
+    if (cond) throw new MathError('Un integrale non ha condizioni: il dominio va sotto, es. \\iint_D')
+    const region = integralRegion(multiple.node, scope)
+    return { kind: 'region', line, label: multipleLabel(multiple, scope), slot, M: flatMargin(region.vars, region.margin), strict: false, parts: planeParts(region) }
+  }
+  const set = setOf(main, scope)
+  if (set) {
+    if (cond) throw new MathError('Le condizioni vanno dentro l\'insieme')
+    const domain = inequalityMargin(set.node, scope, null)
+    return { kind: 'region', line, label: toLatex(main), slot, M: flatMargin(domain.vars, domain.margin), strict: domain.strict, parts: planeParts(domain) }
+  }
+  if (inequalities(main) && (dependsOn(main, 'x') || dependsOn(main, 'y'))) {
+    const node: MathNode = cond ? { k: 'and', items: [main, cond] } : main
+    const domain = inequalityMargin(node, scope, ['x', 'y'])
+    return { kind: 'region', line, label: `${toLatex(main)}${condLabel(cond)}`, slot, M: flatMargin(['x', 'y'], domain.margin), strict: domain.strict, parts: planeParts(domain) }
+  }
+  return null
+}
+
+/**
+ * Un solido dello spazio: le disuguaglianze in x, y e z, un insieme con tre variabili, il dominio di
+ * un integrale triplo o il volume sotto la superficie di un integrale doppio; un insieme del piano
+ * o una zona del piano stanno nel piano xy. Null se la riga è altro.
+ */
+function spaceRegionFor(l: Line, scope: Scope, slot: number): GraphItem | null {
+  const { main, cond, line } = l
+  const multiple = multipleOf(main)
+  if (multiple) {
+    if (cond) throw new MathError('Un integrale non ha condizioni: il dominio va sotto, es. \\iiint_E')
+    const region = integralRegion(multiple.node, scope)
+    const label = multipleLabel(multiple, scope)
+    if (multiple.dims === 3) {
+      const M = spaceMargin(region.vars, region.margin)
+      if (!M) throw new MathError(`Le variabili sono ${region.vars.join(', ')}: nello spazio si disegnano i domini in x, y e z (o cilindriche, o sferiche)`)
+      return { kind: 'solid', line, label, slot, M, parts: spaceParts(region.vars, region.parts), layers: spaceLayers(region.layers) }
+    }
+    // L'area del dominio (la funzione è 1): il dominio nel piano xy.
+    if (constantIntegrand(region)) return { kind: 'region', line, label, slot, M: flatMargin(region.vars, region.margin), strict: false, parts: planeParts(region) }
+    const M = volumeMargin(region)
+    if (!M) throw new MathError('Il volume si disegna per gli integrali in x e y: con r e θ dentro la funzione c\'è anche r')
+    const base = flatMargin(region.vars, region.margin)
+    return { kind: 'solid', line, label, slot, M, parts: volumeParts(region, planeExtent(base)), layers: volumeLayers(region) }
+  }
+  const set = setOf(main, scope)
+  if (set) {
+    if (cond) throw new MathError('Le condizioni vanno dentro l\'insieme')
+    const domain = inequalityMargin(set.node, scope, null)
+    const { vars, margin, strict, parts, layers } = domain
+    if (vars.length === 2) return { kind: 'region', line, label: toLatex(main), slot, M: flatMargin(vars, margin), strict, parts: planeParts(domain) }
+    const M = spaceMargin(vars, margin)
+    if (!M) throw new MathError(`Le variabili sono ${vars.join(', ')}: nello spazio si disegnano gli insiemi in x, y e z`)
+    return { kind: 'solid', line, label: toLatex(main), slot, M, parts: spaceParts(vars, parts), layers: spaceLayers(layers) }
+  }
+  if (inequalities(main)) {
+    const node: MathNode = cond ? { k: 'and', items: [main, cond] } : main
+    const { margin, parts, layers } = inequalityMargin(node, scope, ['x', 'y', 'z'])
+    const label = `${toLatex(main)}${condLabel(cond)}`
+    return { kind: 'solid', line, label, slot, M: spaceMargin(['x', 'y', 'z'], margin)!, parts: spaceParts(['x', 'y', 'z'], parts), layers: spaceLayers(layers) }
+  }
+  return null
+}
+
 /** Quello che disegna una riga; `curve`: un'area disegna anche la sua curva (vedi readGraph). */
 function itemFor(l: Line, scope: Scope, slot: number, curve = true): GraphItem {
   const { main, cond, line } = l
   const area = areaOf(main)
   if (area) return areaFor(l, area, scope, slot, curve)
+  const region = planeRegionFor(l, scope, slot)
+  if (region) return region
 
   // Un punto: (1, 2), P = (1, 2), P(1, 2). Con t (o θ) è una curva con un parametro.
   let coords: MathNode[] | null = null
@@ -861,8 +1104,7 @@ function itemFor(l: Line, scope: Scope, slot: number, curve = true): GraphItem {
   if (main.k === 'rel') {
     if (main.ops.length !== 1 || main.ops[0] !== '=') {
       if (main.ops.every((op) => op === '=')) throw new MathError('In una riga va un\'uguaglianza sola')
-      if (!dependsOn(main, 'y')) throw new MathError('Una condizione da sola non si disegna: per la parte da mostrare scrivi x \\in [a, b]')
-      throw new MathError('Le zone (con < e >) non si sanno ancora colorare: scrivi un\'uguaglianza')
+      throw new MathError('Un\'uguaglianza e una disuguaglianza insieme: scrivile in due righe')
     }
     const [lhs, rhs] = main.items
     const label = `${toLatex(main)}${condLabel(cond)}`
@@ -980,13 +1222,15 @@ function spaceTuple(l: Line, { coords, name }: { coords: MathNode[]; name: strin
  */
 function spaceItemFor(l: Line, scope: Scope, slot: number): GraphItem {
   const { main, cond, line } = l
-  if (areaOf(main)) throw new MathError('Nei grafici 3D gli integrali non si disegnano ancora: scrivilo in un grafico senza la z')
+  if (areaOf(main)) throw new MathError('Nei grafici 3D l\'area sotto una curva non si disegna: scrivila in un grafico senza la z')
+  const solid = spaceRegionFor(l, scope, slot)
+  if (solid) return solid
   const tuple = tupleOf(main)
   if (tuple && !(main.k === 'apply' && scope.fns.has(main.name))) return spaceTuple(l, tuple, scope, slot)
   if (main.k === 'rel') {
     if (main.ops.length !== 1 || main.ops[0] !== '=') {
       if (main.ops.every((op) => op === '=')) throw new MathError('In una riga va un\'uguaglianza sola')
-      throw new MathError('Le zone (con < e >) non si sanno ancora colorare: scrivi un\'uguaglianza')
+      throw new MathError('Un\'uguaglianza e una disuguaglianza insieme: scrivile in due righe')
     }
     const [lhs, rhs] = main.items
     const label = `${toLatex(main)}${condLabel(cond)}`
@@ -1055,19 +1299,20 @@ export function graphNames(source: string): Set<string> {
 }
 
 /**
- * La riga del blocco per una formula della nota: la formula stessa o, se è un integrale, solo
- * l'integrale (con il nome, se c'è), senza l'uguale finale né il risultato.
+ * La riga del blocco per una formula della nota: la formula stessa o, se è un integrale (anche
+ * doppio o triplo), solo l'integrale (con il nome, se c'è), senza l'uguale finale né il risultato.
  */
 export function formulaGraphLine(tex: string): string {
   const text = tex.trim()
   for (const t of [text, ...withoutResult(text)]) {
-    let area: ReturnType<typeof areaOf>
+    let found: { name: string | null } | null
     try {
-      area = areaOf(parseStatement(t).main)
+      const main = parseStatement(t).main
+      found = areaOf(main) ?? multipleOf(main)
     } catch {
       continue
     }
-    if (area) return splitEquals(t).slice(0, area.name ? 2 : 1).join('=').trim()
+    if (found) return splitEquals(t).slice(0, found.name ? 2 : 1).join('=').trim()
     if (t === text) break
   }
   return text
@@ -1075,8 +1320,10 @@ export function formulaGraphLine(tex: string): string {
 
 /**
  * La formula è una funzione (o una curva) da disegnare? `y = …` o `f(x) = …` con la x, `r = …` con
- * θ, un'equazione in x e y, un integrale (la sua area); nello spazio `z = …` o `f(x, y) = …` con x
- * o y e le equazioni con la z. Se sì, il suo grafico (con le definizioni della nota `defs`).
+ * θ, un'equazione in x e y, un integrale (la sua area, o il dominio e il volume se è doppio o
+ * triplo), un insieme (D = \{…\}), delle disuguaglianze in x e y (la zona); nello spazio `z = …`
+ * o `f(x, y) = …` con x o y e le equazioni con la z. Se sì, il suo grafico (con le definizioni della
+ * nota `defs`).
  */
 export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSpec | null {
   const text = formulaGraphLine(tex)
@@ -1087,10 +1334,12 @@ export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSp
   } catch {
     return null
   }
-  if (!areaOf(main)) {
+  const all = namesIn(main)
+  const axes = ['x', 'y', 'z'].filter((a) => all.has(a)).length
+  const zone = inequalities(main) && axes >= 2
+  if (!areaOf(main) && !multipleOf(main) && !setOf(main) && !zone) {
     if (main.k !== 'rel' || main.ops.length !== 1 || main.ops[0] !== '=') return null
     const [lhs, rhs] = main.items
-    const all = namesIn(main)
     const plottable =
       (lhs.k === 'name' && lhs.name === 'y' && namesIn(rhs).has('x')) ||
       (lhs.k === 'apply' && !lhs.primes && lhs.args.length === 1 && lhs.args[0].k === 'name' && namesIn(rhs).has(lhs.args[0].name)) ||

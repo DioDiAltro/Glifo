@@ -20,7 +20,8 @@ export type MathNode =
   | { k: 'num'; v: number; /** Il numero come è scritto, con il punto: serve ai conti esatti. */ text: string; comma: boolean }
   | { k: 'name'; name: string }
   | { k: 'neg'; a: MathNode }
-  | { k: 'bin'; op: '+' | '-' | '*' | '/' | '^'; a: MathNode; b: MathNode; implicit?: boolean; frac?: boolean }
+  /** `cross`: scritto con \times (o ×): tra due vettori è il prodotto vettoriale, tra due intervalli un rettangolo. */
+  | { k: 'bin'; op: '+' | '-' | '*' | '/' | '^'; a: MathNode; b: MathNode; implicit?: boolean; frac?: boolean; cross?: boolean }
   /** Una funzione nota: `\sin x`, `\log_2 x` (base), `\sqrt[3]{x}` (indice in `base`), `\sin^2 x` (pow). */
   | { k: 'fn'; name: string; args: MathNode[]; pow?: MathNode; base?: MathNode }
   /** `f(x)`, `f'(2)`: una funzione definita nella nota, oppure (se `f` è un numero) un prodotto. */
@@ -30,6 +31,13 @@ export type MathNode =
   | { k: 'binom'; n: MathNode; r: MathNode }
   | { k: 'big'; op: 'sum' | 'prod'; v: string; from: MathNode; to: MathNode; body: MathNode }
   | { k: 'int'; v: string; from: MathNode; to: MathNode; body: MathNode }
+  /**
+   * `\iint_D f \, dx \, dy`, `\iiint_E f \, dV`: l'integrale su un dominio, che è un insieme, una
+   * condizione (x^2 + y^2 \le 1), un rettangolo ([0, 1] \times [0, 2]) o il nome di un insieme.
+   */
+  | { k: 'mint'; vars: string[]; domain: MathNode; body: MathNode }
+  /** `\{(x, y) \in \mathbb{R}^2 : x^2 + y^2 \le 1\}`: un insieme; `vars` null se non le scrive. */
+  | { k: 'set'; vars: string[] | null; cond: MathNode }
   | { k: 'cases'; rows: { value: MathNode; cond: MathNode | null }[] }
   | { k: 'tuple'; items: MathNode[] }
   | { k: 'rel'; ops: RelOp[]; items: MathNode[] }
@@ -95,14 +103,15 @@ const ACCENTS: Record<string, string> = {
 }
 
 const COMMAND_OPS: Record<string, [Kind, string]> = {
-  cdot: ['op', '*'], times: ['op', '*'], ast: ['op', '*'], cdotp: ['op', '*'], div: ['op', '/'],
+  cdot: ['op', '*'], ast: ['op', '*'], cdotp: ['op', '*'], div: ['op', '/'],
   le: ['rel', '<='], leq: ['rel', '<='], leqslant: ['rel', '<='], leqq: ['rel', '<='],
   ge: ['rel', '>='], geq: ['rel', '>='], geqslant: ['rel', '>='], geqq: ['rel', '>='],
   lt: ['rel', '<'], gt: ['rel', '>'], ne: ['rel', '!='], neq: ['rel', '!='], approx: ['rel', '≈'],
   in: ['in', 'in'], R: ['set', 'R'], Reals: ['set', 'R'], reals: ['set', 'R'], land: ['and', 'and'], wedge: ['and', 'and'], lor: ['or', 'or'], vee: ['or', 'or'],
   infty: ['infty', '∞'], circ: ['deg', '°'], frac: ['frac', 'frac'], dfrac: ['frac', 'frac'], tfrac: ['frac', 'frac'],
   cfrac: ['frac', 'frac'], sqrt: ['sqrt', 'sqrt'], binom: ['binom', 'binom'], dbinom: ['binom', 'binom'],
-  tbinom: ['binom', 'binom'], sum: ['big', 'sum'], prod: ['big', 'prod'], int: ['int', 'int'],
+  tbinom: ['binom', 'binom'], sum: ['big', 'sum'], prod: ['big', 'prod'], int: ['int', 'int'], iint: ['int', 'iint'], iiint: ['int', 'iiint'],
+  mid: ['bar', '|'],
   quad: ['sep', 'quad'], qquad: ['sep', 'quad'], cr: ['row', '\\\\'], coloneqq: ['rel', '='], coloneq: ['rel', '='],
   lbrace: ['open', '\\{'], rbrace: ['close', '\\}'], lbrack: ['open', '['], rbrack: ['close', ']'],
   lfloor: ['open', 'floor'], rfloor: ['close', 'floor'], lceil: ['open', 'ceil'], rceil: ['close', 'ceil'],
@@ -129,6 +138,10 @@ interface Tok {
   end: number
   /** Solo i numeri: scritto con la virgola. */
   comma?: boolean
+  /** Solo «:» (che è una divisione, ma in un insieme vuol dire «tali che»). */
+  colon?: boolean
+  /** Solo \times e ×. */
+  cross?: boolean
 }
 
 const isDigit = (c: string | undefined) => c !== undefined && c >= '0' && c <= '9'
@@ -226,13 +239,17 @@ export function tokenize(src: string): Tok[] {
     switch (c) {
       case '+': one('op', '+'); break
       case '-': case '−': case '–': one('op', '-'); break
-      case '*': case '×': case '·': case '⋅': case '∙': one('op', '*'); break
+      case '×': push('op', '*', i, i + 1, { cross: true }); i++; break
+      case '*': case '·': case '⋅': case '∙': one('op', '*'); break
       case ':':
         // a := 3 è una definizione, come a = 3; da solo «:» è la divisione (6 : 3).
         if (src[i + 1] === '=') {
           push('rel', '=', i, i + 2)
           i += 2
-        } else one('op', '/')
+        } else {
+          push('op', '/', i, i + 1, { colon: true })
+          i++
+        }
         break
       case '/': case '÷': one('op', '/'); break
       case '^': one('op', '^'); break
@@ -336,6 +353,14 @@ function readCommand(src: string, i: number, out: Tok[], depth: () => number, ad
     const next = delim.startsWith('\\') ? readCommand(src, j, out, depth, addDepth) : (tokenizeDelim(delim, j, out, addDepth), to)
     for (let t = before; t < out.length; t++) out[t].pos = i
     return next
+  }
+  if (name === 'times') {
+    out.push({ k: 'op', v: '*', pos: i, end, cross: true })
+    return end
+  }
+  if (name === 'colon') {
+    out.push({ k: 'op', v: '/', pos: i, end, colon: true })
+    return end
   }
   if (name in COMMAND_OPS) {
     const [k, v] = COMMAND_OPS[name]
@@ -618,9 +643,10 @@ class Parser {
     let left = this.unary()
     for (;;) {
       if (this.is('op', '*') || this.is('op', '/')) {
-        const op = this.next().v as '*' | '/'
+        const sign = this.next()
+        const op = sign.v as '*' | '/'
         if (!this.peek()) throw this.error(`Manca qualcosa dopo ${op === '*' ? '·' : '/'}`)
-        left = { k: 'bin', op, a: left, b: this.unary() }
+        left = { k: 'bin', op, a: left, b: this.unary(), ...(sign.cross && { cross: true }) }
       } else if (this.startsFactor()) {
         if (left.k === 'num' && this.is('num')) throw this.error('Due numeri di seguito: manca un\'operazione?')
         left = { k: 'bin', op: '*', a: left, b: this.power(), implicit: true }
@@ -641,8 +667,8 @@ class Parser {
       case 'cases':
         return true
       case 'name':
-        // «dx» chiude l'integrale.
-        return !(this.integrals > 0 && t.v === 'd' && this.is('name', undefined, 1))
+        // «dx» (e d(x, y)) chiude l'integrale.
+        return !(this.integrals > 0 && this.atDifferential())
       case 'fn':
       case 'big':
       case 'int':
@@ -787,7 +813,7 @@ class Parser {
       case 'cases':
         return this.cases()
       case 'open':
-        return this.group()
+        return t.v === '\\{' ? this.setBuilder() : this.group()
       case 'bar': {
         this.next()
         this.absDepth++
@@ -930,8 +956,14 @@ class Parser {
     return { k: 'big', op, v, from, to, body: this.implicitArgument() }
   }
 
+  /** `dx`, `d(x, y)` (anche `\mathrm{d}x`): qui finisce la funzione da integrare. */
+  private atDifferential(): boolean {
+    return this.is('name', 'd') && (this.is('name', undefined, 1) || this.is('open', '(', 1))
+  }
+
   /** `\int_a^b f(x)\,dx`. */
   private integral(): MathNode {
+    if (this.peek()!.v !== 'int') return this.multipleIntegral()
     const start = this.next()
     let from: MathNode | null = null
     let to: MathNode | null = null
@@ -948,7 +980,8 @@ class Parser {
     this.integrals++
     let body: MathNode
     try {
-      body = this.expr()
+      // \int_0^1 dx: la funzione è 1.
+      body = this.atDifferential() ? ONE : this.expr()
     } finally {
       this.integrals--
     }
@@ -956,6 +989,114 @@ class Parser {
     this.next()
     const v = this.next().v
     return { k: 'int', v, from, to, body }
+  }
+
+  /** `\iint_D f \, dx \, dy` (anche `dA` o `d(x, y)`) e `\iiint_E f \, dx \, dy \, dz` (anche `dV`). */
+  private multipleIntegral(): MathNode {
+    const start = this.next()
+    const n = start.v === 'iint' ? 2 : 3
+    const symbol = n === 2 ? '\\iint' : '\\iiint'
+    let domain: MathNode | null = null
+    if (this.is('op', '_')) {
+      this.next()
+      domain = this.domainArg()
+    }
+    if (this.is('op', '^')) throw this.error(`${symbol} vuole sotto il dominio, non gli estremi sopra: ${symbol}_D`)
+    if (!domain) throw this.error(`Sotto ${symbol} va il dominio, es. ${n === 2 ? '\\iint_D' : '\\iiint_E'}`, start.pos)
+    this.integrals++
+    let body: MathNode
+    try {
+      body = this.atDifferential() ? ONE : this.expr()
+    } finally {
+      this.integrals--
+    }
+    return { k: 'mint', vars: this.differentials(n), domain, body }
+  }
+
+  /** Il dominio sotto \iint: un nome (D) o, tra graffe, un insieme, una condizione o un rettangolo. */
+  private domainArg(): MathNode {
+    if (!this.is('open', '{')) return this.latexArg('il dominio dell\'integrale')
+    this.next()
+    if (this.is('close', '}')) throw this.error('Il dominio è vuoto')
+    const inner = this.condition()
+    this.expect('close', '}', 'la graffa } del dominio')
+    return inner
+  }
+
+  /** Le variabili di dx \, dy (\, dz), d(x, y), dA (x e y) o dV (x, y e z), alla fine di un integrale doppio o triplo. */
+  private differentials(n: number): string[] {
+    const vars: string[] = []
+    while (this.atDifferential()) {
+      this.next()
+      if (this.is('open', '(')) {
+        const group = this.group(true)
+        for (const item of group.k === 'tuple' ? group.items : [group]) {
+          if (item.k !== 'name') throw this.error('In d(x, y) vanno le variabili')
+          vars.push(item.name)
+        }
+      } else vars.push(this.next().v)
+    }
+    if (vars.length === 1 && n === 2 && vars[0] === 'A') return ['x', 'y']
+    if (vars.length === 1 && n === 3 && vars[0] === 'V') return ['x', 'y', 'z']
+    if (vars.length !== n || new Set(vars).size !== n) {
+      throw this.error(n === 2 ? 'Alla fine dell\'integrale doppio va dx \\, dy (o dA)' : 'Alla fine dell\'integrale triplo va dx \\, dy \\, dz (o dV)')
+    }
+    return vars
+  }
+
+  /**
+   * `\{(x, y) \in \mathbb{R}^2 : x^2 + y^2 \le 1\}`: un insieme, con le sue variabili e la condizione
+   * (dopo «:», «|» o \mid); le variabili si possono non scrivere: `\{0 \le x \le 1, 0 \le y \le x\}`.
+   */
+  private setBuilder(): MathNode {
+    this.next()
+    const start = this.i
+    let vars: string[] | null = null
+    try {
+      vars = this.setHead()
+    } catch {
+      vars = null
+    }
+    if (!vars) this.i = start
+    if (this.is('close', '\\}')) throw this.error('L\'insieme è vuoto')
+    const cond = this.condition()
+    this.expect('close', '\\}', 'la graffa \\} che chiude l\'insieme')
+    return { k: 'set', vars, cond }
+  }
+
+  /** La prima parte di un insieme: `(x, y)` o `x`, con `\in \mathbb{R}^2` facoltativo, fino a «:» o «|». */
+  private setHead(): string[] | null {
+    const vars: string[] = []
+    if (this.is('open', '(')) {
+      this.next()
+      for (;;) {
+        if (!this.is('name')) return null
+        const n = this.name()
+        if (n.k !== 'name') return null
+        vars.push(n.name)
+        if (!this.is('comma')) break
+        this.next()
+      }
+      if (!this.is('close', ')')) return null
+      this.next()
+    } else if (this.is('name')) {
+      const n = this.name()
+      if (n.k !== 'name') return null
+      vars.push(n.name)
+    } else return null
+    if (this.is('in')) {
+      this.next()
+      if (!this.is('set')) return null
+      this.next()
+      if (this.is('op', '^')) {
+        this.next()
+        this.latexArg('la dimensione')
+      }
+    }
+    const t = this.peek()
+    if (!t || !((t.k === 'op' && t.colon) || (t.k === 'bar' && t.v === '|'))) return null
+    this.next()
+    return vars
   }
 
   /** `\begin{cases} x^2 & x < 0 \\ x & \text{altrimenti} \end{cases}`. */
@@ -1041,6 +1182,9 @@ class Parser {
   }
 }
 
+/** La funzione 1 di \int_0^1 dx (e dell'area di un dominio, \iint_D dx \, dy). */
+const ONE: MathNode = { k: 'num', v: 1, text: '1', comma: false }
+
 function isMinusOne(n: MathNode): boolean {
   return n.k === 'neg' && n.a.k === 'num' && n.a.v === 1
 }
@@ -1086,6 +1230,15 @@ export function namesIn(node: MathNode, out = new Set<string>(), bound: Readonly
         visit(n.body, new Set([...b, n.v]))
         return
       }
+      case 'mint': {
+        const inner = new Set([...b, ...n.vars])
+        visit(n.domain, inner)
+        visit(n.body, inner)
+        return
+      }
+      case 'set':
+        visit(n.cond, new Set([...b, ...(n.vars ?? [])]))
+        return
       default:
         for (const child of children(n)) visit(child, b)
     }
@@ -1118,6 +1271,10 @@ export function children(n: MathNode): MathNode[] {
     case 'big':
     case 'int':
       return [n.from, n.to, n.body]
+    case 'mint':
+      return [n.domain, n.body]
+    case 'set':
+      return [n.cond]
     case 'cases':
       return n.rows.flatMap((r) => (r.cond ? [r.value, r.cond] : [r.value]))
     case 'tuple':
