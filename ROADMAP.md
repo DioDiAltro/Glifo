@@ -52,10 +52,16 @@ pubblicata appena è pronta e qui si segna come fatta.
    angoli con l'arco e l'ampiezza, rette, circonferenze, intersezioni, piani e triangoli nello spazio;
    i nomi dei vertici fuori dalle figure). Da migliorare se serve: le coniche (ellisse, parabola,
    iperbole) come figure con i loro elementi (fuochi, assi).
-6. **Integrali di linea e di superficie** su curve e superfici date con i loro parametri, lavoro e
-   flusso; campi vettoriali disegnati con le frecce, gradiente, divergenza e rotore.
-7. **Il resto di Analisi**: derivate scritte come formula, limiti, serie, polinomi di Taylor,
-   equazioni e sistemi risolti, curve di livello, campi di direzioni delle equazioni differenziali.
+6. Fatto (2 ottobre 2026): **integrali di linea e di superficie** su curve e superfici definite con i
+   loro parametri e l'intervallo (`\gamma(t) = (…), \; t \in [0, 2\pi]`): di una funzione (ds, dS), il
+   lavoro (anche delle forme P dx + Q dy) e il flusso (verso fuori sulle superfici chiuse); i campi di
+   vettori disegnati con le frecce, nel piano e nello spazio, e le curve con la freccia del verso; il
+   gradiente, la divergenza, il rotore, il laplaciano, l'hessiana e la jacobiana con le lettere. Con
+   questa tappa sono arrivate anche le **derivate scritte come formula** (`f'(x) =`, `\frac{d}{dx}`, le
+   derivate parziali), con le semplificazioni che servono a leggerle. Da migliorare se serve: le
+   superfici date come grafico (z = g(x, y) su un dominio) vanno scritte con i parametri, S(u, v) = (u, v, g(u, v)).
+7. **Il resto di Analisi**: limiti, serie, polinomi di Taylor, equazioni e sistemi risolti, curve di
+   livello, campi di direzioni delle equazioni differenziali.
 
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 

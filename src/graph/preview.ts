@@ -175,6 +175,7 @@ function swatchClass(item: GraphSpec['items'][number]): string {
   if (kind === 'area') return 'graph-swatch is-area'
   if (kind === 'region') return 'graph-swatch is-region'
   if (kind === 'surface' || kind === 'implicit3' || kind === 'patch' || kind === 'solid') return 'graph-swatch is-surface'
+  if (kind === 'field' || kind === 'field3' || kind === 'vector' || (kind === 'complex' && item.arrows)) return 'graph-swatch is-arrow'
   return 'graph-swatch'
 }
 

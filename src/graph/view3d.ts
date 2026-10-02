@@ -78,7 +78,8 @@ export interface Scene {
   faces: SceneFace[]
   lines: { points: Vec3[]; item: number; sides: Sides }[]
   points: { p: Vec3; item: number; name: string | null; sides: Sides }[]
-  vectors: { from: Vec3; to: Vec3; item: number; name: string | null }[]
+  /** Le frecce: `thin` quelle dei campi (tante e sottili), `headOnly` le punte che dicono il verso delle curve. */
+  vectors: { from: Vec3; to: Vec3; item: number; name: string | null; thin?: boolean; headOnly?: boolean }[]
 }
 
 function inside(p: readonly number[], box: Box, slack = 1e-9): boolean {
@@ -133,6 +134,17 @@ export function buildScene(spec: GraphSpec, box: Box, quality: Quality = 'fine')
           break
         case 'curve3':
           for (const points of curveLines(item.fx, item.fy, item.fz, item.t, box, item.straight)) scene.lines.push({ points, item: i, sides: [] })
+          if (item.arrow) {
+            // Il verso: una punta a metà dell'intervallo.
+            const tm = (item.t[0] + item.t[1]) / 2
+            const h = (item.t[1] - item.t[0]) * 2e-3 || 1e-3
+            const at = (t: number): Vec3 => [item.fx(t), item.fy(t), item.fz(t)]
+            const [from, to] = [at(tm - h), at(tm + h)]
+            if (from.every(Number.isFinite) && to.every(Number.isFinite) && inside(to, box, 1e-6)) scene.vectors.push({ from, to, item: i, name: null, headOnly: true })
+          }
+          break
+        case 'field3':
+          scene.vectors.push(...fieldVectors(item.F, box, i))
           break
         case 'point3': {
           const p: Vec3 = [item.x, item.y, item.z]
@@ -172,6 +184,38 @@ export function buildScene(spec: GraphSpec, box: Box, quality: Quality = 'fine')
     for (const p of scene.points) p.sides = sidesOf(p.p, scene.planes, box)
     return scene
   })
+}
+
+/** Le frecce di un campo nello spazio: su una griglia nella scatola, lunghe secondo quanto vale il campo. */
+function fieldVectors(F: (x: number, y: number, z: number) => Vec3, box: Box, item: number): Scene['vectors'] {
+  const n = 4
+  const r = [box.x, box.y, box.z]
+  const sizes = r.map(([lo, hi]) => hi - lo)
+  const samples: { p: Vec3; u: Vec3; m: number }[] = []
+  let max = 0
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      for (let k = 0; k < n; k++) {
+        const p = [i, j, k].map((c, a) => r[a][0] + ((c + 0.5) / n) * sizes[a]) as Vec3
+        const v = F(p[0], p[1], p[2])
+        // Le componenti in proporzione alla scatola, che può avere gli assi lunghi diversi.
+        const u = v.map((c, a) => c / sizes[a]) as Vec3
+        const m = Math.hypot(...u)
+        if (!Number.isFinite(m)) continue
+        max = Math.max(max, m)
+        samples.push({ p, u, m })
+      }
+    }
+  }
+  if (!(max > 0)) return []
+  const out: Scene['vectors'] = []
+  for (const { p, u, m } of samples) {
+    if (m < max * 1e-9) continue
+    const len = (0.8 / n) * Math.sqrt(m / max)
+    const d = u.map((c, a) => ((c / m) * len * sizes[a]) / 2) as Vec3
+    out.push({ from: p.map((c, a) => c - d[a]) as Vec3, to: p.map((c, a) => c + d[a]) as Vec3, item, name: null, thin: true })
+  }
+  return out
 }
 
 /** Un tratto dritto da a a b, in pezzi (ognuno con la sua profondità). */
@@ -543,15 +587,25 @@ function drawScene(scene: Scene, spec: GraphSpec, camera: Camera, palette: Palet
     const sa = proj.at(v.from)
     const sb = proj.at(v.to)
     const len = Math.hypot(sb[0] - sa[0], sb[1] - sa[1])
-    if (len < 0.5) continue
+    if (len < 0.5 && !v.headOnly) continue
+    const sides = sidesAt(v.to)
+    if (v.headOnly) {
+      // Il verso di una curva: solo la punta, lungo la curva.
+      const ux = (sb[0] - sa[0]) / (len || 1)
+      const uy = (sb[1] - sa[1]) / (len || 1)
+      const tip: Vec3 = [sb[0] + ux * 6, sb[1] + uy * 6, sb[2]]
+      const head = arrowHead([tip[0] - ux * 14, tip[1] - uy * 14, tip[2]], tip, 12, 5.5)
+      if (head) prims.push({ depth: sb[2] + 0.01, sides, k: 'fill', fill: colors[v.item], d: head })
+      continue
+    }
+    const [width, headLength, half] = v.thin ? [1.4, 7, 3] : [2.5, 12, 5.5]
     // La linea si ferma alla base della punta, se no spunterebbe oltre.
-    const k = len > 14 ? 1 - 10 / len : 1
+    const k = len > headLength + 2 ? 1 - (headLength - 2) / len : 1
     const end = v.from.map((c, i) => c + (v.to[i] - c) * k) as Vec3
     const shaft: Vec3[] = []
     for (let i = 0; i <= 8; i++) shaft.push(v.from.map((c, j) => c + ((end[j] - c) * i) / 8) as Vec3)
-    for (const part of split(shaft)) linePrims(part.points, part.sides, proj, colors[v.item], 2.5, prims, 8, v.item)
-    const head = arrowHead(sa, sb, 12, 5.5)
-    const sides = sidesAt(v.to)
+    for (const part of split(shaft)) linePrims(part.points, part.sides, proj, colors[v.item], width, prims, 8, v.item)
+    const head = arrowHead(sa, sb, headLength, half)
     if (head) prims.push({ depth: sb[2], sides, k: 'fill', fill: colors[v.item], d: head })
     if (v.name) prims.push({ depth: sb[2] + 0.02, sides, k: 'text', svg: nameLabel(v.name, sb[0], sb[1], W, palette, halo) })
   }

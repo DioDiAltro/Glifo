@@ -55,6 +55,7 @@ import {
   type Multiple,
   type PlanePart,
 } from './regions'
+import { calculusDims, calculusItems, vectorDefinition, type FieldContext } from './fields'
 import { gaussItem, isComplexLine, onlyComplex } from './gauss'
 
 export type Range = [number, number]
@@ -91,8 +92,11 @@ export type GraphItem =
   | (ItemBase & { kind: 'function'; f: (x: number) => number })
   | (ItemBase & { kind: 'vertical'; x: number })
   | (ItemBase & { kind: 'implicit'; F: (x: number, y: number) => number })
-  /** Una curva con un parametro; `straight`: è una retta ((1 + t, 2t)), si disegna da un bordo all'altro. */
-  | (ItemBase & { kind: 'parametric'; fx: (t: number) => number; fy: (t: number) => number; param: 't' | 'θ'; t: Range; straight: boolean })
+  /**
+   * Una curva con un parametro; `straight`: è una retta ((1 + t, 2t)), si disegna da un bordo
+   * all'altro; `arrow`: con la freccia del verso (le curve con il nome, \gamma(t) = …).
+   */
+  | (ItemBase & { kind: 'parametric'; fx: (t: number) => number; fy: (t: number) => number; param: 't' | 'θ'; t: Range; straight: boolean; arrow?: boolean })
   | (ItemBase & { kind: 'point'; x: number; y: number; name: string | null })
   /** Un vettore (\vec{v} = (2, 1)): una freccia da `from` a `to`, nel piano (z = 0) o nello spazio. */
   | (ItemBase & { kind: 'vector'; from: Vec3; to: Vec3; name: string | null })
@@ -110,8 +114,12 @@ export type GraphItem =
       u: Range
       v: Range
     })
-  /** Una curva nello spazio con un parametro; `straight` come per le curve nel piano. */
-  | (ItemBase & { kind: 'curve3'; fx: (t: number) => number; fy: (t: number) => number; fz: (t: number) => number; param: string; t: Range; straight: boolean })
+  /** Una curva nello spazio con un parametro; `straight` e `arrow` come per le curve nel piano. */
+  | (ItemBase & { kind: 'curve3'; fx: (t: number) => number; fy: (t: number) => number; fz: (t: number) => number; param: string; t: Range; straight: boolean; arrow?: boolean })
+  /** Un campo di vettori nel piano (F(x, y) = (-y, x), \nabla f): una freccia in ogni punto di una griglia. */
+  | (ItemBase & { kind: 'field'; F: (x: number, y: number) => [number, number] })
+  /** Un campo di vettori nello spazio. */
+  | (ItemBase & { kind: 'field3'; F: (x: number, y: number, z: number) => Vec3 })
   | (ItemBase & { kind: 'point3'; x: number; y: number; z: number; name: string | null })
   /**
    * Una zona del piano (y > x^2, un insieme, il dominio di un integrale doppio): dove M(x, y) ≥ 0;
@@ -929,9 +937,22 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
       // L'errore lo dice la riga, quando si disegna.
     }
   }
+  // Le curve, le superfici e i campi del blocco (\gamma(t) = (…), t \in [0, 2\pi]; F(x, y) = (-y, x)): come
+  // nella nota. Qui servono a sapere quante coordinate hanno; dopo le definizioni del blocco si rifanno.
+  const vectorLines = new Set(lines.filter((l) => vectorDefinition(l.main)))
+  for (const l of vectorLines) sheet.define(l.text)
+  const shapes = { scope: sheet.scope(), symbols: sheet.symbolScope() }
+  // f(x, y) = … per \nabla f è solo la funzione del gradiente: non fa il grafico 3D.
+  const gradients = new Set(lines.flatMap((l) => (l.main.k === 'fn' && l.main.name === 'grad' && l.main.args[0]?.k === 'name' ? [l.main.args[0].name] : [])))
   let space =
     !gauss &&
-    lines.some((l) => isSpaceLine(l.main, zFree) || zPlane(l) || (l.main.k === 'name' && xyParams(noteFns.get(l.main.name)?.params)) || linearDims(l.main, linear) === 3)
+    lines.some((l) => {
+      const dims = calculusDims(l.main, shapes)
+      if (dims) return dims === 3
+      const def = definitionOf(l.main)
+      if (def?.params && gradients.has(def.name)) return false
+      return isSpaceLine(l.main, zFree) || zPlane(l) || (l.main.k === 'name' && xyParams(noteFns.get(l.main.name)?.params)) || linearDims(l.main, linear) === 3
+    })
 
   // Un integrale doppio con solo numeri e insiemi attorno: si vede il volume sotto la superficie,
   // nello spazio (se la funzione è 1, cioè l'area del dominio, il dominio nel piano).
@@ -967,8 +988,10 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   }
   const pending = new Map<Line, Definition>()
   const drawn: Line[] = []
+  /** Le definizioni del blocco riuscite, nell'ordine in cui si sono fatte: per rifarle nel foglio delle curve e dei campi. */
+  const madeLines: Line[] = []
   for (const l of lines) {
-    const def = figureLines.has(l) ? null : definitionOf(l.main, space)
+    const def = figureLines.has(l) || vectorLines.has(l) ? null : definitionOf(l.main, space)
     if (def) {
       pending.set(l, def)
       defined.add(def.name)
@@ -986,6 +1009,7 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
         // Riprova dopo le altre: forse usa qualcosa definito più sotto.
         continue
       }
+      madeLines.push(l)
       pending.delete(l)
       progress = true
       // Le funzioni di una variabile si disegnano (nello spazio quelle di x e y), le aree e i volumi
@@ -1012,10 +1036,24 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   for (const [l, def] of pending) {
     try {
       define(def, l.cond, scope(), consts, fns, sets, values, gauss ? complexes : undefined)
+      madeLines.push(l)
     } catch (err) {
       failLine(l, reaches(def.name, def.name, new Set()) ? new MathError(`${def.name} usa sé stessa (anche attraverso un'altra definizione)`) : err)
     }
   }
+
+  // Le curve, le superfici e i campi con i numeri e le funzioni del blocco.
+  if (vectorLines.size || lines.some((l) => l.main.k === 'lint' || l.main.k === 'sint' || (l.main.k === 'fn' && l.main.name === 'grad'))) {
+    for (const l of madeLines) sheet.define(l.text)
+    for (const l of vectorLines) sheet.define(l.text)
+  }
+  const fieldContext: FieldContext = {
+    scope: { ...scope(), vfns: sheet.scope().vfns },
+    symbols: sheet.symbolScope(),
+    own: new Map(lines.flatMap((l): [string, number][] => (vectorDefinition(l.main) ? [[vectorDefinition(l.main)!.name, l.line]] : l.main.k === 'name' ? [[l.main.name, l.line]] : []))),
+  }
+  /** Gli integrali sulle curve e sulle superfici che un'altra riga disegna: prendono il suo colore. */
+  const sameLines = new Map<GraphItem, number>()
 
   // Poi le righe da disegnare, nell'ordine in cui sono scritte, e quelle che dicono da dove a dove.
   const ranges = new Map<string, Range>()
@@ -1061,6 +1099,15 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
     }
     const own = !under.has(l.line)
     try {
+      // Un campo, una curva o una superficie con il nome, un gradiente, un integrale di linea o di superficie.
+      const calculus = calculusItems(l, fieldContext, slot, space)
+      if (calculus) {
+        spec.items.push(...calculus.items)
+        if (calculus.sameAs !== undefined) sameLines.set(calculus.items[0], calculus.sameAs)
+        else slots.set(l.line, slot)
+        slot += calculus.colors
+        continue
+      }
       const complexLine =
         gauss && (isComplexLine(l.main, complexes.scope(), new Set(consts.keys())) || onlyComplex(l.main, (n) => compile(n, scope(), { calc: true })({}), complexes.scope()))
       const item =
@@ -1076,6 +1123,8 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   for (const item of spec.items) {
     const curve = under.get(item.line)
     if (curve !== undefined) item.slot = slots.get(curve) ?? item.slot
+    const same = sameLines.get(item)
+    if (same !== undefined) item.slot = slots.get(same) ?? item.slot
   }
   // I punti della nota usati dalle figure (\triangle ABC, \operatorname{retta}(A, B)): anche loro,
   // con il nome, così si vede quale vertice è quale.
@@ -1670,7 +1719,9 @@ export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSp
   const figure = linearValue(namedFigure(main)?.value ?? main, sheet.linearScope())
   const drawable = !!figure && figure.k !== 'scalar' && figure.k !== 'length' && !(figure.k === 'matrix' && figure.m[0].length !== 1)
   const vector = drawable || (!!tuple && (tuple.coords.length === 2 || tuple.coords.length === 3) && !tuple.coords.some((c) => namesIn(c).size))
-  if (!areaOf(main) && !multipleOf(main) && !setOf(main) && !zone && !complex && !vector) {
+  // Un integrale di linea o di superficie, un gradiente: la curva, la superficie, il campo.
+  const calculus = main.k === 'lint' || main.k === 'sint' || (main.k === 'fn' && main.name === 'grad')
+  if (!areaOf(main) && !multipleOf(main) && !setOf(main) && !zone && !complex && !vector && !calculus) {
     if (main.k !== 'rel' || main.ops.length !== 1 || main.ops[0] !== '=') return null
     const [lhs, rhs] = main.items
     const plottable =
@@ -1684,7 +1735,8 @@ export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSp
     if (!plottable) return null
   }
   const spec = parseGraph(text, defs)
-  return spec.errors.length || spec.items.filter((i) => !i.fromNote).length !== 1 ? null : spec
+  // Una riga sola: con i punti della nota che usa (i vertici) o, per un integrale, anche il campo.
+  return spec.errors.length || !spec.items.length ? null : spec
 }
 
 /** Il blocco da mettere nella nota. */

@@ -3,6 +3,7 @@
  * (`compile`), veloce da chiamare migliaia di volte per disegnare un grafico. Si lavora con i
  * numeri reali: dove una funzione non è definita (√-1, log 0, 1/0) il risultato è NaN o ±∞.
  */
+import { compileLineIntegral, compileSurfaceIntegral } from './calculus'
 import { compileMultiple } from './domain'
 import { MathSyntaxError, type MathNode } from './parse'
 
@@ -16,6 +17,19 @@ export interface UserFunction {
   call(args: number[]): number
 }
 
+/**
+ * Una funzione con i valori vettori: una curva (γ(t) = (\cos t, \sin t)), una superficie
+ * (S(u, v) = (…)) o un campo (F(x, y) = (-y, x)).
+ */
+export interface VectorFunction {
+  params: string[]
+  call(args: number[]): number[]
+  /** Le derivate rispetto a ogni parametro (γ'(t), S_u e S_v), componente per componente. */
+  partials: ((args: number[]) => number[])[]
+  /** Dove variano i parametri ([0, 2π] per γ(t), t ∈ [0, 2π]); null se non è scritto. */
+  domain: ([number, number] | null)[]
+}
+
 /** Cosa vogliono dire i nomi dove si calcola l'espressione. */
 export interface Scope {
   /** Le variabili libere, lette al momento del calcolo (x nei grafici, i parametri delle funzioni). */
@@ -26,6 +40,8 @@ export interface Scope {
   fns: ReadonlyMap<string, UserFunction>
   /** Gli insiemi definiti (D = \{(x, y) : x^2 + y^2 \le 1\}), per gli integrali doppi e tripli. */
   sets?: ReadonlyMap<string, MathNode>
+  /** Le curve, le superfici e i campi definiti, per gli integrali di linea e di superficie. */
+  vfns?: ReadonlyMap<string, VectorFunction>
 }
 
 export interface CompileOptions {
@@ -403,6 +419,12 @@ export function compile(node: MathNode, scope: Scope, options: CompileOptions = 
     }
     case 'mint':
       return compileMultiple(node, scope, options)
+    case 'diff':
+      return compileDerivative(node, scope, options)
+    case 'lint':
+      return compileLineIntegral(node, scope, options)
+    case 'sint':
+      return compileSurfaceIntegral(node, scope, options)
     case 'set':
       throw new MathError('Un insieme non è un numero: si usa sotto un integrale, \\iint_D')
     case 'cases': {
@@ -439,7 +461,56 @@ function snapSum(a: number, b: number): number {
   return Math.abs(s) < 1e-13 * Math.max(Math.abs(a), Math.abs(b)) ? 0 : s
 }
 
+/** Una derivata con i numeri (le differenze finite), dove le lettere non bastano: nei grafici, f'(x) di un integrale… */
+function compileDerivative(node: Extract<MathNode, { k: 'diff' }>, scope: Scope, options: CompileOptions): Compiled {
+  let body = node.body
+  let at: { params: string[]; point: Compiled[] } | null = null
+  // \frac{\partial f}{\partial x}: f con le sue variabili; \frac{\partial f}{\partial x}(1, 2): nel punto.
+  const user = (body.k === 'name' || body.k === 'apply') && !scope.vars.has(body.name) ? scope.fns.get(body.name) : undefined
+  if (user && (body.k === 'name' || (body.k === 'apply' && !body.primes && body.args.length === user.params.length && body.args.every((a) => isConstant(a, scope))))) {
+    if (body.k === 'apply') at = { params: user.params, point: body.args.map((a) => compile(a, scope, options)) }
+    body = { k: 'apply', name: body.name, args: user.params.map((p) => ({ k: 'name', name: p })), primes: 0 }
+  }
+  const vars = node.vars
+  const inner = scopeWith(scope, at ? at.params : vars)
+  let g = compile(body, inner, options)
+  for (const x of vars) {
+    const f = g
+    g = (v) => {
+      const x0 = v[x]
+      const h = 1e-3 * Math.max(1, Math.abs(x0))
+      const value = (t: number) => f({ ...v, [x]: t })
+      return (value(x0 - 2 * h) - 8 * value(x0 - h) + 8 * value(x0 + h) - value(x0 + 2 * h)) / (12 * h)
+    }
+  }
+  const derivative = g
+  if (at) {
+    const { params, point } = at
+    return (v) => derivative({ ...v, ...Object.fromEntries(params.map((p, i) => [p, point[i](v)])) })
+  }
+  // Le variabili della derivata: quelle del grafico, o i numeri definiti (la derivata in quel punto).
+  const fixed: Record<string, number> = {}
+  for (const x of vars) {
+    if (scope.vars.has(x)) continue
+    const value = scope.consts.get(x)
+    if (value === undefined) throw new UndefinedName(x)
+    fixed[x] = value
+  }
+  return Object.keys(fixed).length ? (v) => derivative({ ...v, ...fixed }) : derivative
+}
+
+/** Le operazioni con i campi danno vettori o vanno fatte con le lettere: si calcolano nella nota. */
+const FIELD_OPERATIONS: Record<string, string> = {
+  grad: 'Il gradiente è un vettore',
+  curl: 'Il rotore è un vettore (nel piano un numero)',
+  hess: 'L\'hessiana è una matrice',
+  jac: 'La jacobiana è una matrice',
+  div: 'La divergenza',
+  lap: 'Il laplaciano',
+}
+
 function compileFunction(node: Extract<MathNode, { k: 'fn' }>, scope: Scope, options: CompileOptions): Compiled {
+  if (FIELD_OPERATIONS[node.name]) throw new MathError(`${FIELD_OPERATIONS[node.name]}: si calcola nella nota, con «=»`)
   const args = node.args.map((a) => compile(a, scope, options))
   const pow = node.pow ? compile(node.pow, scope, options) : null
   const name = node.name

@@ -482,7 +482,7 @@ function findWindow(spec: GraphSpec, width: number, height: number): Viewport {
   // Anche le curve delle aree: la loro forma deve vedersi.
   const functions = items.filter((i): i is Extract<GraphItem, { kind: 'function' | 'area' }> => i.kind === 'function' || i.kind === 'area')
   // Le curve e le figure: con le stesse unità sui due assi, se no si deformano (e gli angoli non tornano).
-  const curves = items.filter((i) => ['implicit', 'parametric', 'region', 'segment', 'polygon', 'angle', 'points'].includes(i.kind))
+  const curves = items.filter((i) => ['implicit', 'parametric', 'region', 'segment', 'polygon', 'angle', 'points', 'field'].includes(i.kind))
   const xs: number[] = []
   const ys: number[] = []
   for (const item of items) {
@@ -566,8 +566,8 @@ function findWindow(spec: GraphSpec, width: number, height: number): Viewport {
       let hi = Math.max(...all)
       // Solo zone (con punti e curve come x^2 + y^2 = 1): la finestra si stringe attorno a loro.
       const zones =
-        (items.some((i) => ['region', 'segment', 'polygon', 'angle', 'points'].includes(i.kind)) || !!spec.gauss) &&
-        items.every((i) => ['region', 'implicit', 'point', 'complex', 'parametric', 'segment', 'polygon', 'angle', 'points', 'vector'].includes(i.kind))
+        (items.some((i) => ['region', 'segment', 'polygon', 'angle', 'points'].includes(i.kind) || (i.kind === 'parametric' && i.arrow)) || !!spec.gauss) &&
+        items.every((i) => ['region', 'implicit', 'point', 'complex', 'parametric', 'segment', 'polygon', 'angle', 'points', 'vector', 'field'].includes(i.kind))
       const pad = Math.max((hi - lo) * 0.2, zones ? 0.5 : 1)
       const least = zones ? 2 : 6
       lo -= pad

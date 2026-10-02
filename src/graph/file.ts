@@ -68,7 +68,9 @@ export function graphImage(source: string, defs: readonly string[] = []): string
                 ? `<span style="width:14px;height:14px;box-sizing:border-box;border:2px solid ${color};border-radius:3px;background:${areaColor(color, palette)}"></span>`
                 : item.kind === 'surface' || item.kind === 'implicit3' || item.kind === 'patch' || item.kind === 'solid'
                 ? `<span style="width:14px;height:14px;border-radius:3px;background:${color}"></span>`
-                : `<span style="width:18px;height:3px;border-radius:2px;background:${color}"></span>`
+                : item.kind === 'field' || item.kind === 'field3' || item.kind === 'vector' || (item.kind === 'complex' && item.arrows)
+                  ? `<svg width="20" height="10" viewBox="0 0 20 10"><path d="M1 5H13" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/><path d="M19 5L12 1.5V8.5Z" fill="${color}"/></svg>`
+                  : `<span style="width:18px;height:3px;border-radius:2px;background:${color}"></span>`
         return `<div style="display:flex;align-items:center;gap:8px;height:28px">${swatch}${renderTexMathml(item.label)}</div>`
       })
       .concat(numbers.length ? [`<div style="display:flex;align-items:center;height:28px">${renderTexMathml(numbers.join(', \\quad '))}</div>`] : [])

@@ -3153,6 +3153,23 @@ kbd {
   border-radius: 3px;
 }
 
+/* Un vettore o un campo di vettori: una freccia. */
+.graph-swatch.is-arrow {
+  position: relative;
+  width: 13px;
+  margin-right: 6px;
+}
+
+.graph-swatch.is-arrow::after {
+  content: '';
+  position: absolute;
+  top: -3.5px;
+  right: -6px;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 7px solid var(--graph-color);
+}
+
 .graph-coords {
   color: var(--muted);
   font-size: 0.9em;

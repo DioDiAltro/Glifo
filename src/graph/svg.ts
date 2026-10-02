@@ -72,6 +72,69 @@ function arrow(ax: number, ay: number, bx: number, by: number): string {
   return `M${f1(bx)} ${f1(by)}L${f1(cx - uy * 5)} ${f1(cy + ux * 5)}L${f1(cx + uy * 5)} ${f1(cy - ux * 5)}Z`
 }
 
+/** La punta che dice il verso di una curva con il nome, a metà del suo intervallo. */
+function orientation(item: Extract<GraphItem, { kind: 'parametric' }>, sx: (x: number) => number, sy: (y: number) => number): string | null {
+  const [t0, t1] = item.t
+  const tm = (t0 + t1) / 2
+  const h = (t1 - t0) * 1e-3 || 1e-3
+  const [ax, ay] = [sx(item.fx(tm - h)), sy(item.fy(tm - h))]
+  const [bx, by] = [sx(item.fx(tm + h)), sy(item.fy(tm + h))]
+  const len = Math.hypot(bx - ax, by - ay)
+  if (!(len > 1e-9) || ![ax, ay, bx, by].every(Number.isFinite)) return null
+  const ux = (bx - ax) / len
+  const uy = (by - ay) / len
+  const [cx, cy] = [(ax + bx) / 2, (ay + by) / 2]
+  return arrow(cx - ux * 8, cy - uy * 8, cx + ux * 7, cy + uy * 7)
+}
+
+/**
+ * Le frecce di un campo, su una griglia: lunghe secondo quanto vale il campo (con la radice, così si
+ * vedono anche quelle piccole), mai più lunghe dello spazio tra due frecce.
+ */
+function fieldArrows(F: (x: number, y: number) => [number, number], vp: Viewport, sx: (x: number) => number, sy: (y: number) => number): { shafts: string; tips: string } {
+  const { width: W, height: H } = vp
+  const step = Math.max(28, Math.min(46, Math.min(W, H) / 10))
+  const cols = Math.max(1, Math.floor(W / step))
+  const rows = Math.max(1, Math.floor(H / step))
+  const ox = (W - (cols - 1) * step) / 2
+  const oy = (H - (rows - 1) * step) / 2
+  const kx = sx(1) - sx(0)
+  const ky = sy(1) - sy(0)
+  const samples: { px: number; py: number; vx: number; vy: number; m: number }[] = []
+  let max = 0
+  for (let j = 0; j < rows; j++) {
+    for (let i = 0; i < cols; i++) {
+      const px = ox + i * step
+      const py = oy + j * step
+      const x = vp.x0 + (px / W) * (vp.x1 - vp.x0)
+      const y = vp.y1 - (py / H) * (vp.y1 - vp.y0)
+      const [fx, fy] = F(x, y)
+      const vx = fx * kx
+      const vy = fy * ky
+      const m = Math.hypot(vx, vy)
+      if (!Number.isFinite(m)) continue
+      max = Math.max(max, m)
+      samples.push({ px, py, vx, vy, m })
+    }
+  }
+  let shafts = ''
+  let tips = ''
+  if (!(max > 0)) return { shafts, tips }
+  for (const { px, py, vx, vy, m } of samples) {
+    if (m < max * 1e-9) continue
+    const len = Math.max(5, 0.82 * step * Math.sqrt(m / max))
+    const ux = vx / m
+    const uy = vy / m
+    const [ax, ay] = [px - (ux * len) / 2, py - (uy * len) / 2]
+    const [bx, by] = [px + (ux * len) / 2, py + (uy * len) / 2]
+    const head = Math.min(6, len * 0.45)
+    shafts += `M${f1(ax)} ${f1(ay)}L${f1(bx - ux * head * 0.8)} ${f1(by - uy * head * 0.8)}`
+    const [cx, cy] = [bx - ux * head, by - uy * head]
+    tips += `M${f1(bx)} ${f1(by)}L${f1(cx - uy * 2.8)} ${f1(cy + ux * 2.8)}L${f1(cx + uy * 2.8)} ${f1(cy - ux * 2.8)}Z`
+  }
+  return { shafts, tips }
+}
+
 /** Il colore di un'area (#rrggbb) con la sua trasparenza, per le legende. */
 export function areaColor(color: string, palette: Palette): string {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16))
@@ -189,6 +252,8 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
   spec.items.forEach((item, i) => {
     const color = colors[i]
     let lines: Polyline[] = []
+    // Una curva che un'altra riga disegna già (l'integrale su γ con γ nel blocco).
+    if (item.same && item.kind !== 'region') return
     if (item.kind === 'function' || (item.kind === 'area' && item.curve)) {
       const s = sampleFunction(item.f, vp)
       lines = s.lines
@@ -201,7 +266,18 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
         drawn.push(...edge.lines)
       }
     }
-    else if (item.kind === 'parametric') lines = item.straight ? lineAcross(item.fx, item.fy, vp) : sampleParametric(item.fx, item.fy, item.t, vp)
+    else if (item.kind === 'parametric') {
+      lines = item.straight ? lineAcross(item.fx, item.fy, vp) : sampleParametric(item.fx, item.fy, item.t, vp)
+      // Il verso della curva: una punta a metà, dove va t.
+      if (item.arrow) {
+        const head = orientation(item, sx, sy)
+        if (head) heads.push(`<path d="${head}" fill="${color}"/>`)
+      }
+    } else if (item.kind === 'field') {
+      const { shafts, tips } = fieldArrows(item.F, vp, sx, sy)
+      if (shafts) curves.push(`<path d="${shafts}" stroke="${color}" stroke-width="1.6" data-item="${i}"/>`)
+      if (tips) heads.push(`<path d="${tips}" fill="${color}"/>`)
+    }
     else if (item.kind === 'vertical') lines = [[sx(item.x), -2, sx(item.x), H + 2]]
     else if (item.kind === 'vector') {
       // La linea finisce alla base della punta: la punta la disegna dopo, piena.

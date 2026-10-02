@@ -17,7 +17,8 @@ import {
   type ComplexScope,
   type ExactComplexScope,
 } from './complex'
-import { compile, EMPTY_SCOPE, scopeWith, withWorkLimit, type Scope, type UserFunction } from './evaluate'
+import { numericPartials } from './calculus'
+import { compile, EMPTY_SCOPE, scopeWith, withWorkLimit, type Scope, type UserFunction, type VectorFunction } from './evaluate'
 import {
   EXACT,
   FLOAT,
@@ -35,7 +36,9 @@ import {
 } from './linear'
 import { evaluateExact, type ExactFunction, type ExactScope, type Rational } from './exact'
 import { formatNumber, formatRational, type FormattedResult } from './format'
+import { toLatex } from './latex'
 import { children, namesIn, parseMath, type MathNode } from './parse'
+import { expandCalculus, isVectorBody, needsSymbols, partialDerivative, plainText, symbolicValue, type SymbolScope } from './symbolic'
 
 export interface Definition {
   name: string
@@ -187,6 +190,13 @@ export class Sheet {
   private exactComplexFns = new Map<string, { params: string[]; body: MathNode; scope: ExactComplexScope }>()
   /** Le matrici e i vettori definiti ($A = \begin{pmatrix} … \end{pmatrix}$, $v = (1, 2, 3)$). */
   private linearValues = new Map<string, LinearValue>()
+  /** Le funzioni come sono scritte (anche quelle con i valori vettori), per i conti con le lettere. */
+  private bodies = new Map<string, { params: string[]; body: MathNode }>()
+  /** Le curve, le superfici e i campi ($\gamma(t) = (\cos t, \sin t)$, $F(x, y) = (-y, x)$). */
+  private vfns = new Map<string, VectorFunction>()
+  /** L'ultima funzione definita: una condizione subito dopo ($t \in [0, 2\pi]$) dice dove variano i suoi parametri. */
+  private lastFunction: Definition | null = null
+  private symbols: SymbolScope | null = null
   readonly definitions: Definition[] = []
 
   /**
@@ -197,7 +207,16 @@ export class Sheet {
 
   /** Lo stato di adesso, per calcolare un'espressione con le definizioni fatte fin qui. */
   scope(): Scope {
-    return { vars: EMPTY_SCOPE.vars, consts: new Map(this.consts), fns: new Map(this.fns), sets: new Map(this.sets) }
+    return { vars: EMPTY_SCOPE.vars, consts: new Map(this.consts), fns: new Map(this.fns), sets: new Map(this.sets), vfns: new Map(this.vfns) }
+  }
+
+  /** Lo stato di adesso per i conti con le lettere (le derivate, il gradiente…); si rifà a ogni definizione. */
+  symbolScope(): SymbolScope {
+    if (this.symbols) return this.symbols
+    const consts = new Map<string, Rational | null>()
+    for (const name of this.consts.keys()) consts.set(name, this.exactConsts.get(name) ?? null)
+    this.symbols = { consts, fns: new Map(this.bodies) }
+    return this.symbols
   }
 
   private exactScope(): ExactScope {
@@ -248,20 +267,62 @@ export class Sheet {
     }
   }
 
-  /** Ricorda una definizione (a = 2, f(x) = x^2); altro non conta. */
+  /**
+   * Ricorda una definizione (a = 2, f(x) = x^2) o, subito dopo una curva o una superficie, dove
+   * variano i suoi parametri (t \in [0, 2\pi]); altro non conta.
+   */
   define(src: string): void {
+    const pieces = splitPieces(src)
+    if (pieces.length > 1) {
+      for (const piece of pieces) this.define(piece)
+      return
+    }
     const node = parseCached(src)
-    if (!node || node.k !== 'rel' || node.ops.length !== 1 || node.ops[0] !== '=') return
+    if (!node) return
+    if (this.lastFunction && this.attachDomain(node, src)) return
+    if (node.k !== 'rel' || node.ops.length !== 1 || node.ops[0] !== '=') return
     const target = definitionTarget(node.items[0])
     if (!target) return
     const value = node.items[1]
     this.record(target, value, src)
   }
 
+  /** t \in [0, 2\pi], 0 \le t \le 1: l'intervallo di un parametro dell'ultima curva o superficie. */
+  private attachDomain(node: MathNode, src: string): boolean {
+    const last = this.lastFunction!
+    const f = this.vfns.get(last.name)
+    if (!f || !last.params) return false
+    let found = false
+    const visit = (n: MathNode): void => {
+      if (n.k === 'and') return n.items.forEach(visit)
+      let bound: { v: string; lo: MathNode; hi: MathNode } | null = null
+      if (n.k === 'in' && n.a.k === 'name') bound = { v: n.a.name, lo: n.lo, hi: n.hi }
+      else if (n.k === 'rel' && n.items.length === 3 && n.items[1].k === 'name' && n.ops.every((op) => op === '<' || op === '<=')) {
+        bound = { v: n.items[1].name, lo: n.items[0], hi: n.items[2] }
+      }
+      const i = bound ? f.params.indexOf(bound.v) : -1
+      if (!bound || i < 0) return
+      const lo = this.evaluate(bound.lo)
+      const hi = this.evaluate(bound.hi)
+      if (!lo || !hi || !('float' in lo) || !('float' in hi) || !(hi.float > lo.float)) return
+      f.domain[i] = [lo.float, hi.float]
+      found = true
+    }
+    visit(node)
+    // Il grafico rifà le definizioni dal loro testo: anche l'intervallo.
+    if (found) last.source = `${last.source}, \\; ${src.trim().replace(/^(\\[,;:! ]|\\q?quad\b|\s)+/, '')}`
+    return found
+  }
+
   private record(target: { name: string; params: string[] | null }, value: MathNode, source: string, known?: Value): void {
     const { name, params } = target
     const uses = namesIn(value, new Set(), new Set(params ?? []))
-    this.definitions.push({ name, params, source: source.trim(), value, uses })
+    const definition = { name, params, source: source.trim(), value, uses }
+    this.definitions.push(definition)
+    this.symbols = null
+    this.lastFunction = params ? definition : null
+    this.bodies.delete(name)
+    this.vfns.delete(name)
     this.consts.delete(name)
     this.exactConsts.delete(name)
     this.fns.delete(name)
@@ -276,7 +337,24 @@ export class Sheet {
       this.sets.set(name, value)
       return
     }
+    try {
+      this.store(name, params, value, known)
+    } finally {
+      // Quello che la definizione ha cambiato vale anche per i conti con le lettere.
+      this.symbols = null
+    }
+  }
+
+  private store(name: string, params: string[] | null, value: MathNode, known?: Value): void {
     if (params) {
+      // Con le derivate e il gradiente già fatti con le lettere: g(x) = f'(x), F(x, y) = \nabla f.
+      const body = this.prepare(value, params)
+      this.bodies.set(name, { params, body })
+      if (isVectorBody(body)) {
+        this.vfns.set(name, this.vectorFunction(params, body))
+        return
+      }
+      value = body
       this.complexFns.set(name, { params, body: value, scope: this.complexScope() })
       this.exactComplexFns.set(name, { params, body: value, scope: this.exactComplexScope() })
       try {
@@ -292,6 +370,7 @@ export class Sheet {
       return
     }
     const forced = this.fixed?.get(name)
+    if (!known) value = this.prepare(value)
     let result: Value | null = forced !== undefined ? { float: forced, exact: null } : known ?? this.evaluate(value)
     // Senza un valore reale (z = 1 + 2i): un numero complesso; o una matrice, un vettore.
     if (!result || ('float' in result && !Number.isFinite(result.float))) result = this.evaluateComplex(value)
@@ -315,6 +394,64 @@ export class Sheet {
       this.complexConsts.set(name, result.complex)
       this.exactComplexConsts.set(name, result.exactComplex)
     }
+  }
+
+  /**
+   * La formula con le derivate e gli operatori dei campi già fatti con le lettere, dove si può
+   * (`params`: le variabili di una funzione, che restano lettere).
+   */
+  private prepare(node: MathNode, params: string[] = [], decimal = styleOf(node).decimal || this.usesDecimals(node)): MathNode {
+    const scope = { ...this.symbolScope() }
+    if (!needsSymbols(node, scope)) return node
+    if (params.length) scope.consts = new Map([...scope.consts].filter(([n]) => !params.includes(n)))
+    try {
+      return withWorkLimit(WORK, () => expandCalculus(node, scope, decimal))
+    } catch {
+      return node
+    }
+  }
+
+  /** Le funzioni che la formula usa sono scritte con i decimali (f(x) = 0{,}3 x^2)? Allora anche il risultato. */
+  private usesDecimals(node: MathNode, seen = new Set<string>()): boolean {
+    for (const name of namesIn(node)) {
+      const body = this.bodies.get(name)
+      if (!body || seen.has(name)) continue
+      seen.add(name)
+      if (styleOf(body.body).decimal || this.usesDecimals(body.body, seen)) return true
+    }
+    return false
+  }
+
+  /** Una curva, una superficie o un campo: i valori, le derivate (con le lettere, se si può) e gli intervalli. */
+  private vectorFunction(params: string[], body: MathNode): VectorFunction {
+    const items = body.k === 'tuple' ? body.items : body.k === 'matrix' ? body.rows.map((r) => r[0]) : []
+    const inner = scopeWith(this.scope(), params)
+    const parts = items.map((c) => {
+      try {
+        return compile(c, inner, { calc: true })
+      } catch {
+        return () => NaN
+      }
+    })
+    const vars = (args: number[]) => Object.fromEntries(params.map((p, i) => [p, args[i]]))
+    const call = (args: number[]) => {
+      const v = vars(args)
+      return parts.map((c) => c(v))
+    }
+    const numeric = numericPartials(call, params.length)
+    const scope = this.symbolScope()
+    const partials = params.map((p, k) => {
+      try {
+        const derivatives = items.map((c) => compile(partialDerivative(c, p, params, scope), inner, { calc: true }))
+        return (args: number[]) => {
+          const v = vars(args)
+          return derivatives.map((d) => d(v))
+        }
+      } catch {
+        return numeric[k]
+      }
+    })
+    return { params, call, partials, domain: params.map(() => null) }
   }
 
   private evaluate(node: MathNode): { float: number; exact: Rational | null } | null {
@@ -450,9 +587,19 @@ export class Sheet {
     else items = splitEquals(src).map(parseCached)
     const target = items.length > 1 && items[0] ? definitionTarget(items[0]) : null
     for (let i = items.length - 1; i >= (target ? 1 : 0); i--) {
-      const item = items[i]
+      let item = items[i]
       if (!item) continue
       const style = styleOf(item)
+      // Le derivate e gli operatori dei campi con le lettere: se restano variabili, il risultato è una formula.
+      if (needsSymbols(item, this.symbolScope())) {
+        const decimal = style.decimal || this.usesDecimals(item)
+        item = this.prepare(item, [], decimal)
+        if (this.freeNames(item).length) {
+          const shown = this.showSymbolic(item, decimal)
+          if (shown) return shown
+          continue
+        }
+      }
       const result = this.evaluate(item)
       const real = result && (result.exact ? formatRational(result.exact, style) : formatNumber(result.float, { ...style, decimal: true }))
       // Senza un valore reale: con i numeri complessi (1 + 2i, \sqrt{-4}, \ln(-1)), o con vettori e matrici.
@@ -462,6 +609,34 @@ export class Sheet {
       return found.shown
     }
     return null
+  }
+
+  /** Le lettere che la formula usa e che la nota non definisce (le variabili di un risultato con le lettere). */
+  private freeNames(node: MathNode): string[] {
+    return [...namesIn(node)].filter(
+      (n) =>
+        !this.consts.has(n) &&
+        !this.complexConsts.has(n) &&
+        !this.linearValues.has(n) &&
+        !this.fns.has(n) &&
+        !this.vfns.has(n) &&
+        !this.bodies.has(n) &&
+        !this.sets.has(n) &&
+        !['π', 'e', 'i'].includes(n),
+    )
+  }
+
+  /** Un risultato con le lettere (2x, (2x, 2y), la matrice hessiana), semplificato e disegnato. */
+  private showSymbolic(node: MathNode, decimal: boolean): FormattedResult | null {
+    let value = node
+    try {
+      value = withWorkLimit(WORK, () => symbolicValue(node, this.symbolScope(), decimal))
+    } catch {
+      // Una parte che non si semplifica si mostra com'è, ma non una derivata che non si è saputa fare.
+      if (needsSymbols(node, this.symbolScope())) return null
+    }
+    const tex = toLatex(value)
+    return tex ? { tex, text: plainText(value), rich: true } : null
   }
 
   /** Le definizioni che servono a questi nomi (anche attraverso altre definizioni), in ordine. */

@@ -65,7 +65,12 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   tutte, le forme a + bi e ρe^{iθ}; `linear.ts` vettori e matrici, con le frazioni esatte (`EXACT`) o
   con la virgola (`FLOAT`): determinante, inversa, rango, nucleo, autovalori, polinomio caratteristico, e la
   geometria (segmenti, rette, circonferenze, piani, poligoni, angoli, intersezioni: `geometryOf`); i
-  risultati con le matrici hanno `rich` e l'editor li disegna con KaTeX), `sheet.ts` è il
+  risultati con le matrici hanno `rich` e l'editor li disegna con KaTeX; `symbolic.ts` i conti con le
+  lettere: derivate (`f'(x)`, nodi `diff` da `\frac{d}{dx}` e `\partial`), gradiente, divergenza, rotore,
+  hessiana e jacobiana, con le semplificazioni (`tidy`: frazioni unite, polinomi in ordine, fattori
+  raccolti); il foglio li usa con `expandCalculus` e, se restano lettere, mostra la formula;
+  `calculus.ts` gli integrali di linea e di superficie (nodi `lint` e `sint`) sulle curve, superfici e
+  campi definiti (`Scope.vfns`, con l'intervallo dopo la virgola: t \in [0, 2\pi])), `sheet.ts` è il
   «foglio» della nota: le formule dall'alto in basso, `$a = 2$` e `$f(x) = …$` definiscono, una formula
   che finisce con `=` ha il risultato (nell'editor `src/editor/calcResults.ts`, Tab lo scrive;
   nell'anteprima colorato, classe `calc-result`). `\log` è il logaritmo naturale.
@@ -93,7 +98,10 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   geometria (`\triangle ABC`, `\overline{AB}`, `\widehat{BAC}`, `\operatorname{retta}(A, B)`) passano da
   `linearItem` in `spec.ts`; `\overline{AB}` con due maiuscole è un segmento, non il coniugato (vedi
   `isComplexLine`). I punti della nota che una figura usa si aggiungono con `fromNote`; i nomi dei punti
-  li mette `nameSpot` in `svg.ts`, nella direzione libera più lontana dalla figura.
+  li mette `nameSpot` in `svg.ts`, nella direzione libera più lontana dalla figura. I campi di vettori
+  (`field`, `field3`), le curve con il nome (con `arrow`, la freccia del verso), le superfici con il nome
+  e gli integrali di linea e di superficie sono in `fields.ts`: le definizioni con i valori vettori del
+  blocco passano dal foglio (`sheet.define`), come nella nota.
 - `src/ai/`: assistente AI. `src/host.ts`: funzioni della demo dentro claude.ai.
 - `src/account/`: account e sincronizzazione. `sync.ts` è il motore (manda, scarica, nei
   conflitti tiene tutte e due le versioni), `controller.ts` decide quando sincronizzare,

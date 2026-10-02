@@ -159,6 +159,23 @@ chi sta provando Glifo.*
   (`\operatorname{piano}(A, B, C) =`), le distanze di un punto da una retta e da un piano (`d(P, r) =`) e
   le intersezioni di rette, circonferenze e piani (`\operatorname{intersezione}(r, c) =`, con le radici
   esatte: `(−√2, −√2); (√2, √2)`). Le figure con un nome (`r = \operatorname{retta}(A, B)`) si usano dopo.
+- **Derivate scritte come formula**: con `$f(x) = \frac{x^2 - 1}{x + 2}$`, `$f'(x) =$` dà
+  `(x² + 4x + 1)/(x + 2)²` (le frazioni con un denominatore solo, i polinomi dal grado più alto, i fattori
+  comuni raccolti: `(1 − x)e^{−x}`); anche `f''(x)`, `\frac{d}{dx} \sin x \cos x =`, `\frac{d^2}{dx^2}`, la
+  funzione integrale (`F(x) = \int_0^x e^{-t^2} \, dt` dà `F'(x) = e^{−x²}`) e, in un punto, `f'(2) =`. Le
+  **derivate parziali** si scrivono `\frac{\partial f}{\partial x}`, `\frac{\partial^2 f}{\partial x \partial y}`,
+  `\partial_x f`, anche in un punto (`\frac{\partial f}{\partial x}(1, 2) =`). Con i campi: il **gradiente**
+  (`\nabla f`, `\operatorname{grad} f`), la **divergenza** (`\nabla \cdot F`, `\operatorname{div} F`), il **rotore**
+  (`\nabla \times F`, `\operatorname{rot} F`; nel piano è un numero), il laplaciano (`\nabla^2 f`), l'hessiana
+  (`\operatorname{Hess} f`, anche `\det \operatorname{Hess} f(1, 1) =`) e la jacobiana (`\operatorname{jac} F`).
+  I risultati con le lettere si vedono disegnati anche nell'editor; Tab li scrive nella formula.
+- **Campi, curve e superfici** con il nome: `$F(x, y) = (-y, x)$`, `$\gamma(t) = (\cos t, \sin t), \; t \in [0, 2\pi]$`
+  (l'intervallo del parametro dopo la virgola), `$S(u, v) = (…), \; u \in [0, 2\pi], \; v \in [0, \pi]$`;
+  `F(1, 2) =` dà il vettore. Gli **integrali di linea**: di una funzione (`\int_\gamma f \, ds`, con `1` la
+  lunghezza), di un campo (il lavoro: `\oint_\gamma F \cdot dr`, anche `\int_\gamma \nabla f \cdot dr`) o di una
+  forma (`\oint_\gamma (-y \, dx + x \, dy)`). Gli **integrali di superficie**: `\iint_S f \, dS` (con `1` l'area)
+  e il flusso `\iint_S F \cdot d\mathbf{S}` (o `F \cdot n \, dS`), con la normale S_u × S_v; su una superficie chiusa
+  (`\oiint_S`) sempre verso fuori.
 - **Integrali doppi e tripli**, con il dominio sotto: disuguaglianze (`\iint_{x^2 + y^2 \le 1} (x^2 + y^2) \, dA =`,
   `\iiint_{x^2 + y^2 \le 1, 0 \le z \le 2} dV =`), rettangoli (`\iint_{[0, 1] \times [0, 2]} x y \, dx \, dy =`,
   `[0, 1]^3`) o il nome di un insieme scritto prima (`$D = \{(x, y) : 0 \le y \le x \le 1\}$` e poi
@@ -214,6 +231,11 @@ chi sta provando Glifo.*
   (`u + v`, `A u`, con le componenti nella legenda), e una curva con il
   parametro di primo grado (`(1 + t, 2t)`) è una retta intera, da un bordo all'altro (con
   `t \in [0, 1]` solo quel pezzo).
+- I **campi di vettori** si disegnano con una freccia in ogni punto (`F(x, y) = (-y, x)`, o solo `(-y, x)`, o il
+  gradiente `\nabla f`; con tre componenti in 3D), le curve con il nome con la **freccia del verso**
+  (`\gamma(t) = (\cos t, \sin t), \; t \in [0, 2\pi]`, anche nello spazio) e le superfici con il nome (`S(u, v)`).
+  Un integrale di linea disegna la curva e il campo, con il lavoro nella legenda (`\oint_\gamma F \cdot dr = 6,283185…`);
+  uno di superficie la superficie e le frecce del campo, con il flusso.
 - Le figure della **geometria** si disegnano come si scrivono: punti con il nome (`A = (0, 0)`,
   `M = \operatorname{medio}(B, C)`), segmenti (`\overline{AM}`), triangoli e poligoni colorati
   (`\triangle ABC`), angoli con l'arco e l'ampiezza (`\widehat{BAC}`; quello retto con il quadratino),
@@ -251,6 +273,8 @@ chi sta provando Glifo.*
 ![Matrici e vettori: inversa, autovalori, autovettori e polinomio caratteristico, e i vettori come frecce](docs/matrici.png)
 
 ![Geometria: lunghezze, area, angoli, rette e circonferenze nella nota, e il triangolo con l'angolo e la mediana nel grafico](docs/geometria.png)
+
+![Derivate e campi: la derivata di un quoziente, gradiente, derivata mista, lavoro e rotore nella nota; il campo con le frecce e la curva con il verso nel grafico](docs/campi.png)
 
 **Schemi stile draw.io**
 - Il pulsante con i due riquadri nella barra apre un editor a tutto schermo: forme a sinistra
@@ -451,6 +475,8 @@ src/
     domain.ts             i domini degli integrali doppi e tripli (margine, condizioni, strati) e come si integrano
     complex.ts            i numeri complessi: conti (anche esatti), radici, forme a + bi e ρe^{iθ}, equazioni
     linear.ts             vettori e matrici: conti esatti o con la virgola, determinante, inversa, rango, nucleo, autovalori; la geometria (segmenti, rette, circonferenze, piani, angoli, intersezioni)
+    symbolic.ts           i conti con le lettere: derivate (anche parziali), gradiente, divergenza, rotore, hessiana, con le semplificazioni
+    calculus.ts           gli integrali di linea e di superficie (lavoro e flusso) sulle curve e superfici definite
     exact.ts, format.ts   i conti esatti con le frazioni; i risultati scritti all'italiana
     sheet.ts              il «foglio» della nota: definizioni dall'alto in basso e risultati dopo «=»
     latex.ts              un'espressione riscritta in LaTeX (le legende dei grafici)
@@ -458,6 +484,7 @@ src/
     spec.ts               le righe di un blocco ```grafico: funzioni, curve, punti, vettori, aree degli integrali, superfici, zone e solidi, la parte da mostrare, gli slider
     regions.ts            le zone e i solidi: disuguaglianze, insiemi, domini degli integrali doppi e tripli, volumi sotto le superfici
     gauss.ts              il piano di Gauss: numeri complessi, radici, equazioni e zone in z
+    fields.ts             i campi di vettori (le frecce), le curve con il verso, le superfici e gli integrali di linea e di superficie
     plot.ts               dove calcolare le curve (salti, asintoti) e le aree, la finestra, le tacche
     svg.ts                il disegno in SVG, con i colori dei due temi
     space.ts              i conti del 3D: superfici a quadretti e a tetraedri, piani, solidi, curve nello spazio, la scatola da mostrare

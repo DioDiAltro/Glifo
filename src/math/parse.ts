@@ -22,8 +22,11 @@ export type MathNode =
   | { k: 'neg'; a: MathNode }
   /** `cross`: scritto con \times (o ×): tra due vettori è il prodotto vettoriale, tra due intervalli un rettangolo. */
   | { k: 'bin'; op: '+' | '-' | '*' | '/' | '^'; a: MathNode; b: MathNode; implicit?: boolean; frac?: boolean; cross?: boolean }
-  /** Una funzione nota: `\sin x`, `\log_2 x` (base), `\sqrt[3]{x}` (indice in `base`), `\sin^2 x` (pow). */
-  | { k: 'fn'; name: string; args: MathNode[]; pow?: MathNode; base?: MathNode }
+  /**
+   * Una funzione nota: `\sin x`, `\log_2 x` (base), `\sqrt[3]{x}` (indice in `base`), `\sin^2 x` (pow).
+   * Gradiente, divergenza, rotore e laplaciano scritti con \nabla hanno `nabla`.
+   */
+  | { k: 'fn'; name: string; args: MathNode[]; pow?: MathNode; base?: MathNode; nabla?: boolean }
   /** `f(x)`, `f'(2)`: una funzione definita nella nota, oppure (se `f` è un numero) un prodotto. */
   | { k: 'apply'; name: string; args: MathNode[]; primes: number }
   | { k: 'post'; op: '!' | '%' | '°'; a: MathNode }
@@ -36,6 +39,19 @@ export type MathNode =
    * condizione (x^2 + y^2 \le 1), un rettangolo ([0, 1] \times [0, 2]) o il nome di un insieme.
    */
   | { k: 'mint'; vars: string[]; domain: MathNode; body: MathNode }
+  /**
+   * Una derivata: `\frac{d}{dx} …`, `\frac{\partial^2 f}{\partial x \partial y}`, `\partial_x f`; `vars` ha
+   * una variabile per ogni derivata. Di una funzione in un punto (`\frac{\partial f}{\partial x}(1, 2)`)
+   * `body` è f(1, 2).
+   */
+  | { k: 'diff'; body: MathNode; vars: string[]; partial: boolean }
+  /**
+   * Un integrale di linea sulla curva `curve` (definita nella nota: γ(t) = (…), t ∈ [a, b]): di una
+   * funzione (`ds`) o di un campo (il lavoro: F · dr); `form` se è scritto come P dx + Q dy.
+   */
+  | { k: 'lint'; curve: string; closed: boolean; ds: boolean; body: MathNode; form?: boolean }
+  /** Un integrale sulla superficie `surface` (S(u, v) = (…)): di una funzione (`dS`) o il flusso di un campo. */
+  | { k: 'sint'; surface: string; closed: boolean; dS: boolean; body: MathNode }
   /** `\{(x, y) \in \mathbb{R}^2 : x^2 + y^2 \le 1\}`: un insieme; `vars` null se non le scrive. */
   | { k: 'set'; vars: string[] | null; cond: MathNode }
   | { k: 'cases'; rows: { value: MathNode; cond: MathNode | null }[] }
@@ -95,6 +111,9 @@ const FUNCTION_NAMES: Record<string, string> = {
   triangle: 'triangle', poligono: 'polygon', angle: 'angle', measuredangle: 'angle', angolo: 'angle', retta: 'line',
   circonferenza: 'circle', cerchio: 'circle', medio: 'mid', puntomedio: 'mid', baricentro: 'centroid', area: 'area',
   perimetro: 'perimeter', piano: 'plane', intersezione: 'intersect', distanza: 'dist', segmento: 'segment',
+  // Le operazioni con i campi: gradiente, divergenza, rotore, laplaciano, hessiana e jacobiana.
+  grad: 'grad', gradiente: 'grad', div: 'div', divergenza: 'div', rot: 'curl', rotore: 'curl', curl: 'curl',
+  lap: 'lap', laplaciano: 'lap', hess: 'hess', hessiana: 'hess', jac: 'jac', jacobiana: 'jac',
 }
 
 /** Le parole riconosciute anche senza barra (`sin x`, `sqrt(x)`, `pi`), come in una calcolatrice. */
@@ -124,6 +143,7 @@ const COMMAND_OPS: Record<string, [Kind, string]> = {
   infty: ['infty', '∞'], circ: ['deg', '°'], frac: ['frac', 'frac'], dfrac: ['frac', 'frac'], tfrac: ['frac', 'frac'],
   cfrac: ['frac', 'frac'], sqrt: ['sqrt', 'sqrt'], binom: ['binom', 'binom'], dbinom: ['binom', 'binom'],
   tbinom: ['binom', 'binom'], sum: ['big', 'sum'], prod: ['big', 'prod'], int: ['int', 'int'], iint: ['int', 'iint'], iiint: ['int', 'iiint'],
+  oint: ['int', 'oint'], oiint: ['int', 'oiint'], nabla: ['nabla', 'nabla'], partial: ['partial', 'partial'],
   mid: ['bar', '|'],
   quad: ['sep', 'quad'], qquad: ['sep', 'quad'], cr: ['row', '\\\\'], coloneqq: ['rel', '='], coloneq: ['rel', '='],
   lbrace: ['open', '\\{'], rbrace: ['close', '\\}'], lbrack: ['open', '['], rbrack: ['close', ']'],
@@ -145,7 +165,7 @@ const IGNORED = new Set([
 type Kind =
   | 'num' | 'name' | 'fn' | 'frac' | 'sqrt' | 'binom' | 'big' | 'int' | 'op' | 'rel' | 'open' | 'close' | 'bar'
   | 'comma' | 'semi' | 'sep' | 'in' | 'and' | 'or' | 'else' | 'amp' | 'row' | 'cases' | 'endcases' | 'matrix' | 'endmatrix' | 'infty'
-  | 'deg' | 'prime' | 'set' | 'bad'
+  | 'deg' | 'prime' | 'set' | 'nabla' | 'partial' | 'bad'
 
 interface Tok {
   k: Kind
@@ -298,6 +318,9 @@ export function tokenize(src: string): Tok[] {
       case '∧': one('and', 'and'); break
       case '∨': one('or', 'or'); break
       case '√': one('sqrt', 'sqrt'); break
+      case '∇': one('nabla', 'nabla'); break
+      case '∂': one('partial', 'partial'); break
+      case '∮': one('int', 'oint'); break
       case 'ℝ': one('set', 'R'); break
       case '⟨': one('open', '⟨'); break
       case '⟩': one('close', '⟩'); break
@@ -418,7 +441,7 @@ function readCommand(src: string, i: number, out: Tok[], depth: () => number, ad
     push(letter ? 'name' : 'bad', letter ? letter + ACCENTS[name] : '\\' + name)
     return end
   }
-  if (/^(mathbb|mathbf|mathrm|mathit|mathsf|text|textrm|textit|textbf|mbox|operatorname)$/.test(name)) {
+  if (/^(mathbb|mathbf|mathrm|mathit|mathsf|boldsymbol|bm|text|textrm|textit|textbf|mbox|operatorname)$/.test(name)) {
     let j = end
     if (name === 'operatorname' && src[j] === '*') j++
     const arg = readBraces(src, j)
@@ -701,6 +724,8 @@ class Parser {
     let left = this.unary()
     for (;;) {
       if (this.is('op', '*') || this.is('op', '/')) {
+        // F \cdot dr, F \cdot d\mathbf{S}: il differenziale chiude la funzione da integrare.
+        if (this.integrals > 0 && this.is('op', '*') && this.atDifferential(1)) break
         const sign = this.next()
         const op = sign.v as '*' | '/'
         if (!this.peek()) throw this.error(`Manca qualcosa dopo ${op === '*' ? '·' : '/'}`)
@@ -730,6 +755,8 @@ class Parser {
       case 'fn':
       case 'big':
       case 'int':
+      case 'nabla':
+      case 'partial':
         return !fnArgument
       case 'open':
         if (t.v === '[' && this.reversedInterval) return false
@@ -842,6 +869,8 @@ class Parser {
       case 'fn':
         return this.fnCall()
       case 'frac': {
+        const derivative = this.derivativeFrac()
+        if (derivative) return derivative
         this.next()
         const a = this.latexArg('il numeratore di \\frac')
         const b = this.latexArg('il denominatore di \\frac')
@@ -868,6 +897,10 @@ class Parser {
         return this.bigOperator()
       case 'int':
         return this.integral()
+      case 'nabla':
+        return this.nabla()
+      case 'partial':
+        return this.partialDerivative()
       case 'cases':
         return this.cases()
       case 'matrix':
@@ -1017,13 +1050,14 @@ class Parser {
   }
 
   /** `dx`, `d(x, y)` (anche `\mathrm{d}x`): qui finisce la funzione da integrare. */
-  private atDifferential(): boolean {
-    return this.is('name', 'd') && (this.is('name', undefined, 1) || this.is('open', '(', 1))
+  private atDifferential(o = 0): boolean {
+    return this.is('name', 'd', o) && (this.is('name', undefined, o + 1) || this.is('open', '(', o + 1))
   }
 
   /** `\int_a^b f(x)\,dx`. */
   private integral(): MathNode {
-    if (this.peek()!.v !== 'int') return this.multipleIntegral()
+    const kind = this.peek()!.v
+    if (kind !== 'int' && kind !== 'oint') return this.multipleIntegral()
     const start = this.next()
     let from: MathNode | null = null
     let to: MathNode | null = null
@@ -1036,6 +1070,8 @@ class Parser {
         to = this.supArg(hat)
       }
     }
+    // \int_\gamma f \, ds, \oint_C F \cdot dr: sulla curva.
+    if (kind === 'oint' || (from && !to && from.k === 'name')) return this.lineIntegral(from, kind === 'oint', start)
     if (!from || !to) throw this.error('Si sanno calcolare solo gli integrali con gli estremi, es. \\int_0^1', start.pos)
     this.integrals++
     let body: MathNode
@@ -1054,8 +1090,8 @@ class Parser {
   /** `\iint_D f \, dx \, dy` (anche `dA` o `d(x, y)`) e `\iiint_E f \, dx \, dy \, dz` (anche `dV`). */
   private multipleIntegral(): MathNode {
     const start = this.next()
-    const n = start.v === 'iint' ? 2 : 3
-    const symbol = n === 2 ? '\\iint' : '\\iiint'
+    const n = start.v === 'iiint' ? 3 : 2
+    const symbol = start.v === 'oiint' ? '\\oiint' : n === 2 ? '\\iint' : '\\iiint'
     let domain: MathNode | null = null
     if (this.is('op', '_')) {
       this.next()
@@ -1070,7 +1106,186 @@ class Parser {
     } finally {
       this.integrals--
     }
+    // F \cdot d\mathbf{S}, f \, dS, F \cdot n \, dS: sulla superficie.
+    const dot = this.is('op', '*') && this.atDifferential(1)
+    if (dot) this.next()
+    if (this.atDifferential() && SURFACE.has(this.peek(1)!.v)) {
+      this.i += 2
+      if (domain.k !== 'name') throw this.error(`Sotto ${symbol} va il nome della superficie, es. ${symbol}_S`, start.pos)
+      const normal = dot ? null : withoutNormal(body)
+      return { k: 'sint', surface: domain.name, closed: start.v === 'oiint', dS: !dot && !normal, body: normal ?? body }
+    }
+    if (dot || start.v === 'oiint') throw this.error(`Alla fine di ${symbol} va dS (o F \\cdot d\\mathbf{S})`)
     return { k: 'mint', vars: this.differentials(n), domain, body }
+  }
+
+  /** `\int_\gamma f \, ds`, `\oint_\gamma F \cdot dr`, `\int_\gamma y \, dx - x \, dy`: l'integrale sulla curva. */
+  private lineIntegral(curve: MathNode | null, closed: boolean, start: Tok): MathNode {
+    if (!curve || curve.k !== 'name') throw this.error('Sotto \\oint va la curva, es. \\oint_\\gamma', start.pos)
+    this.integrals++
+    try {
+      // (P \, dx + Q \, dy): la forma tra parentesi.
+      if (this.is('open', '(') && this.formAhead()) {
+        this.next()
+        const body = this.form()
+        this.expect('close', ')', 'la parentesi ) della forma')
+        return { k: 'lint', curve: curve.name, closed, ds: false, body, form: true }
+      }
+      const first = this.atDifferential() ? ONE : this.expr()
+      if (this.is('op', '*') && this.atDifferential(1)) this.next()
+      if (!this.atDifferential()) throw this.error('Manca il differenziale alla fine: ds (per una funzione), dr (per un campo) o dx, dy')
+      this.next()
+      const v = this.next().v
+      if (v === 's') return { k: 'lint', curve: curve.name, closed, ds: true, body: first }
+      if (v === 'r' || v === 'r⃗' || v === 'l' || v === 'ℓ') return { k: 'lint', curve: curve.name, closed, ds: false, body: first }
+      if (v === 'x' || v === 'y' || v === 'z') return { k: 'lint', curve: curve.name, closed, ds: false, body: this.form({ v, coef: first }), form: true }
+      throw this.error(`Alla fine va ds, dr oppure dx, dy, dz (non d${v})`)
+    } finally {
+      this.integrals--
+    }
+  }
+
+  /** Dentro le parentesi dopo \int_\gamma c'è un dx, dy o dz: è una forma differenziale. */
+  private formAhead(): boolean {
+    let depth = 0
+    for (let j = this.i; j < this.toks.length; j++) {
+      const t = this.toks[j]
+      if (t.k === 'open') depth++
+      else if (t.k === 'close' && --depth === 0) return false
+      else if (depth === 1 && t.k === 'name' && t.v === 'd' && /^[xyz]$/.test(this.toks[j + 1]?.v ?? '') && this.toks[j + 1].k === 'name') return true
+    }
+    return false
+  }
+
+  /** P \, dx + Q \, dy (+ R \, dz): il campo (P, Q, R). `first`: il primo pezzo, già letto. */
+  private form(first?: { v: string; coef: MathNode }): MathNode {
+    const parts = new Map<string, MathNode>()
+    const put = (v: string, coef: MathNode) => {
+      if (!/^[xyz]$/.test(v)) throw this.error(`In una forma vanno dx, dy e dz (non d${v})`)
+      const before = parts.get(v)
+      parts.set(v, before ? { k: 'bin', op: '+', a: before, b: coef } : coef)
+    }
+    const piece = (minus: boolean) => {
+      const coef = this.atDifferential() ? ONE : this.term()
+      if (!this.atDifferential()) throw this.error('Manca il differenziale: dx, dy o dz')
+      this.next()
+      put(this.next().v, minus ? { k: 'neg', a: coef } : coef)
+    }
+    if (first) put(first.v, first.coef)
+    else piece(false)
+    while (this.is('op', '+') || this.is('op', '-')) piece(this.next().v === '-')
+    const names = parts.has('z') ? ['x', 'y', 'z'] : ['x', 'y']
+    return { k: 'tuple', items: names.map((n) => parts.get(n) ?? ZERO) }
+  }
+
+  /**
+   * `\frac{d}{dx} x^2`, `\frac{d^2 f}{dx^2}`, `\frac{\partial f}{\partial x}(1, 2)`,
+   * `\frac{\partial^2}{\partial x \partial y} (x^2 y)`: una derivata. Null (senza leggere niente) se la
+   * frazione è un'altra.
+   */
+  private derivativeFrac(): MathNode | null {
+    const start = this.i
+    const fail = () => {
+      this.i = start
+      return null
+    }
+    this.next()
+    if (!this.is('open', '{')) return fail()
+    this.next()
+    const top = this.differentialHead()
+    if (!top) return fail()
+    let fn: string | null = null
+    if (this.is('name')) {
+      fn = this.next().v
+      if (this.is('op', '_')) fn += '_' + this.subscriptText()
+    }
+    if (!this.is('close', '}')) return fail()
+    this.next()
+    if (!this.is('open', '{')) return fail()
+    this.next()
+    const vars: string[] = []
+    while (!this.is('close', '}')) {
+      const head = this.differentialHead(true)
+      if (!head) return fail()
+      for (let k = 0; k < (head.order ?? 1); k++) vars.push(head.v!)
+    }
+    this.next()
+    if (!vars.length || (top.order !== null && top.order !== vars.length)) return fail()
+    let body: MathNode
+    if (fn) {
+      // \frac{\partial f}{\partial x}(1, 2): f nel punto; senza punto, f con le sue variabili.
+      if (this.is('open', '(')) {
+        const group = this.group(true)
+        body = { k: 'apply', name: fn, args: group.k === 'tuple' ? group.items : [group], primes: 0 }
+      } else body = { k: 'name', name: fn }
+    } else {
+      if (!this.peek() || !this.startsArgument()) throw this.error('Manca la funzione da derivare dopo la frazione')
+      body = this.term()
+    }
+    return { k: 'diff', body, vars, partial: top.partial }
+  }
+
+  /** `d`, `\partial`, `d^2`, `\partial^2` (con `variable`: seguito dalla variabile, `dx`, `\partial x^2`). */
+  private differentialHead(variable = false): { partial: boolean; order: number | null; v?: string } | null {
+    let partial: boolean
+    if (this.is('partial')) partial = true
+    else if (this.is('name', 'd')) partial = false
+    else return null
+    this.next()
+    let v: string | undefined
+    if (variable) {
+      if (!this.is('name')) return null
+      v = this.next().v
+    }
+    let order: number | null = null
+    if (this.is('op', '^')) {
+      this.next()
+      const braced = this.is('open', '{')
+      if (braced) this.next()
+      if (!this.is('num')) return null
+      order = Number(this.next().v)
+      if (braced) {
+        if (!this.is('close', '}')) return null
+        this.next()
+      }
+      if (!Number.isInteger(order) || order < 1 || order > 9) return null
+    }
+    return { partial, order, v }
+  }
+
+  /** `\partial_x f`, `\partial_{xy} f`, `\partial_x \partial_y f`. */
+  private partialDerivative(): MathNode {
+    const start = this.next()
+    const vars: string[] = []
+    for (;;) {
+      if (!this.is('op', '_')) throw this.error('Dopo \\partial va la variabile: \\partial_x f', start.pos)
+      this.next()
+      if (this.is('open', '{')) {
+        this.next()
+        while (this.is('name')) vars.push(this.next().v)
+        this.expect('close', '}', 'la graffa } della variabile')
+      } else if (this.is('name')) vars.push(this.next().v)
+      if (!vars.length) throw this.error('Dopo \\partial va la variabile: \\partial_x f', start.pos)
+      if (!this.is('partial')) break
+      this.next()
+    }
+    if (!this.peek() || !this.startsArgument()) throw this.error('Manca la funzione da derivare dopo \\partial', start.pos)
+    return { k: 'diff', body: this.term(), vars, partial: true }
+  }
+
+  /** `\nabla f` (il gradiente), `\nabla \cdot F` (la divergenza), `\nabla \times F` (il rotore), `\nabla^2 f` (il laplaciano). */
+  private nabla(): MathNode {
+    const start = this.next()
+    let name = 'grad'
+    if (this.is('op', '*')) name = this.next().cross ? 'curl' : 'div'
+    else if (this.is('op', '^')) {
+      const hat = this.next()
+      const p = this.supArg(hat)
+      if (!(p.k === 'num' && p.v === 2)) throw this.error('\\nabla^2 f è il laplaciano: dopo \\nabla^ va 2', start.pos)
+      name = 'lap'
+    }
+    if (!this.peek() || !this.startsArgument()) throw this.error('Manca la funzione dopo \\nabla', start.pos)
+    return { k: 'fn', name, args: [this.implicitArgument()], nabla: true }
   }
 
   /** Il dominio sotto \iint: un nome (D) o, tra graffe, un insieme, una condizione o un rettangolo. */
@@ -1277,6 +1492,17 @@ class Parser {
 
 /** La funzione 1 di \int_0^1 dx (e dell'area di un dominio, \iint_D dx \, dy). */
 const ONE: MathNode = { k: 'num', v: 1, text: '1', comma: false }
+const ZERO: MathNode = { k: 'num', v: 0, text: '0', comma: false }
+
+/** I differenziali di superficie: dS, dσ, d\mathbf{S}, d\vec{S}. */
+const SURFACE = new Set(['S', 'σ', 'S⃗', 'Σ'])
+
+/** F \cdot n (o \hat{n}, \mathbf{n}, \vec{n}): il campo F, senza la normale; null se non è scritto così. */
+function withoutNormal(body: MathNode): MathNode | null {
+  if (body.k !== 'bin' || body.op !== '*' || body.implicit || body.cross) return null
+  const n = body.b
+  return n.k === 'name' && /^(n|n̂|n⃗|ν|N)$/.test(n.name) ? body.a : null
+}
 
 function isMinusOne(n: MathNode): boolean {
   return n.k === 'neg' && n.a.k === 'num' && n.a.v === 1
@@ -1332,6 +1558,18 @@ export function namesIn(node: MathNode, out = new Set<string>(), bound: Readonly
       case 'set':
         visit(n.cond, new Set([...b, ...(n.vars ?? [])]))
         return
+      case 'diff':
+        visit(n.body, b)
+        // La derivata dipende dalle sue variabili (non se è in un punto: f(1, 2)).
+        if (n.body.k !== 'apply') for (const v of n.vars) if (!b.has(v)) out.add(v)
+        return
+      case 'lint':
+      case 'sint': {
+        const where = n.k === 'lint' ? n.curve : n.surface
+        if (!b.has(where)) out.add(where)
+        visit(n.body, new Set([...b, 'x', 'y', 'z']))
+        return
+      }
       default:
         for (const child of children(n)) visit(child, b)
     }
@@ -1379,5 +1617,9 @@ export function children(n: MathNode): MathNode[] {
       return n.items
     case 'in':
       return [n.a, n.lo, n.hi]
+    case 'diff':
+    case 'lint':
+    case 'sint':
+      return [n.body]
   }
 }

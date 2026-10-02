@@ -49,7 +49,11 @@ function level(n: MathNode): number {
     case 'big':
     case 'int':
     case 'mint':
+    case 'lint':
+    case 'sint':
       return 1.8
+    case 'diff':
+      return n.body.k === 'name' || n.body.k === 'apply' ? 5 : 1.8
     case 'fn':
       return n.args.length === 1 && isAtom(n.args[0]) ? 3 : 5
     case 'post':
@@ -183,6 +187,18 @@ export function toLatex(node: MathNode): string {
       const symbol = node.vars.length === 2 ? '\\iint' : '\\iiint'
       return `${symbol}_{${domainLatex(node.domain)}} ${wrap(node.body, 1.5)} \\, ${node.vars.map((v) => `d${nameLatex(v)}`).join(' \\, ')}`
     }
+    case 'diff':
+      return diffLatex(node)
+    case 'lint': {
+      const head = `${node.closed ? '\\oint' : '\\int'}_{${nameLatex(node.curve)}}`
+      if (node.ds) return `${head} ${wrap(node.body, 1.5)} \\, ds`
+      if (node.form && node.body.k === 'tuple') return `${head} ${formLatex(node.body.items)}`
+      return `${head} ${wrap(node.body, 2)} \\cdot d\\mathbf{r}`
+    }
+    case 'sint': {
+      const head = `${node.closed ? '\\oiint' : '\\iint'}_{${nameLatex(node.surface)}}`
+      return node.dS ? `${head} ${wrap(node.body, 1.5)} \\, dS` : `${head} ${wrap(node.body, 2)} \\cdot d\\mathbf{S}`
+    }
     case 'set':
       return setLatex(node)
     case 'matrix':
@@ -201,6 +217,38 @@ export function toLatex(node: MathNode): string {
       return node.items.map(toLatex).join('\\ \\text{o}\\ ')
   }
   return ''
+}
+
+/** \frac{\partial^2 f}{\partial x \, \partial y}, \frac{d}{dx} (…), \frac{\partial f}{\partial x}(1, 2). */
+function diffLatex(node: Extract<MathNode, { k: 'diff' }>): string {
+  const d = node.partial ? '\\partial' : 'd'
+  const n = node.vars.length
+  const top = n > 1 ? `${d}^{${n}}` : d
+  const groups: [string, number][] = []
+  for (const v of node.vars) {
+    const last = groups[groups.length - 1]
+    if (last && last[0] === v) last[1]++
+    else groups.push([v, 1])
+  }
+  const bottom = groups.map(([v, k]) => `${d}${node.partial ? ' ' : ''}${nameLatex(v)}${k > 1 ? `^{${k}}` : ''}`).join(' \\, ')
+  const body = node.body
+  if (body.k === 'name') return `\\frac{${top} ${nameLatex(body.name)}}{${bottom}}`
+  if (body.k === 'apply' && !body.primes) return `\\frac{${top} ${nameLatex(body.name)}}{${bottom}}\\left(${body.args.map(toLatex).join(', ')}\\right)`
+  return `\\frac{${top}}{${bottom}} ${wrap(body, 3)}`
+}
+
+/** (P \, dx + Q \, dy): una forma differenziale. */
+function formLatex(items: MathNode[]): string {
+  const parts: string[] = []
+  items.forEach((c, i) => {
+    if (c.k === 'num' && c.v === 0) return
+    const d = `d${'xyz'[i]}`
+    const negative = c.k === 'neg'
+    const value = negative ? c.a : c
+    const coef = value.k === 'num' && value.v === 1 ? d : `${wrap(value, 2)} \\, ${d}`
+    parts.push(parts.length ? `${negative ? '-' : '+'} ${coef}` : `${negative ? '-' : ''}${coef}`)
+  })
+  return paren(parts.join(' ') || '0')
 }
 
 function setLatex(node: Extract<MathNode, { k: 'set' }>): string {
@@ -258,6 +306,21 @@ function fnLatex(node: Extract<MathNode, { k: 'fn' }>, pow?: MathNode): string {
     case 'dot':
       out = `\\langle ${args.map(toLatex).join(', ')} \\rangle`
       break
+    case 'grad':
+    case 'div':
+    case 'curl':
+    case 'lap': {
+      const a = arg ? wrap(arg, 3) : paren(inner)
+      if (node.nabla) out = { grad: '\\nabla', div: '\\nabla \\cdot', curl: '\\nabla \\times', lap: '\\nabla^{2}' }[node.name] + ` ${a}`
+      else out = { grad: '\\operatorname{grad}', div: '\\operatorname{div}', curl: '\\operatorname{rot}', lap: '\\Delta' }[node.name] + ` ${a}`
+      break
+    }
+    case 'hess':
+    case 'jac': {
+      const letter = node.name === 'hess' ? 'H' : 'J'
+      out = arg && arg.k === 'name' ? `${letter}_{${toLatex(arg)}}` : `${letter}_{${arg && arg.k === 'apply' ? nameLatex(arg.name) : ''}}${arg && arg.k === 'apply' ? `(${arg.args.map(toLatex).join(', ')})` : paren(inner)}`
+      break
+    }
     case 'floor':
       out = `\\left\\lfloor ${inner}\\right\\rfloor`
       break

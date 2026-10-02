@@ -1364,6 +1364,23 @@ try {
       triangleNote?.includes('```grafico\n\\triangle ABC\n```'),
     `un triangolo ha l'area, e nel grafico i vertici con il nome (${JSON.stringify({ triangleArea, vertexNames, triangleLegend, note: triangleNote?.slice(-40) })})`,
   )
+  // Le derivate con le lettere (disegnate nell'editor), il gradiente e il lavoro lungo una curva;
+  // nel pannello il campo con le frecce e la curva con il verso.
+  await gp.locator('.notes-head button[aria-label="Nuova nota"]').click()
+  await gp.keyboard.press('Control+a')
+  await gp.keyboard.type("# Campi\n\nSia $f(x) = x^3$: $f'(x) =")
+  await gp.waitForSelector('.cm-calc-result.is-rich .katex', { timeout: 5000 })
+  const derivative = await gp.locator('.cm-calc-result.is-rich').first().getAttribute('aria-label')
+  await gp.keyboard.press('End')
+  await gp.keyboard.type('\n\nIl campo $F(x, y) = (-y, x)$ e la curva $\\gamma(t) = (\\cos t, \\sin t), \\; t \\in [0, 2\\pi]$. Il lavoro: $\\oint_\\gamma F \\cdot dr =')
+  await gp.waitForFunction(() => [...document.querySelectorAll('.cm-calc-result')].some((e) => e.textContent?.includes('6,283185')), null, { timeout: 5000 })
+  await gp.waitForSelector('.formula-graph:not([hidden]) svg path[stroke-width="1.6"]', { timeout: 5000 })
+  const fieldArrows = await gp.locator('.formula-graph svg path[stroke-width="1.6"]').count()
+  const workLegend = await gp.locator('.formula-graph-caption, .formula-graph').first().innerText()
+  check(
+    derivative === '3x²' && fieldArrows > 0,
+    `una derivata ha il risultato con le lettere, e il lavoro lungo una curva il valore e il campo nel pannello (${JSON.stringify({ derivative, fieldArrows, workLegend: workLegend.slice(0, 80) })})`,
+  )
   await gp.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)
