@@ -50,6 +50,8 @@ export class SidePanel {
   /** Il grafico della formula sotto il cursore, se è una funzione (y = …, f(x) = …). */
   private readonly formulaGraph: HTMLElement
   private readonly formulaGraphCanvas: HTMLElement
+  /** Sotto il piano di Gauss: il numero nelle sue forme (1 + i = √2 e^{iπ/4}). */
+  private readonly formulaGraphCaption: HTMLElement
   private lastGraphKey = ''
   private readonly body: HTMLElement
   private query = ''
@@ -93,10 +95,12 @@ export class SidePanel {
     this.formulaMeta = h('span', { class: 'formula-meta' })
     this.formulaError = h('div', { class: 'formula-error', attrs: { role: 'status' } })
     this.formulaGraphCanvas = h('div', { class: 'formula-graph-canvas' })
+    this.formulaGraphCaption = h('div', { class: 'formula-graph-caption', attrs: { hidden: true } })
     this.formulaGraph = h(
       'div',
       { class: 'formula-graph', attrs: { hidden: true } },
       this.formulaGraphCanvas,
+      this.formulaGraphCaption,
       h(
         'button',
         {
@@ -167,6 +171,11 @@ export class SidePanel {
     const surface = getComputedStyle(this.formulaGraph.parentElement ?? this.el).backgroundColor
     // Il disegno è fatto da Glifo: i testi sono già passati da escapeXml.
     this.formulaGraphCanvas.innerHTML = staticGraphSvg(spec, width, height, { ...palette, halo: surface || palette.halo }, { id: 'formula-graph', title: graphTitle(spec) })
+    // Un numero complesso: sotto il disegno le sue forme, algebrica ed esponenziale.
+    const number = spec.gauss ? spec.items.find((i) => i.kind === 'complex' && i.arrows) : undefined
+    const caption = number ? renderTex(number.label) : null
+    this.formulaGraphCaption.innerHTML = caption && !caption.error ? caption.html : ''
+    this.formulaGraphCaption.hidden = !caption || !!caption.error
     this.formulaGraph.hidden = false
   }
 

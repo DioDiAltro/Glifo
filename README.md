@@ -130,6 +130,14 @@ chi sta provando Glifo.*
   funzioni definite (`f'(2)`, `f''(2)`) e funzioni a tratti con `\begin{cases}`. Si scrivono in LaTeX
   ma anche come in una calcolatrice: `sqrt(x)`, `sin(x)`, `2*x`, `pi`; e con i nomi italiani (`\tg`,
   `\arctg`, `\operatorname{sen}`, `settsinh`).
+- **Numeri complessi** con la `i`: `$(1 + 2i)(3 - i) =$` dà 5 + 5i, `$\frac{1}{1 + i} =$` dà ½ − ½i (con
+  le frazioni i conti restano esatti), `$e^{i\pi} =$` dà −1. Modulo `|z|`, argomento `\arg z` (tra −π e
+  π, scritto come multiplo di π quando lo è), parte reale e immaginaria (`\Re z`, `\Im z`, anche
+  `\operatorname{Re}`), coniugato (`\bar{z}`, `\overline{1 + i}`), potenze, esponenziale, logaritmo e
+  funzioni trigonometriche. Una radice da sola dà **tutte le radici** (`$\sqrt[3]{8i} =$` dà le tre
+  radici cubiche); dentro un'espressione vale la principale. Un numero definito (`$z = 1 + 2i$`) e le
+  funzioni (`$f(z) = z^2 + 1$`) si usano dopo; una formula senza valore reale (`\sqrt{-4}`, `\ln(-1)`)
+  ha il suo valore complesso.
 - **Integrali doppi e tripli**, con il dominio sotto: disuguaglianze (`\iint_{x^2 + y^2 \le 1} (x^2 + y^2) \, dA =`,
   `\iiint_{x^2 + y^2 \le 1, 0 \le z \le 2} dV =`), rettangoli (`\iint_{[0, 1] \times [0, 2]} x y \, dx \, dy =`,
   `[0, 1]^3`) o il nome di un insieme scritto prima (`$D = \{(x, y) : 0 \le y \le x \le 1\}$` e poi
@@ -163,6 +171,13 @@ chi sta provando Glifo.*
   integrale doppio con una funzione di x e y diventa il **volume sotto la superficie** (sotto lo zero
   dove la funzione è negativa). Gli spigoli restano netti: ogni condizione disegna la sua faccia.
   Un solido che la scatola taglia (`z \ge 0`) con altre cose nel grafico è velato, per non coprirle.
+- Con i numeri complessi il grafico è il **piano di Gauss** (assi Re e Im, le tacche verticali con la
+  i): un numero è una freccia dall'origine (`1 + 2i`, `w = e^{i\pi/3}`, i numeri della nota come `z_1`),
+  con nella legenda la forma algebrica ed esponenziale (`1 + i = \sqrt{2}\,e^{i\pi/4}`, che si vede
+  anche nel pannello a destra); le radici (`\sqrt[6]{-64}`) e le soluzioni di un'equazione (`z^3 = 8i`)
+  sono punti; un'equazione con i lati reali è una curva (`|z - i| = 2`, `\Re z = 1`,
+  `\arg z = \frac{\pi}{4}`), una disuguaglianza una zona (`|z| \le 2`, `1 < |z - 1| \le 2`), come gli
+  insiemi `\{z \in \mathbb{C} : …\}`; con il parametro t una curva (`2e^{it}`).
 - Con la **z** (o una funzione di x e y, o un punto con tre coordinate) il grafico è in **3D**:
   superfici sopra il piano xy (`z = x^2 + y^2`, `f(x, y) = \sin x \cos y`, o solo `x^2 - y^2`),
   superfici date da un'equazione (`x^2 + y^2 + z^2 = 4`, il cilindro `x^2 + y^2 = 1`) e piani
@@ -200,6 +215,8 @@ chi sta provando Glifo.*
 ![Grafici 3D: la sella tagliata da un piano e una sfera tagliata da un piano](docs/grafici-3d.png)
 
 ![Integrali doppi e tripli: il dominio nel piano, il volume sotto la superficie e un solido in coordinate sferiche](docs/integrali-multipli.png)
+
+![Numeri complessi: i conti nella nota e il piano di Gauss con frecce, radici e zone](docs/numeri-complessi.png)
 
 **Schemi stile draw.io**
 - Il pulsante con i due riquadri nella barra apre un editor a tutto schermo: forme a sinistra
@@ -398,12 +415,14 @@ src/
     parse.ts              legge le espressioni (LaTeX o come in una calcolatrice) in un albero
     evaluate.ts           le calcola: funzioni, somme, integrali, derivate, condizioni
     domain.ts             i domini degli integrali doppi e tripli (margine, condizioni, strati) e come si integrano
+    complex.ts            i numeri complessi: conti (anche esatti), radici, forme a + bi e ρe^{iθ}, equazioni
     exact.ts, format.ts   i conti esatti con le frazioni; i risultati scritti all'italiana
     sheet.ts              il «foglio» della nota: definizioni dall'alto in basso e risultati dopo «=»
     latex.ts              un'espressione riscritta in LaTeX (le legende dei grafici)
   graph/
     spec.ts               le righe di un blocco ```grafico: funzioni, curve, punti, vettori, aree degli integrali, superfici, zone e solidi, la parte da mostrare, gli slider
     regions.ts            le zone e i solidi: disuguaglianze, insiemi, domini degli integrali doppi e tripli, volumi sotto le superfici
+    gauss.ts              il piano di Gauss: numeri complessi, radici, equazioni e zone in z
     plot.ts               dove calcolare le curve (salti, asintoti) e le aree, la finestra, le tacche
     svg.ts                il disegno in SVG, con i colori dei due temi
     space.ts              i conti del 3D: superfici a quadretti e a tetraedri, piani, solidi, curve nello spazio, la scatola da mostrare

@@ -60,7 +60,9 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
 - `src/math/`: le espressioni delle formule (LaTeX o da calcolatrice): `parse.ts` le legge, `evaluate.ts`
   le calcola (`exact.ts` con le frazioni, `format.ts` scrive i risultati all'italiana; `domain.ts` i
   domini degli integrali doppi e tripli `\iint_D`: un «margine» positivo dentro, le condizioni una per
-  una, gli strati quando ogni variabile sta tra due estremi), `sheet.ts` è il
+  una, gli strati quando ogni variabile sta tra due estremi; `complex.ts` i numeri complessi: si usano
+  quando una formula ha la i o non ha un valore reale, con le frazioni esatte `GaussRational`, le radici
+  tutte, le forme a + bi e ρe^{iθ}), `sheet.ts` è il
   «foglio» della nota: le formule dall'alto in basso, `$a = 2$` e `$f(x) = …$` definiscono, una formula
   che finisce con `=` ha il risultato (nell'editor `src/editor/calcResults.ts`, Tab lo scrive;
   nell'anteprima colorato, classe `calc-result`). `\log` è il logaritmo naturale.
@@ -82,7 +84,9 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   doppi) e i solidi (con la z, integrali tripli, volumi sotto le superfici) sono in `regions.ts`; il 3D
   (`space.ts` e `view3d.ts`, tutto in SVG con l'algoritmo del pittore) disegna i solidi condizione per
   condizione (`solidFaces`) o, se il dominio è a strati, faccia per faccia (`layeredFaces`, anche in
-  coordinate cilindriche e sferiche).
+  coordinate cilindriche e sferiche). Con i numeri complessi il grafico è il piano di Gauss (`gauss.ts`,
+  `spec.gauss`): numeri come frecce (`kind: 'complex'`), radici e soluzioni come punti, equazioni e
+  disuguaglianze in z come curve e zone (i lati si calcolano con `compileComplex`).
 - `src/ai/`: assistente AI. `src/host.ts`: funzioni della demo dentro claude.ai.
 - `src/account/`: account e sincronizzazione. `sync.ts` è il motore (manda, scarica, nei
   conflitti tiene tutte e due le versioni), `controller.ts` decide quando sincronizzare,

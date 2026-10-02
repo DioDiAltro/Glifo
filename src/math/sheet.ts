@@ -3,6 +3,20 @@
  * in basso; `$a = 2$` definisce a, `$f(x) = x^2$` definisce f, e una formula che finisce con «=»
  * (`$f(3) + a =$`) ha il suo risultato. I grafici usano le stesse definizioni.
  */
+import {
+  allRoots,
+  compileComplex,
+  evaluateExactComplex,
+  formatComplex,
+  formatGauss,
+  formatList,
+  GaussRational,
+  piMultiple,
+  type Complex,
+  type ComplexFunction,
+  type ComplexScope,
+  type ExactComplexScope,
+} from './complex'
 import { compile, EMPTY_SCOPE, scopeWith, withWorkLimit, type Scope, type UserFunction } from './evaluate'
 import { evaluateExact, type ExactFunction, type ExactScope, type Rational } from './exact'
 import { formatNumber, formatRational, type FormattedResult } from './format'
@@ -140,6 +154,9 @@ function styleOf(node: MathNode): { comma: boolean; decimal: boolean; digits: nu
   return { comma: comma ?? true, decimal: decimal || single, digits }
 }
 
+/** Il valore di una formula: un numero reale (anche esatto, una frazione) o complesso (anche esatto). */
+type Value = { float: number; exact: Rational | null } | { complex: Complex; exactComplex: GaussRational | null }
+
 export class Sheet {
   private consts = new Map<string, number>()
   private exactConsts = new Map<string, Rational | null>()
@@ -147,6 +164,12 @@ export class Sheet {
   private exactFns = new Map<string, ExactFunction | null>()
   /** Gli insiemi definiti ($D = \{(x, y) : x^2 + y^2 \le 1\}$), per gli integrali doppi e tripli. */
   private sets = new Map<string, MathNode>()
+  /** I numeri complessi definiti ($z = 1 + 2i$): quelli con la parte immaginaria (gli altri sono in `consts`). */
+  private complexConsts = new Map<string, Complex>()
+  private exactComplexConsts = new Map<string, GaussRational | null>()
+  /** Le funzioni, per calcolarle anche con i numeri complessi (f(z) = z^2 + i). */
+  private complexFns = new Map<string, ComplexFunction>()
+  private exactComplexFns = new Map<string, { params: string[]; body: MathNode; scope: ExactComplexScope }>()
   readonly definitions: Definition[] = []
 
   /**
@@ -162,6 +185,27 @@ export class Sheet {
 
   private exactScope(): ExactScope {
     return { consts: new Map(this.exactConsts), fns: new Map(this.exactFns) }
+  }
+
+  /** Lo stato di adesso per i conti con i numeri complessi: i numeri reali e quelli complessi. */
+  complexScope(): ComplexScope {
+    const consts = new Map<string, Complex>()
+    for (const [name, value] of this.consts) consts.set(name, { re: value, im: 0 })
+    for (const [name, value] of this.complexConsts) consts.set(name, value)
+    return { vars: EMPTY_SCOPE.vars, consts, fns: new Map(this.complexFns) }
+  }
+
+  private exactComplexScope(): ExactComplexScope {
+    const consts = new Map<string, GaussRational | null>()
+    for (const [name, value] of this.exactConsts) consts.set(name, value && GaussRational.real(value))
+    for (const name of this.consts.keys()) if (!consts.has(name)) consts.set(name, null)
+    for (const [name, value] of this.exactComplexConsts) consts.set(name, value)
+    return { consts, fns: new Map(this.exactComplexFns) }
+  }
+
+  /** I numeri complessi definiti fin qui (per i grafici nel piano di Gauss). */
+  complexValues(): ReadonlyMap<string, Complex> {
+    return new Map(this.complexConsts)
   }
 
   /**
@@ -192,7 +236,7 @@ export class Sheet {
     this.record(target, value, src)
   }
 
-  private record(target: { name: string; params: string[] | null }, value: MathNode, source: string, known?: { float: number; exact: Rational | null }): void {
+  private record(target: { name: string; params: string[] | null }, value: MathNode, source: string, known?: Value): void {
     const { name, params } = target
     const uses = namesIn(value, new Set(), new Set(params ?? []))
     this.definitions.push({ name, params, source: source.trim(), value, uses })
@@ -201,11 +245,17 @@ export class Sheet {
     this.fns.delete(name)
     this.exactFns.delete(name)
     this.sets.delete(name)
+    this.complexConsts.delete(name)
+    this.exactComplexConsts.delete(name)
+    this.complexFns.delete(name)
+    this.exactComplexFns.delete(name)
     if (!params && value.k === 'set') {
       this.sets.set(name, value)
       return
     }
     if (params) {
+      this.complexFns.set(name, { params, body: value, scope: this.complexScope() })
+      this.exactComplexFns.set(name, { params, body: value, scope: this.exactComplexScope() })
       try {
         const body = compile(value, scopeWith(this.scope(), params), { calc: true })
         this.fns.set(name, {
@@ -219,10 +269,20 @@ export class Sheet {
       return
     }
     const forced = this.fixed?.get(name)
-    const result = forced !== undefined ? { float: forced, exact: null } : known ?? this.evaluate(value)
-    if (!result || !Number.isFinite(result.float)) return
-    this.consts.set(name, result.float)
-    this.exactConsts.set(name, result.exact)
+    let result: Value | null = forced !== undefined ? { float: forced, exact: null } : known ?? this.evaluate(value)
+    // Senza un valore reale (z = 1 + 2i): un numero complesso.
+    if (!result || ('float' in result && !Number.isFinite(result.float))) result = this.evaluateComplex(value)
+    if (!result) return
+    if ('float' in result) {
+      this.consts.set(name, result.float)
+      this.exactConsts.set(name, result.exact)
+    } else if (result.complex.im === 0) {
+      this.consts.set(name, result.complex.re)
+      this.exactConsts.set(name, result.exactComplex?.isReal ? result.exactComplex.re : null)
+    } else {
+      this.complexConsts.set(name, result.complex)
+      this.exactComplexConsts.set(name, result.exactComplex)
+    }
   }
 
   private evaluate(node: MathNode): { float: number; exact: Rational | null } | null {
@@ -241,6 +301,47 @@ export class Sheet {
     return { float: exact ? exact.toNumber() : float, exact }
   }
 
+  /** Il valore con i numeri complessi (anche esatto, con le frazioni), o null. */
+  private evaluateComplex(node: MathNode): { complex: Complex; exactComplex: GaussRational | null } | null {
+    let complex: Complex
+    try {
+      complex = withWorkLimit(WORK, () => compileComplex(node, this.complexScope())({}))
+    } catch {
+      return null
+    }
+    if (!Number.isFinite(complex.re) || !Number.isFinite(complex.im)) return null
+    let exact: GaussRational | null = null
+    try {
+      exact = withWorkLimit(WORK, () => evaluateExactComplex(node, this.exactComplexScope()))
+    } catch {
+      // Con e, π, radici…: va bene il risultato con la virgola.
+    }
+    return { complex: exact ? exact.toComplex() : complex, exactComplex: exact }
+  }
+
+  /** Il risultato con i numeri complessi: tutte le radici di una radice da sola, l'argomento come multiplo di π. */
+  private showComplex(item: MathNode, style: ReturnType<typeof styleOf>): { shown: FormattedResult; value: Value | null } | null {
+    const roots = (() => {
+      try {
+        return withWorkLimit(WORK, () => allRoots(item, this.complexScope()))
+      } catch {
+        return null
+      }
+    })()
+    if (roots && roots.length > 1) {
+      const shown = roots.map((r) => formatComplex(r, { ...style, decimal: true }))
+      return shown.every((r) => r) ? { shown: formatList(shown as FormattedResult[]), value: null } : null
+    }
+    const value = this.evaluateComplex(item)
+    if (!value) return null
+    if (item.k === 'fn' && item.name === 'arg' && !item.pow) {
+      const pi = piMultiple(value.complex.re)
+      if (pi) return { shown: pi, value }
+    }
+    const shown = value.exactComplex ? formatGauss(value.exactComplex, style) : formatComplex(value.complex, style)
+    return shown ? { shown, value } : null
+  }
+
   /** Il risultato di «… =»: dell'ultima parte che si sa calcolare (in a = 3 + 4 = anche a diventa 7). */
   private calculate(src: string): FormattedResult | null {
     const node = parseCached(src)
@@ -252,13 +353,14 @@ export class Sheet {
     for (let i = items.length - 1; i >= (target ? 1 : 0); i--) {
       const item = items[i]
       if (!item) continue
-      const result = this.evaluate(item)
-      if (!result) continue
       const style = styleOf(item)
-      const shown = result.exact ? formatRational(result.exact, style) : formatNumber(result.float, { ...style, decimal: true })
-      if (!shown) continue
-      if (target && !target.params) this.record(target, item, `${target.name} = ${src.slice(src.indexOf('=') + 1)}`, result)
-      return shown
+      const result = this.evaluate(item)
+      const real = result && (result.exact ? formatRational(result.exact, style) : formatNumber(result.float, { ...style, decimal: true }))
+      // Senza un valore reale: con i numeri complessi (1 + 2i, \sqrt{-4}, \ln(-1)).
+      const found = real ? { shown: real, value: result } : this.showComplex(item, style)
+      if (!found) continue
+      if (target && !target.params && found.value) this.record(target, item, `${target.name} = ${src.slice(src.indexOf('=') + 1)}`, found.value)
+      return found.shown
     }
     return null
   }

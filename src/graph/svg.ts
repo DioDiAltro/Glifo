@@ -165,7 +165,7 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
   for (const t of ty.major) {
     const y = sy(t.value)
     if (y < 18 || y > H - 8 || (t.value === 0 && (xAxis || yAxis))) continue
-    labels.push(`<text x="${f1(lx)}" y="${f1(y + 4)}" text-anchor="${anchor}">${escapeXml(t.label)}</text>`)
+    labels.push(`<text x="${f1(lx)}" y="${f1(y + 4)}" text-anchor="${anchor}">${escapeXml(spec.gauss ? imaginaryLabel(t.label) : t.label)}</text>`)
     if (yAxis) labels.push(`<path d="M${f1(ax - 3)} ${f1(y)}h6" stroke="${palette.axis}"/>`)
   }
   out.push(`<g font-size="11.5" fill="${palette.text}" ${halo}>${labels.join('')}</g>`)
@@ -201,6 +201,17 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
         heads.push(`<path d="${arrow(ax, ay, bx, by)}" fill="${color}"/>`)
       }
     }
+    else if (item.kind === 'complex' && item.arrows) {
+      // Un numero complesso: la freccia dall'origine.
+      for (const z of item.values) {
+        const [ax, ay, bx, by] = [sx(0), sy(0), sx(z.re), sy(z.im)]
+        const len = Math.hypot(bx - ax, by - ay)
+        if (len <= 0.5) continue
+        const k = len > 14 ? (len - 10) / len : 1
+        lines.push([ax, ay, ax + (bx - ax) * k, ay + (by - ay) * k])
+        heads.push(`<path d="${arrow(ax, ay, bx, by)}" fill="${color}"/>`)
+      }
+    }
     if (lines.length) curves.push(`<path d="${lines.map(path).join('')}" stroke="${color}" data-item="${i}"/>`)
   })
   out.push(`<g clip-path="url(#${clip})" fill="none" stroke-linecap="round" stroke-linejoin="round">`)
@@ -209,6 +220,24 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
 
   // Punti, con il nome
   const points: string[] = []
+  // I numeri complessi senza freccia (le radici, le soluzioni): pallini del colore della riga.
+  spec.items.forEach((item, i) => {
+    if (item.kind !== 'complex') return
+    for (const z of item.arrows ? [] : item.values) {
+      const x = sx(z.re)
+      const y = sy(z.im)
+      if (x < -5 || x > W + 5 || y < -5 || y > H + 5) continue
+      points.push(`<circle cx="${f1(x)}" cy="${f1(y)}" r="4.5" fill="${colors[i]}" stroke="${palette.halo}" stroke-width="2" paint-order="stroke" data-item="${i}"/>`)
+    }
+    const tip = item.values[0]
+    if (item.name && tip) {
+      const x = sx(tip.re)
+      const y = sy(tip.im)
+      if (x < -5 || x > W + 5 || y < -5 || y > H + 5) return
+      const right = x < W - 40
+      points.push(`<text x="${f1(right ? x + 8 : x - 8)}" y="${f1(y < 22 ? y + 18 : y - 8)}" text-anchor="${right ? 'start' : 'end'}" font-style="italic" font-family="'KaTeX_Math', 'Times New Roman', serif" font-size="16" fill="${palette.text}" ${halo}>${escapeXml(pointName(item.name))}</text>`)
+    }
+  })
   spec.items.forEach((item, i) => {
     if (item.kind !== 'point') return
     const x = sx(item.x)
@@ -234,12 +263,22 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
   // I nomi degli assi e l'origine O
   const names: string[] = []
   const math = `font-style="italic" font-family="'KaTeX_Math', 'Times New Roman', serif" font-size="16" fill="${palette.axis}" ${halo}`
-  if (xAxis) names.push(`<text x="${W - 6}" y="${f1(ay > 24 ? ay - 9 : ay + 20)}" text-anchor="end" ${math}>x</text>`)
-  if (yAxis) names.push(`<text x="${f1(ax + 9)}" y="14" ${math}>y</text>`)
+  // Nel piano di Gauss gli assi sono la parte reale e quella immaginaria.
+  const [xName, yName] = spec.gauss ? ['Re', 'Im'] : ['x', 'y']
+  const axisFont = spec.gauss ? math.replace('font-style="italic" ', '').replace("'KaTeX_Math'", "'KaTeX_Main'") : math
+  if (xAxis) names.push(`<text x="${W - 6}" y="${f1(ay > 24 ? ay - 9 : ay + 20)}" text-anchor="end" ${axisFont}>${xName}</text>`)
+  if (yAxis) names.push(`<text x="${f1(ax + 9)}" y="14" ${axisFont}>${yName}</text>`)
   if (xAxis && yAxis) names.push(`<text x="${f1(ax - 6)}" y="${f1(ay + 16 > H - 2 ? ay - 6 : ay + 16)}" text-anchor="end" ${math.replace('font-style="italic" ', '')}>O</text>`)
   out.push(names.join(''))
   out.push('</svg>')
   return out.join('')
+}
+
+/** Il numero di una tacca dell'asse immaginario: 2 → 2i, 1 → i, −1 → −i. */
+export function imaginaryLabel(label: string): string {
+  if (label === '1') return 'i'
+  if (label === '−1' || label === '-1') return '−i'
+  return `${label}i`
 }
 
 /** La descrizione per chi non vede il disegno: «Grafico di y = x^2 e y = 2x». */

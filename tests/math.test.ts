@@ -278,7 +278,8 @@ describe('il foglio: definizioni e risultati dopo «=»', () => {
 
   it('senza un risultato sicuro non mostra niente', () => {
     expect(result('x + 1 =')).toBeNull()
-    expect(result('\\sqrt{-1} =')).toBeNull()
+    // Nei reali √−1 non c'è: il risultato sono le due radici complesse.
+    expect(result('\\sqrt{-1} =')).toBe('i;\\ -i')
     expect(result('\\frac{1}{0} =')).toBeNull()
     expect(result('\\lim_{x \\to 0} \\frac{\\sin x}{x} =')).toBeNull()
     expect(result('3 + 4 = 7')).toBeNull()

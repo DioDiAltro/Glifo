@@ -1417,6 +1417,16 @@ kbd {
   border-radius: 8px;
 }
 
+.formula-graph-caption {
+  margin-top: 6px;
+  overflow-x: auto;
+  font-size: 13px;
+}
+
+.formula-graph-caption[hidden] {
+  display: none;
+}
+
 .formula-graph-insert {
   margin-top: 6px;
 }

@@ -30,8 +30,13 @@ pubblicata appena è pronta e qui si segna come fatta.
    tengono una variabile da sola tra due estremi (come `0 \le \rho \le 2\cos\varphi`) si disegna a
    gradini; il volume sotto una superficie data in r e θ non si disegna (dentro la funzione c'è lo
    jacobiano r).
-3. **Numeri complessi**: `i`, coniugato, modulo, argomento, forma esponenziale, potenze e radici.
-   Nel grafico il piano di Gauss, con punti, circonferenze (`|z - i| = 2`) e zone.
+3. Fatto (2 ottobre 2026): **numeri complessi** nella nota (`i`, coniugato, modulo, argomento come
+   multiplo di π, parte reale e immaginaria, esponenziale e logaritmo, potenze, tutte le radici di
+   `\sqrt[n]{w}`; conti esatti con le frazioni) e nel grafico il **piano di Gauss**: numeri come
+   frecce con la forma esponenziale nella legenda e nel pannello, radici e soluzioni delle equazioni
+   (`z^3 = 8i`) come punti, curve (`|z - i| = 2`, `\arg z = \frac{\pi}{4}`), zone (`|z| \le 2`) e
+   curve con il parametro (`2e^{it}`). Da migliorare se serve: le soluzioni si cercano con parte
+   reale e immaginaria tra −32 e 32.
 4. **Vettori e matrici**: matrici scritte con `pmatrix`, determinante, inversa, trasposta, rango,
    traccia, riduzione a scala, nucleo e immagine, autovalori e autovettori, prodotto scalare e
    vettoriale, norma. Nei grafici le frecce dei vettori.

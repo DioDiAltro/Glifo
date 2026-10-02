@@ -1306,6 +1306,29 @@ try {
       dashed === 1,
     `un integrale doppio ha il valore e il volume, nel pannello e nella nota; y > x^2 è una zona tratteggiata (${JSON.stringify({ volumeResult, volumeLegend, dashed, note: volumeNote?.slice(-70) })})`,
   )
+  // I numeri complessi: il risultato dopo «=», il numero nel piano di Gauss nel pannello (con le sue
+  // forme sotto) e, con «Inserisci il grafico», nella nota.
+  await gp.locator('.notes-head button[aria-label="Nuova nota"]').click()
+  await gp.keyboard.press('Control+a')
+  await gp.keyboard.type('# Complessi\n\nVale $(1 + 2i)(3 - i) =')
+  await gp.waitForSelector('.cm-calc-result')
+  const complexResult = await gp.locator('.cm-calc-result').first().innerText()
+  await gp.keyboard.press('End')
+  await gp.keyboard.type('\n\nIl numero $1 + i$')
+  await gp.keyboard.press('ArrowLeft')
+  await gp.waitForSelector('.formula-graph:not([hidden]) .formula-graph-caption:not([hidden])', { timeout: 5000 })
+  const gaussAxes = await gp.locator('.formula-graph svg text').evaluateAll((els) => els.map((e) => e.textContent))
+  const caption = await gp.locator('.formula-graph-caption').innerText()
+  await gp.locator('.formula-graph-insert').click()
+  await gp.waitForSelector('.preview-pane .graph-block .graph-legend', { timeout: 5000 })
+  await gp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  const complexNote = await gp.evaluate(() =>
+    [...Array(localStorage.length).keys()].map((i) => localStorage.getItem(localStorage.key(i)) ?? '').find((v) => v.startsWith('# Complessi')),
+  )
+  check(
+    complexResult.includes('5 + 5i') && gaussAxes.includes('Re') && gaussAxes.includes('Im') && caption.includes('π') && complexNote?.includes('```grafico\n1 + i\n```'),
+    `un numero complesso ha il risultato, il piano di Gauss nel pannello con le sue forme e nella nota (${JSON.stringify({ complexResult, caption, note: complexNote?.slice(-40) })})`,
+  )
   await gp.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)

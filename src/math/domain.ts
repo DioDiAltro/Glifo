@@ -78,12 +78,19 @@ function combine(parts: Margin[], pick: 'min' | 'max'): Margin {
   }
 }
 
+/**
+ * Come si calcolano i due lati di una disuguaglianza: di solito con i numeri reali; nel piano di
+ * Gauss con i numeri complessi (|z - 1| \le 2), vedi src/graph/gauss.ts.
+ */
+export type SideCompiler = (node: MathNode) => Compiled
+
 /** Il margine di una condizione: per a ≤ b è b − a, per una catena a < b < c il più piccolo dei due. */
-function marginOf(node: MathNode, scope: Scope, options: CompileOptions): Margin {
+function marginOf(node: MathNode, scope: Scope, options: CompileOptions, side?: SideCompiler): Margin {
+  const sideOf = (n: MathNode, s: Scope) => (side ? side(n) : bound(n, s, options))
   switch (node.k) {
     case 'rel': {
       if (node.ops.some((op) => op === '=' || op === '≈')) throw new MathError('Con «=» il dominio è una curva, senza area: usa ≤ o ≥')
-      const items = node.items.map((n) => bound(n, scope, options))
+      const items = node.items.map((n) => sideOf(n, scope))
       const parts: Margin[] = node.ops.map((op, i) => {
         const a = items[i]
         const b = items[i + 1]
@@ -96,28 +103,28 @@ function marginOf(node: MathNode, scope: Scope, options: CompileOptions): Margin
       return combine(parts, 'min')
     }
     case 'in': {
-      const a = compile(node.a, scope, options)
-      const lo = bound(node.lo, scope, options)
-      const hi = bound(node.hi, scope, options)
+      const a = side ? side(node.a) : compile(node.a, scope, options)
+      const lo = sideOf(node.lo, scope)
+      const hi = sideOf(node.hi, scope)
       const above: Compiled = (v) => a(v) - lo(v)
       const below: Compiled = (v) => hi(v) - a(v)
       return { strict: node.loOpen && node.hiOpen, margin: (v) => Math.min(above(v), below(v)), parts: [above, below], strictParts: [node.loOpen, node.hiOpen] }
     }
     case 'and':
       return combine(
-        node.items.map((n) => marginOf(n, scope, options)),
+        node.items.map((n) => marginOf(n, scope, options, side)),
         'min',
       )
     case 'or':
       return combine(
-        node.items.map((n) => marginOf(n, scope, options)),
+        node.items.map((n) => marginOf(n, scope, options, side)),
         'max',
       )
     case 'set':
-      return marginOf(node.cond, node.vars ? scopeWith(scope, node.vars) : scope, options)
+      return marginOf(node.cond, node.vars ? scopeWith(scope, node.vars) : scope, options, side)
     case 'name': {
       const set = scope.sets?.get(node.name)
-      if (set) return marginOf(set, scope, options)
+      if (set) return marginOf(set, scope, options, side)
       break
     }
   }
@@ -246,10 +253,16 @@ function axesIn(node: MathNode, scope: Scope): string[] {
 
 /**
  * Il dominio scritto in `node`. `vars`: le variabili che l'integrale dice (dx dy, dV), che valgono
- * se l'insieme non dice le sue; se neanche quelle, x, y (e z se c'è).
+ * se l'insieme non dice le sue; se neanche quelle, x, y (e z se c'è). `side`: come calcolare i lati
+ * delle disuguaglianze, se non con i numeri reali (allora le variabili sono `vars`).
  */
-export function compileDomain(node: MathNode, scope: Scope, vars: string[] | null, options: CompileOptions = {}): Domain {
+export function compileDomain(node: MathNode, scope: Scope, vars: string[] | null, options: CompileOptions = {}, side?: SideCompiler): Domain {
   const target = resolve(node, scope)
+  if (side) {
+    const names = vars ?? ['x', 'y']
+    const { margin, strict, parts, strictParts } = marginOf(target, scope, options, side)
+    return { vars: names, margin, box: null, strict, parts, strictParts, layers: null }
+  }
   const rectangle = rectangleOf(target, scope)
   if (rectangle) {
     const names = vars ?? ['x', 'y', 'z'].slice(0, rectangle.length)

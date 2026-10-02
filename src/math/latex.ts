@@ -78,9 +78,12 @@ function numberLatex(n: Extract<MathNode, { k: 'num' }>): string {
   return n.comma ? n.text.replace('.', '{,}') : n.text
 }
 
+/** Come si scrivono le funzioni dei numeri complessi. */
+const COMPLEX_FUNCTIONS: Record<string, string> = { re: '\\operatorname{Re}', im: '\\operatorname{Im}', arg: '\\arg' }
+
 function fnName(name: string): string {
   if (KATEX_FUNCTIONS.has(name)) return `\\${name}`
-  return `\\operatorname{${name}}`
+  return COMPLEX_FUNCTIONS[name] ?? `\\operatorname{${name}}`
 }
 
 /** Il primo carattere che si vedrebbe: per decidere se tra due fattori serve il puntino. */
@@ -202,6 +205,9 @@ function fnLatex(node: Extract<MathNode, { k: 'fn' }>, pow?: MathNode): string {
       break
     case 'abs':
       out = `\\left|${inner}\\right|`
+      break
+    case 'conj':
+      out = `\\overline{${inner}}`
       break
     case 'floor':
       out = `\\left\\lfloor ${inner}\\right\\rfloor`

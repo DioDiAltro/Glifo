@@ -2,6 +2,7 @@ import { syntaxTree } from '@codemirror/language'
 import { EditorSelection } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
 import { formulaGraph, formulaGraphLine, graphBlockText, graphNames } from '../graph/spec'
+import { calculationRequest } from '../math/sheet'
 import { sheetBefore } from './calcResults'
 import { mathRegionAt } from './mathContext'
 
@@ -14,9 +15,15 @@ export function formulaAtCursor(view: EditorView): { tex: string; defs: string[]
   const head = state.selection.main.head
   const region = mathRegionAt(state, head)
   if (!region || !region.closed || head < region.contentFrom || head > region.contentTo) return null
+  const sheet = sheetBefore(state, region.from)
   const tex = formulaGraphLine(region.tex)
-  const defs = sheetBefore(state, region.from).definitionsFor(graphNames(tex))
-  return formulaGraph(tex, defs) ? { tex, defs, to: region.to } : null
+  const defs = sheet.definitionsFor(graphNames(tex))
+  if (formulaGraph(tex, defs)) return { tex, defs, to: region.to }
+  // Un conto con i numeri complessi (1 + i =, \sqrt[3]{8i} =): il numero prima dell'uguale.
+  const request = calculationRequest(tex)?.trim()
+  if (!request) return null
+  const requestDefs = sheet.definitionsFor(graphNames(request))
+  return formulaGraph(request, requestDefs) ? { tex: request, defs: requestDefs, to: region.to } : null
 }
 
 /**

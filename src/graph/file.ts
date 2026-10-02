@@ -60,7 +60,7 @@ export function graphImage(source: string, defs: readonly string[] = []): string
     div.innerHTML = rows
       .map(({ item, color }) => {
         const swatch =
-          item.kind === 'point' || item.kind === 'point3'
+          item.kind === 'point' || item.kind === 'point3' || (item.kind === 'complex' && !item.arrows)
             ? `<span style="width:9px;height:9px;border-radius:50%;background:${color}"></span>`
             : item.kind === 'area'
               ? `<span style="width:18px;height:12px;box-sizing:border-box;border-top:3px solid ${color};border-radius:2px 2px 0 0;background:${areaColor(color, palette)}"></span>`

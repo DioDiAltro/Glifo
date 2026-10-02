@@ -31,6 +31,7 @@
  * slider sotto il grafico: `parseGraph` con `values` rifà il grafico con quei valori al posto di
  * quelli scritti, senza cambiare la nota.
  */
+import { compileComplex, type Complex, type ComplexFunction, type ComplexScope } from '../math/complex'
 import { compile, compileCondition, EMPTY_SCOPE, errorMessage, MathError, scopeWith, UndefinedName, withWorkLimit, type Compiled, type Scope, type UserFunction } from '../math/evaluate'
 import { formatNumber } from '../math/format'
 import { nameLatex, toLatex } from '../math/latex'
@@ -53,6 +54,7 @@ import {
   type Multiple,
   type PlanePart,
 } from './regions'
+import { gaussItem, isComplexLine, onlyComplex } from './gauss'
 
 export type Range = [number, number]
 
@@ -124,6 +126,11 @@ export type GraphItem =
       layers: LayeredSolid | null
     })
   /**
+   * Numeri complessi nel piano di Gauss (1 + 2i, w = e^{i\pi/3}, le radici di \sqrt[3]{8i}, le
+   * soluzioni di z^3 = 8i): `arrows` le frecce dall'origine (per un numero solo), se no i punti.
+   */
+  | (ItemBase & { kind: 'complex'; values: Complex[]; name: string | null; arrows: boolean })
+  /**
    * L'area tra la curva y = f(x) e l'asse x, da `from` a `to` (\int_0^2 x^2 \, dx); `value` è
    * l'integrale (NaN se non converge). `curve`: disegna anche la curva, se nessun'altra riga la
    * disegna (se no l'area prende il colore di quella riga).
@@ -165,6 +172,8 @@ export interface GraphSpec {
   /** Ci sono seni e coseni: sull'asse x le tacche con π. */
   trig: boolean
   sliders: GraphSlider[]
+  /** Il piano di Gauss (numeri complessi): sugli assi Re e Im, e le tacche dell'asse verticale con la i. */
+  gauss?: boolean
 }
 
 const TRIG_FUNCTIONS = new Set(['sin', 'cos', 'tan', 'cot', 'sec', 'csc'])
@@ -555,6 +564,14 @@ function curveKeys(main: MathNode, scope: Scope): string[] {
   return expression && dependsOn(main, 'x') ? shapeKeys(main, 'x') : []
 }
 
+/** I numeri complessi e le funzioni da calcolare con loro, definiti nella nota e nel blocco. */
+interface ComplexDefinitions {
+  consts: Map<string, Complex>
+  fns: Map<string, ComplexFunction>
+  /** Lo stato di adesso, con i numeri reali (vedi readGraph). */
+  scope(): ComplexScope
+}
+
 function define(
   def: Definition,
   cond: MathNode | null,
@@ -563,7 +580,10 @@ function define(
   fns: Map<string, UserFunction>,
   sets: Map<string, MathNode>,
   values?: ReadonlyMap<string, number>,
+  complexes?: ComplexDefinitions,
 ): void {
+  complexes?.consts.delete(def.name)
+  complexes?.fns.delete(def.name)
   if (!def.params && def.value.k === 'set') {
     if (cond) throw new MathError('Le condizioni vanno dentro l\'insieme')
     consts.delete(def.name)
@@ -573,12 +593,27 @@ function define(
   }
   if (!def.params) {
     if (cond) throw new MathError('Un numero non ha condizioni')
-    const value = values?.get(def.name) ?? compile(def.value, scope, { calc: true })({})
-    if (!Number.isFinite(value)) throw new MathError(`${def.name} non è un numero`)
+    let value: number
+    try {
+      value = values?.get(def.name) ?? compile(def.value, scope, { calc: true })({})
+      if (!Number.isFinite(value)) throw new MathError(`${def.name} non è un numero`)
+    } catch (err) {
+      // Un numero complesso (w = 1 + i): per il piano di Gauss.
+      const z = complexes ? complexValue(def.value, complexes.scope()) : null
+      if (!z) throw err
+      fns.delete(def.name)
+      if (z.im === 0) consts.set(def.name, z.re)
+      else {
+        consts.delete(def.name)
+        complexes!.consts.set(def.name, z)
+      }
+      return
+    }
     fns.delete(def.name)
     consts.set(def.name, value)
     return
   }
+  if (complexes) complexes.fns.set(def.name, { params: def.params, body: def.value, scope: complexes.scope() })
   const params = def.params
   const inner = scopeWith(scope, params)
   const body = restrict(compile(def.value, inner), cond, inner)
@@ -587,6 +622,16 @@ function define(
     params,
     call: params.length === 1 ? (args) => body({ [params[0]]: args[0] }) : (args) => body(Object.fromEntries(params.map((p, i) => [p, args[i]]))),
   })
+}
+
+/** Il valore con i numeri complessi, o null se non c'è. */
+function complexValue(node: MathNode, scope: ComplexScope): Complex | null {
+  try {
+    const z = compileComplex(node, scope)({})
+    return Number.isFinite(z.re) && Number.isFinite(z.im) ? z : null
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -642,10 +687,15 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   // z = 3 che nessun'altra riga usa: è il piano, non un numero (x^2 + y^2 = 1 e z = 0,5).
   const zPlane = (l: Line) =>
     zFree && l.main.k === 'rel' && l.main.items[0].k === 'name' && l.main.items[0].name === 'z' && !lines.some((o) => o !== l && dependsOn(o.main, 'z'))
-  let space = lines.some((l) => isSpaceLine(l.main, zFree) || zPlane(l) || (l.main.k === 'name' && xyParams(noteFns.get(l.main.name)?.params)))
+  // Con i numeri complessi (la i, \Re z, |z - 1| = 2) è il piano di Gauss: la z è un numero complesso.
+  const noteComplex = sheet.complexScope()
+  const realNames = new Set(sheet.scope().consts.keys())
+  const realValue = (n: MathNode) => compile(n, sheet.scope(), { calc: true })({})
+  const gauss = lines.some((l) => isComplexLine(l.main, noteComplex, realNames) || onlyComplex(l.main, realValue, noteComplex))
+  let space = !gauss && lines.some((l) => isSpaceLine(l.main, zFree) || zPlane(l) || (l.main.k === 'name' && xyParams(noteFns.get(l.main.name)?.params)))
   // Un integrale doppio con solo numeri e insiemi attorno: si vede il volume sotto la superficie,
   // nello spazio (se la funzione è 1, cioè l'area del dominio, il dominio nel piano).
-  if (!space) {
+  if (!space && !gauss) {
     const neutral = (l: Line) => {
       const def = definitionOf(l.main)
       return !!multipleOf(l.main) || (!!def && !def.params) || !!rangeLine(l.main) || l.main.k === 'set'
@@ -658,12 +708,23 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
     space = lines.length > 0 && lines.every(neutral) && lines.some(volume)
   }
   spec.dim = space ? 3 : 2
+  if (gauss) spec.gauss = true
 
   // Prima le definizioni (a = 2, f(x) = …), in qualsiasi ordine: ognuna appena ha quello che le serve.
   const consts = new Map(sheet.scope().consts)
   const fns = new Map(sheet.scope().fns)
   const sets = new Map(sheet.scope().sets)
   const scope = (): Scope => ({ vars: new Set(), consts, fns, sets })
+  const complexes: ComplexDefinitions = {
+    consts: new Map(sheet.complexValues()),
+    fns: new Map(noteComplex.fns),
+    scope: () => {
+      const all = new Map<string, Complex>()
+      for (const [name, value] of consts) all.set(name, { re: value, im: 0 })
+      for (const [name, value] of complexes.consts) all.set(name, value)
+      return { vars: new Set(), consts: all, fns: new Map(complexes.fns) }
+    },
+  }
   const pending = new Map<Line, Definition>()
   const drawn: Line[] = []
   for (const l of lines) {
@@ -680,7 +741,7 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
       const uses = namesIn(def.value, new Set(), new Set(def.params ?? []))
       if ([...pending.values()].some((other) => other.name !== def.name && uses.has(other.name))) continue
       try {
-        define(def, l.cond, scope(), consts, fns, sets, values)
+        define(def, l.cond, scope(), consts, fns, sets, values, gauss ? complexes : undefined)
       } catch {
         // Riprova dopo le altre: forse usa qualcosa definito più sotto.
         continue
@@ -689,7 +750,9 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
       progress = true
       // Le funzioni di una variabile si disegnano (nello spazio quelle di x e y), le aree e i volumi
       // con un nome (A = \int_0^2 x^2 \, dx) e gli insiemi (D = \{…\}).
-      if ((space ? xyParams(def.params) : def.params?.length === 1) || areaOf(l.main) || multipleOf(l.main) || def.value.k === 'set') drawn.push(l)
+      // Nel piano di Gauss anche i numeri complessi definiti (w = 1 + i), come frecce.
+      const complexNumber = gauss && !def.params && complexes.consts.has(def.name)
+      if ((space ? xyParams(def.params) : def.params?.length === 1) || areaOf(l.main) || multipleOf(l.main) || def.value.k === 'set' || complexNumber) drawn.push(l)
     }
   }
   // Quelle rimaste: o sbagliate, o in un giro (f usa g che usa f).
@@ -708,7 +771,7 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   }
   for (const [l, def] of pending) {
     try {
-      define(def, l.cond, scope(), consts, fns, sets, values)
+      define(def, l.cond, scope(), consts, fns, sets, values, gauss ? complexes : undefined)
     } catch (err) {
       failLine(l, reaches(def.name, def.name, new Set()) ? new MathError(`${def.name} usa sé stessa (anche attraverso un'altra definizione)`) : err)
     }
@@ -758,7 +821,9 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
     }
     const own = !under.has(l.line)
     try {
-      const item = space ? spaceItemFor(l, scope(), slot) : itemFor(l, scope(), slot, own)
+      const complexLine =
+        gauss && (isComplexLine(l.main, complexes.scope(), new Set(consts.keys())) || onlyComplex(l.main, (n) => compile(n, scope(), { calc: true })({}), complexes.scope()))
+      const item = space ? spaceItemFor(l, scope(), slot) : complexLine ? gaussItem(l, complexes.scope(), sets, slot) : itemFor(l, scope(), slot, own)
       if (item.kind !== 'point' && item.kind !== 'point3' && own) slots.set(l.line, slot++)
       spec.items.push(item)
     } catch (err) {
@@ -877,7 +942,7 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   // I nomi che mancano: la riga da aggiungere al blocco per averli, con uno slider (k = 1, o
   // l'inizio dell'intervallo scritto, se 1 è fuori).
   for (const { error, line } of undefinedIn) {
-    const missing = missingNumbers(line, scope(), space).filter((name) => !defined.has(name))
+    const missing = missingNumbers(line, scope(), space).filter((name) => !defined.has(name) && !(gauss && (name === 'i' || name === 'z')))
     if (!missing.length || missing.length > 6 || hasWord(line.text)) continue
     error.add = missing.map((name) => {
       const r = sliderRanges.get(name)
@@ -1337,7 +1402,11 @@ export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSp
   const all = namesIn(main)
   const axes = ['x', 'y', 'z'].filter((a) => all.has(a)).length
   const zone = inequalities(main) && axes >= 2
-  if (!areaOf(main) && !multipleOf(main) && !setOf(main) && !zone) {
+  // Un numero complesso, un'equazione o una zona nel piano di Gauss.
+  const sheet = new Sheet()
+  for (const d of defs) sheet.define(d)
+  const complex = isComplexLine(main, sheet.complexScope(), new Set(sheet.scope().consts.keys()))
+  if (!areaOf(main) && !multipleOf(main) && !setOf(main) && !zone && !complex) {
     if (main.k !== 'rel' || main.ops.length !== 1 || main.ops[0] !== '=') return null
     const [lhs, rhs] = main.items
     const plottable =

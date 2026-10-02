@@ -244,7 +244,8 @@ export function sampleImplicit(F: (x: number, y: number) => number, vp: Viewport
     const x = gx(i0) + (gx(i1) - gx(i0)) * t
     const y = gy(j0) + (gy(j1) - gy(j0)) * t
     const m = F(x, y)
-    if (!finite(m) || Math.abs(m) > Math.max(Math.abs(a), Math.abs(b))) return -1
+    // Dove F salta (\arg z sul semiasse negativo, 1/x) il punto trovato non è vicino allo zero: lì la curva non c'è.
+    if (!finite(m) || Math.abs(m) > 0.5 * Math.max(Math.abs(a), Math.abs(b))) return -1
     points.set(id, [sx(x), sy(y)])
     return id
   }
@@ -516,13 +517,17 @@ function findWindow(spec: GraphSpec, width: number, height: number): Viewport {
       }
     } else if (item.kind === 'implicit') {
       const search: Viewport = { x0: -12, x1: 12, y0: -12, y1: 12, width: 240, height: 240 }
+      const points: [number, number][] = []
       for (const line of sampleImplicit(item.F, search, 2)) {
-        for (let k = 0; k < line.length; k += 2) {
-          xs.push(search.x0 + (line[k] / 240) * 24)
-          ys.push(search.y1 - (line[k + 1] / 240) * 24)
-        }
+        for (let k = 0; k < line.length; k += 2) points.push([search.x0 + (line[k] / 240) * 24, search.y1 - (line[k + 1] / 240) * 24])
       }
+      nearOrigin(points, xs, ys)
     } else if (item.kind === 'region') regionExtent(item.M, xs, ys)
+    else if (item.kind === 'complex') {
+      // I numeri complessi, con l'origine (da dove partono le frecce).
+      xs.push(0, ...item.values.map((z) => z.re))
+      ys.push(0, ...item.values.map((z) => z.im))
+    }
   }
 
   // x: dove succede qualcosa (con l'origine), con un po' di margine. Con un integrale (non da −∞
@@ -546,7 +551,9 @@ function findWindow(spec: GraphSpec, width: number, height: number): Viewport {
       let lo = Math.min(...all)
       let hi = Math.max(...all)
       // Solo zone (con punti e curve come x^2 + y^2 = 1): la finestra si stringe attorno a loro.
-      const zones = items.some((i) => i.kind === 'region') && items.every((i) => i.kind === 'region' || i.kind === 'implicit' || i.kind === 'point')
+      const zones =
+        (items.some((i) => i.kind === 'region') || !!spec.gauss) &&
+        items.every((i) => i.kind === 'region' || i.kind === 'implicit' || i.kind === 'point' || i.kind === 'complex' || i.kind === 'parametric')
       const pad = Math.max((hi - lo) * 0.2, zones ? 0.5 : 1)
       const least = zones ? 2 : 6
       lo -= pad
@@ -575,8 +582,9 @@ function findWindow(spec: GraphSpec, width: number, height: number): Viewport {
     y = chooseY(values, square, poles)
   }
 
-  // Le curve (circonferenze, ellissi…) con le stesse unità sui due assi, se no si deformano.
-  if (curves.length && !functions.length && !spec.x && !spec.y) [x, y] = sameUnits(x, ys.length ? [Math.min(...ys), Math.max(...ys)] : y, width, height)
+  // Le curve (circonferenze, ellissi…) con le stesse unità sui due assi, se no si deformano; nel
+  // piano di Gauss sempre (gli angoli dei numeri complessi si vedono giusti).
+  if ((curves.length || spec.gauss) && !functions.length && !spec.x && !spec.y) [x, y] = sameUnits(x, ys.length ? [Math.min(...ys), Math.max(...ys)] : y, width, height)
   return { x0: x[0], x1: x[1], y0: y[0], y1: y[1], width, height }
 }
 
@@ -621,9 +629,20 @@ function regionExtent(M: (x: number, y: number) => number, xs: number[], ys: num
   for (const line of sampleImplicit(M, search, 2)) {
     for (let k = 0; k < line.length; k += 2) points.push([search.x0 + (line[k] / 240) * 2 * R, search.y1 - (line[k + 1] / 240) * 2 * R])
   }
+  nearOrigin(points, xs, ys, true)
+}
+
+/**
+ * I punti di una curva che si cerca tra −12 e 12. Se arriva al bordo della ricerca (una retta, una
+ * parabola: non finisce) contano solo quelli vicino all'origine, fin dove arriva il punto più
+ * vicino e un po' più in là (almeno fino a 3); se no (una circonferenza) tutti. `open`: la curva è
+ * il bordo di una zona che non finisce.
+ */
+function nearOrigin(points: [number, number][], xs: number[], ys: number[], open = false): void {
   if (!points.length) return
+  const reaches = open || points.some(([x, y]) => Math.max(Math.abs(x), Math.abs(y)) > 11.5)
   const nearest = Math.min(...points.map(([x, y]) => Math.hypot(x, y)))
-  const radius = Math.max(3, 1.5 * nearest)
+  const radius = reaches ? Math.max(3, 1.5 * nearest) : Infinity
   for (const [x, y] of points) {
     if (Math.hypot(x, y) > radius) continue
     xs.push(x)

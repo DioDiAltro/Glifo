@@ -82,6 +82,8 @@ const FUNCTION_NAMES: Record<string, string> = {
   arctanh: 'artanh', atanh: 'artanh', setttanh: 'artanh', setttgh: 'artanh', ln: 'ln', log: 'log', lg: 'lg',
   exp: 'exp', sqrt: 'sqrt', abs: 'abs', sgn: 'sgn', sign: 'sgn', segno: 'sgn', floor: 'floor', ceil: 'ceil',
   max: 'max', min: 'min', gcd: 'gcd', mcd: 'gcd', lcm: 'lcm', mcm: 'lcm', round: 'round',
+  // I numeri complessi: parte reale e immaginaria (\Re z, \operatorname{Re} z), argomento, coniugato.
+  Re: 're', re: 're', Im: 'im', im: 'im', arg: 'arg', Arg: 'arg', conj: 'conj',
 }
 
 /** Le parole riconosciute anche senza barra (`sin x`, `sqrt(x)`, `pi`), come in una calcolatrice. */
@@ -384,6 +386,15 @@ function readCommand(src: string, i: number, out: Tok[], depth: () => number, ad
       const inner = arg.text.trim()
       const greek = /^\\([A-Za-z]+)$/.exec(inner)
       letter = /^[A-Za-z]$/.test(inner) ? inner : greek && greek[1] in GREEK ? GREEK[greek[1]] : null
+      // \overline{1 + i}, \bar{z w}: il coniugato di un'espressione, come conj(…).
+      if (!letter && inner && (name === 'bar' || name === 'overline')) {
+        const open = arg.end - arg.text.length - 1
+        push('fn', 'conj', open)
+        out.push({ k: 'open', v: '(', pos: open, end: open + 1 })
+        for (const t of tokenize(arg.text)) out.push({ ...t, pos: t.pos + open + 1, end: t.end + open + 1 })
+        out.push({ k: 'close', v: ')', pos: arg.end - 1, end: arg.end })
+        return arg.end
+      }
       end = arg.end
     } else {
       let j = end

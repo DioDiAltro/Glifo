@@ -94,6 +94,16 @@ export function graphSize(available: number): { width: number; height: number } 
   return { width, height: Math.round(Math.max(200, Math.min(440, width * 0.62))) }
 }
 
+/** Un punto del piano di Gauss come numero complesso: 1,5 + 2i, −i, 3. */
+function complexCoord(x: number, y: number, xStep: number, yStep: number): string {
+  const re = coord(x, xStep)
+  const im = coord(Math.abs(y), yStep)
+  if (im === '0') return re
+  const i = im === '1' ? 'i' : `${im}i`
+  if (re === '0' || re === '−0') return y < 0 ? `−${i}` : i
+  return `${re} ${y < 0 ? '−' : '+'} ${i}`
+}
+
 /** Una coordinata con la virgola, con tante cifre quante servono a quello zoom. */
 function coord(v: number, step: number): string {
   const decimals = Math.max(0, Math.min(8, Math.ceil(-Math.log10(step))))
@@ -158,8 +168,9 @@ function addLabel(add: NonNullable<GraphError['add']>): string {
 }
 
 /** Il quadratino della legenda: una linea per le curve, un pallino per i punti, un riquadro per aree e superfici. */
-function swatchClass(kind: GraphSpec['items'][number]['kind']): string {
-  if (kind === 'point' || kind === 'point3') return 'graph-swatch is-point'
+function swatchClass(item: GraphSpec['items'][number]): string {
+  const kind = item.kind
+  if (kind === 'point' || kind === 'point3' || (kind === 'complex' && !item.arrows)) return 'graph-swatch is-point'
   if (kind === 'area') return 'graph-swatch is-area'
   if (kind === 'region') return 'graph-swatch is-region'
   if (kind === 'surface' || kind === 'implicit3' || kind === 'patch' || kind === 'solid') return 'graph-swatch is-surface'
@@ -577,7 +588,7 @@ class GraphView {
             : item.kind === 'point3'
               ? `(${coord(item.x, 1e-3)}; ${coord(item.y, 1e-3)}; ${coord(item.z, 1e-3)})`
               : ''
-        return `<li><span class="${swatchClass(item.kind)}" style="--graph-color:${color}"></span>${label}${coords ? ` <span class="graph-coords">${escapeHtml(coords)}</span>` : ''}</li>`
+        return `<li><span class="${swatchClass(item)}" style="--graph-color:${color}"></span>${label}${coords ? ` <span class="graph-coords">${escapeHtml(coords)}</span>` : ''}</li>`
       })
     if (!rows.length && !this.spec.errors.length) {
       return '<p class="graph-hint">Scrivi nel blocco una funzione, una per riga: per esempio <code>y = x^2</code> (o <code>z = x^2 + y^2</code> per una superficie)</p>'
@@ -866,13 +877,15 @@ class GraphView {
           bestDistance = d
           best = { sx: p.x, sy, x, y, color: this.colors[i] }
         }
-      } else if (item.kind === 'point') {
-        const sx = ((item.x - v.x0) / (v.x1 - v.x0)) * this.width
-        const sy = (v.y1 - item.y) * ky
-        const d = Math.hypot(sx - p.x, sy - p.y)
-        if (d < Math.min(bestDistance, 14)) {
-          bestDistance = d
-          best = { sx, sy, x: item.x, y: item.y, color: this.colors[i] }
+      } else if (item.kind === 'point' || item.kind === 'complex') {
+        for (const [px, py] of item.kind === 'point' ? [[item.x, item.y]] : item.values.map((z) => [z.re, z.im])) {
+          const sx = ((px - v.x0) / (v.x1 - v.x0)) * this.width
+          const sy = (v.y1 - py) * ky
+          const d = Math.hypot(sx - p.x, sy - p.y)
+          if (d < Math.min(bestDistance, 14)) {
+            bestDistance = d
+            best = { sx, sy, x: px, y: py, color: this.colors[i] }
+          }
         }
       }
     })
@@ -889,7 +902,9 @@ class GraphView {
     this.dot.hidden = false
     this.dot.style.cssText = `left:${left}px;top:${top}px;--graph-color:${found.color}`
     this.tip.hidden = false
-    this.tip.textContent = `(${coord(found.x, step)}; ${coord(found.y, step * (v.y1 - v.y0) / (v.x1 - v.x0))})`
+    const yStep = (step * (v.y1 - v.y0)) / (v.x1 - v.x0)
+    // Nel piano di Gauss il punto è un numero complesso: 1,5 + 2i.
+    this.tip.textContent = this.spec.gauss ? complexCoord(found.x, found.y, step, yStep) : `(${coord(found.x, step)}; ${coord(found.y, yStep)})`
     const right = left > (r.width || this.width) - 140
     this.tip.style.cssText = `left:${right ? left - 10 : left + 10}px;top:${top < 34 ? top + 12 : top - 34}px;${right ? 'transform:translateX(-100%)' : ''}`
   }
