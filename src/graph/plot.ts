@@ -151,6 +151,29 @@ export function sampleArea(f: (x: number) => number, a: number, b: number, vp: V
   return sampleFunction((x) => (x >= lo && x <= hi ? f(x) : NaN), vp).lines.map((line) => [line[0], axis, ...line, line[line.length - 2], axis])
 }
 
+/** Una retta data con un parametro ((1 + t, 2t)): da un bordo all'altro della finestra (un po' oltre). */
+export function lineAcross(fx: (t: number) => number, fy: (t: number) => number, vp: Viewport): Polyline[] {
+  const { sx, sy } = screen(vp)
+  const [x0, y0] = [fx(0), fy(0)]
+  const [dx, dy] = [fx(1) - x0, fy(1) - y0]
+  const w = vp.x1 - vp.x0
+  const h = vp.y1 - vp.y0
+  let lo = -Infinity
+  let hi = Infinity
+  for (const [p, d, a, b] of [[x0, dx, vp.x0 - w, vp.x1 + w], [y0, dy, vp.y0 - h, vp.y1 + h]]) {
+    if (d === 0) {
+      if (p < a || p > b) return []
+      continue
+    }
+    const t1 = (a - p) / d
+    const t2 = (b - p) / d
+    lo = Math.max(lo, Math.min(t1, t2))
+    hi = Math.min(hi, Math.max(t1, t2))
+  }
+  if (!(lo < hi) || !finite(lo) || !finite(hi)) return []
+  return [[sx(x0 + dx * lo), sy(y0 + dy * lo), sx(x0 + dx * hi), sy(y0 + dy * hi)]]
+}
+
 /** Una curva con un parametro t (o θ), più fitta dove i punti si allontanano. */
 export function sampleParametric(fx: (t: number) => number, fy: (t: number) => number, t: Range, vp: Viewport): Polyline[] {
   const { sx, sy } = screen(vp)
@@ -336,7 +359,16 @@ function findWindow(spec: GraphSpec, width: number, height: number): Viewport {
       xs.push(item.x)
       ys.push(item.y)
     } else if (item.kind === 'vertical') xs.push(item.x)
-    else if (item.kind === 'area') {
+    else if (item.kind === 'vector') {
+      xs.push(item.from[0], item.to[0])
+      ys.push(item.from[1], item.to[1])
+    } else if (item.kind === 'parametric' && item.straight) {
+      // Una retta: i suoi punti per t = 0 e t = 1.
+      for (const t of [0, 1]) {
+        xs.push(item.fx(t))
+        ys.push(item.fy(t))
+      }
+    } else if (item.kind === 'area') {
       // L'area intera, chiusa dall'asse x; verso un estremo infinito, un pezzo (\int_0^\infty: fino a 5).
       const lo = Math.min(item.from, item.to)
       const hi = Math.max(item.from, item.to)

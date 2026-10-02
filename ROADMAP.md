@@ -8,6 +8,34 @@ il lavoro si parte da qui, e quando una voce è fatta si toglie.
 
 ## In programma
 
+### Matematica per i corsi: grafici e calcoli per tutto il programma
+
+**Cosa:** chiesto dallo studente il 2 ottobre 2026: grafici e calcoli devono bastare per un corso
+di matematica intero (Analisi 1 e 2, Geometria e algebra lineare). Si fa a tappe: ognuna viene
+pubblicata appena è pronta e qui si segna come fatta.
+
+1. Fatto (2 ottobre 2026): **grafici 3D** nel blocco ```grafico: superfici (`z = x^2 + y^2`,
+   `f(x, y) = …`), superfici date da un'equazione (`x^2 + y^2 + z^2 = 4`) e piani, superfici con due
+   parametri (`(u \cos v, u \sin v, u)`), curve nello spazio (`(\cos t, \sin t, t)`), punti e
+   vettori (anche nel piano). Si girano trascinandoli e hanno gli slider come quelli 2D. Da
+   migliorare se serve: dove due superfici curve si tagliano il bordo è a dentini (i piani invece
+   tagliano giusto).
+2. **Integrali doppi e tripli**: il valore (`\int_0^1 \int_0^x xy \, dy \, dx`, anche su un dominio
+   scritto come insieme) e il disegno: il dominio colorato nel piano, il volume sotto la superficie
+   nel 3D. Insieme arrivano le **zone colorate** delle disuguaglianze (`y > x^2`,
+   `x^2 + y^2 \le 4`).
+3. **Numeri complessi**: `i`, coniugato, modulo, argomento, forma esponenziale, potenze e radici.
+   Nel grafico il piano di Gauss, con punti, circonferenze (`|z - i| = 2`) e zone.
+4. **Vettori e matrici**: matrici scritte con `pmatrix`, determinante, inversa, trasposta, rango,
+   traccia, riduzione a scala, nucleo e immagine, autovalori e autovettori, prodotto scalare e
+   vettoriale, norma. Nei grafici le frecce dei vettori.
+5. **Geometria**: segmenti, triangoli e poligoni, rette per due punti, circonferenze, distanze,
+   angoli, punti medi; piani e rette nello spazio.
+6. **Integrali di linea e di superficie** su curve e superfici date con i loro parametri, lavoro e
+   flusso; campi vettoriali disegnati con le frecce, gradiente, divergenza e rotore.
+7. **Il resto di Analisi**: derivate scritte come formula, limiti, serie, polinomi di Taylor,
+   equazioni e sistemi risolti, curve di livello, campi di direzioni delle equazioni differenziali.
+
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
 **Cosa:** ognuno ha il suo account e ritrova gli stessi appunti su PC, tablet e telefono.
@@ -199,15 +227,13 @@ le definizioni della nota, blocchi ```grafico con funzioni, curve, punti, asinto
 ingrandire, grafici nei file .md come immagini, gli **slider** per i numeri (in `y = a x^2`,
 trascinare `a`, o scriverne il valore accanto, e vedere il grafico cambiare, come in GeoGebra e nelle
 Note matematiche) e l'**area degli integrali** (`\int_0^2 x^2 \, dx` colora l'area sotto la curva, con
-il valore nella legenda). Tutto è descritto nel README. Se serviranno:
+il valore nella legenda). Tutto è descritto nel README. Quello che serve per i corsi di matematica
+è «in programma» (sopra). Se serviranno anche:
 
-- le **zone colorate** con le disuguaglianze (`y > x^2`, il dominio di una funzione di due
-  variabili in Analisi 2) e l'area tra due curve (`\int_0^1 (f(x) - g(x)) \, dx` oggi colora
-  quella sotto la differenza);
+- l'area tra due curve (`\int_0^1 (f(x) - g(x)) \, dx` oggi colora quella sotto la differenza);
 - nelle aree degli integrali, le parti sotto l'asse x di un altro aspetto (oggi hanno lo stesso
   colore: nell'integrale contano con il meno);
 - segnare da soli zeri, massimi, minimi e intersezioni (con un clic sulla curva);
-- le derivate scritte come formula (oggi `f'(x)` si calcola, ma non si vede come espressione) e i limiti;
 - i calcoli anche fuori dalle formule (`12 * 3 =` nel testo) e con le unità di misura (`3 m/s`);
 - un'impostazione per spegnere i risultati dopo `=`, se a qualcuno danno fastidio;
 - «Copia come immagine» e PNG anche per i grafici (come per gli schemi).

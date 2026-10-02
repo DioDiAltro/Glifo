@@ -1,9 +1,9 @@
 import { askAi, type AiResult } from '../ai/assistant'
 import type { MarkdownEditor } from '../editor/editor'
 import { formulaAtCursor, insertGraphBlock } from '../editor/graphInsert'
-import { chooseWindow } from '../graph/plot'
+import { staticGraphSvg } from '../graph/picture'
 import { formulaGraph } from '../graph/spec'
-import { graphSvg, graphTitle, PALETTES } from '../graph/svg'
+import { graphTitle, PALETTES } from '../graph/svg'
 import type { SuggestionItem } from '../editor/suggestions'
 import { cleanKatexError, renderTex } from '../render/katex'
 import { isConfidentAnswer, searchSymbols, type SearchResult } from '../search/search'
@@ -166,7 +166,7 @@ export class SidePanel {
     const palette = PALETTES[dark ? 'dark' : 'light']
     const surface = getComputedStyle(this.formulaGraph.parentElement ?? this.el).backgroundColor
     // Il disegno è fatto da Glifo: i testi sono già passati da escapeXml.
-    this.formulaGraphCanvas.innerHTML = graphSvg(spec, chooseWindow(spec, width, height), { ...palette, halo: surface || palette.halo }, { id: 'formula-graph', title: graphTitle(spec) })
+    this.formulaGraphCanvas.innerHTML = staticGraphSvg(spec, width, height, { ...palette, halo: surface || palette.halo }, { id: 'formula-graph', title: graphTitle(spec) })
     this.formulaGraph.hidden = false
   }
 

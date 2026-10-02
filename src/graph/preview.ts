@@ -9,14 +9,20 @@
  * allarga), ▶ lo muove da solo, la freccia torna al valore scritto. La nota non cambia: il file .md
  * e la stampa usano i valori scritti. A un nome che manca (k non è definita) il pulsante
  * «Aggiungi lo slider per k» aggiunge k = 1 al blocco (lo fa src/ui/preview.ts).
+ *
+ * I grafici 3D (vedi view3d.ts) si girano trascinandoli, con il mouse o con un dito; + e − (o
+ * Ctrl e la rotellina, o due dita) li avvicinano e li allontanano. Mentre si girano si disegnano con
+ * meno quadretti, per seguire il mouse.
  */
 import { formatNumber } from '../math/format'
 import { nameLatex } from '../math/latex'
 import { escapeHtml, renderTex } from '../render/katex'
 import type { Theme } from '../schema/model'
 import { chooseWindow, type Viewport } from './plot'
+import { chooseBox, type Box } from './space'
 import { parseGraph, typedSliderValue, widenSlider, type GraphError, type GraphSlider, type GraphSpec, type Range } from './spec'
 import { graphSvg, graphTitle, itemColors, PALETTES, pointName, type Palette } from './svg'
+import { buildScene, DEFAULT_CAMERA, MAX_ELEVATION, sceneSvg, type Camera, type Quality, type Scene } from './view3d'
 
 export interface GraphLook {
   theme: Theme
@@ -43,6 +49,14 @@ function remember<T>(cache: Map<string, T>, key: string, make: () => T): T {
 }
 /** Lo spostamento e lo zoom fatti a mano: restano finché il blocco resta uguale. */
 const views = new Map<string, Window>()
+/** Da dove si guardano i grafici 3D girati a mano. */
+const cameras = new Map<string, Camera>()
+/** Le scatole dei grafici 3D, come le finestre di quelli nel piano. */
+const boxes = new Map<string, Box>()
+/** Quanto si gira il grafico 3D per ogni pixel trascinato (in radianti). */
+const TURN = 0.0105
+/** Dopo quanto (in millisecondi) uno slider fermo conta come fermo, per rifare il 3D con tutti i quadretti. */
+const SETTLE = 300
 let counter = 0
 
 interface SliderState {
@@ -143,6 +157,14 @@ function addLabel(add: NonNullable<GraphError['add']>): string {
   return `Aggiungi gli slider per ${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`
 }
 
+/** Il quadratino della legenda: una linea per le curve, un pallino per i punti, un riquadro per aree e superfici. */
+function swatchClass(kind: GraphSpec['items'][number]['kind']): string {
+  if (kind === 'point' || kind === 'point3') return 'graph-swatch is-point'
+  if (kind === 'area') return 'graph-swatch is-area'
+  if (kind === 'surface' || kind === 'implicit3' || kind === 'patch') return 'graph-swatch is-surface'
+  return 'graph-swatch'
+}
+
 function texHtml(tex: string): string {
   const { html, error } = renderTex(tex)
   return error ? escapeHtml(tex) : html
@@ -150,7 +172,11 @@ function texHtml(tex: string): string {
 
 /** La parte da mostrare scritta nel blocco (x \in [a, b]), per vedere se è cambiata. */
 function explicitWindow(spec: GraphSpec): string {
-  return JSON.stringify([spec.x, spec.y])
+  return JSON.stringify([spec.x, spec.y, spec.z])
+}
+
+function sameCamera(a: Camera, b: Camera): boolean {
+  return a.az === b.az && a.el === b.el && a.zoom === b.zoom
 }
 
 interface SliderRow {
@@ -211,7 +237,18 @@ class GraphView {
   private lastTime = 0
   private drag: { x: number; y: number; view: Window } | null = null
   private readonly touches = new Map<number, { x: number; y: number }>()
-  private pinch: { distance: number; center: { x: number; y: number }; view: Window } | null = null
+  private pinch: { distance: number; center: { x: number; y: number }; view: Window; camera: Camera } | null = null
+  /** Un grafico 3D: si gira invece di spostarsi. */
+  private readonly space: boolean
+  private box: Box | null = null
+  private camera: Camera = DEFAULT_CAMERA
+  /** Mentre si gira trascinando: da dove è partito il puntatore, e da dove si guardava. */
+  private turn: { x: number; y: number; camera: Camera } | null = null
+  /** I pezzi del grafico 3D già calcolati (con i valori degli slider e la qualità di adesso). */
+  private scenes = new Map<string, Scene>()
+  /** Quando si è mosso l'ultima volta uno slider: nel 3D, finché si muove, meno quadretti. */
+  private slidAt = -Infinity
+  private fineTimer = 0
 
   constructor(
     private readonly block: HTMLElement,
@@ -229,7 +266,13 @@ class GraphView {
     const size = graphSize(block.clientWidth)
     this.width = size.width
     this.height = size.height
-    this.base = this.startWindow()
+    this.space = this.written.dim === 3
+    if (this.space) {
+      this.box = this.startBox()
+      this.camera = cameras.get(this.key) ?? DEFAULT_CAMERA
+      block.classList.add('is-space')
+    }
+    this.base = this.space ? { x0: -1, x1: 1, y0: -1, y1: 1 } : this.startWindow()
     this.view = views.get(this.key) ?? this.base
 
     // I pulsanti stanno sopra il disegno (e si vedono passandoci sopra); sui telefoni sotto, sempre.
@@ -249,7 +292,10 @@ class GraphView {
       const action = (ev.target as HTMLElement).closest<HTMLElement>('[data-action]')?.dataset.action
       if (action === 'in') this.zoom(0.5)
       else if (action === 'out') this.zoom(2)
-      else if (action === 'reset') this.setView(this.base)
+      else if (action === 'reset') {
+        if (this.space) this.setCamera(DEFAULT_CAMERA)
+        else this.setView(this.base)
+      }
     })
     // Il doppio clic sui pulsanti non deve portare all'editor (lo fa il doppio clic sul grafico).
     frame.querySelector('.graph-tools')!.addEventListener('dblclick', (ev) => ev.stopPropagation())
@@ -426,6 +472,12 @@ class GraphView {
     }
     this.showSlider(row)
     this.hideTip()
+    if (this.space) {
+      // Finito di muoverlo, il grafico 3D si rifà con tutti i quadretti.
+      this.slidAt = performance.now()
+      clearTimeout(this.fineTimer)
+      this.fineTimer = window.setTimeout(() => this.schedule(), SETTLE + 20)
+    }
     this.schedule()
   }
 
@@ -501,9 +553,12 @@ class GraphView {
     const explicit = explicitWindow(this.spec)
     if (explicit !== this.explicit) {
       this.explicit = explicit
-      const moved = this.view !== this.base
-      this.base = this.startWindow()
-      if (!moved) this.view = this.base
+      if (this.space) this.box = this.startBox()
+      else {
+        const moved = this.view !== this.base
+        this.base = this.startWindow()
+        if (!moved) this.view = this.base
+      }
     }
     return this.spec
   }
@@ -515,12 +570,16 @@ class GraphView {
       .map(({ item, color }) => {
         const { html, error } = renderTex(item.label)
         const label = error ? `<code>${escapeHtml(item.label)}</code>` : html
-        const swatch = item.kind === 'point' ? 'graph-swatch is-point' : item.kind === 'area' ? 'graph-swatch is-area' : 'graph-swatch'
-        const coords = item.kind === 'point' ? ` <span class="graph-coords">${escapeHtml(`(${coord(item.x, 1e-3)}; ${coord(item.y, 1e-3)})`)}</span>` : ''
-        return `<li><span class="${swatch}" style="--graph-color:${color}"></span>${label}${coords}</li>`
+        const coords =
+          item.kind === 'point'
+            ? `(${coord(item.x, 1e-3)}; ${coord(item.y, 1e-3)})`
+            : item.kind === 'point3'
+              ? `(${coord(item.x, 1e-3)}; ${coord(item.y, 1e-3)}; ${coord(item.z, 1e-3)})`
+              : ''
+        return `<li><span class="${swatchClass(item.kind)}" style="--graph-color:${color}"></span>${label}${coords ? ` <span class="graph-coords">${escapeHtml(coords)}</span>` : ''}</li>`
       })
     if (!rows.length && !this.spec.errors.length) {
-      return '<p class="graph-hint">Scrivi nel blocco una funzione, una per riga: per esempio <code>y = x^2</code></p>'
+      return '<p class="graph-hint">Scrivi nel blocco una funzione, una per riga: per esempio <code>y = x^2</code> (o <code>z = x^2 + y^2</code> per una superficie)</p>'
     }
     return rows.length ? `<ul class="graph-legend">${rows.join('')}</ul>` : ''
   }
@@ -543,8 +602,10 @@ class GraphView {
     const moved = this.view !== this.base
     this.width = size.width
     this.height = size.height
-    this.base = this.startWindow()
-    if (!moved) this.view = this.base
+    if (!this.space) {
+      this.base = this.startWindow()
+      if (!moved) this.view = this.base
+    }
     this.frameEl.style.maxWidth = `${this.width}px`
     if (this.slidersEl) this.slidersEl.style.maxWidth = `${this.width}px`
     this.hideTip()
@@ -568,6 +629,34 @@ class GraphView {
     return spec === this.written ? remember(windows, `${this.width}x${this.height}\n${this.key}`, make) : make()
   }
 
+  /** La scatola del grafico 3D: quella scelta per il blocco come è scritto, se gli slider non cambiano la parte da mostrare. */
+  private startBox(): Box {
+    const spec = explicitWindow(this.spec) === explicitWindow(this.written) ? this.written : this.spec
+    return spec === this.written ? remember(boxes, this.key, () => chooseBox(spec)) : chooseBox(spec)
+  }
+
+  /** I pezzi del grafico 3D, calcolati una volta per valori degli slider, scatola e qualità. */
+  private sceneFor(spec: GraphSpec, quality: Quality): Scene {
+    const key = `${this.specValues}\u0000${JSON.stringify(this.box)}\u0000${quality}`
+    let scene = this.scenes.get(key)
+    if (!scene) {
+      scene = buildScene(spec, this.box!, quality)
+      if (this.scenes.size >= 4) this.scenes.delete(this.scenes.keys().next().value!)
+      this.scenes.set(key, scene)
+    }
+    return scene
+  }
+
+  private setCamera(camera: Camera): void {
+    this.camera = camera
+    if (sameCamera(camera, DEFAULT_CAMERA)) cameras.delete(this.key)
+    else {
+      if (cameras.size >= MAX_CACHE) cameras.delete(cameras.keys().next().value!)
+      cameras.set(this.key, camera)
+    }
+    this.schedule()
+  }
+
   private viewport(): Viewport {
     return { ...this.view, width: this.width, height: this.height }
   }
@@ -583,6 +672,10 @@ class GraphView {
 
   private render(): void {
     this.frame = 0
+    if (this.space) {
+      this.renderSpace()
+      return
+    }
     const spec = this.currentSpec()
     const v = this.view
     const draw = () => graphSvg(spec, this.viewport(), this.palette, { id: 'graph', title: graphTitle(spec) })
@@ -601,6 +694,23 @@ class GraphView {
     this.block.classList.toggle('is-moved', moved)
   }
 
+  /** Il grafico 3D: mentre si gira con meno quadretti, poi di nuovo con tutti. */
+  private renderSpace(): void {
+    const spec = this.currentSpec()
+    const moving = this.rows.some((r) => r.state.playing) || performance.now() - this.slidAt < SETTLE
+    const quality: Quality = this.turn || this.pinch || moving ? 'fast' : 'fine'
+    const scene = this.sceneFor(spec, quality)
+    this.canvas.innerHTML = sceneSvg(scene, spec, this.camera, this.palette, { width: this.width, height: this.height, title: graphTitle(spec) })
+    const notes = this.legendHtml() + this.errorsHtml()
+    if (notes !== this.notesHtml) {
+      this.notesHtml = notes
+      this.notes.innerHTML = notes
+    }
+    const moved = !sameCamera(this.camera, DEFAULT_CAMERA)
+    this.reset.hidden = !moved
+    this.block.classList.toggle('is-moved', moved)
+  }
+
   private setView(view: Window): void {
     this.view = view
     if (view === this.base) views.delete(this.key)
@@ -614,6 +724,11 @@ class GraphView {
 
   /** Ingrandisce (factor < 1) o rimpicciolisce attorno a un punto (in pixel del disegno), di solito il centro. */
   private zoom(factor: number, at?: { x: number; y: number }): void {
+    if (this.space) {
+      const zoom = this.camera.zoom / factor
+      if (zoom >= 0.2 && zoom <= 12) this.setCamera({ ...this.camera, zoom })
+      return
+    }
     const v = this.view
     const px = at ? at.x / this.width : 0.5
     const py = at ? at.y / this.height : 0.5
@@ -636,15 +751,29 @@ class GraphView {
       this.touches.set(ev.pointerId, this.local(ev))
       if (this.touches.size === 2) {
         const [a, b] = [...this.touches.values()]
-        this.pinch = { distance: Math.hypot(a.x - b.x, a.y - b.y) || 1, center: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, view: this.view }
+        this.turn = null
+        this.pinch = { distance: Math.hypot(a.x - b.x, a.y - b.y) || 1, center: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, view: this.view, camera: this.camera }
+        this.canvas.setPointerCapture(ev.pointerId)
+      } else if (this.space && this.touches.size === 1) {
+        // Nello spazio un dito solo gira il grafico.
+        this.turn = { ...this.local(ev), camera: this.camera }
         this.canvas.setPointerCapture(ev.pointerId)
       }
       return
     }
     if (ev.button !== 0) return
-    this.drag = { ...this.local(ev), view: this.view }
+    if (this.space) this.turn = { ...this.local(ev), camera: this.camera }
+    else this.drag = { ...this.local(ev), view: this.view }
     this.canvas.setPointerCapture(ev.pointerId)
     this.canvas.classList.add('is-dragging')
+  }
+
+  /** Gira il grafico 3D seguendo il puntatore: in orizzontale attorno all'asse z, in verticale dall'alto o dal basso. */
+  private turnTo(p: { x: number; y: number }): void {
+    const start = this.turn!
+    const az = start.camera.az - (p.x - start.x) * TURN
+    const el = Math.max(-MAX_ELEVATION, Math.min(MAX_ELEVATION, start.camera.el + (p.y - start.y) * TURN))
+    this.setCamera({ ...start.camera, az, el })
   }
 
   private onMove(ev: PointerEvent): void {
@@ -652,12 +781,21 @@ class GraphView {
     if (ev.pointerType === 'touch') {
       if (!this.touches.has(ev.pointerId)) return
       this.touches.set(ev.pointerId, p)
+      if (this.turn && this.touches.size === 1) {
+        this.turnTo(p)
+        return
+      }
       if (this.pinch && this.touches.size === 2) {
         const [a, b] = [...this.touches.values()]
         const distance = Math.hypot(a.x - b.x, a.y - b.y) || 1
         const center = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
         const start = this.pinch
         const factor = start.distance / distance
+        if (this.space) {
+          const zoom = Math.max(0.2, Math.min(12, start.camera.zoom / factor))
+          this.setCamera({ ...this.camera, zoom })
+          return
+        }
         const v = start.view
         const w = (v.x1 - v.x0) * factor
         const h = (v.y1 - v.y0) * factor
@@ -672,6 +810,11 @@ class GraphView {
       }
       return
     }
+    if (this.turn) {
+      this.turnTo(p)
+      return
+    }
+    if (this.space) return
     if (this.drag) {
       const v = this.drag.view
       const dx = ((p.x - this.drag.x) / this.width) * (v.x1 - v.x0)
@@ -683,13 +826,18 @@ class GraphView {
   }
 
   private onUp(ev: PointerEvent): void {
+    const turning = !!this.turn || !!this.pinch
     if (ev.pointerType === 'touch') {
       this.touches.delete(ev.pointerId)
       if (this.touches.size < 2) this.pinch = null
-      return
+      if (!this.touches.size) this.turn = null
+    } else {
+      this.drag = null
+      this.turn = null
+      this.canvas.classList.remove('is-dragging')
     }
-    this.drag = null
-    this.canvas.classList.remove('is-dragging')
+    // Finito di girare: di nuovo con tutti i quadretti.
+    if (this.space && turning && !this.turn && !this.pinch) this.schedule()
   }
 
   private onWheel(ev: WheelEvent): void {
@@ -701,6 +849,7 @@ class GraphView {
 
   /** Il punto della curva più vicino al puntatore, con le sue coordinate. */
   private trace(p: { x: number; y: number }): void {
+    if (this.space) return
     const v = this.view
     const x = v.x0 + (p.x / this.width) * (v.x1 - v.x0)
     const ky = this.height / (v.y1 - v.y0)

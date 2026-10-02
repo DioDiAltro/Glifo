@@ -147,6 +147,19 @@ chi sta provando Glifo.*
   riga) l'area prende il suo colore; se no il grafico disegna anche la curva. Gli estremi possono
   essere numeri con lo slider (`\int_0^b`): muovendolo l'area cambia. Si può lasciare l'uguale
   finale o il risultato copiato dalla nota.
+- Con la **z** (o una funzione di x e y, o un punto con tre coordinate) il grafico è in **3D**:
+  superfici sopra il piano xy (`z = x^2 + y^2`, `f(x, y) = \sin x \cos y`, o solo `x^2 - y^2`),
+  superfici date da un'equazione (`x^2 + y^2 + z^2 = 4`, il cilindro `x^2 + y^2 = 1`) e piani
+  (`x + y + z = 1`, `z = 2`), superfici con due parametri (`(u \cos v, u \sin v, u)`: u e v, s e t,
+  θ e φ…; gli angoli fanno un giro, φ mezzo, gli altri vanno da 0 a 1, o come dice `u \in [0, 2]`),
+  curve nello spazio (`(\cos t, \sin t, t)`), punti (`P = (1, 2, 3)`) e vettori
+  (`\vec{v} = (1, 2, 2)`). Si gira **trascinandolo** (anche con un dito), + e − lo avvicinano e lo
+  allontanano, la freccia lo riporta com'era. I piani sono velati e tagliano le superfici nel punto
+  giusto; gli slider funzionano come nel piano. La z è la terza coordinata, a meno che la nota non la
+  definisca come numero (`$z = 2$`).
+- Anche nel piano i **vettori** sono frecce dall'origine (`\vec{v} = (2, 1)`), e una curva con il
+  parametro di primo grado (`(1 + t, 2t)`) è una retta intera, da un bordo all'altro (con
+  `t \in [0, 1]` solo quel pezzo).
 - Glifo sceglie da solo la parte da mostrare (dove la funzione si annulla, ha massimi e minimi, gli
   asintoti; per seni e coseni due giri con le tacche in π; le circonferenze restano rotonde), stacca
   la curva dove salta e segna gli **asintoti verticali** tratteggiati. Assi con la freccia, i numeri
@@ -167,6 +180,8 @@ chi sta provando Glifo.*
   è tutto scritto per Glifo, senza librerie esterne.
 
 ![Risultati dopo «=» e grafici nell'anteprima](docs/grafici.png)
+
+![Grafici 3D: la sella tagliata da un piano e una sfera tagliata da un piano](docs/grafici-3d.png)
 
 **Schemi stile draw.io**
 - Il pulsante con i due riquadri nella barra apre un editor a tutto schermo: forme a sinistra
@@ -368,9 +383,12 @@ src/
     sheet.ts              il «foglio» della nota: definizioni dall'alto in basso e risultati dopo «=»
     latex.ts              un'espressione riscritta in LaTeX (le legende dei grafici)
   graph/
-    spec.ts               le righe di un blocco ```grafico: funzioni, curve, punti, aree degli integrali, la parte da mostrare, gli slider
+    spec.ts               le righe di un blocco ```grafico: funzioni, curve, punti, vettori, aree degli integrali, superfici, la parte da mostrare, gli slider
     plot.ts               dove calcolare le curve (salti, asintoti) e le aree, la finestra, le tacche
     svg.ts                il disegno in SVG, con i colori dei due temi
+    space.ts              i conti del 3D: superfici a quadretti e a tetraedri, piani, curve nello spazio, la scatola da mostrare
+    view3d.ts             il disegno 3D in SVG: la luce, i pezzi dal più lontano al più vicino, i piani, gli assi
+    picture.ts            il disegno fermo di un grafico, per il pannello a destra e i file .md
     preview.ts            nell'anteprima: legenda, errori, slider, trascinare, ingrandire, coordinate
     file.ts               i grafici nei file .md: immagine SVG più il testo nascosto, e ritorno
   host.ts                 integrazione facoltativa con claude.ai (per la demo pubblicata lì)

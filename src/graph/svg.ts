@@ -3,7 +3,7 @@
  * Lo stesso disegno serve all'anteprima (con i colori del tema) e alle immagini nei file .md.
  */
 import { withWorkLimit } from '../math/evaluate'
-import { sampleArea, sampleFunction, sampleImplicit, sampleParametric, ticks, type Polyline, type Viewport } from './plot'
+import { lineAcross, sampleArea, sampleFunction, sampleImplicit, sampleParametric, ticks, type Polyline, type Viewport } from './plot'
 import { GRAPH_WORK, type GraphItem, type GraphSpec } from './spec'
 
 export interface Palette {
@@ -19,6 +19,8 @@ export interface Palette {
   series: readonly string[]
   /** Quanto si vede il colore delle aree degli integrali: una velatura, la griglia resta visibile. */
   area: number
+  /** Le linee della griglia sulle superfici 3D: un velo scuro sopra il loro colore. */
+  mesh: string
 }
 
 export const PALETTES: Record<'light' | 'dark', Palette> = {
@@ -31,6 +33,7 @@ export const PALETTES: Record<'light' | 'dark', Palette> = {
     text: '#5b6178',
     series: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'],
     area: 0.18,
+    mesh: 'rgba(24, 28, 44, 0.3)',
   },
   dark: {
     surface: null,
@@ -41,12 +44,13 @@ export const PALETTES: Record<'light' | 'dark', Palette> = {
     text: '#9aa0b5',
     series: ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767'],
     area: 0.28,
+    mesh: 'rgba(0, 0, 0, 0.4)',
   },
 }
 
 /** Il colore di ogni riga: le curve nell'ordine delle righe, i punti con l'inchiostro del testo. */
 export function itemColors(items: readonly GraphItem[], palette: Palette): string[] {
-  return items.map((item) => (item.kind === 'point' ? palette.axis : palette.series[Math.max(0, item.slot) % palette.series.length]))
+  return items.map((item) => (item.kind === 'point' || item.kind === 'point3' ? palette.axis : palette.series[Math.max(0, item.slot) % palette.series.length]))
 }
 
 const f1 = (v: number) => (Math.round(v * 10) / 10).toString()
@@ -55,6 +59,17 @@ function path(line: Polyline): string {
   let d = `M${f1(line[0])} ${f1(line[1])}`
   for (let i = 2; i < line.length; i += 2) d += `L${f1(line[i])} ${f1(line[i + 1])}`
   return d
+}
+
+/** La punta di una freccia da (ax, ay) a (bx, by), in pixel. */
+function arrow(ax: number, ay: number, bx: number, by: number): string {
+  const len = Math.hypot(bx - ax, by - ay) || 1
+  const ux = (bx - ax) / len
+  const uy = (by - ay) / len
+  const size = Math.min(12, len)
+  const cx = bx - ux * size
+  const cy = by - uy * size
+  return `M${f1(bx)} ${f1(by)}L${f1(cx - uy * 5)} ${f1(cy + ux * 5)}L${f1(cx + uy * 5)} ${f1(cy - ux * 5)}Z`
 }
 
 /** Il colore di un'area (#rrggbb) con la sua trasparenza, per le legende. */
@@ -156,6 +171,8 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
   // Le curve, ritagliate sul riquadro
   const curves: string[] = []
   const dashed: string[] = []
+  /** Le punte dei vettori. */
+  const heads: string[] = []
   spec.items.forEach((item, i) => {
     const color = colors[i]
     let lines: Polyline[] = []
@@ -164,13 +181,23 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
       lines = s.lines
       for (const p of s.poles) dashed.push(`M${f1(sx(p))} 0V${H}`)
     } else if (item.kind === 'implicit') lines = sampleImplicit(item.F, vp)
-    else if (item.kind === 'parametric') lines = sampleParametric(item.fx, item.fy, item.t, vp)
+    else if (item.kind === 'parametric') lines = item.straight ? lineAcross(item.fx, item.fy, vp) : sampleParametric(item.fx, item.fy, item.t, vp)
     else if (item.kind === 'vertical') lines = [[sx(item.x), -2, sx(item.x), H + 2]]
+    else if (item.kind === 'vector') {
+      // La linea finisce alla base della punta: la punta la disegna dopo, piena.
+      const [ax, ay, bx, by] = [sx(item.from[0]), sy(item.from[1]), sx(item.to[0]), sy(item.to[1])]
+      const len = Math.hypot(bx - ax, by - ay)
+      if (len > 0.5) {
+        const k = len > 14 ? (len - 10) / len : 1
+        lines = [[ax, ay, ax + (bx - ax) * k, ay + (by - ay) * k]]
+        heads.push(`<path d="${arrow(ax, ay, bx, by)}" fill="${color}"/>`)
+      }
+    }
     if (lines.length) curves.push(`<path d="${lines.map(path).join('')}" stroke="${color}" data-item="${i}"/>`)
   })
   out.push(`<g clip-path="url(#${clip})" fill="none" stroke-linecap="round" stroke-linejoin="round">`)
   if (dashed.length) out.push(`<path d="${dashed.join('')}" stroke="${palette.axis}" stroke-width="1" stroke-dasharray="5 5" opacity="0.7"/>`)
-  out.push(`<g stroke-width="2.5">${curves.join('')}</g></g>`)
+  out.push(`<g stroke-width="2.5">${curves.join('')}</g>${heads.join('')}</g>`)
 
   // Punti, con il nome
   const points: string[] = []
@@ -184,6 +211,15 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
       const right = x < W - 40
       points.push(`<text x="${f1(right ? x + 8 : x - 8)}" y="${f1(y < 22 ? y + 18 : y - 8)}" text-anchor="${right ? 'start' : 'end'}" font-style="italic" font-family="'KaTeX_Math', 'Times New Roman', serif" font-size="16" fill="${palette.text}" ${halo}>${escapeXml(pointName(item.name))}</text>`)
     }
+  })
+  // I nomi dei vettori, vicino alla punta.
+  spec.items.forEach((item) => {
+    if (item.kind !== 'vector' || !item.name) return
+    const x = sx(item.to[0])
+    const y = sy(item.to[1])
+    if (x < -5 || x > W + 5 || y < -5 || y > H + 5) return
+    const right = x < W - 40
+    points.push(`<text x="${f1(right ? x + 8 : x - 8)}" y="${f1(y < 22 ? y + 18 : y - 8)}" text-anchor="${right ? 'start' : 'end'}" font-style="italic" font-family="'KaTeX_Math', 'Times New Roman', serif" font-size="16" fill="${palette.text}" ${halo}>${escapeXml(pointName(item.name.replace(/⃗$/, '')))}</text>`)
   })
   out.push(points.join(''))
 

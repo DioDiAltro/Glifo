@@ -62,7 +62,7 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   «foglio» della nota: le formule dall'alto in basso, `$a = 2$` e `$f(x) = …$` definiscono, una formula
   che finisce con `=` ha il risultato (nell'editor `src/editor/calcResults.ts`, Tab lo scrive;
   nell'anteprima colorato, classe `calc-result`). `\log` è il logaritmo naturale.
-- `src/graph/`: i blocchi ```grafico (una riga per funzione, curva, punto, area di un integrale; `spec.ts`), il campionamento
+- `src/graph/`: i blocchi ```grafico (una riga per funzione, curva, punto, vettore, area di un integrale; `spec.ts`), il campionamento
   con salti e asintoti e la finestra scelta da sola (`plot.ts`), il disegno SVG (`svg.ts`, colori
   validati con la skill dataviz), l'anteprima interattiva (`preview.ts`) e i file .md (`file.ts`, come
   gli schemi). Le definizioni della nota arrivano al blocco in `data-defs` (vedi `render/markdown.ts`).
@@ -70,7 +70,10 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   `parseGraph(…, values)` rifà il grafico con altri valori senza cambiare la nota (file .md e stampa
   usano quelli scritti). Un integrale (`\int_0^2 x^2 \, dx`) è un'area (`kind: 'area'`, `sampleArea`
   in `plot.ts`): sotto una curva che un'altra riga disegna già prende il suo colore (lo decide come
-  sono scritte le righe, `curveKeys`), se no disegna anche la curva. Il valore si può anche scrivere nella casella accanto (`typedSliderValue`;
+  sono scritte le righe, `curveKeys`), se no disegna anche la curva. Con la z (o una funzione di x e y, o tre
+  coordinate) il grafico è 3D (`spec.dim`, `isSpaceLine`, `spaceItemFor`): `space.ts` fa superfici, piani,
+  curve e la scatola, `view3d.ts` il disegno (algoritmo del pittore; i piani dividono lo spazio e si disegna
+  prima quello dietro), `picture.ts` il disegno fermo per pannello e file .md. Il valore si può anche scrivere nella casella accanto (`typedSliderValue`;
   fuori dallo slider, `widenSlider` lo allarga). «Aggiungi lo slider per k» passa da `onAddToGraph`
   (`src/ui/preview.ts`) a `addToGraphBlock`. Il pulsante «Grafico» e il grafico nel pannello della
   formula: `src/editor/graphInsert.ts`.

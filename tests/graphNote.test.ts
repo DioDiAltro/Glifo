@@ -121,6 +121,34 @@ describe('i grafici nell\'anteprima', () => {
     expect(block.querySelector('.graph-errors')).toBeNull()
   })
 
+  it('un grafico 3D: superfici e punti nella legenda; si gira trascinandolo e torna alla vista di partenza', async () => {
+    const host = preview('```grafico\nz = x^2 - y^2\nP = (1, 2, 3)\n```\n')
+    hydrateGraphs(host, light)
+    const block = host.querySelector<HTMLElement>('.graph-block')!
+    expect(block.classList.contains('is-space')).toBe(true)
+    const canvas = block.querySelector<HTMLElement>('.graph-canvas')!
+    expect(canvas.querySelector('svg.graph-3d')).not.toBeNull()
+    const legend = [...block.querySelectorAll('.graph-legend li')]
+    expect(legend[0].querySelector('.graph-swatch.is-surface')).not.toBeNull()
+    expect(legend[1].querySelector('.graph-coords')?.textContent).toBe('(1; 2; 3)')
+    const reset = block.querySelector<HTMLButtonElement>('[data-action="reset"]')!
+    expect(reset.hidden).toBe(true)
+    const before = canvas.innerHTML
+    canvas.setPointerCapture = () => {}
+    const pointer = (type: string, x: number) => canvas.dispatchEvent(new PointerEvent(type, { pointerId: 1, pointerType: 'mouse', button: 0, clientX: x, clientY: 10, bubbles: true }))
+    pointer('pointerdown', 10)
+    pointer('pointermove', 70)
+    await frame()
+    expect(canvas.innerHTML).not.toBe(before)
+    expect(reset.hidden).toBe(false)
+    pointer('pointerup', 70)
+    await frame()
+    reset.click()
+    await frame()
+    expect(canvas.innerHTML).toBe(before)
+    expect(reset.hidden).toBe(true)
+  })
+
   it('un blocco vuoto dice cosa scrivere', () => {
     const host = preview('```grafico\n```\n')
     hydrateGraphs(host, { theme: 'dark', surface: '#000' })
@@ -425,6 +453,14 @@ describe('i grafici nei file .md', () => {
     expect(svg).toContain('data-area="0"')
     expect(svg).toContain('background:rgba(42, 120, 214, 0.18)')
     expect(new DOMParser().parseFromString(svg, 'image/svg+xml').querySelector('parsererror')).toBeNull()
+  })
+
+  it('un grafico 3D nel file: il disegno, la legenda con le superfici, un SVG valido e leggero', () => {
+    const svg = graphImage('z = x^2 + y^2\nx^2 + y^2 + z^2 = 4')
+    expect(svg).toContain('graph-3d')
+    expect(svg).toContain('border-radius:3px')
+    expect(new DOMParser().parseFromString(svg, 'image/svg+xml').querySelector('parsererror')).toBeNull()
+    expect(svg.length).toBeLessThan(250000)
   })
 
   it('i grafici nel file usano le definizioni della nota', () => {

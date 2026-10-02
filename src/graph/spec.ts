@@ -10,10 +10,21 @@
  *     (\cos t, \sin t)            una curva con un parametro t
  *     P = (1, 2)                  un punto (anche P(1, 2) o solo (1, 2))
  *     \int_0^2 x^2 \, dx          l'area tra la curva e l'asse x, con il valore (anche A = \int…)
+ *     \vec{v} = (2, 1)            un vettore: una freccia dall'origine
  *     a = 2                       un numero da usare nelle altre righe (con uno slider)
  *     a \in [0, 5]                da dove a dove va lo slider di a (anche 0 \le a \le 5)
  *     x \in [-5, 5]               la parte da mostrare (anche -1 \le y \le 3)
  *     % commento                  non conta
+ *
+ * Con la z (o una funzione di x e y, o tre coordinate) il grafico è in 3D, e ogni equazione è
+ * una superficie (vedi space.ts e view3d.ts):
+ *
+ *     z = x^2 + y^2               una superficie sopra il piano xy (anche f(x, y) = …, o solo x^2 + y^2)
+ *     x^2 + y^2 + z^2 = 4         una superficie qualsiasi in x, y e z (x + y + z = 1 è un piano)
+ *     (u \cos v, u \sin v, u)     una superficie con due parametri (u e v, s e t, θ e φ…)
+ *     (\cos t, \sin t, t)         una curva nello spazio (con t \in [0, 1] solo quel pezzo)
+ *     P = (1, 2, 3)               un punto; \vec{v} = (1, 2, 3) un vettore
+ *     z \in [-1, 1]               la parte da mostrare
  *
  * Le righe possono usare anche le definizioni scritte prima nella nota (`$a = 2$`, `$f(x) = …$`).
  * Ogni numero scritto con le cifre che il grafico usa (a = 2, non b = 2a, che segue a) ha uno
@@ -27,6 +38,12 @@ import { children, namesIn, parseMath, parseStatement, tokenize, type MathNode, 
 import { calculationRequest, Sheet, splitEquals } from '../math/sheet'
 
 export type Range = [number, number]
+
+/** Un punto (o uno spostamento) nello spazio; nel piano z è 0. */
+export type Vec3 = [number, number, number]
+
+/** Un piano a x + b y + c z = d, come [a, b, c, d]. */
+export type Plane = [number, number, number, number]
 
 interface ItemBase {
   /** La riga del blocco (da 0), per i messaggi. */
@@ -44,8 +61,28 @@ export type GraphItem =
   | (ItemBase & { kind: 'function'; f: (x: number) => number })
   | (ItemBase & { kind: 'vertical'; x: number })
   | (ItemBase & { kind: 'implicit'; F: (x: number, y: number) => number })
-  | (ItemBase & { kind: 'parametric'; fx: (t: number) => number; fy: (t: number) => number; param: 't' | 'θ'; t: Range })
+  /** Una curva con un parametro; `straight`: è una retta ((1 + t, 2t)), si disegna da un bordo all'altro. */
+  | (ItemBase & { kind: 'parametric'; fx: (t: number) => number; fy: (t: number) => number; param: 't' | 'θ'; t: Range; straight: boolean })
   | (ItemBase & { kind: 'point'; x: number; y: number; name: string | null })
+  /** Un vettore (\vec{v} = (2, 1)): una freccia da `from` a `to`, nel piano (z = 0) o nello spazio. */
+  | (ItemBase & { kind: 'vector'; from: Vec3; to: Vec3; name: string | null })
+  /** z = f(x, y): una superficie sopra il piano xy (grafici 3D). */
+  | (ItemBase & { kind: 'surface'; f: (x: number, y: number) => number })
+  /** Una superficie data da un'equazione F(x, y, z) = 0 (una sfera, un cilindro); `plane` se è un piano. */
+  | (ItemBase & { kind: 'implicit3'; F: (x: number, y: number, z: number) => number; plane: Plane | null })
+  /** Una superficie con due parametri: (x(u, v), y(u, v), z(u, v)), con u e v negli intervalli dati. */
+  | (ItemBase & {
+      kind: 'patch'
+      fx: (u: number, v: number) => number
+      fy: (u: number, v: number) => number
+      fz: (u: number, v: number) => number
+      params: [string, string]
+      u: Range
+      v: Range
+    })
+  /** Una curva nello spazio con un parametro; `straight` come per le curve nel piano. */
+  | (ItemBase & { kind: 'curve3'; fx: (t: number) => number; fy: (t: number) => number; fz: (t: number) => number; param: string; t: Range; straight: boolean })
+  | (ItemBase & { kind: 'point3'; x: number; y: number; z: number; name: string | null })
   /**
    * L'area tra la curva y = f(x) e l'asse x, da `from` a `to` (\int_0^2 x^2 \, dx); `value` è
    * l'integrale (NaN se non converge). `curve`: disegna anche la curva, se nessun'altra riga la
@@ -77,11 +114,14 @@ export interface GraphSlider {
 }
 
 export interface GraphSpec {
+  /** 3: c'è la z (o una funzione di x e y, o un punto con tre coordinate) e si disegna nello spazio. */
+  dim: 2 | 3
   items: GraphItem[]
   errors: GraphError[]
   /** La parte da mostrare, se scritta nel blocco. */
   x: Range | null
   y: Range | null
+  z: Range | null
   /** Ci sono seni e coseni: sull'asse x le tacche con π. */
   trig: boolean
   sliders: GraphSlider[]
@@ -120,8 +160,9 @@ function constantValue(node: MathNode, scope: Scope): number {
   return compile(node, scope)({})
 }
 
-type Axis = 'x' | 'y' | 't' | 'θ'
 const AXES: readonly string[] = ['x', 'y', 't', 'θ']
+/** I parametri delle curve e delle superfici nello spazio: uno per una curva, due per una superficie. */
+const PARAMS: readonly string[] = ['t', 'θ', 's', 'u', 'v', 'φ', 'r']
 
 /**
  * `a \in [0, 5]` o `0 \le a \le 5`: da dove a dove va un nome. Per x e y è la parte da mostrare,
@@ -196,11 +237,110 @@ function termCounters(node: MathNode, out: Set<string>): void {
   for (const child of children(node)) termCounters(child, out)
 }
 
-/** Una riga che sembra un punto ((1, 2), P = (1, 2), P(1, 2)): non ha un colore suo. */
+/** Una riga che sembra un punto ((1, 2), P = (1, 2), P(1, 2), anche nello spazio): non ha un colore suo. */
 function looksLikePoint(main: MathNode): boolean {
-  if (main.k === 'tuple') return !dependsOn(main, 't') && !dependsOn(main, 'θ')
-  if (main.k === 'rel' && main.ops.length === 1 && main.items[0].k === 'name' && main.items[1].k === 'tuple') return looksLikePoint(main.items[1])
-  return main.k === 'apply' && main.args.length === 2
+  const tuple = tupleOf(main)
+  if (!tuple || tuple.name?.endsWith(VEC)) return false
+  return !tuple.coords.some((n) => PARAMS.some((p) => dependsOn(n, p)))
+}
+
+/** L'accento di \vec{v}: il nome di un vettore. */
+const VEC = '⃗'
+
+/** Le coordinate di un punto (o di una curva, o di un vettore): (1, 2), P = (1, 2), P(1, 2, 3). */
+function tupleOf(main: MathNode): { coords: MathNode[]; name: string | null } | null {
+  if (main.k === 'tuple') return { coords: main.items, name: null }
+  if (main.k === 'rel' && main.ops.length === 1 && main.ops[0] === '=' && main.items[0].k === 'name' && main.items[1].k === 'tuple') {
+    return { coords: main.items[1].items, name: main.items[0].name }
+  }
+  if (main.k === 'apply' && !main.primes && main.args.length >= 2) return { coords: main.args, name: main.name }
+  return null
+}
+
+/**
+ * I parametri di una curva o di una superficie nello spazio, nell'ordine in cui compaiono: t e θ
+ * sempre (come nel piano), gli altri (s, u, v, φ, r) se non sono numeri definiti.
+ */
+function tupleParams(coords: MathNode[], scope: Scope): string[] {
+  const names = new Set<string>()
+  for (const n of coords) namesIn(n, names)
+  return [...names].filter((n) => PARAMS.includes(n) && (n === 't' || n === 'θ' || !(scope.consts.has(n) || scope.fns.has(n))))
+}
+
+/** `x` compare dentro un seno o un coseno (allora va da 0 a 2π)? */
+function inTrig(node: MathNode, name: string): boolean {
+  if (node.k === 'fn' && TRIG_FUNCTIONS.has(node.name)) return node.args.some((a) => dependsOn(a, name))
+  return children(node).some((c) => inTrig(c, name))
+}
+
+/** Da dove a dove va un parametro di una superficie, se il blocco non lo dice: gli angoli un giro (φ mezzo), gli altri da 0 a 1. */
+function patchRange(name: string, coords: MathNode[]): Range {
+  if (name === 'φ') return [0, Math.PI]
+  if (name === 'θ' || coords.some((n) => inTrig(n, name))) return [0, 2 * Math.PI]
+  return [0, 1]
+}
+
+/** Una curva x(t), y(t), z(t) che è una retta (le coordinate sono di primo grado in t). */
+function isStraight(fs: ((t: number) => number)[]): boolean {
+  const ts = [0, 1, -1.7, 2.9, 7.3]
+  for (const f of fs) {
+    const [a, b] = [f(0), f(1)]
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return false
+    const scale = Math.max(1, Math.abs(a), Math.abs(b))
+    for (const t of ts.slice(2)) {
+      const v = f(t)
+      if (!Number.isFinite(v) || Math.abs(v - (a + (b - a) * t)) > 1e-9 * scale * (1 + Math.abs(t))) return false
+    }
+  }
+  // Ferma in un punto non è una retta.
+  return fs.some((f) => f(1) !== f(0))
+}
+
+/** Se F(x, y, z) = 0 è un piano (F di primo grado): a x + b y + c z = d. */
+function planeOf(F: (x: number, y: number, z: number) => number): Plane | null {
+  const f0 = F(0, 0, 0)
+  const [a, b, c] = [F(1, 0, 0) - f0, F(0, 1, 0) - f0, F(0, 0, 1) - f0]
+  if (![f0, a, b, c].every(Number.isFinite) || (a === 0 && b === 0 && c === 0)) return null
+  const scale = Math.max(1, Math.abs(a), Math.abs(b), Math.abs(c), Math.abs(f0))
+  const tests: Vec3[] = [[1.7, -2.3, 0.6], [-3.1, 0.4, 2.9], [0.3, 5.2, -4.4], [12, -7, 3]]
+  for (const [x, y, z] of tests) {
+    const v = F(x, y, z)
+    if (!Number.isFinite(v) || Math.abs(v - (f0 + a * x + b * y + c * z)) > 1e-9 * scale * (1 + Math.abs(x) + Math.abs(y) + Math.abs(z))) return null
+  }
+  return [a, b, c, -f0]
+}
+
+/** I due argomenti sono proprio x e y (f(x, y), f(y, x)). */
+function xyArgs(args: MathNode[]): boolean {
+  const names = args.map((a) => (a.k === 'name' ? a.name : ''))
+  return names.length === 2 && names.includes('x') && names.includes('y')
+}
+
+/** Una funzione di x e y (f(x, y), anche f(y, x)): nello spazio è una superficie. */
+function xyParams(params: readonly string[] | null | undefined): boolean {
+  return !!params && params.length === 2 && params.includes('x') && params.includes('y')
+}
+
+/**
+ * Una riga che fa del grafico un grafico 3D: usa la z insieme alla x o alla y (z = x^2 + y^2), o
+ * da sola se la nota non definisce z come numero; ha tre coordinate; è una funzione di x e y.
+ * `z = 3` da sola non decide: in un grafico 3D è un piano, se no definisce il numero z.
+ */
+function isSpaceLine(main: MathNode, zFree: boolean): boolean {
+  const range = rangeLine(main)
+  if (range) return zFree && range.name === 'z'
+  const tuple = tupleOf(main)
+  if (tuple) return tuple.coords.length === 3 || (main.k === 'apply' && xyArgs(main.args))
+  if (main.k === 'rel' && main.ops.length === 1 && main.ops[0] === '=') {
+    const [lhs, rhs] = main.items
+    if (lhs.k === 'apply' && !lhs.primes && xyArgs(lhs.args)) return true
+    if (lhs.k === 'name' && lhs.name === 'z' && !dependsOn(rhs, 'x') && !dependsOn(rhs, 'y') && !dependsOn(rhs, 'z')) return false
+  }
+  // Anche se la nota ha $z = 2$ (magari solo per dire «il piano z = 2»), z = x^2 + y^2 è una superficie.
+  if (dependsOn(main, 'z') && (zFree || dependsOn(main, 'x') || dependsOn(main, 'y'))) return true
+  // Un'espressione in y (e in x) da sola: z = …
+  const expression = main.k !== 'rel' && main.k !== 'in' && main.k !== 'and' && main.k !== 'or'
+  return expression && dependsOn(main, 'y') && !areaOf(main)
 }
 
 interface Definition {
@@ -209,13 +349,17 @@ interface Definition {
   value: MathNode
 }
 
-/** a = 2 o f(x) = …: una riga che definisce un nome (le coordinate x e y no, sono rette). */
-function definitionOf(node: MathNode): Definition | null {
+/**
+ * a = 2 o f(x) = …: una riga che definisce un nome (le coordinate x e y no, sono rette). Neanche
+ * z = x^2 + y^2, che è una superficie, e in un grafico 3D (`space`) z = 3, che è un piano.
+ */
+function definitionOf(node: MathNode, space = false): Definition | null {
   if (node.k !== 'rel' || node.ops.length !== 1 || node.ops[0] !== '=') return null
   const [lhs, value] = node.items
   if (value.k === 'tuple') return null
   if (lhs.k === 'name') {
     if (lhs.name === 'x' || lhs.name === 'y' || lhs.name === 'π') return null
+    if (lhs.name === 'z' && (space || dependsOn(value, 'x') || dependsOn(value, 'y'))) return null
     // r = 1 + \cos\theta è una curva in coordinate polari, r = 2 un numero.
     if (lhs.name === 'r' && dependsOn(value, 'θ')) return null
     return { name: lhs.name, params: null, value }
@@ -359,7 +503,7 @@ export const GRAPH_WORK = 5e6
 function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap<string, number>): GraphSpec {
   const sheet = new Sheet(values)
   for (const d of defs) sheet.define(d)
-  const spec: GraphSpec = { items: [], errors: [], x: null, y: null, trig: false, sliders: [] }
+  const spec: GraphSpec = { dim: 2, items: [], errors: [], x: null, y: null, z: null, trig: false, sliders: [] }
   const fail = (l: { line: number; text: string }, err: unknown): GraphError => {
     const error = { line: l.line, text: l.text, message: errorMessage(err) }
     spec.errors.push(error)
@@ -390,6 +534,16 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
       fail(l, err)
     }
   }
+  // Nello spazio se una riga usa la z (che la nota non definisce come numero), ha tre coordinate o è
+  // una funzione di x e y (anche solo il suo nome, se è definita nella nota). Una formula della nota
+  // come $z = x^2 - y^2$ non dà un numero: la z resta una coordinata.
+  const noteFns = sheet.scope().fns
+  const zFree = !sheet.scope().consts.has('z') && !noteFns.has('z')
+  // z = 3 che nessun'altra riga usa: è il piano, non un numero (x^2 + y^2 = 1 e z = 0,5).
+  const zPlane = (l: Line) =>
+    zFree && l.main.k === 'rel' && l.main.items[0].k === 'name' && l.main.items[0].name === 'z' && !lines.some((o) => o !== l && dependsOn(o.main, 'z'))
+  const space = lines.some((l) => isSpaceLine(l.main, zFree) || zPlane(l) || (l.main.k === 'name' && xyParams(noteFns.get(l.main.name)?.params)))
+  spec.dim = space ? 3 : 2
 
   // Prima le definizioni (a = 2, f(x) = …), in qualsiasi ordine: ognuna appena ha quello che le serve.
   const consts = new Map(sheet.scope().consts)
@@ -398,7 +552,7 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   const pending = new Map<Line, Definition>()
   const drawn: Line[] = []
   for (const l of lines) {
-    const def = definitionOf(l.main)
+    const def = definitionOf(l.main, space)
     if (def) {
       pending.set(l, def)
       defined.add(def.name)
@@ -418,8 +572,9 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
       }
       pending.delete(l)
       progress = true
-      // Le funzioni di una variabile si disegnano, e le aree con un nome (A = \int_0^2 x^2 \, dx).
-      if (def.params?.length === 1 || areaOf(l.main)) drawn.push(l)
+      // Le funzioni di una variabile si disegnano (nello spazio quelle di x e y), e le aree con un
+      // nome (A = \int_0^2 x^2 \, dx).
+      if ((space ? xyParams(def.params) : def.params?.length === 1) || areaOf(l.main)) drawn.push(l)
     }
   }
   // Quelle rimaste: o sbagliate, o in un giro (f usa g che usa f).
@@ -445,23 +600,27 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   }
 
   // Poi le righe da disegnare, nell'ordine in cui sono scritte, e quelle che dicono da dove a dove.
-  const ranges = new Map<Axis, Range>()
+  const ranges = new Map<string, Range>()
   const sliderRanges = new Map<string, { range: Range; ends: [string, string]; line: Line }>()
+  /** Le coordinate: la parte da mostrare, mai uno slider. */
+  const coords = space ? ['x', 'y', 'z'] : ['x', 'y']
   drawn.sort((a, b) => a.line - b.line)
   // Un'area sotto una curva che un'altra riga disegna (y = x^2 e \int_0^2 x^2 \, dx, f(x) = … e
   // \int_0^2 f(x) \, dx) prende il colore di quella riga e non la ridisegna. Si guarda solo come
   // sono scritte le righe: così i colori non cambiano muovendo uno slider.
   const under = new Map<number, number>()
-  const curves = drawn.filter((l) => !rangeLine(l.main) && !areaOf(l.main)).map((l) => ({ line: l.line, keys: curveKeys(l.main, scope()) }))
-  const areaCurves: typeof curves = []
-  for (const l of drawn) {
-    const area = areaOf(l.main)
-    if (!area) continue
-    const keys = shapeKeys(area.int.body, area.int.v)
-    const same = (c: { keys: string[] }) => c.keys.some((k) => keys.includes(k))
-    const curve = curves.find(same) ?? areaCurves.find(same)
-    if (curve) under.set(l.line, curve.line)
-    else areaCurves.push({ line: l.line, keys })
+  if (!space) {
+    const curves = drawn.filter((l) => !rangeLine(l.main) && !areaOf(l.main)).map((l) => ({ line: l.line, keys: curveKeys(l.main, scope()) }))
+    const areaCurves: typeof curves = []
+    for (const l of drawn) {
+      const area = areaOf(l.main)
+      if (!area) continue
+      const keys = shapeKeys(area.int.body, area.int.v)
+      const same = (c: { keys: string[] }) => c.keys.some((k) => keys.includes(k))
+      const curve = curves.find(same) ?? areaCurves.find(same)
+      if (curve) under.set(l.line, curve.line)
+      else areaCurves.push({ line: l.line, keys })
+    }
   }
   /** Il colore di ogni riga che ne ha uno suo. */
   const slots = new Map<number, number>()
@@ -472,11 +631,11 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
       try {
         const range: Range = [constantValue(r.lo, scope()), constantValue(r.hi, scope())]
         if (!(Number.isFinite(range[0]) && Number.isFinite(range[1]) && range[1] > range[0])) {
-          const example = AXES.includes(r.name) ? 'x \\in [-5, 5]' : `${nameLatex(r.name)} \\in [0, 5]`
+          const example = AXES.includes(r.name) || coords.includes(r.name) ? 'x \\in [-5, 5]' : `${nameLatex(r.name)} \\in [0, 5]`
           throw new MathError(`Servono due estremi, dal più piccolo al più grande: ${example}`)
         }
-        if (AXES.includes(r.name)) ranges.set(r.name as Axis, range)
-        if (r.name !== 'x' && r.name !== 'y') sliderRanges.set(r.name, { range, ends: [toLatex(r.lo), toLatex(r.hi)], line: l })
+        ranges.set(r.name, range)
+        if (!coords.includes(r.name)) sliderRanges.set(r.name, { range, ends: [toLatex(r.lo), toLatex(r.hi)], line: l })
       } catch (err) {
         failLine(l, err)
       }
@@ -484,8 +643,8 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
     }
     const own = !under.has(l.line)
     try {
-      const item = itemFor(l, scope(), slot, own)
-      if (item.kind !== 'point' && own) slots.set(l.line, slot++)
+      const item = space ? spaceItemFor(l, scope(), slot) : itemFor(l, scope(), slot, own)
+      if (item.kind !== 'point' && item.kind !== 'point3' && own) slots.set(l.line, slot++)
       spec.items.push(item)
     } catch (err) {
       if (!looksLikePoint(l.main) && own) slots.set(l.line, slot++)
@@ -498,17 +657,37 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   }
   spec.x = ranges.get('x') ?? null
   spec.y = ranges.get('y') ?? null
+  spec.z = space ? ranges.get('z') ?? null : null
   const functions = spec.items.filter((i) => i.kind === 'function' || i.kind === 'area')
   spec.trig = functions.some((i) => trig.has(i.line)) || (functions.length > 0 && defs.some((d) => /\\?(sin|cos|tan|tg)\b/.test(d)))
+  // Gli intervalli dei parametri (t \in [0, 1]): una retta con il suo intervallo è solo quel pezzo.
+  const params = new Set<string>()
   for (const item of spec.items) {
-    if (item.kind === 'parametric') item.t = ranges.get(item.param) ?? item.t
+    if (item.kind === 'parametric' || item.kind === 'curve3') {
+      params.add(item.param)
+      const t = ranges.get(item.param)
+      if (t) {
+        item.t = t
+        item.straight = false
+      }
+    } else if (item.kind === 'patch') {
+      item.params.forEach((p) => params.add(p))
+      item.u = ranges.get(item.params[0]) ?? item.u
+      item.v = ranges.get(item.params[1]) ?? item.v
+    }
+  }
+  if (space) {
+    for (const l of drawn) {
+      const tuple = tupleOf(l.main)
+      if (tuple) tupleParams(tuple.coords, scope()).forEach((p) => params.add(p))
+    }
   }
 
   // Gli slider: i numeri scritti con le cifre (nella nota o nel blocco) che il grafico usa, anche
   // attraverso le altre definizioni (f(x) = a x^2 usa a).
   const blockDefs = new Map<string, { def: Definition; line: number }>()
   for (const l of lines) {
-    const def = definitionOf(l.main)
+    const def = definitionOf(l.main, space)
     if (def) blockDefs.set(def.name, { def, line: l.line })
   }
   const noteDefs = new Map<string, number>()
@@ -543,7 +722,8 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   for (const d of sheet.definitions) termCounters(d.value, counters)
   const order = (name: string) => (blockDefs.has(name) ? 1e6 + blockDefs.get(name)!.line : noteDefs.get(name) ?? 0)
   spec.sliders = [...used]
-    .filter(isNumber)
+    // Nello spazio la z è una coordinata, anche se la nota la definisce.
+    .filter((name) => isNumber(name) && !coords.includes(name))
     .sort((a, b) => order(a) - order(b))
     .map((name) => {
       const value = consts.get(name)!
@@ -552,9 +732,9 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
       const range = written?.range ?? defaultRange(value, integer)
       return { name, value, range, ends: written?.ends ?? [String(range[0]), String(range[1])], step: integer ? 1 : sliderStep(range), integer }
     })
-  // Un intervallo per un nome che non è un numero da muovere.
+  // Un intervallo per un nome che non è un numero da muovere (né un parametro).
   for (const [name, r] of sliderRanges) {
-    if (isNumber(name) || name === 't' || name === 'θ') continue
+    if (isNumber(name) || name === 't' || name === 'θ' || params.has(name)) continue
     const def = blockDefs.get(name)?.def ?? lastNoteDef(name)
     if (fns.has(name) || def?.params) failLine(r.line, new MathError(`${name} è una funzione: lo slider è per i numeri, come a = 2`))
     else if (def && (def.value.k === 'int' || !onlyDigits(usesOf(name)))) failLine(r.line, new MathError(`${name} si calcola da altri numeri: lo slider è per quelli scritti con le cifre, come a = 2`))
@@ -564,7 +744,7 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   // I nomi che mancano: la riga da aggiungere al blocco per averli, con uno slider (k = 1, o
   // l'inizio dell'intervallo scritto, se 1 è fuori).
   for (const { error, line } of undefinedIn) {
-    const missing = missingNumbers(line, scope()).filter((name) => !defined.has(name))
+    const missing = missingNumbers(line, scope(), space).filter((name) => !defined.has(name))
     if (!missing.length || missing.length > 6 || hasWord(line.text)) continue
     error.add = missing.map((name) => {
       const r = sliderRanges.get(name)
@@ -593,10 +773,13 @@ function hasWord(text: string): boolean {
  * quelli davanti a una parentesi con un'espressione (k(x - 1) è un prodotto); g(x) invece è una
  * funzione, e uno slider non serve.
  */
-function missingNumbers(l: Line, scope: Scope): string[] {
+function missingNumbers(l: Line, scope: Scope, space = false): string[] {
   const out = new Set<string>()
+  // Nello spazio anche z e i parametri della riga (u e v in (u \cos v, u \sin v, u)).
+  const tuple = space ? tupleOf(l.main) : null
+  const extra = new Set(space ? ['z', ...(tuple ? tupleParams(tuple.coords, scope) : [])] : [])
   const known = (name: string, bound: ReadonlySet<string>) =>
-    bound.has(name) || AXES.includes(name) || name === 'π' || name === 'e' || scope.consts.has(name) || scope.fns.has(name)
+    bound.has(name) || AXES.includes(name) || extra.has(name) || name === 'π' || name === 'e' || scope.consts.has(name) || scope.fns.has(name)
   const visit = (n: MathNode, bound: ReadonlySet<string>): void => {
     if (n.k === 'name') {
       if (!known(n.name, bound)) out.add(n.name)
@@ -614,7 +797,7 @@ function missingNumbers(l: Line, scope: Scope): string[] {
     }
     for (const child of children(n)) visit(child, bound)
   }
-  const def = definitionOf(l.main)
+  const def = definitionOf(l.main, space)
   const polar = l.main.k === 'rel' && l.main.items[0].k === 'name' && l.main.items[0].name === 'r' && dependsOn(l.main.items[1], 'θ')
   if (def) visit(def.value, new Set(def.params ?? []))
   else if (polar) visit((l.main as Extract<MathNode, { k: 'rel' }>).items[1], new Set())
@@ -664,11 +847,14 @@ function itemFor(l: Line, scope: Scope, slot: number, curve = true): GraphItem {
       const fy = compile(coords[1], inner)
       const v: Record<string, number> = { [param]: 0 }
       const label = `${name ? `${nameLatex(name)} = ` : ''}${toLatex({ k: 'tuple', items: coords })}${condLabel(cond)}`
-      return { kind: 'parametric', line, label, slot, param, t: [0, 2 * Math.PI], fx: (t) => ((v[param] = t), fx(v)), fy: (t) => ((v[param] = t), fy(v)) }
+      const [fxt, fyt] = [(t: number) => ((v[param] = t), fx(v)), (t: number) => ((v[param] = t), fy(v))]
+      return { kind: 'parametric', line, label, slot, param, t: [0, 2 * Math.PI], fx: fxt, fy: fyt, straight: !cond && isStraight([fxt, fyt]) }
     }
     if (cond) throw new MathError('Un punto non ha condizioni')
     const [x, y] = coords.map((n) => compile(n, scope)({}))
     if (!Number.isFinite(x) || !Number.isFinite(y)) throw new MathError('Le coordinate del punto non sono numeri')
+    // \vec{v} = (2, 1): una freccia dall'origine.
+    if (name?.endsWith(VEC)) return { kind: 'vector', line, label: `${nameLatex(name)} = ${toLatex({ k: 'tuple', items: coords })}`, slot, from: [0, 0, 0], to: [x, y, 0], name }
     return { kind: 'point', line, label: name ? nameLatex(name) : '', slot: -1, x, y, name }
   }
 
@@ -713,6 +899,7 @@ function itemFor(l: Line, scope: Scope, slot: number, curve = true): GraphItem {
         t: [0, 2 * Math.PI],
         fx: (t) => ((v.θ = t), r(v) * Math.cos(t)),
         fy: (t) => ((v.θ = t), r(v) * Math.sin(t)),
+        straight: false,
       }
     }
     // Una curva qualsiasi: sinistra - destra = 0
@@ -748,6 +935,107 @@ function itemFor(l: Line, scope: Scope, slot: number, curve = true): GraphItem {
   const f = restrict(compile(main, inner), cond, inner)
   const v = { x: 0 }
   return { kind: 'function', line, label: `y = ${toLatex(main)}${condLabel(cond)}`, slot, f: (x) => ((v.x = x), f(v)) }
+}
+
+/** La superficie z = f(x, y) di una funzione di x e y (scritta f(x, y) o f(y, x)). */
+function surfaceOf(fn: UserFunction): (x: number, y: number) => number {
+  const xFirst = fn.params[0] === 'x'
+  return (x, y) => fn.call(xFirst ? [x, y] : [y, x])
+}
+
+/** Un punto, un vettore, una curva o una superficie con i parametri, nello spazio. */
+function spaceTuple(l: Line, { coords, name }: { coords: MathNode[]; name: string | null }, scope: Scope, slot: number): GraphItem {
+  const { cond, line } = l
+  if (coords.length !== 2 && coords.length !== 3) throw new MathError('Un punto nello spazio ha tre coordinate: (x, y, z)')
+  // (x, y) nello spazio è nel piano xy.
+  const all: MathNode[] = coords.length === 3 ? coords : [...coords, { k: 'num', v: 0, text: '0', comma: false }]
+  const params = tupleParams(all, scope)
+  const label = `${name ? `${nameLatex(name)} = ` : ''}${toLatex({ k: 'tuple', items: coords })}${condLabel(cond)}`
+  if (!params.length) {
+    if (cond) throw new MathError('Un punto non ha condizioni')
+    const [x, y, z] = all.map((n) => compile(n, scope)({}))
+    if (![x, y, z].every(Number.isFinite)) throw new MathError('Le coordinate del punto non sono numeri')
+    if (name?.endsWith(VEC)) return { kind: 'vector', line, label, slot, from: [0, 0, 0], to: [x, y, z], name }
+    return { kind: 'point3', line, label: name ? nameLatex(name) : '', slot: -1, x, y, z, name }
+  }
+  if (params.length > 2) throw new MathError(`Troppi parametri (${params.join(', ')}): una curva ne ha uno, una superficie due`)
+  const inner = scopeWith(scope, params)
+  const [cx, cy, cz] = all.map((n, i) => (i === 0 ? restrict(compile(n, inner), cond, inner) : compile(n, inner)))
+  const v: Record<string, number> = Object.fromEntries(params.map((p) => [p, 0]))
+  if (params.length === 1) {
+    const [p] = params
+    const at = (f: Compiled) => (t: number) => ((v[p] = t), f(v))
+    const [fx, fy, fz] = [at(cx), at(cy), at(cz)]
+    return { kind: 'curve3', line, label, slot, param: p, t: p === 'φ' ? [0, Math.PI] : [0, 2 * Math.PI], straight: !cond && isStraight([fx, fy, fz]), fx, fy, fz }
+  }
+  const [p, q] = params
+  const at = (f: Compiled) => (a: number, b: number) => ((v[p] = a), (v[q] = b), f(v))
+  return { kind: 'patch', line, label, slot, params: [p, q], u: patchRange(p, all), v: patchRange(q, all), fx: at(cx), fy: at(cy), fz: at(cz) }
+}
+
+/**
+ * Quello che disegna una riga in un grafico 3D: z = f(x, y) e le funzioni di x e y sono superfici
+ * sopra il piano xy, le altre equazioni superfici qualsiasi (x = 2 e x + y + z = 1 piani), i punti
+ * con tre coordinate punti, con i parametri curve e superfici.
+ */
+function spaceItemFor(l: Line, scope: Scope, slot: number): GraphItem {
+  const { main, cond, line } = l
+  if (areaOf(main)) throw new MathError('Nei grafici 3D gli integrali non si disegnano ancora: scrivilo in un grafico senza la z')
+  const tuple = tupleOf(main)
+  if (tuple && !(main.k === 'apply' && scope.fns.has(main.name))) return spaceTuple(l, tuple, scope, slot)
+  if (main.k === 'rel') {
+    if (main.ops.length !== 1 || main.ops[0] !== '=') {
+      if (main.ops.every((op) => op === '=')) throw new MathError('In una riga va un\'uguaglianza sola')
+      throw new MathError('Le zone (con < e >) non si sanno ancora colorare: scrivi un\'uguaglianza')
+    }
+    const [lhs, rhs] = main.items
+    const label = `${toLatex(main)}${condLabel(cond)}`
+    // f(x, y) = …: la superficie z = f(x, y).
+    const fn = lhs.k === 'apply' && xyArgs(lhs.args) ? scope.fns.get(lhs.name) : undefined
+    if (fn && xyParams(fn.params)) return { kind: 'surface', line, label, slot, f: surfaceOf(fn) }
+    // z = f(x, y)
+    if (lhs.k === 'name' && lhs.name === 'z' && !dependsOn(rhs, 'z')) {
+      const inner = scopeWith(scope, ['x', 'y'])
+      const f = restrict(compile(rhs, inner), cond, inner)
+      const v = { x: 0, y: 0 }
+      return { kind: 'surface', line, label, slot, f: (x, y) => ((v.x = x), (v.y = y), f(v)) }
+    }
+    // r = f(θ): una curva in coordinate polari, nel piano xy.
+    if (lhs.k === 'name' && lhs.name === 'r' && dependsOn(rhs, 'θ') && !dependsOn(rhs, 'z')) {
+      const inner = scopeWith(scope, ['θ'])
+      const r = restrict(compile(rhs, inner), cond, inner)
+      const v = { θ: 0 }
+      const at = (g: (t: number) => number) => (t: number) => ((v.θ = t), g(t) * r(v))
+      return { kind: 'curve3', line, label, slot, param: 'θ', t: [0, 2 * Math.PI], straight: false, fx: at(Math.cos), fy: at(Math.sin), fz: () => 0 }
+    }
+    if (!dependsOn(main, 'x') && !dependsOn(main, 'y') && !dependsOn(main, 'z')) throw new MathError('Mancano x, y e z: cosa disegno?')
+    // Una superficie qualsiasi: sinistra - destra = 0.
+    const xyz = scopeWith(scope, ['x', 'y', 'z'])
+    const left = compile(lhs, xyz)
+    const right = compile(rhs, xyz)
+    const ok = cond ? compileCondition(cond, xyz) : null
+    const v = { x: 0, y: 0, z: 0 }
+    const F = (x: number, y: number, z: number) => {
+      v.x = x
+      v.y = y
+      v.z = z
+      return ok && !ok(v) ? NaN : left(v) - right(v)
+    }
+    return { kind: 'implicit3', line, label, slot, F, plane: ok ? null : planeOf(F) }
+  }
+  if (main.k === 'in' || main.k === 'and' || main.k === 'or') throw new MathError('Una condizione da sola non si disegna: per la parte da mostrare scrivi z \\in [a, b]')
+  // f: una funzione di x e y, da sola.
+  if (main.k === 'name' && scope.fns.has(main.name)) {
+    const fn = scope.fns.get(main.name)!
+    if (!xyParams(fn.params)) throw new MathError(`${main.name} non è una funzione di x e y: nello spazio si disegnano le superfici z = f(x, y)`)
+    return { kind: 'surface', line, label: `${nameLatex(main.name)}(${fn.params.map(nameLatex).join(', ')})`, slot, f: surfaceOf(fn) }
+  }
+  if (!dependsOn(main, 'x') && !dependsOn(main, 'y')) throw new MathError('Mancano x e y: per un piano orizzontale scrivi z = 3')
+  // Un'espressione in x e y da sola: è z = …
+  const inner = scopeWith(scope, ['x', 'y'])
+  const f = restrict(compile(main, inner), cond, inner)
+  const v = { x: 0, y: 0 }
+  return { kind: 'surface', line, label: `z = ${toLatex(main)}${condLabel(cond)}`, slot, f: (x, y) => ((v.x = x), (v.y = y), f(v)) }
 }
 
 /** I nomi che il blocco usa: quelli da cercare tra le definizioni della nota. */
@@ -787,8 +1075,8 @@ export function formulaGraphLine(tex: string): string {
 
 /**
  * La formula è una funzione (o una curva) da disegnare? `y = …` o `f(x) = …` con la x, `r = …` con
- * θ, un'equazione in x e y, un integrale (la sua area). Se sì, il suo grafico (con le definizioni
- * della nota `defs`).
+ * θ, un'equazione in x e y, un integrale (la sua area); nello spazio `z = …` o `f(x, y) = …` con x
+ * o y e le equazioni con la z. Se sì, il suo grafico (con le definizioni della nota `defs`).
  */
 export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSpec | null {
   const text = formulaGraphLine(tex)
@@ -807,7 +1095,10 @@ export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSp
       (lhs.k === 'name' && lhs.name === 'y' && namesIn(rhs).has('x')) ||
       (lhs.k === 'apply' && !lhs.primes && lhs.args.length === 1 && lhs.args[0].k === 'name' && namesIn(rhs).has(lhs.args[0].name)) ||
       (lhs.k === 'name' && lhs.name === 'r' && namesIn(rhs).has('θ')) ||
-      (all.has('x') && all.has('y') && !(lhs.k === 'name' && (lhs.name === 'x' || lhs.name === 'y')))
+      (all.has('x') && all.has('y') && !(lhs.k === 'name' && (lhs.name === 'x' || lhs.name === 'y'))) ||
+      (lhs.k === 'name' && lhs.name === 'z' && (namesIn(rhs).has('x') || namesIn(rhs).has('y'))) ||
+      (lhs.k === 'apply' && !lhs.primes && xyArgs(lhs.args)) ||
+      (all.has('z') && (all.has('x') || all.has('y')))
     if (!plottable) return null
   }
   const spec = parseGraph(text, defs)

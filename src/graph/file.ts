@@ -15,9 +15,9 @@ import { renderTexMathml } from '../render/katex'
 import { renderMarkdown } from '../render/markdown'
 import { findFencedBlocks } from '../schema/blocks'
 import { base64 } from '../schema/file'
-import { chooseWindow } from './plot'
+import { staticGraphSvg } from './picture'
 import { parseGraph } from './spec'
-import { areaColor, graphSvg, graphTitle, itemColors, PALETTES, escapeXml } from './svg'
+import { areaColor, graphTitle, itemColors, PALETTES, escapeXml } from './svg'
 
 const MARKER = 'glifo-grafico'
 const HINT = 'per modificare il grafico apri questo file con Glifo'
@@ -45,11 +45,11 @@ export function graphImage(source: string, defs: readonly string[] = []): string
   const width = 640
   const height = 400
   const palette = { ...PALETTES.light, surface: '#ffffff', halo: '#ffffff' }
-  const plot = graphSvg(spec, chooseWindow(spec, width, height), palette, { id: 'grafico' })
+  const plot = staticGraphSvg(spec, width, height, palette, { id: 'grafico' }, 'file')
   const colors = itemColors(spec.items, palette)
   const rows = spec.items
     .map((item, i) => ({ item, color: colors[i] }))
-    .filter(({ item }) => item.kind !== 'point' || item.name)
+    .filter(({ item }) => (item.kind !== 'point' && item.kind !== 'point3') || item.name)
   const numbers = spec.sliders.map((s) => `${nameLatex(s.name)} = ${formatNumber(s.value, { comma: true, decimal: true, digits: 6 })?.tex ?? s.value}`)
   const lines = rows.length + (numbers.length ? 1 : 0)
   const legendHeight = lines ? lines * 28 + 12 : 0
@@ -60,11 +60,13 @@ export function graphImage(source: string, defs: readonly string[] = []): string
     div.innerHTML = rows
       .map(({ item, color }) => {
         const swatch =
-          item.kind === 'point'
+          item.kind === 'point' || item.kind === 'point3'
             ? `<span style="width:9px;height:9px;border-radius:50%;background:${color}"></span>`
             : item.kind === 'area'
               ? `<span style="width:18px;height:12px;box-sizing:border-box;border-top:3px solid ${color};border-radius:2px 2px 0 0;background:${areaColor(color, palette)}"></span>`
-              : `<span style="width:18px;height:3px;border-radius:2px;background:${color}"></span>`
+              : item.kind === 'surface' || item.kind === 'implicit3' || item.kind === 'patch'
+                ? `<span style="width:14px;height:14px;border-radius:3px;background:${color}"></span>`
+                : `<span style="width:18px;height:3px;border-radius:2px;background:${color}"></span>`
         return `<div style="display:flex;align-items:center;gap:8px;height:28px">${swatch}${renderTexMathml(item.label)}</div>`
       })
       .concat(numbers.length ? [`<div style="display:flex;align-items:center;height:28px">${renderTexMathml(numbers.join(', \\quad '))}</div>`] : [])

@@ -1249,6 +1249,35 @@ try {
     areaNote?.includes('```grafico\n\\int_0^2 x^2 \\, dx\n```') && areaLegend.includes('2,666666') && (await gp.locator('.preview-pane .graph-block path[data-area]').count()) === 1,
     `un integrale ha la sua area nel pannello e nella nota, con il valore nella legenda (${JSON.stringify({ areaLegend, note: areaNote?.slice(-50) })})`,
   )
+  // Un grafico 3D: la superficie della formula nel pannello e, con «Inserisci il grafico», nella
+  // nota; trascinandolo si gira, il pulsante con la freccia lo riporta com'era.
+  await gp.locator('.notes-head button[aria-label="Nuova nota"]').click()
+  await gp.keyboard.press('Control+a')
+  await gp.keyboard.type('# Superficie\n\nLa sella $z = x^2 - y^2$')
+  await gp.keyboard.press('ArrowLeft')
+  await gp.waitForSelector('.formula-graph:not([hidden]) svg.graph-3d', { timeout: 5000 })
+  await gp.locator('.formula-graph-insert').click()
+  await gp.waitForSelector('.preview-pane .graph-block.is-space svg.graph-3d', { timeout: 5000 })
+  await gp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  const spaceNote = await gp.evaluate(() =>
+    [...Array(localStorage.length).keys()].map((i) => localStorage.getItem(localStorage.key(i)) ?? '').find((v) => v.startsWith('# Superficie')),
+  )
+  const spaceCanvas = gp.locator('.preview-pane .graph-block.is-space .graph-canvas')
+  const spaceBefore = await spaceCanvas.innerHTML()
+  const spaceBox = await spaceCanvas.boundingBox()
+  await gp.mouse.move(spaceBox.x + spaceBox.width / 2, spaceBox.y + spaceBox.height / 2)
+  await gp.mouse.down()
+  await gp.mouse.move(spaceBox.x + spaceBox.width / 2 + 80, spaceBox.y + spaceBox.height / 2 + 20, { steps: 6 })
+  await gp.mouse.up()
+  const spaceReset = gp.locator('.preview-pane .graph-block.is-space [data-action="reset"]')
+  await gp.waitForFunction(() => !document.querySelector('.preview-pane .graph-block.is-space [data-action="reset"]')?.hidden, null, { timeout: 5000 })
+  const turned = (await spaceCanvas.innerHTML()) !== spaceBefore
+  await spaceReset.click()
+  await gp.waitForFunction((before) => document.querySelector('.preview-pane .graph-block.is-space .graph-canvas')?.innerHTML === before, spaceBefore, { timeout: 5000 })
+  check(
+    spaceNote?.includes('```grafico\nz = x^2 - y^2\n```') && turned && (await gp.locator('.preview-pane .graph-block.is-space .graph-swatch.is-surface').count()) === 1,
+    `una superficie si disegna in 3D, nel pannello e nella nota, e si gira trascinandola (${JSON.stringify({ turned, note: spaceNote?.slice(-40) })})`,
+  )
   await gp.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)
