@@ -39,6 +39,8 @@ export type MathNode =
   /** `\{(x, y) \in \mathbb{R}^2 : x^2 + y^2 \le 1\}`: un insieme; `vars` null se non le scrive. */
   | { k: 'set'; vars: string[] | null; cond: MathNode }
   | { k: 'cases'; rows: { value: MathNode; cond: MathNode | null }[] }
+  /** Una matrice (\begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}), o un vettore colonna: le righe. */
+  | { k: 'matrix'; rows: MathNode[][] }
   | { k: 'tuple'; items: MathNode[] }
   | { k: 'rel'; ops: RelOp[]; items: MathNode[] }
   | { k: 'in'; a: MathNode; lo: MathNode; hi: MathNode; loOpen: boolean; hiOpen: boolean }
@@ -84,6 +86,11 @@ const FUNCTION_NAMES: Record<string, string> = {
   max: 'max', min: 'min', gcd: 'gcd', mcd: 'gcd', lcm: 'lcm', mcm: 'lcm', round: 'round',
   // I numeri complessi: parte reale e immaginaria (\Re z, \operatorname{Re} z), argomento, coniugato.
   Re: 're', re: 're', Im: 'im', im: 'im', arg: 'arg', Arg: 'arg', conj: 'conj',
+  // Le matrici: determinante, rango, traccia, nucleo (\operatorname{Im} è anche l'immagine), riduzione
+  // a scala, autovalori e autovettori.
+  det: 'det', rank: 'rank', rk: 'rank', rg: 'rank', rango: 'rank', tr: 'tr', Tr: 'tr', trace: 'tr', traccia: 'tr',
+  ker: 'ker', Ker: 'ker', dim: 'dim', rref: 'rref', scala: 'rref', gauss: 'rref', autovalori: 'eig', eig: 'eig',
+  autovettori: 'eigvec', eigvec: 'eigvec', span: 'span', Span: 'span',
 }
 
 /** Le parole riconosciute anche senza barra (`sin x`, `sqrt(x)`, `pi`), come in una calcolatrice. */
@@ -120,6 +127,9 @@ const COMMAND_OPS: Record<string, [Kind, string]> = {
   lvert: ['bar', 'l|'], rvert: ['bar', 'r|'], vert: ['bar', '|'], lVert: ['bar', 'l|'], rVert: ['bar', 'r|'], Vert: ['bar', '|'],
 }
 
+/** Gli ambienti delle matrici: \begin{vmatrix} è il determinante. */
+const MATRIX_ENVS = new Set(['pmatrix', 'bmatrix', 'Bmatrix', 'vmatrix', 'Vmatrix', 'matrix', 'smallmatrix', 'array'])
+
 /** I comandi che non cambiano il valore: spazi, stili, dimensioni. */
 const IGNORED = new Set([
   'displaystyle', 'textstyle', 'scriptstyle', 'limits', 'nolimits', 'enspace', 'thinspace', 'medspace',
@@ -130,7 +140,7 @@ const IGNORED = new Set([
 
 type Kind =
   | 'num' | 'name' | 'fn' | 'frac' | 'sqrt' | 'binom' | 'big' | 'int' | 'op' | 'rel' | 'open' | 'close' | 'bar'
-  | 'comma' | 'semi' | 'sep' | 'in' | 'and' | 'or' | 'else' | 'amp' | 'row' | 'cases' | 'endcases' | 'infty'
+  | 'comma' | 'semi' | 'sep' | 'in' | 'and' | 'or' | 'else' | 'amp' | 'row' | 'cases' | 'endcases' | 'matrix' | 'endmatrix' | 'infty'
   | 'deg' | 'prime' | 'set' | 'bad'
 
 interface Tok {
@@ -285,6 +295,8 @@ export function tokenize(src: string): Tok[] {
       case '∨': one('or', 'or'); break
       case '√': one('sqrt', 'sqrt'); break
       case 'ℝ': one('set', 'R'); break
+      case '⟨': one('open', '⟨'); break
+      case '⟩': one('close', '⟩'); break
       case '⌊': one('open', 'floor'); break
       case '⌋': one('close', 'floor'); break
       case '⌈': one('open', 'ceil'); break
@@ -439,7 +451,24 @@ function readCommand(src: string, i: number, out: Tok[], depth: () => number, ad
     const env = arg?.text.trim() ?? ''
     if (arg) end = arg.end
     if (/^(cases|dcases|rcases|cases\*)$/.test(env)) push(name === 'begin' ? 'cases' : 'endcases', env)
-    else push('bad', `\\${name}{${env}}`)
+    else if (MATRIX_ENVS.has(env)) {
+      // \begin{array}{cc}: le colonne non contano.
+      if (name === 'begin' && env === 'array') {
+        const columns = readBraces(src, end)
+        if (columns) end = columns.end
+      }
+      push(name === 'begin' ? 'matrix' : 'endmatrix', env)
+    } else push('bad', `\\${name}{${env}}`)
+    return end
+  }
+  if (name === 'top' || name === 'intercal') {
+    // A^\top: la trasposta.
+    push('name', 'T')
+    return end
+  }
+  if (name === 'langle' || name === 'rangle') {
+    // \langle u, v \rangle: il prodotto scalare.
+    push(name === 'langle' ? 'open' : 'close', name === 'langle' ? '⟨' : '⟩')
     return end
   }
   push('bad', '\\' + name)
@@ -454,7 +483,7 @@ function tokenizeDelim(delim: string, at: number, out: Tok[], addDepth: (d: numb
 
 // ——— Il parser ———
 
-const CLOSING: Record<string, string> = { '(': ')', '[': ']', '{': '}', '\\{': '\\}', floor: 'floor', ceil: 'ceil' }
+const CLOSING: Record<string, string> = { '(': ')', '[': ']', '{': '}', '\\{': '\\}', floor: 'floor', ceil: 'ceil', '⟨': '⟩' }
 const SHOW: Record<string, string> = { '\\{': '\\{', '\\}': '\\}', floor: '⌊', ceil: '⌈', '\\\\': '\\\\' }
 
 /** Le funzioni trigonometriche e iperboliche: per loro `^{-1}` è la funzione inversa. */
@@ -823,6 +852,8 @@ class Parser {
         return this.integral()
       case 'cases':
         return this.cases()
+      case 'matrix':
+        return this.matrix()
       case 'open':
         return t.v === '\\{' ? this.setBuilder() : this.group()
       case 'bar': {
@@ -1189,7 +1220,40 @@ class Parser {
       if (items.length > 1) throw this.error('Nella parte intera va un solo valore', open.pos)
       return { k: open.v, a: items[0] }
     }
+    if (open.v === '⟨') {
+      if (items.length !== 2) throw this.error('Il prodotto scalare ha due vettori: \\langle u, v \\rangle', open.pos)
+      return { k: 'fn', name: 'dot', args: items }
+    }
     return items.length === 1 ? items[0] : { k: 'tuple', items }
+  }
+
+  /** `\begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}`: le righe, con gli elementi separati da &. */
+  private matrix(): MathNode {
+    const begin = this.next()
+    const rows: MathNode[][] = []
+    let row: MathNode[] = []
+    for (;;) {
+      if (this.is('endmatrix')) break
+      if (!this.peek()) throw this.error(`Manca \\end{${begin.v}}`)
+      row.push(this.expr())
+      if (this.is('amp')) {
+        this.next()
+        continue
+      }
+      if (this.is('row')) {
+        this.next()
+        rows.push(row)
+        row = []
+        continue
+      }
+      if (!this.is('endmatrix')) throw this.error('In una matrice gli elementi si separano con & e le righe con \\\\')
+    }
+    this.next()
+    if (row.length) rows.push(row)
+    if (!rows.length) throw this.error('La matrice è vuota', begin.pos)
+    if (rows.some((r) => r.length !== rows[0].length)) throw this.error('Le righe della matrice hanno lunghezze diverse', begin.pos)
+    const matrix: MathNode = { k: 'matrix', rows }
+    return begin.v === 'vmatrix' ? { k: 'fn', name: 'det', args: [matrix] } : matrix
   }
 }
 
@@ -1261,6 +1325,8 @@ export function namesIn(node: MathNode, out = new Set<string>(), bound: Readonly
 /** I figli di un nodo, per visitarlo. */
 export function children(n: MathNode): MathNode[] {
   switch (n.k) {
+    case 'matrix':
+      return n.rows.flat()
     case 'num':
     case 'name':
     case 'infty':

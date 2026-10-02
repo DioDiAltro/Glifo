@@ -138,6 +138,15 @@ chi sta provando Glifo.*
   radici cubiche); dentro un'espressione vale la principale. Un numero definito (`$z = 1 + 2i$`) e le
   funzioni (`$f(z) = z^2 + 1$`) si usano dopo; una formula senza valore reale (`\sqrt{-4}`, `\ln(-1)`)
   ha il suo valore complesso.
+- **Vettori e matrici**: le matrici con `\begin{pmatrix} 2 & 1 \\ 1 & 2 \end{pmatrix}` (anche `bmatrix`;
+  `vmatrix` è il determinante), i vettori come `(1, 2, 3)` o in colonna. Somme e prodotti (`A B`, `2A`,
+  `A v`), trasposta (`A^T`, `A^\top`), inversa (`A^{-1}`, con le frazioni esatte), potenze, determinante
+  (`\det A`, `|A|`), rango (`\operatorname{rank}`, `\operatorname{rg}`), traccia (`\operatorname{tr}`),
+  riduzione a scala (`\operatorname{rref}`), nucleo e immagine (`\ker A`, `\operatorname{Im} A`, come span
+  di una base, e `\dim \ker A`), prodotto scalare (`u \cdot v`, `\langle u, v \rangle`) e vettoriale
+  (`u \times v`), norma (`\|v\|`), **autovalori** e **autovettori** (`\operatorname{autovalori}(A) =`,
+  `\operatorname{autovettori}(A) =`, anche complessi e con la molteplicità) e il polinomio caratteristico
+  (`\det(A - \lambda I) =`). I risultati con le matrici si vedono disegnati anche nell'editor.
 - **Integrali doppi e tripli**, con il dominio sotto: disuguaglianze (`\iint_{x^2 + y^2 \le 1} (x^2 + y^2) \, dA =`,
   `\iiint_{x^2 + y^2 \le 1, 0 \le z \le 2} dV =`), rettangoli (`\iint_{[0, 1] \times [0, 2]} x y \, dx \, dy =`,
   `[0, 1]^3`) o il nome di un insieme scritto prima (`$D = \{(x, y) : 0 \le y \le x \le 1\}$` e poi
@@ -188,7 +197,9 @@ chi sta provando Glifo.*
   allontanano, la freccia lo riporta com'era. I piani sono velati e tagliano le superfici nel punto
   giusto; gli slider funzionano come nel piano. La z è la terza coordinata, a meno che la nota non la
   definisca come numero (`$z = 2$`).
-- Anche nel piano i **vettori** sono frecce dall'origine (`\vec{v} = (2, 1)`), e una curva con il
+- Anche nel piano i **vettori** sono frecce dall'origine (`\vec{v} = (2, 1)`, o con il nome minuscolo,
+  `v = (2, 1)`; con la maiuscola, `P = (2, 1)`, è un punto), anche quelli della nota e i loro conti
+  (`u + v`, `A u`, con le componenti nella legenda), e una curva con il
   parametro di primo grado (`(1 + t, 2t)`) è una retta intera, da un bordo all'altro (con
   `t \in [0, 1]` solo quel pezzo).
 - Glifo sceglie da solo la parte da mostrare (dove la funzione si annulla, ha massimi e minimi, gli
@@ -217,6 +228,8 @@ chi sta provando Glifo.*
 ![Integrali doppi e tripli: il dominio nel piano, il volume sotto la superficie e un solido in coordinate sferiche](docs/integrali-multipli.png)
 
 ![Numeri complessi: i conti nella nota e il piano di Gauss con frecce, radici e zone](docs/numeri-complessi.png)
+
+![Matrici e vettori: inversa, autovalori, autovettori e polinomio caratteristico, e i vettori come frecce](docs/matrici.png)
 
 **Schemi stile draw.io**
 - Il pulsante con i due riquadri nella barra apre un editor a tutto schermo: forme a sinistra
@@ -416,6 +429,7 @@ src/
     evaluate.ts           le calcola: funzioni, somme, integrali, derivate, condizioni
     domain.ts             i domini degli integrali doppi e tripli (margine, condizioni, strati) e come si integrano
     complex.ts            i numeri complessi: conti (anche esatti), radici, forme a + bi e ρe^{iθ}, equazioni
+    linear.ts             vettori e matrici: conti esatti o con la virgola, determinante, inversa, rango, nucleo, autovalori
     exact.ts, format.ts   i conti esatti con le frazioni; i risultati scritti all'italiana
     sheet.ts              il «foglio» della nota: definizioni dall'alto in basso e risultati dopo «=»
     latex.ts              un'espressione riscritta in LaTeX (le legende dei grafici)

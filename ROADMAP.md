@@ -37,9 +37,13 @@ pubblicata appena è pronta e qui si segna come fatta.
    (`z^3 = 8i`) come punti, curve (`|z - i| = 2`, `\arg z = \frac{\pi}{4}`), zone (`|z| \le 2`) e
    curve con il parametro (`2e^{it}`). Da migliorare se serve: le soluzioni si cercano con parte
    reale e immaginaria tra −32 e 32.
-4. **Vettori e matrici**: matrici scritte con `pmatrix`, determinante, inversa, trasposta, rango,
-   traccia, riduzione a scala, nucleo e immagine, autovalori e autovettori, prodotto scalare e
-   vettoriale, norma. Nei grafici le frecce dei vettori.
+4. Fatto (2 ottobre 2026): **vettori e matrici** nella nota (matrici con `pmatrix`, `bmatrix` e
+   `vmatrix`, determinante, inversa con le frazioni esatte, trasposta, potenze, rango, traccia,
+   riduzione a scala, nucleo e immagine come span, autovalori anche complessi, autovettori,
+   polinomio caratteristico, prodotto scalare e vettoriale, norma; i risultati disegnati anche
+   nell'editor) e nei grafici le frecce dei vettori della nota e dei loro conti (`u + v`, `A u`).
+   Da migliorare se serve: i sistemi lineari si risolvono con l'inversa (`A^{-1} b`); i sistemi
+   scritti per esteso arrivano con la tappa 7.
 5. **Geometria**: segmenti, triangoli e poligoni, rette per due punti, circonferenze, distanze,
    angoli, punti medi; piani e rette nello spazio.
 6. **Integrali di linea e di superficie** su curve e superfici date con i loro parametri, lavoro e

@@ -18,6 +18,21 @@ import {
   type ExactComplexScope,
 } from './complex'
 import { compile, EMPTY_SCOPE, scopeWith, withWorkLimit, type Scope, type UserFunction } from './evaluate'
+import {
+  EXACT,
+  FLOAT,
+  eigenvalues,
+  eigenvectors,
+  evaluateLinear,
+  formatEigenvalues,
+  formatLinear,
+  formatPolynomial,
+  polynomialIn,
+  type Eigenvalue,
+  type LinearScope,
+  type LinearValue,
+  type Mat,
+} from './linear'
 import { evaluateExact, type ExactFunction, type ExactScope, type Rational } from './exact'
 import { formatNumber, formatRational, type FormattedResult } from './format'
 import { children, namesIn, parseMath, type MathNode } from './parse'
@@ -75,9 +90,9 @@ export function splitPieces(tex: string): string[] {
   for (let i = 0; i < tex.length; i++) {
     const c = tex[i]
     if (c === '\\') {
-      const m = /^\\(q?quad\b|[{}])/.exec(tex.slice(i))
-      if (m?.[1] === '{') depth++
-      else if (m?.[1] === '}') depth--
+      const m = /^\\(q?quad\b|[{}]|langle\b|rangle\b)/.exec(tex.slice(i))
+      if (m?.[1] === '{' || m?.[1] === 'langle') depth++
+      else if (m?.[1] === '}' || m?.[1] === 'rangle') depth--
       else if (m && depth === 0) {
         pieces.push(tex.slice(start, i))
         start = i + m[0].length
@@ -85,8 +100,8 @@ export function splitPieces(tex: string): string[] {
       i += m ? m[0].length - 1 : 1
       continue
     }
-    if (c === '(' || c === '[' || c === '{') depth++
-    else if (c === ')' || c === ']' || c === '}') depth--
+    if (c === '(' || c === '[' || c === '{' || c === '⟨') depth++
+    else if (c === ')' || c === ']' || c === '}' || c === '⟩') depth--
     else if (depth === 0 && (c === ';' || (c === ',' && !(/\d/.test(tex[i - 1] ?? '') && /\d/.test(tex[i + 1] ?? ''))))) {
       pieces.push(tex.slice(start, i))
       start = i + 1
@@ -154,8 +169,8 @@ function styleOf(node: MathNode): { comma: boolean; decimal: boolean; digits: nu
   return { comma: comma ?? true, decimal: decimal || single, digits }
 }
 
-/** Il valore di una formula: un numero reale (anche esatto, una frazione) o complesso (anche esatto). */
-type Value = { float: number; exact: Rational | null } | { complex: Complex; exactComplex: GaussRational | null }
+/** Il valore di una formula: un numero reale (anche esatto, una frazione), complesso (anche esatto) o una matrice. */
+type Value = { float: number; exact: Rational | null } | { complex: Complex; exactComplex: GaussRational | null } | { linear: LinearValue }
 
 export class Sheet {
   private consts = new Map<string, number>()
@@ -170,6 +185,8 @@ export class Sheet {
   /** Le funzioni, per calcolarle anche con i numeri complessi (f(z) = z^2 + i). */
   private complexFns = new Map<string, ComplexFunction>()
   private exactComplexFns = new Map<string, { params: string[]; body: MathNode; scope: ExactComplexScope }>()
+  /** Le matrici e i vettori definiti ($A = \begin{pmatrix} … \end{pmatrix}$, $v = (1, 2, 3)$). */
+  private linearValues = new Map<string, LinearValue>()
   readonly definitions: Definition[] = []
 
   /**
@@ -206,6 +223,11 @@ export class Sheet {
   /** I numeri complessi definiti fin qui (per i grafici nel piano di Gauss). */
   complexValues(): ReadonlyMap<string, Complex> {
     return new Map(this.complexConsts)
+  }
+
+  /** Lo stato di adesso per i conti con vettori e matrici. */
+  linearScope(): LinearScope {
+    return { real: this.scope(), exactReals: new Map(this.exactConsts), values: new Map(this.linearValues) }
   }
 
   /**
@@ -249,6 +271,7 @@ export class Sheet {
     this.exactComplexConsts.delete(name)
     this.complexFns.delete(name)
     this.exactComplexFns.delete(name)
+    this.linearValues.delete(name)
     if (!params && value.k === 'set') {
       this.sets.set(name, value)
       return
@@ -270,10 +293,18 @@ export class Sheet {
     }
     const forced = this.fixed?.get(name)
     let result: Value | null = forced !== undefined ? { float: forced, exact: null } : known ?? this.evaluate(value)
-    // Senza un valore reale (z = 1 + 2i): un numero complesso.
+    // Senza un valore reale (z = 1 + 2i): un numero complesso; o una matrice, un vettore.
     if (!result || ('float' in result && !Number.isFinite(result.float))) result = this.evaluateComplex(value)
+    if (!result) {
+      const linear = this.evaluateLinear(value)
+      if (linear?.float.k === 'scalar') {
+        if (Number.isFinite(linear.float.v)) result = { float: linear.float.v, exact: linear.exact?.k === 'scalar' ? linear.exact.v : null }
+      } else if (linear) result = { linear }
+    }
     if (!result) return
-    if ('float' in result) {
+    if ('linear' in result) {
+      if (result.linear.float.k === 'matrix') this.linearValues.set(name, result.linear)
+    } else if ('float' in result) {
       this.consts.set(name, result.float)
       this.exactConsts.set(name, result.exact)
     } else if (result.complex.im === 0) {
@@ -319,6 +350,73 @@ export class Sheet {
     return { complex: exact ? exact.toComplex() : complex, exactComplex: exact }
   }
 
+  /** Il valore con vettori e matrici (con le frazioni, se si può), o null. */
+  private evaluateLinear(node: MathNode): LinearValue | null {
+    const scope = this.linearScope()
+    let float: LinearValue['float']
+    try {
+      float = withWorkLimit(WORK, () => evaluateLinear(node, scope, FLOAT))
+    } catch {
+      return null
+    }
+    let exact: LinearValue['exact'] = null
+    try {
+      exact = withWorkLimit(WORK, () => evaluateLinear(node, scope, EXACT))
+    } catch {
+      // Con π, le radici…: va bene con la virgola.
+    }
+    return { exact, float }
+  }
+
+  /**
+   * Il risultato con vettori e matrici: una matrice, un vettore, un sottospazio (\ker A), gli
+   * autovalori e gli autovettori, il polinomio caratteristico (\det(A - \lambda I)).
+   */
+  private showLinear(item: MathNode, style: ReturnType<typeof styleOf>): { shown: FormattedResult; value: Value | null } | null {
+    if (item.k === 'fn' && (item.name === 'eig' || item.name === 'eigvec') && item.args.length === 1) {
+      const A = this.evaluateLinear(item.args[0])
+      if (!A || A.float.k !== 'matrix') return null
+      let values: Eigenvalue[]
+      try {
+        values = withWorkLimit(WORK, () => eigenvalues(this.linearScope(), A))
+      } catch {
+        return null
+      }
+      if (!values.length) return null
+      const vectors =
+        item.name === 'eigvec'
+          ? (e: Eigenvalue): FormattedResult | null => {
+              const basis = eigenvectors(A, e)
+              if (!basis.length) return null
+              const shown = e.exact
+                ? (basis as Mat<Rational>[]).map((m) => formatLinear(EXACT, { k: 'matrix', m, tuple: false }, style))
+                : (basis as Mat<number>[]).map((m) => formatLinear(FLOAT, { k: 'matrix', m, tuple: false }, style))
+              if (shown.some((v) => !v)) return null
+              return { tex: shown.map((v) => v!.tex).join(',\ '), text: shown.map((v) => v!.text).join(', ') }
+            }
+          : undefined
+      return { shown: formatEigenvalues(values, style, vectors), value: null }
+    }
+    const value = this.evaluateLinear(item)
+    if (value && !(value.float.k === 'scalar' && !Number.isFinite(value.float.v))) {
+      const shown = value.exact ? formatLinear(EXACT, value.exact, style) : formatLinear(FLOAT, value.float, style)
+      if (!shown) return null
+      const result: Value =
+        value.float.k === 'scalar' ? { float: value.float.v, exact: value.exact?.k === 'scalar' ? value.exact.v : null } : { linear: value }
+      return { shown, value: result }
+    }
+    // Il polinomio caratteristico: un determinante con una sola variabile libera (λ).
+    const scope = this.linearScope()
+    const free = [...namesIn(item)].filter(
+      (n) => !scope.values.has(n) && !this.consts.has(n) && !this.complexConsts.has(n) && !this.fns.has(n) && !['π', 'e', 'I', 'T'].includes(n) && !/^I_\d$/.test(n),
+    )
+    let det = false
+    walk(item, (n) => (det ||= (n.k === 'fn' && n.name === 'det') || n.k === 'matrix'))
+    if (free.length !== 1 || !det) return null
+    const poly = withWorkLimit(WORK, () => polynomialIn(item, free[0], scope))
+    return poly ? { shown: formatPolynomial(poly, free[0], style), value: null } : null
+  }
+
   /** Il risultato con i numeri complessi: tutte le radici di una radice da sola, l'argomento come multiplo di π. */
   private showComplex(item: MathNode, style: ReturnType<typeof styleOf>): { shown: FormattedResult; value: Value | null } | null {
     const roots = (() => {
@@ -356,8 +454,8 @@ export class Sheet {
       const style = styleOf(item)
       const result = this.evaluate(item)
       const real = result && (result.exact ? formatRational(result.exact, style) : formatNumber(result.float, { ...style, decimal: true }))
-      // Senza un valore reale: con i numeri complessi (1 + 2i, \sqrt{-4}, \ln(-1)).
-      const found = real ? { shown: real, value: result } : this.showComplex(item, style)
+      // Senza un valore reale: con i numeri complessi (1 + 2i, \sqrt{-4}, \ln(-1)), o con vettori e matrici.
+      const found = real ? { shown: real, value: result } : this.showComplex(item, style) ?? this.showLinear(item, style)
       if (!found) continue
       if (target && !target.params && found.value) this.record(target, item, `${target.name} = ${src.slice(src.indexOf('=') + 1)}`, found.value)
       return found.shown

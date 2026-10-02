@@ -1329,6 +1329,18 @@ try {
     complexResult.includes('5 + 5i') && gaussAxes.includes('Re') && gaussAxes.includes('Im') && caption.includes('π') && complexNote?.includes('```grafico\n1 + i\n```'),
     `un numero complesso ha il risultato, il piano di Gauss nel pannello con le sue forme e nella nota (${JSON.stringify({ complexResult, caption, note: complexNote?.slice(-40) })})`,
   )
+  // Le matrici: l'inversa con le frazioni, disegnata nell'editor (KaTeX); un vettore nel pannello è una freccia.
+  await gp.locator('.notes-head button[aria-label="Nuova nota"]').click()
+  await gp.keyboard.press('Control+a')
+  await gp.keyboard.type('# Matrici\n\nSia $A = \\begin{pmatrix} 2 & 1 \\\\ 1 & 2 \\end{pmatrix}$, allora $A^{-1} =')
+  await gp.waitForSelector('.cm-calc-result.is-rich .katex', { timeout: 5000 })
+  const inverse = await gp.locator('.cm-calc-result.is-rich').first().getAttribute('aria-label')
+  await gp.keyboard.press('End')
+  await gp.keyboard.type('\n\nIl vettore $v = (2, 1)$')
+  await gp.keyboard.press('ArrowLeft')
+  await gp.waitForSelector('.formula-graph:not([hidden]) svg', { timeout: 5000 })
+  const arrows = await gp.locator('.formula-graph svg path[fill]:not([fill="none"])').count()
+  check(inverse === '(2/3  −1/3 ; −1/3  2/3)' && arrows > 0, `l'inversa di una matrice ha le frazioni ed è disegnata; un vettore è una freccia (${JSON.stringify({ inverse, arrows })})`)
   await gp.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)

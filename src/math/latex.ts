@@ -14,7 +14,7 @@ const ACCENT_COMMANDS: Record<string, string> = {
   '̄': 'bar', '̂': 'hat', '̃': 'tilde', '⃗': 'vec', '̇': 'dot', '̈': 'ddot',
 }
 /** Le funzioni che KaTeX conosce come comandi; le altre con \operatorname. */
-const KATEX_FUNCTIONS = new Set(['sin', 'cos', 'tan', 'cot', 'sec', 'csc', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh', 'coth', 'ln', 'log', 'lg', 'exp', 'max', 'min', 'gcd'])
+const KATEX_FUNCTIONS = new Set(['sin', 'cos', 'tan', 'cot', 'sec', 'csc', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh', 'coth', 'ln', 'log', 'lg', 'exp', 'max', 'min', 'gcd', 'det', 'ker', 'dim'])
 const REL: Record<RelOp, string> = { '=': '=', '<': '<', '<=': '\\le', '>': '>', '>=': '\\ge', '!=': '\\ne', '≈': '\\approx' }
 
 function letters(s: string): string {
@@ -79,7 +79,13 @@ function numberLatex(n: Extract<MathNode, { k: 'num' }>): string {
 }
 
 /** Come si scrivono le funzioni dei numeri complessi. */
-const COMPLEX_FUNCTIONS: Record<string, string> = { re: '\\operatorname{Re}', im: '\\operatorname{Im}', arg: '\\arg' }
+const COMPLEX_FUNCTIONS: Record<string, string> = {
+  re: '\\operatorname{Re}',
+  im: '\\operatorname{Im}',
+  arg: '\\arg',
+  eig: '\\operatorname{autovalori}',
+  eigvec: '\\operatorname{autovettori}',
+}
 
 function fnName(name: string): string {
   if (KATEX_FUNCTIONS.has(name)) return `\\${name}`
@@ -162,6 +168,8 @@ export function toLatex(node: MathNode): string {
     }
     case 'set':
       return setLatex(node)
+    case 'matrix':
+      return `\\begin{pmatrix} ${node.rows.map((r) => r.map(toLatex).join(' & ')).join(' \\\\ ')} \\end{pmatrix}`
     case 'cases':
       return `\\begin{cases} ${node.rows.map((r) => `${toLatex(r.value)} & ${r.cond ? toLatex(r.cond) : '\\text{altrimenti}'}`).join(' \\\\ ')} \\end{cases}`
     case 'tuple':
@@ -208,6 +216,9 @@ function fnLatex(node: Extract<MathNode, { k: 'fn' }>, pow?: MathNode): string {
       break
     case 'conj':
       out = `\\overline{${inner}}`
+      break
+    case 'dot':
+      out = `\\langle ${args.map(toLatex).join(', ')} \\rangle`
       break
     case 'floor':
       out = `\\left\\lfloor ${inner}\\right\\rfloor`

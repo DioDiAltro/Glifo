@@ -1436,6 +1436,13 @@ kbd {
   color: var(--accent);
 }
 
+/* Un risultato disegnato (una matrice, un vettore): KaTeX dentro l'editor, allineato al testo. */
+.cm-calc-result.is-rich {
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 1.2;
+}
+
 /* Nell'editor: il risultato dopo «=» (src/editor/calcResults.ts); Tab o un clic lo scrivono. */
 .cm-calc-result {
   margin-left: 0.25em;

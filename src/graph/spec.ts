@@ -32,6 +32,7 @@
  * quelli scritti, senza cambiare la nota.
  */
 import { compileComplex, type Complex, type ComplexFunction, type ComplexScope } from '../math/complex'
+import { evaluateLinear, FLOAT, type LinearScope } from '../math/linear'
 import { compile, compileCondition, EMPTY_SCOPE, errorMessage, MathError, scopeWith, UndefinedName, withWorkLimit, type Compiled, type Scope, type UserFunction } from '../math/evaluate'
 import { formatNumber } from '../math/format'
 import { nameLatex, toLatex } from '../math/latex'
@@ -289,12 +290,17 @@ function termCounters(node: MathNode, out: Set<string>): void {
 /** Una riga che sembra un punto ((1, 2), P = (1, 2), P(1, 2), anche nello spazio): non ha un colore suo. */
 function looksLikePoint(main: MathNode): boolean {
   const tuple = tupleOf(main)
-  if (!tuple || tuple.name?.endsWith(VEC)) return false
+  if (!tuple || isVectorName(tuple.name)) return false
   return !tuple.coords.some((n) => PARAMS.some((p) => dependsOn(n, p)))
 }
 
 /** L'accento di \vec{v}: il nome di un vettore. */
 const VEC = '⃗'
+
+/** Il nome di un vettore: con la freccia (\vec{v}) o una lettera minuscola (u, v_1), come nei libri; i punti hanno la maiuscola. */
+function isVectorName(name: string | null | undefined): name is string {
+  return !!name && (name.endsWith(VEC) || (/^[a-z](_.+)?$/.test(name) && !['x', 'y', 'z', 't'].includes(name[0])))
+}
 
 /** Le coordinate di un punto (o di una curva, o di un vettore): (1, 2), P = (1, 2), P(1, 2, 3). */
 function tupleOf(main: MathNode): { coords: MathNode[]; name: string | null } | null {
@@ -624,6 +630,59 @@ function define(
   })
 }
 
+/** La riga usa vettori o matrici della nota (v = (1, 2), A = \begin{pmatrix} … \end{pmatrix}) o scrive una matrice. */
+function usesLinear(main: MathNode, scope: LinearScope): boolean {
+  if ([...namesIn(main)].some((n) => scope.values.has(n))) return true
+  let matrix = false
+  const visit = (n: MathNode) => {
+    if (n.k === 'matrix') matrix = true
+    else children(n).forEach(visit)
+  }
+  visit(main)
+  return matrix
+}
+
+/** Le componenti del vettore di una riga (u + v, A v, la colonna di una matrice), o null se non è un vettore. */
+function linearVector(main: MathNode, scope: LinearScope): number[] | null {
+  if (!usesLinear(main, scope)) return null
+  try {
+    const value = evaluateLinear(main, scope, FLOAT)
+    if (value.k !== 'matrix' || value.m[0].length !== 1) return null
+    const v = value.m.map((r) => r[0])
+    return v.length === 2 || v.length === 3 ? v : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Un vettore della nota nel grafico: una freccia dall'origine (u + v, A v, \vec{v}). Un nome con la
+ * maiuscola (P, A_1) è un punto, come nei libri.
+ */
+function linearItem(l: Line, scope: LinearScope, slot: number, space: boolean): GraphItem | null {
+  const v = linearVector(l.main, scope)
+  if (!v) {
+    if (usesLinear(l.main, scope)) {
+      try {
+        const value = evaluateLinear(l.main, scope, FLOAT)
+        if (value.k === 'matrix') throw new MathError('Una matrice non si disegna: disegna i vettori, come A v')
+      } catch (err) {
+        if (err instanceof MathError) throw err
+      }
+    }
+    return null
+  }
+  const [x, y, z = 0] = v
+  const name = l.main.k === 'name' ? l.main.name : null
+  // Nella legenda anche le componenti, se la riga non le scrive già: u + v = (4, 1).
+  const parts = v.map((c) => formatNumber(c, { comma: true, decimal: true, digits: 9 })?.tex ?? String(c))
+  const components = `\\left(${parts.join(parts.some((p) => p.includes('{,}')) ? '; ' : ', ')}\\right)`
+  const label = l.main.k === 'matrix' ? toLatex(l.main) : `${toLatex(l.main)} = ${components}`
+  if (name && /^[A-Z]/.test(name)) return space ? { kind: 'point3', line: l.line, label: nameLatex(name), slot: -1, x, y, z, name } : { kind: 'point', line: l.line, label: nameLatex(name), slot: -1, x, y, name }
+  if (!space && v.length === 3) throw new MathError('Un vettore con tre componenti va in un grafico 3D')
+  return { kind: 'vector', line: l.line, label, slot, from: [0, 0, 0], to: [x, y, z], name }
+}
+
 /** Il valore con i numeri complessi, o null se non c'è. */
 function complexValue(node: MathNode, scope: ComplexScope): Complex | null {
   try {
@@ -692,7 +751,10 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   const realNames = new Set(sheet.scope().consts.keys())
   const realValue = (n: MathNode) => compile(n, sheet.scope(), { calc: true })({})
   const gauss = lines.some((l) => isComplexLine(l.main, noteComplex, realNames) || onlyComplex(l.main, realValue, noteComplex))
-  let space = !gauss && lines.some((l) => isSpaceLine(l.main, zFree) || zPlane(l) || (l.main.k === 'name' && xyParams(noteFns.get(l.main.name)?.params)))
+  const linear = sheet.linearScope()
+  let space =
+    !gauss &&
+    lines.some((l) => isSpaceLine(l.main, zFree) || zPlane(l) || (l.main.k === 'name' && xyParams(noteFns.get(l.main.name)?.params)) || linearVector(l.main, linear)?.length === 3)
   // Un integrale doppio con solo numeri e insiemi attorno: si vede il volume sotto la superficie,
   // nello spazio (se la funzione è 1, cioè l'area del dominio, il dominio nel piano).
   if (!space && !gauss) {
@@ -823,7 +885,9 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
     try {
       const complexLine =
         gauss && (isComplexLine(l.main, complexes.scope(), new Set(consts.keys())) || onlyComplex(l.main, (n) => compile(n, scope(), { calc: true })({}), complexes.scope()))
-      const item = space ? spaceItemFor(l, scope(), slot) : complexLine ? gaussItem(l, complexes.scope(), sets, slot) : itemFor(l, scope(), slot, own)
+      const item =
+        linearItem(l, linear, slot, space) ??
+        (space ? spaceItemFor(l, scope(), slot) : complexLine ? gaussItem(l, complexes.scope(), sets, slot) : itemFor(l, scope(), slot, own))
       if (item.kind !== 'point' && item.kind !== 'point3' && own) slots.set(l.line, slot++)
       spec.items.push(item)
     } catch (err) {
@@ -1162,7 +1226,7 @@ function itemFor(l: Line, scope: Scope, slot: number, curve = true): GraphItem {
     const [x, y] = coords.map((n) => compile(n, scope)({}))
     if (!Number.isFinite(x) || !Number.isFinite(y)) throw new MathError('Le coordinate del punto non sono numeri')
     // \vec{v} = (2, 1): una freccia dall'origine.
-    if (name?.endsWith(VEC)) return { kind: 'vector', line, label: `${nameLatex(name)} = ${toLatex({ k: 'tuple', items: coords })}`, slot, from: [0, 0, 0], to: [x, y, 0], name }
+    if (isVectorName(name)) return { kind: 'vector', line, label: `${nameLatex(name)} = ${toLatex({ k: 'tuple', items: coords })}`, slot, from: [0, 0, 0], to: [x, y, 0], name }
     return { kind: 'point', line, label: name ? nameLatex(name) : '', slot: -1, x, y, name }
   }
 
@@ -1262,7 +1326,7 @@ function spaceTuple(l: Line, { coords, name }: { coords: MathNode[]; name: strin
     if (cond) throw new MathError('Un punto non ha condizioni')
     const [x, y, z] = all.map((n) => compile(n, scope)({}))
     if (![x, y, z].every(Number.isFinite)) throw new MathError('Le coordinate del punto non sono numeri')
-    if (name?.endsWith(VEC)) return { kind: 'vector', line, label, slot, from: [0, 0, 0], to: [x, y, z], name }
+    if (isVectorName(name)) return { kind: 'vector', line, label, slot, from: [0, 0, 0], to: [x, y, z], name }
     return { kind: 'point3', line, label: name ? nameLatex(name) : '', slot: -1, x, y, z, name }
   }
   if (params.length > 2) throw new MathError(`Troppi parametri (${params.join(', ')}): una curva ne ha uno, una superficie due`)
@@ -1406,7 +1470,10 @@ export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSp
   const sheet = new Sheet()
   for (const d of defs) sheet.define(d)
   const complex = isComplexLine(main, sheet.complexScope(), new Set(sheet.scope().consts.keys()))
-  if (!areaOf(main) && !multipleOf(main) && !setOf(main) && !zone && !complex) {
+  // Un vettore (u + v, A v): la sua freccia; un punto o un vettore scritto con le coordinate.
+  const tuple = tupleOf(main)
+  const vector = !!linearVector(main, sheet.linearScope()) || (!!tuple && (tuple.coords.length === 2 || tuple.coords.length === 3) && !tuple.coords.some((c) => namesIn(c).size))
+  if (!areaOf(main) && !multipleOf(main) && !setOf(main) && !zone && !complex && !vector) {
     if (main.k !== 'rel' || main.ops.length !== 1 || main.ops[0] !== '=') return null
     const [lhs, rhs] = main.items
     const plottable =

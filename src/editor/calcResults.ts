@@ -9,6 +9,7 @@ import { syntaxTree } from '@codemirror/language'
 import { EditorSelection, type EditorState, type Range } from '@codemirror/state'
 import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from '@codemirror/view'
 import { Sheet } from '../math/sheet'
+import { renderTex } from '../render/katex'
 import { regionFromNode, type MathRegion } from './mathContext'
 
 export interface CalcResult {
@@ -21,6 +22,8 @@ export interface CalcResult {
   /** Il risultato in LaTeX (da scrivere) e come testo (da mostrare). */
   tex: string
   text: string
+  /** Una matrice, un vettore…: si mostra disegnato (con KaTeX) invece che come testo. */
+  rich?: boolean
 }
 
 /** Le formule chiuse dall'inizio del testo fino a `to`, nell'ordine. */
@@ -58,7 +61,7 @@ export function calcResults(state: EditorState, to: number): CalcResult[] {
     // Subito dopo l'«=» (gli spazi in fondo alla formula non contano).
     let pos = region.contentTo
     while (pos > region.contentFrom && /\s/.test(state.sliceDoc(pos - 1, pos))) pos--
-    results.push({ pos, contentTo: region.contentTo, to: region.to, tex: result.tex, text: result.text })
+    results.push({ pos, contentTo: region.contentTo, to: region.to, tex: result.tex, text: result.text, ...(result.rich && { rich: true }) })
   }
   return results
 }
@@ -87,13 +90,19 @@ class ResultWidget extends WidgetType {
   }
 
   override eq(other: ResultWidget): boolean {
-    return other.result.text === this.result.text && other.hint === this.hint
+    return other.result.text === this.result.text && other.result.tex === this.result.tex && other.hint === this.hint
   }
 
   toDOM(view: EditorView): HTMLElement {
     const span = document.createElement('span')
     span.className = 'cm-calc-result'
-    span.textContent = this.result.text
+    // Una matrice si legge meglio disegnata; il testo resta per chi non vede.
+    const drawn = this.result.rich ? renderTex(this.result.tex) : null
+    if (drawn && !drawn.error) {
+      span.innerHTML = drawn.html
+      span.classList.add('is-rich')
+      span.setAttribute('aria-label', this.result.text)
+    } else span.textContent = this.result.text
     span.title = 'Calcolato da Glifo: Tab (o un clic) lo scrive nella formula'
     if (this.hint) {
       const key = document.createElement('kbd')

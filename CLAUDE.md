@@ -62,7 +62,9 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   domini degli integrali doppi e tripli `\iint_D`: un «margine» positivo dentro, le condizioni una per
   una, gli strati quando ogni variabile sta tra due estremi; `complex.ts` i numeri complessi: si usano
   quando una formula ha la i o non ha un valore reale, con le frazioni esatte `GaussRational`, le radici
-  tutte, le forme a + bi e ρe^{iθ}), `sheet.ts` è il
+  tutte, le forme a + bi e ρe^{iθ}; `linear.ts` vettori e matrici, con le frazioni esatte (`EXACT`) o
+  con la virgola (`FLOAT`): determinante, inversa, rango, nucleo, autovalori, polinomio caratteristico; i
+  risultati con le matrici hanno `rich` e l'editor li disegna con KaTeX), `sheet.ts` è il
   «foglio» della nota: le formule dall'alto in basso, `$a = 2$` e `$f(x) = …$` definiscono, una formula
   che finisce con `=` ha il risultato (nell'editor `src/editor/calcResults.ts`, Tab lo scrive;
   nell'anteprima colorato, classe `calc-result`). `\log` è il logaritmo naturale.

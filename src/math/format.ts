@@ -8,6 +8,8 @@ import { Rational } from './exact'
 export interface FormattedResult {
   tex: string
   text: string
+  /** Da mostrare disegnato (una matrice, un vettore): nell'editor con KaTeX invece che come testo. */
+  rich?: boolean
 }
 
 export interface FormatOptions {
