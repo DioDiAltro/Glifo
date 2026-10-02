@@ -52,6 +52,8 @@ export type MathNode =
   | { k: 'lint'; curve: string; closed: boolean; ds: boolean; body: MathNode; form?: boolean }
   /** Un integrale sulla superficie `surface` (S(u, v) = (…)): di una funzione (`dS`) o il flusso di un campo. */
   | { k: 'sint'; surface: string; closed: boolean; dS: boolean; body: MathNode }
+  /** \lim_{x \to a} …: `side` 1 da destra (a^+), −1 da sinistra (a^-), 0 da tutte e due le parti. */
+  | { k: 'lim'; v: string; to: MathNode; side: -1 | 0 | 1; body: MathNode }
   /** `\{(x, y) \in \mathbb{R}^2 : x^2 + y^2 \le 1\}`: un insieme; `vars` null se non le scrive. */
   | { k: 'set'; vars: string[] | null; cond: MathNode }
   | { k: 'cases'; rows: { value: MathNode; cond: MathNode | null }[] }
@@ -114,6 +116,10 @@ const FUNCTION_NAMES: Record<string, string> = {
   // Le operazioni con i campi: gradiente, divergenza, rotore, laplaciano, hessiana e jacobiana.
   grad: 'grad', gradiente: 'grad', div: 'div', divergenza: 'div', rot: 'curl', rotore: 'curl', curl: 'curl',
   lap: 'lap', laplaciano: 'lap', hess: 'hess', hessiana: 'hess', jac: 'jac', jacobiana: 'jac',
+  // Il polinomio di Taylor: \operatorname{taylor}(\sin x, 0, 5), \operatorname{maclaurin}(e^x, 4).
+  taylor: 'taylor', maclaurin: 'maclaurin', mclaurin: 'maclaurin',
+  // Le curve di livello di una funzione di x e y, nei grafici.
+  livelli: 'levels', livello: 'levels', contour: 'levels',
 }
 
 /** Le parole riconosciute anche senza barra (`sin x`, `sqrt(x)`, `pi`), come in una calcolatrice. */
@@ -144,6 +150,9 @@ const COMMAND_OPS: Record<string, [Kind, string]> = {
   cfrac: ['frac', 'frac'], sqrt: ['sqrt', 'sqrt'], binom: ['binom', 'binom'], dbinom: ['binom', 'binom'],
   tbinom: ['binom', 'binom'], sum: ['big', 'sum'], prod: ['big', 'prod'], int: ['int', 'int'], iint: ['int', 'iint'], iiint: ['int', 'iiint'],
   oint: ['int', 'oint'], oiint: ['int', 'oiint'], nabla: ['nabla', 'nabla'], partial: ['partial', 'partial'],
+  lim: ['lim', 'lim'], to: ['to', 'to'], rightarrow: ['to', 'to'], longrightarrow: ['to', 'to'],
+  Rightarrow: ['implies', '⇒'], implies: ['implies', '⇒'], Longrightarrow: ['implies', '⇒'], iff: ['implies', '⇔'],
+  Leftrightarrow: ['implies', '⇔'], Longleftrightarrow: ['implies', '⇔'],
   mid: ['bar', '|'],
   quad: ['sep', 'quad'], qquad: ['sep', 'quad'], cr: ['row', '\\\\'], coloneqq: ['rel', '='], coloneq: ['rel', '='],
   lbrace: ['open', '\\{'], rbrace: ['close', '\\}'], lbrack: ['open', '['], rbrack: ['close', ']'],
@@ -165,7 +174,7 @@ const IGNORED = new Set([
 type Kind =
   | 'num' | 'name' | 'fn' | 'frac' | 'sqrt' | 'binom' | 'big' | 'int' | 'op' | 'rel' | 'open' | 'close' | 'bar'
   | 'comma' | 'semi' | 'sep' | 'in' | 'and' | 'or' | 'else' | 'amp' | 'row' | 'cases' | 'endcases' | 'matrix' | 'endmatrix' | 'infty'
-  | 'deg' | 'prime' | 'set' | 'nabla' | 'partial' | 'bad'
+  | 'deg' | 'prime' | 'set' | 'nabla' | 'partial' | 'lim' | 'to' | 'implies' | 'bad'
 
 interface Tok {
   k: Kind
@@ -319,6 +328,9 @@ export function tokenize(src: string): Tok[] {
       case '∨': one('or', 'or'); break
       case '√': one('sqrt', 'sqrt'); break
       case '∇': one('nabla', 'nabla'); break
+      case '→': one('to', 'to'); break
+      case '⇒': one('implies', '⇒'); break
+      case '⇔': one('implies', '⇔'); break
       case '∂': one('partial', 'partial'); break
       case '∮': one('int', 'oint'); break
       case 'ℝ': one('set', 'R'); break
@@ -594,7 +606,6 @@ class Parser {
 
   private badToken(t: Tok): MathSyntaxError {
     if (t.v.startsWith('\\')) {
-      if (t.v === '\\lim') return this.error('I limiti non si sanno ancora calcolare', t.pos)
       if (t.v === '\\pm' || t.v === '\\mp') return this.error('Con ± ci sono due valori: scrivili separati', t.pos)
       if (/\\(l|c)?dots/.test(t.v)) return this.error('I puntini … non si possono calcolare', t.pos)
       return this.error(`Non so calcolare ${t.v}`, t.pos)
@@ -757,6 +768,7 @@ class Parser {
       case 'int':
       case 'nabla':
       case 'partial':
+      case 'lim':
         return !fnArgument
       case 'open':
         if (t.v === '[' && this.reversedInterval) return false
@@ -901,6 +913,8 @@ class Parser {
         return this.nabla()
       case 'partial':
         return this.partialDerivative()
+      case 'lim':
+        return this.limit()
       case 'cases':
         return this.cases()
       case 'matrix':
@@ -974,7 +988,8 @@ class Parser {
       const group = this.group(true)
       return { k: 'apply', name, args: group.k === 'tuple' ? group.items : [group], primes }
     }
-    if (primes) throw this.error(`Dopo ${name}${"'".repeat(primes)} va il valore tra parentesi, es. ${name}'(x)`)
+    // y' = x - y: un'equazione differenziale (y' senza parentesi è un nome).
+    if (primes) return { k: 'name', name: name + "'".repeat(primes) }
     return { k: 'name', name }
   }
 
@@ -1273,6 +1288,61 @@ class Parser {
     return { k: 'diff', body: this.term(), vars, partial: true }
   }
 
+  /** `\lim_{x \to 0} \frac{\sin x}{x}`, `\lim_{x \to 0^+}`, `\lim_{n \to \infty}`. */
+  private limit(): MathNode {
+    const start = this.next()
+    const example = 'es. \\lim_{x \\to 0}'
+    if (!this.is('op', '_')) throw this.error(`Sotto \\lim va dove tende la variabile, ${example}`, start.pos)
+    this.next()
+    const braced = this.is('open', '{')
+    if (braced) this.next()
+    const v = this.peek()
+    if (!v || v.k !== 'name') throw this.error(`Sotto \\lim va la variabile, ${example}`, start.pos)
+    this.next()
+    if (!this.is('to')) throw this.error(`Manca \\to: ${example}`, start.pos)
+    this.next()
+    // 0^+ e 0^-: da destra o da sinistra (tolti prima di leggere il punto).
+    let side: -1 | 0 | 1 = 0
+    if (braced) {
+      let depth = 0
+      let end = this.i
+      for (; end < this.toks.length; end++) {
+        const t = this.toks[end]
+        if (t.k === 'open') depth++
+        else if (t.k === 'close' && depth-- === 0) break
+      }
+      const sign = (t: Tok | undefined) => (t && t.k === 'op' && (t.v === '+' || t.v === '-') ? t.v : null)
+      const at = (o: number) => this.toks[end + o]
+      if (at(-2)?.k === 'op' && at(-2).v === '^' && sign(at(-1))) {
+        side = sign(at(-1)) === '+' ? 1 : -1
+        this.toks.splice(end - 2, 2)
+      } else if (at(-4)?.k === 'op' && at(-4).v === '^' && at(-3)?.k === 'open' && sign(at(-2)) && at(-1)?.k === 'close') {
+        side = sign(at(-2)) === '+' ? 1 : -1
+        this.toks.splice(end - 4, 4)
+      }
+    }
+    const to = this.is('op', '+') && this.is('infty', undefined, 1) ? (this.next(), this.expr()) : this.expr()
+    if (braced) this.expect('close', '}', 'la graffa } sotto \\lim')
+    if (!this.peek() || !this.startsArgument()) throw this.error('Manca la funzione dopo \\lim', start.pos)
+    let body = this.term()
+    // \lim_{x \to \infty} \sqrt{x^2 + x} - x: anche i termini dopo, se usano la variabile.
+    while (this.is('op', '+') || this.is('op', '-')) {
+      const back = this.i
+      const op = this.next().v as '+' | '-'
+      if (!this.peek()) {
+        this.i = back
+        break
+      }
+      const next = this.term()
+      if (!namesIn(next).has(v.v)) {
+        this.i = back
+        break
+      }
+      body = { k: 'bin', op, a: body, b: next }
+    }
+    return { k: 'lim', v: v.v, to, side, body }
+  }
+
   /** `\nabla f` (il gradiente), `\nabla \cdot F` (la divergenza), `\nabla \times F` (il rotore), `\nabla^2 f` (il laplaciano). */
   private nabla(): MathNode {
     const start = this.next()
@@ -1381,7 +1451,8 @@ class Parser {
     for (;;) {
       if (this.is('endcases')) break
       if (!this.peek()) throw this.error('Manca \\end{cases}')
-      const value = this.expr()
+      // Una riga può essere anche un'equazione: \begin{cases} x + y = 3 \\ x - y = 1 \end{cases} è un sistema.
+      const value = this.relation()
       let cond: MathNode | null = null
       while (this.is('comma') || this.is('semi') || this.is('sep')) this.next()
       if (this.is('amp')) {
@@ -1563,6 +1634,10 @@ export function namesIn(node: MathNode, out = new Set<string>(), bound: Readonly
         // La derivata dipende dalle sue variabili (non se è in un punto: f(1, 2)).
         if (n.body.k !== 'apply') for (const v of n.vars) if (!b.has(v)) out.add(v)
         return
+      case 'lim':
+        visit(n.to, b)
+        visit(n.body, new Set([...b, n.v]))
+        return
       case 'lint':
       case 'sint': {
         const where = n.k === 'lint' ? n.curve : n.surface
@@ -1621,5 +1696,7 @@ export function children(n: MathNode): MathNode[] {
     case 'lint':
     case 'sint':
       return [n.body]
+    case 'lim':
+      return [n.to, n.body]
   }
 }

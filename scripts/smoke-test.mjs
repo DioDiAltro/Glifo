@@ -1381,6 +1381,33 @@ try {
     derivative === '3x²' && fieldArrows > 0,
     `una derivata ha il risultato con le lettere, e il lavoro lungo una curva il valore e il campo nel pannello (${JSON.stringify({ derivative, fieldArrows, workLegend: workLegend.slice(0, 80) })})`,
   )
+  // Analisi: un limite dopo «=», le soluzioni di un'equazione dopo ⇒ e, nel pannello, il campo di
+  // direzioni di un'equazione differenziale con la soluzione dal punto iniziale.
+  await gp.locator('.notes-head button[aria-label="Nuova nota"]').click()
+  await gp.keyboard.press('Control+a')
+  await gp.keyboard.type('# Analisi\n\nIl limite $\\lim_{x \\to 0} \\frac{\\sin x}{x} =')
+  await gp.waitForSelector('.cm-calc-result', { timeout: 5000 })
+  const limitResult = await gp.locator('.cm-calc-result').first().innerText()
+  await gp.keyboard.press('End')
+  await gp.keyboard.type('\n\nLe soluzioni: $x^2 - 5x + 6 = 0 \\Rightarrow')
+  await gp.waitForFunction(() => [...document.querySelectorAll('.cm-calc-result')].some((e) => e.textContent?.includes('x = 2 ∨ x = 3')), null, { timeout: 5000 })
+  await gp.keyboard.press('End')
+  await gp.keyboard.type("\n\nL'equazione $y' = x - y, \\; y(0) = 1$")
+  await gp.keyboard.press('ArrowLeft')
+  await gp.waitForSelector('.formula-graph:not([hidden]) svg [stroke-opacity="0.55"]', { timeout: 5000 })
+  const startDots = await gp.locator('.formula-graph svg circle[r="4"]').count()
+  check(
+    limitResult.replace('Tab', '') === '1' && startDots === 1,
+    `un limite ha il risultato, un'equazione le soluzioni e un'equazione differenziale il campo di direzioni (${JSON.stringify({ limitResult, startDots })})`,
+  )
+  // Il polinomio di Taylor: dalla potenza più bassa e, nel pannello, con la funzione da cui viene.
+  await gp.keyboard.press('End')
+  await gp.keyboard.type('\n\nTaylor: $\\operatorname{taylor}(\\sin x, 0, 3) =')
+  // Il risultato con le lettere è disegnato (KaTeX): il testo è nell'aria-label.
+  await gp.waitForFunction(() => [...document.querySelectorAll('.cm-calc-result')].some((e) => e.getAttribute('aria-label') === 'x − x³/6'), null, { timeout: 5000 })
+  await gp.waitForSelector('.formula-graph:not([hidden]) svg [data-item="1"]', { timeout: 5000 })
+  const taylorCurves = await gp.locator('.formula-graph svg path[data-item]').evaluateAll((els) => new Set(els.map((e) => e.getAttribute('data-item'))).size)
+  check(taylorCurves === 2, `il polinomio di Taylor ha il risultato e nel pannello la funzione e il polinomio (${taylorCurves} curve)`)
   await gp.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)

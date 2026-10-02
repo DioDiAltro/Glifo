@@ -4,6 +4,7 @@
  */
 import { withWorkLimit } from '../math/evaluate'
 import { lineAcross, regionEdges, sampleArea, sampleFunction, sampleImplicit, sampleParametric, sampleRegion, ticks, type Polyline, type Viewport } from './plot'
+import { contourLevels, solutionCurves } from './ode'
 import { GRAPH_WORK, type GraphItem, type GraphSpec } from './spec'
 
 export interface Palette {
@@ -70,6 +71,39 @@ function arrow(ax: number, ay: number, bx: number, by: number): string {
   const cx = bx - ux * size
   const cy = by - uy * size
   return `M${f1(bx)} ${f1(by)}L${f1(cx - uy * 5)} ${f1(cy + ux * 5)}L${f1(cx + uy * 5)} ${f1(cy - ux * 5)}Z`
+}
+
+/**
+ * Il campo di direzioni di y' = f(x, y): un trattino con la pendenza in ogni punto di una griglia, e
+ * le soluzioni dai punti iniziali (in pixel).
+ */
+function slopeField(item: Extract<GraphItem, { kind: 'slopes' }>, vp: Viewport, sx: (x: number) => number, sy: (y: number) => number): { segments: string; solutions: Polyline[] } {
+  const { width: W, height: H } = vp
+  const step = Math.max(22, Math.min(36, Math.min(W, H) / 13))
+  const cols = Math.max(1, Math.floor(W / step))
+  const rows = Math.max(1, Math.floor(H / step))
+  const ox = (W - (cols - 1) * step) / 2
+  const oy = (H - (rows - 1) * step) / 2
+  const kx = sx(1) - sx(0)
+  const ky = sy(1) - sy(0)
+  let segments = ''
+  for (let j = 0; j < rows; j++) {
+    for (let i = 0; i < cols; i++) {
+      const px = ox + i * step
+      const py = oy + j * step
+      const x = vp.x0 + (px / W) * (vp.x1 - vp.x0)
+      const y = vp.y1 - (py / H) * (vp.y1 - vp.y0)
+      const m = item.f(x, y)
+      if (!Number.isFinite(m)) continue
+      const dx = kx
+      const dy = m * ky
+      const len = Math.hypot(dx, dy) || 1
+      const half = (0.32 * step) / len
+      segments += `M${f1(px - dx * half)} ${f1(py - dy * half)}L${f1(px + dx * half)} ${f1(py + dy * half)}`
+    }
+  }
+  const solutions = item.starts.flatMap(([x0, y0]) => solutionCurves(item.f, x0, y0, vp)).map((curve) => curve.flatMap(([x, y]) => [sx(x), sy(y)]))
+  return { segments, solutions }
 }
 
 /** La punta che dice il verso di una curva con il nome, a metà del suo intervallo. */
@@ -246,6 +280,9 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
   const curves: string[] = []
   /** Le linee disegnate (in pixel): i nomi dei punti non ci vanno sopra. */
   const drawn: Polyline[] = []
+  /** I valori delle curve di livello, e i punti iniziali delle soluzioni delle equazioni differenziali. */
+  const levelLabels: { x: number; y: number; text: string }[] = []
+  const startDots: string[] = []
   const dashed: string[] = []
   /** Le punte dei vettori. */
   const heads: string[] = []
@@ -277,6 +314,34 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
       const { shafts, tips } = fieldArrows(item.F, vp, sx, sy)
       if (shafts) curves.push(`<path d="${shafts}" stroke="${color}" stroke-width="1.6" data-item="${i}"/>`)
       if (tips) heads.push(`<path d="${tips}" fill="${color}"/>`)
+    } else if (item.kind === 'contour') {
+      // Le curve di livello, più chiare quelle basse; i valori scritti su alcune.
+      const levels = contourLevels(item.F, vp)
+      levels.forEach(({ value, lines: polylines }, k) => {
+        if (!polylines.length) return
+        const opacity = levels.length > 1 ? 0.35 + (0.65 * k) / (levels.length - 1) : 1
+        curves.push(`<path d="${polylines.map(path).join('')}" stroke="${color}" stroke-width="1.5" stroke-opacity="${Math.round(opacity * 100) / 100}" data-item="${i}"/>`)
+        drawn.push(...polylines)
+        // Il valore su un punto della curva più lunga dove non copre i numeri degli assi o altri valori.
+        const longest = polylines.reduce((a, b) => (b.length > a.length ? b : a))
+        const width = 6 * value.length + 4
+        for (const t of [0.25, 0.5, 0.75, 0.125, 0.375, 0.625, 0.875]) {
+          const m = Math.floor((longest.length / 2) * t) * 2
+          const [x, y] = [longest[m], longest[m + 1]]
+          if (x < 10 || x > W - 10 || y < 12 || y > H - 6) continue
+          const box = textBox(x, y + 4, 'middle', width, 10.5)
+          if (taken.some((b) => box[0] < b[2] + 3 && b[0] < box[2] + 3 && box[1] < b[3] + 3 && b[1] < box[3] + 3)) continue
+          taken.push(box)
+          levelLabels.push({ x, y, text: value })
+          break
+        }
+      })
+    } else if (item.kind === 'slopes') {
+      const { segments, solutions } = slopeField(item, vp, sx, sy)
+      if (segments) curves.push(`<path d="${segments}" stroke="${color}" stroke-width="1.3" stroke-opacity="0.55" data-item="${i}"/>`)
+      if (solutions.length) curves.push(`<path d="${solutions.map(path).join('')}" stroke="${color}" stroke-width="2.5" data-item="${i}"/>`)
+      drawn.push(...solutions)
+      for (const [x0, y0] of item.starts) startDots.push(`<circle cx="${f1(sx(x0))}" cy="${f1(sy(y0))}" r="4" fill="${color}" stroke="${palette.halo}" stroke-width="2" paint-order="stroke"/>`)
     }
     else if (item.kind === 'vertical') lines = [[sx(item.x), -2, sx(item.x), H + 2]]
     else if (item.kind === 'vector') {
@@ -343,7 +408,10 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
   }
 
   // Punti, con il nome
-  const points: string[] = []
+  const points: string[] = [...startDots]
+  for (const { x, y, text } of levelLabels) {
+    points.push(`<text x="${f1(x)}" y="${f1(y + 4)}" text-anchor="middle" font-size="10.5" fill="${palette.text}" ${halo}>${escapeXml(text)}</text>`)
+  }
   // I punti delle intersezioni: pallini del colore della riga; gli angoli con l'ampiezza.
   spec.items.forEach((item, i) => {
     if (item.kind === 'points') {

@@ -8,9 +8,13 @@
  *     S(u, v) = (…), u \in [0, 1], v \in [0, 1]      una superficie (in 3D)
  *     \oint_\gamma F \cdot dr                         la curva e il campo, con il lavoro nella legenda
  *     \iint_S F \cdot d\mathbf{S}                     la superficie e il campo, con il flusso
+ *     \operatorname{livelli}(f)                       le curve di livello di f(x, y)
+ *     y' = x - y, \; y(0) = 1                         il campo di direzioni e la soluzione da (0, 1)
+ *     y'' = -y, \; y(0) = 0, \; y'(0) = 1              la soluzione (di ordine più alto: solo lei)
  *
  * Le curve, le superfici e i campi si definiscono come nella nota (vedi Sheet), anche lì.
  */
+import { compileOde, initialConditions, odeOf, odeSolution } from '../math/differential'
 import { compile, MathError, scopeWith, type Scope, type VectorFunction } from '../math/evaluate'
 import { formatNumber } from '../math/format'
 import { nameLatex, toLatex } from '../math/latex'
@@ -85,6 +89,7 @@ export function calculusDims(main: MathNode, ctx: Pick<FieldContext, 'scope' | '
   }
   if (main.k === 'sint') return 3
   if (main.k === 'tuple' && fieldTuple(main)) return main.items.length
+  if ((main.k === 'fn' && main.name === 'levels') || odeOf(main)) return 2
   return 0
 }
 
@@ -212,6 +217,35 @@ export function calculusItems(l: Line, ctx: FieldContext, slot: number, space: b
   if (main.k === 'tuple' && fieldTuple(main)) {
     const vars = COORDS.slice(0, main.items.length)
     return { items: [fieldItem(line, toLatex(main), slot, compiledField(main.items, vars, ctx.scope), main.items.length, space)], colors: 1 }
+  }
+  if (main.k === 'fn' && main.name === 'levels') {
+    if (space) throw new MathError('Le curve di livello si disegnano nel piano: per la superficie scrivi solo f')
+    if (main.args.length !== 1) throw new MathError('Si scrive \\operatorname{livelli}(f), con f una funzione di x e y')
+    const arg = main.args[0]
+    const user = arg.k === 'name' ? ctx.scope.fns.get(arg.name) : undefined
+    let F: (x: number, y: number) => number
+    if (user) {
+      if (user.params.length !== 2) throw new MathError(`${arg.k === 'name' ? arg.name : 'f'} non è una funzione di due variabili`)
+      const xFirst = user.params[0] !== 'y'
+      F = (x, y) => user.call(xFirst ? [x, y] : [y, x])
+    } else {
+      const f = compiledField([arg], ['x', 'y'], ctx.scope)
+      F = (x, y) => f([x, y])[0]
+    }
+    return { items: [{ kind: 'contour', line, label: toLatex(main), slot, F }], colors: 1 }
+  }
+  const ode = odeOf(main)
+  if (ode) {
+    if (space) throw new MathError('Le equazioni differenziali si disegnano nel piano')
+    const F = compileOde(ode, ctx.scope)
+    const conds = !l.cond ? [] : l.cond.k === 'and' ? l.cond.items : [l.cond]
+    const starts = initialConditions(conds, ode, (n) => compile(n, ctx.scope)({}))
+    const labelOf = (cs: readonly MathNode[]) => [toLatex(main), ...cs.map((c) => toLatex(c))].join(', \\; ')
+    // Del primo ordine: il campo di direzioni, con le soluzioni dai punti iniziali.
+    if (ode.order === 1) return { items: [{ kind: 'slopes', line, label: labelOf(conds), slot, f: (x, y) => F(x, [y]), starts: starts.map((s) => [s.x0, s.Y0[0]]) }], colors: 1 }
+    // Di ordine più alto: la soluzione di ogni gruppo di condizioni, come una funzione.
+    if (!starts.length) throw new MathError(`Per disegnare la soluzione servono le condizioni iniziali, come ${ode.y}(0) = 1, \\; ${ode.y}'(0) = 0`)
+    return { items: starts.map((s, k) => ({ kind: 'function', line, label: labelOf(s.conds), slot: slot + k, f: odeSolution(F, s.x0, s.Y0) })), colors: starts.length }
   }
   if (main.k === 'lint') {
     const shape = shapeOf(ctx.scope, main.curve)

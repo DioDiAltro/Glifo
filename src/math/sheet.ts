@@ -18,7 +18,10 @@ import {
   type ExactComplexScope,
 } from './complex'
 import { numericPartials } from './calculus'
-import { compile, EMPTY_SCOPE, scopeWith, withWorkLimit, type Scope, type UserFunction, type VectorFunction } from './evaluate'
+import { bound, compile, EMPTY_SCOPE, isCounter, scopeWith, withWorkLimit, type Scope, type UserFunction, type VectorFunction } from './evaluate'
+import { limit, recognize, seriesSum, type LimitValue } from './limits'
+import { solve } from './solve'
+import { compileOde, odeOf, odeSolution, primed, type Ode, type OdeFunction } from './differential'
 import {
   EXACT,
   FLOAT,
@@ -38,7 +41,7 @@ import { evaluateExact, type ExactFunction, type ExactScope, type Rational } fro
 import { formatNumber, formatRational, type FormattedResult } from './format'
 import { toLatex } from './latex'
 import { children, namesIn, parseMath, type MathNode } from './parse'
-import { expandCalculus, isVectorBody, needsSymbols, partialDerivative, plainText, symbolicValue, type SymbolScope } from './symbolic'
+import { expandCalculus, isVectorBody, needsSymbols, partialDerivative, plainText, symbolicValue, zeroOverZero, type SymbolScope } from './symbolic'
 
 export interface Definition {
   name: string
@@ -54,6 +57,16 @@ export interface Definition {
 
 /** Una formula che finisce con «=» (o con ≈): il testo prima. */
 const TRAILING_EQUALS = /(?<![<>!:\\])(=|\\approx|≈)(?:\s|\\[,;:! ]|\\q?quad\b)*$/
+
+/** Una formula che finisce con ⇒ (o ⇔): l'equazione, la disequazione o il sistema da risolvere. */
+const SOLVE_REQUEST = /(?:\\(?:Rightarrow|implies|Longrightarrow|iff|Leftrightarrow|Longleftrightarrow)|⇒|⇔)(?:\s|\\[,;:! ]|\\q?quad\b)*$/
+
+export function solveRequest(tex: string): string | null {
+  const m = SOLVE_REQUEST.exec(tex)
+  if (!m) return null
+  const body = tex.slice(0, m.index)
+  return body.trim() ? body : null
+}
 
 export function calculationRequest(tex: string): string | null {
   const m = TRAILING_EQUALS.exec(tex)
@@ -172,6 +185,22 @@ function styleOf(node: MathNode): { comma: boolean; decimal: boolean; digits: nu
   return { comma: comma ?? true, decimal: decimal || single, digits }
 }
 
+/** Come si scrive il risultato di un limite o di una serie. */
+function limitText(value: LimitValue, style: ReturnType<typeof styleOf>, exact: Rational | null): FormattedResult | null {
+  if (value.k === 'infinity') return value.sign > 0 ? { tex: '+\\infty', text: '+∞' } : { tex: '-\\infty', text: '−∞' }
+  if (value.k === 'none') {
+    const side = (v: LimitValue | undefined) => (v ? limitText(v, style, null) : null)
+    const left = side(value.left)
+    const right = side(value.right)
+    if (left && right && value.left!.k !== 'none' && value.right!.k !== 'none') {
+      return { tex: `\\nexists \\quad \\text{(da sinistra } ${left.tex}\\text{, da destra } ${right.tex}\\text{)}`, text: `non esiste (da sinistra ${left.text}, da destra ${right.text})` }
+    }
+    return { tex: '\\nexists', text: 'non esiste' }
+  }
+  if (exact) return formatRational(exact, style)
+  return recognize(value.v, style) ?? formatNumber(value.v, { ...style, decimal: true, digits: 9 })
+}
+
 /** Il valore di una formula: un numero reale (anche esatto, una frazione), complesso (anche esatto) o una matrice. */
 type Value = { float: number; exact: Rational | null } | { complex: Complex; exactComplex: GaussRational | null } | { linear: LinearValue }
 
@@ -196,6 +225,11 @@ export class Sheet {
   private vfns = new Map<string, VectorFunction>()
   /** L'ultima funzione definita: una condizione subito dopo ($t \in [0, 2\pi]$) dice dove variano i suoi parametri. */
   private lastFunction: Definition | null = null
+  /**
+   * L'ultima equazione differenziale (y' = x - y, y'' = -y): le condizioni iniziali subito dopo
+   * (y(0) = 1, y'(0) = 0) la risolvono; finché non ci sono tutte, quelle date.
+   */
+  private lastOde: { ode: Ode; definition: Definition; x0: number | null; Y0: (number | undefined)[] } | null = null
   private symbols: SymbolScope | null = null
   readonly definitions: Definition[] = []
 
@@ -254,6 +288,9 @@ export class Sheet {
    * restituisce il risultato (null se non si sa calcolare).
    */
   add(tex: string): FormattedResult | null {
+    // x^2 - 5x + 6 = 0 \Rightarrow: le soluzioni.
+    const equations = solveRequest(tex)
+    if (equations !== null) return this.solveAll(equations)
     if (!tex.includes('=') && !tex.includes('≈') && !tex.includes('\\approx') && !tex.includes('\\coloneq')) return null
     try {
       const request = calculationRequest(tex)
@@ -263,6 +300,29 @@ export class Sheet {
       return last === null ? null : this.calculate(last)
     } catch {
       // Una formula che non si riesce a calcolare (troppo grande, troppo annidata) non ha risultato.
+      return null
+    }
+  }
+
+  /** Le soluzioni di un'equazione, di una disequazione o di un sistema (anche con le virgole o in \begin{cases}). */
+  private solveAll(src: string): FormattedResult | null {
+    const nodes = splitPieces(src).map(parseCached)
+    if (!nodes.length || nodes.some((n) => !n)) return null
+    const style = styleOf(nodes[0]!)
+    try {
+      return withWorkLimit(WORK, () =>
+        solve(
+          nodes.map((n) => this.prepare(n!)),
+          {
+            real: this.scope(),
+            linear: this.linearScope(),
+            symbols: this.symbolScope(),
+            defined: (name) => this.consts.has(name) || this.complexConsts.has(name) || this.linearValues.has(name) || this.fns.has(name) || this.vfns.has(name),
+          },
+          style,
+        ),
+      )
+    } catch {
       return null
     }
   }
@@ -280,11 +340,53 @@ export class Sheet {
     const node = parseCached(src)
     if (!node) return
     if (this.lastFunction && this.attachDomain(node, src)) return
+    if (this.lastOde && this.attachInitial(node, src)) return
+    // y' = x - y, y'' + y = 0: un'equazione differenziale; con le condizioni iniziali y diventa una funzione.
+    const ode = odeOf(node)
+    if (ode) {
+      const own = [ode.x, ...Array.from({ length: ode.order + 1 }, (_, k) => primed(ode.y, k))]
+      const definition: Definition = { name: ode.y, params: [ode.x], source: src.trim(), value: ode.f, uses: namesIn(ode.f, new Set(), new Set(own)) }
+      this.definitions.push(definition)
+      this.lastOde = { ode, definition, x0: null, Y0: Array(ode.order).fill(undefined) }
+      this.lastFunction = null
+      return
+    }
     if (node.k !== 'rel' || node.ops.length !== 1 || node.ops[0] !== '=') return
     const target = definitionTarget(node.items[0])
     if (!target) return
     const value = node.items[1]
     this.record(target, value, src)
+  }
+
+  /** y(0) = 1 dopo y' = …: la soluzione, con Runge–Kutta, come funzione (y(2) = …). */
+  private attachInitial(node: MathNode, src: string): boolean {
+    const last = this.lastOde!
+    const { ode } = last
+    const at = node.k === 'rel' && node.ops.length === 1 && node.ops[0] === '=' ? node.items[0] : null
+    if (!at || at.k !== 'apply' || at.name !== ode.y || at.args.length !== 1 || at.primes >= ode.order || last.Y0[at.primes] !== undefined) return false
+    const x0 = this.evaluate(at.args[0])
+    const y0 = this.evaluate((node as Extract<MathNode, { k: 'rel' }>).items[1])
+    if (!x0 || !y0 || !Number.isFinite(x0.float) || !Number.isFinite(y0.float) || (last.x0 !== null && last.x0 !== x0.float)) return false
+    let F: OdeFunction
+    try {
+      F = compileOde(ode, this.scope())
+    } catch {
+      return false
+    }
+    last.x0 = x0.float
+    last.Y0[at.primes] = y0.float
+    last.definition.source = `${last.definition.source}, \\; ${src.trim().replace(/^(\\[,;:! ]|\\q?quad\b|\s)+/, '')}`
+    // y'' = -y con solo y(0) = 0: aspetta y'(0).
+    if (last.Y0.some((v) => v === undefined)) return true
+    const start = last.x0
+    const Y0 = last.Y0 as number[]
+    this.consts.delete(ode.y)
+    // Passi di un millesimo: le cifre che si mostrano sono giuste.
+    const solution = odeSolution(F, start, Y0, 1e-3)
+    this.fns.set(ode.y, { params: [ode.x], call: ([x]) => solution(x) })
+    this.lastOde = null
+    this.symbols = null
+    return true
   }
 
   /** t \in [0, 2\pi], 0 \le t \le 1: l'intervallo di un parametro dell'ultima curva o superficie. */
@@ -590,12 +692,20 @@ export class Sheet {
       let item = items[i]
       if (!item) continue
       const style = styleOf(item)
+      // Un limite o una serie: il valore (riconosciuto, se si può), l'infinito o «non esiste».
+      const limitShown = this.showLimit(item, style)
+      if (limitShown) {
+        if (target && !target.params && limitShown.value) this.record(target, item, `${target.name} = ${src.slice(src.indexOf('=') + 1)}`, limitShown.value)
+        return limitShown.shown
+      }
       // Le derivate e gli operatori dei campi con le lettere: se restano variabili, il risultato è una formula.
       if (needsSymbols(item, this.symbolScope())) {
         const decimal = style.decimal || this.usesDecimals(item)
+        // Una derivata, un gradiente, un polinomio di Taylor da soli: già scritti come vanno.
+        const single = item.k === 'diff' || item.k === 'fn' || (item.k === 'apply' && item.primes > 0)
         item = this.prepare(item, [], decimal)
         if (this.freeNames(item).length) {
-          const shown = this.showSymbolic(item, decimal)
+          const shown = single ? this.showSymbolic(item, decimal, false) : this.showSymbolic(item, decimal)
           if (shown) return shown
           continue
         }
@@ -609,6 +719,59 @@ export class Sheet {
       return found.shown
     }
     return null
+  }
+
+  /**
+   * Il risultato di un limite (\lim_{x \to 0} \frac{\sin x}{x} = 1) o di una serie
+   * (\sum_{n=1}^{\infty} \frac{1}{n^2} = π²/6 ≈ 1,644934…); null se la formula è altro.
+   */
+  private showLimit(item: MathNode, style: ReturnType<typeof styleOf>): { shown: FormattedResult; value: Value | null } | null {
+    const series = item.k === 'big' && item.op === 'sum' && (item.to.k === 'infty' || (item.to.k === 'bin' && item.to.op === '+' && item.to.b.k === 'infty'))
+    if (item.k !== 'lim' && !series) return null
+    let value: LimitValue
+    let exact: Rational | null = null
+    try {
+      value = withWorkLimit(WORK, () => {
+        const scope = this.scope()
+        if (item.k === 'lim') {
+          const node = this.prepare(item.body)
+          const body = compile(node, scopeWith(scope, [item.v]), { calc: true })
+          const to = bound(item.to, scope)({})
+          // 0/0 in un punto: con le derivate esatte, anche dove le cifre dei numeri non bastano.
+          const exactly = Number.isFinite(to) ? zeroOverZero(item.body, item.v, item.to, this.symbolScope()) : null
+          if (exactly) {
+            exact = exactly.exact
+            return { k: 'value', v: exactly.value }
+          }
+          const v: Record<string, number> = {}
+          const found = limit((x) => ((v[item.v] = x), body(v)), to, item.side, isCounter(item.v) && !Number.isFinite(to))
+          // Dove la funzione è continua il valore esatto: \lim_{x 	o 2} x^2 = 4.
+          if (found.k === 'value' && Number.isFinite(to)) exact = this.exactAt(node, item.v, item.to, found.v)
+          return found
+        }
+        const big = item as Extract<MathNode, { k: 'big' }>
+        const body = compile(this.prepare(big.body), scopeWith(scope, [big.v]), { calc: true })
+        const start = bound(big.from, scope)({})
+        const v: Record<string, number> = {}
+        return seriesSum((n) => ((v[big.v] = n), body(v)), Math.ceil(start - 1e-9))
+      })
+    } catch {
+      return null
+    }
+    const shown = limitText(value, style, exact)
+    const result: Value | null = value.k === 'value' ? { float: value.v, exact } : null
+    return shown ? { shown, value: result } : null
+  }
+
+  /** Il valore esatto della funzione nel punto, se c'è e torna con il limite trovato con i numeri. */
+  private exactAt(body: MathNode, v: string, to: MathNode, near: number): Rational | null {
+    try {
+      const point = evaluateExact(to, this.exactScope())
+      const value = evaluateExact(body, this.exactScope(), new Map([[v, point]]))
+      return Math.abs(value.toNumber() - near) <= 1e-6 * Math.max(1, Math.abs(near)) ? value : null
+    } catch {
+      return null
+    }
   }
 
   /** Le lettere che la formula usa e che la nota non definisce (le variabili di un risultato con le lettere). */
@@ -627,10 +790,10 @@ export class Sheet {
   }
 
   /** Un risultato con le lettere (2x, (2x, 2y), la matrice hessiana), semplificato e disegnato. */
-  private showSymbolic(node: MathNode, decimal: boolean): FormattedResult | null {
+  private showSymbolic(node: MathNode, decimal: boolean, simplify = true): FormattedResult | null {
     let value = node
     try {
-      value = withWorkLimit(WORK, () => symbolicValue(node, this.symbolScope(), decimal))
+      if (simplify || needsSymbols(node, this.symbolScope())) value = withWorkLimit(WORK, () => symbolicValue(node, this.symbolScope(), decimal))
     } catch {
       // Una parte che non si semplifica si mostra com'è, ma non una derivata che non si è saputa fare.
       if (needsSymbols(node, this.symbolScope())) return null

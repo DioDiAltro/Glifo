@@ -5,7 +5,7 @@
  * frazione per un prodotto di potenze (`Ex`); poi torna un'espressione (`MathNode`) da scrivere in
  * LaTeX o da calcolare con i numeri.
  */
-import { fnLabel, MathError, UndefinedName } from './evaluate'
+import { compile, EMPTY_SCOPE, fnLabel, MathError, UndefinedName } from './evaluate'
 import { ExactUnavailable, Rational } from './exact'
 import { children, namesIn, type MathNode } from './parse'
 
@@ -547,6 +547,9 @@ function deriveFn(x: Extract<Ex, { t: 'fn' }>, v: string): Ex {
 /** Le operazioni con i campi di vettori. */
 export const VECTOR_OPS = new Set(['grad', 'div', 'curl', 'lap', 'hess', 'jac'])
 
+/** Le funzioni che si fanno solo con le lettere: il polinomio di Taylor. */
+export const SYMBOLIC_FNS = new Set(['taylor', 'maclaurin'])
+
 /** Le funzioni che con le lettere restano come sono (le derivate non si sanno fare, ma si scrivono). */
 const KNOWN_FUNCTIONS = new Set([
   'sin', 'cos', 'tan', 'cot', 'sec', 'csc', 'arcsin', 'arccos', 'arctan', 'arccot', 'sinh', 'cosh', 'tanh', 'coth',
@@ -688,6 +691,7 @@ class Converter {
       case 'mint':
       case 'lint':
       case 'sint':
+      case 'lim':
         return { t: 'node', node }
       default:
         throw new MathError('Questa espressione non si sa scrivere con le lettere')
@@ -714,6 +718,7 @@ class Converter {
       if (Array.isArray(value)) throw new MathError(node.name === 'grad' ? 'Il gradiente è un vettore: qui va un numero' : 'Qui va un numero, non un vettore')
       return value
     }
+    if (SYMBOLIC_FNS.has(node.name)) return this.taylor(node, locals)
     let out: Ex
     if (node.name === 'log' && node.base) out = mul(fn('ln', [s(node.args[0])]), pow(fn('ln', [s(node.base)]), num(-1)))
     else if (node.name === 'lg') out = mul(fn('ln', [s(node.args[0])]), pow(fn('ln', [num(10)]), num(-1)))
@@ -723,6 +728,43 @@ class Converter {
     else if (KNOWN_FUNCTIONS.has(node.name)) out = fn(node.name, node.args.map(s))
     else return { t: 'node', node }
     return node.pow ? pow(out, s(node.pow)) : out
+  }
+
+  /**
+   * Il polinomio di Taylor di f di ordine n in x₀: \operatorname{taylor}(f(x), x_0, n), o
+   * \operatorname{maclaurin}(f(x), n) in 0. Le potenze dalla più bassa, come nei libri.
+   */
+  private taylor(node: Extract<MathNode, { k: 'fn' }>, locals: ReadonlyMap<string, Ex>): Ex {
+    const maclaurin = node.name === 'maclaurin'
+    const usage = maclaurin ? '\\operatorname{maclaurin}(f(x), n)' : '\\operatorname{taylor}(f(x), x_0, n)'
+    if (node.args.length !== (maclaurin ? 2 : 3)) throw new MathError(`Si scrive ${usage}`)
+    const [fn, center, order] = maclaurin ? [node.args[0], null, node.args[1]] : node.args
+    const nEx = this.scalar(order, locals)
+    if (nEx.t !== 'num' || !nEx.v.isInteger || nEx.v.sign < 0 || nEx.v.n > 20n) throw new MathError('L\'ordine del polinomio è un numero intero da 0 a 20')
+    const n = Number(nEx.v.n)
+    const a = center ? this.scalar(center, locals) : num(0)
+    if (symbols(a).some((s) => s !== 'π' && s !== 'e')) throw new MathError('Il punto del polinomio di Taylor è un numero')
+    // La variabile: x, o l'unica lettera della funzione.
+    let f = this.withVariables(['x'], () => this.scalar(fn, locals))
+    const free = symbols(f).filter((s) => s !== 'π' && s !== 'e')
+    const v = free.includes('x') || !free.length ? 'x' : free.length === 1 ? free[0] : null
+    if (!v) throw new MathError(`Di quale variabile? La funzione ne ha più di una (${free.join(', ')})`)
+    const shift = isNum(a, 0) ? sym(v) : sub(sym(v), a)
+    const terms: Ex[] = []
+    let factorial = ONE
+    for (let k = 0; k <= n; k++) {
+      if (k > 0) {
+        f = derive(f, v)
+        factorial = factorial.mul(new Rational(BigInt(k)))
+      }
+      const c = mul(subst(f, v, a), num(new Rational(1n, 1n).div(factorial)))
+      if (!isNum(c, 0)) terms.push(mul(c, pow(shift, num(k))))
+    }
+    if (!terms.length) return num(0)
+    // Dalla potenza più bassa: un nodo già scritto, che le semplificazioni non riordinano.
+    let out = node0(terms[0])
+    for (const t of terms.slice(1)) out = isNegative(t) ? { k: 'bin', op: '-', a: out, b: node0(neg(t)) } : { k: 'bin', op: '+', a: out, b: node0(t) }
+    return { t: 'node', node: out }
   }
 
   /** \frac{\partial^2 f}{\partial x \partial y}, \frac{d}{dx}(…), f nel punto: \frac{\partial f}{\partial x}(1, 2). */
@@ -868,7 +910,7 @@ export function hasCalculus(node: MathNode): boolean {
   let found = false
   const visit = (n: MathNode): void => {
     if (found) return
-    if (n.k === 'diff' || (n.k === 'apply' && n.primes > 0) || (n.k === 'fn' && VECTOR_OPS.has(n.name))) {
+    if (n.k === 'diff' || (n.k === 'apply' && n.primes > 0) || (n.k === 'fn' && (VECTOR_OPS.has(n.name) || SYMBOLIC_FNS.has(n.name)))) {
       found = true
       return
     }
@@ -890,6 +932,84 @@ export function symbolicValue(node: MathNode, scope: SymbolScope, decimal = fals
   return toNode(c.scalar(node), decimal)
 }
 
+/** Le funzioni con tutte le derivate dove sono definite: per de l'Hôpital (|x|, ⌊x⌋ e i tratti no). */
+const SMOOTH_FUNCTIONS = new Set([
+  'sin', 'cos', 'tan', 'cot', 'sec', 'csc', 'arcsin', 'arccos', 'arctan', 'arccot', 'sinh', 'cosh', 'tanh', 'coth', 'arsinh', 'arcosh', 'artanh', 'ln', 'log',
+])
+
+function smooth(x: Ex): boolean {
+  switch (x.t) {
+    case 'num':
+    case 'sym':
+      return true
+    case 'add':
+      return x.terms.every(smooth)
+    case 'mul':
+      return x.factors.every(smooth)
+    case 'pow':
+      return smooth(x.base) && smooth(x.exp)
+    case 'fn':
+      return SMOOTH_FUNCTIONS.has(x.name) && x.args.every(smooth) && (!x.base || smooth(x.base))
+    default:
+      return false
+  }
+}
+
+/** Il valore con i numeri di un'espressione senza lettere (solo π ed e). */
+function floatOf(x: Ex): number {
+  return compile(toNode(x), EMPTY_SCOPE)({})
+}
+
+/** Zero o no, nel punto: con le frazioni è sicuro; con i numeri solo se è chiaramente diverso da zero (null se non si sa). */
+function zeroAt(x: Ex): boolean | null {
+  if (x.t === 'num') return x.v.sign === 0
+  const value = floatOf(x)
+  return Number.isFinite(value) && Math.abs(value) > 1e-9 ? false : null
+}
+
+/**
+ * Il limite in un punto di una frazione che lì fa 0/0, con le derivate fatte con le lettere (de
+ * l'Hôpital, cioè i polinomi di Taylor): al primo ordine in cui il denominatore non si annulla, il
+ * rapporto delle derivate. Esatto, anche dove con i numeri le cifre si perdono ((\tan x − x)/x³ fa
+ * 1/3). Null se non si sa così: il punto all'infinito, funzioni non lisce (|x|, ⌊x⌋), un limite
+ * infinito, derivate che nel punto non danno un numero; allora restano i numeri.
+ */
+export function zeroOverZero(body: MathNode, v: string, to: MathNode, scope: SymbolScope): { value: number; exact: Rational | null } | null {
+  if (body.k !== 'bin' || body.op !== '/') return null
+  try {
+    const c = new Converter(scope)
+    const a = c.scalar(to)
+    const constant = (x: Ex, extra?: string) => symbols(x).every((s) => s === 'π' || s === 'e' || s === extra)
+    if (!constant(a)) return null
+    let f = c.scalarWith(body.a, [v])
+    let g = c.scalarWith(body.b, [v])
+    if (!smooth(f) || !smooth(g) || !constant(f, v) || !constant(g, v)) return null
+    for (let k = 0; k <= 8; k++) {
+      if (k) {
+        f = derive(f, v)
+        g = derive(g, v)
+        // Le derivate si allungano a ogni passo: oltre un certo punto, meglio i numeri.
+        if (key(f).length + key(g).length > 20000) return null
+      }
+      const top = zeroAt(subst(f, v, a))
+      const bottom = zeroAt(subst(g, v, a))
+      if (top === null || bottom === null) return null
+      if (!bottom) {
+        // Al primo passo non è 0/0 (basta la funzione nel punto).
+        if (!k) return null
+        const q = tidy(mul(subst(f, v, a), pow(subst(g, v, a), num(-1))))
+        const value = floatOf(q)
+        return Number.isFinite(value) ? { value, exact: q.t === 'num' ? q.v : null } : null
+      }
+      // Il numeratore si annulla meno volte del denominatore: va all'infinito (lo dicono i numeri).
+      if (!top) return null
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 /** La derivata di `body` rispetto a `v`, con le lettere `variables` che restano variabili (i parametri di una curva). */
 export function partialDerivative(body: MathNode, v: string, variables: string[], scope: SymbolScope): MathNode {
   return toNode(derive(new Converter(scope).scalarWith(body, variables), v))
@@ -905,7 +1025,7 @@ export function needsSymbols(node: MathNode, scope: SymbolScope): boolean {
   let found = false
   const visit = (n: MathNode): void => {
     if (found) return
-    if (n.k === 'diff' || (n.k === 'apply' && n.primes > 0) || (n.k === 'fn' && VECTOR_OPS.has(n.name))) found = true
+    if (n.k === 'diff' || (n.k === 'apply' && n.primes > 0) || (n.k === 'fn' && (VECTOR_OPS.has(n.name) || SYMBOLIC_FNS.has(n.name)))) found = true
     else if ((n.k === 'apply' || n.k === 'name') && isField(n.name, scope)) found = true
     else children(n).forEach(visit)
   }
@@ -927,7 +1047,7 @@ export function expandCalculus(node: MathNode, scope: SymbolScope, decimal = fal
     }
   }
   const visit = (n: MathNode): MathNode => {
-    if (n.k === 'diff' || (n.k === 'apply' && n.primes > 0)) return attempt(n, () => toNode(c.scalar(n), decimal))
+    if (n.k === 'diff' || (n.k === 'apply' && n.primes > 0) || (n.k === 'fn' && SYMBOLIC_FNS.has(n.name))) return attempt(n, () => toNode(c.scalar(n), decimal))
     if (n.k === 'fn' && VECTOR_OPS.has(n.name)) return attempt(n, () => valueNode(c.operator(n, new Map()), decimal))
     if (n.k === 'apply' && !n.primes && isField(n.name, scope)) return attempt(n, () => valueNode(c.vector(n).value, decimal))
     return mapNode(n, visit)
@@ -978,6 +1098,29 @@ function mapNode(n: MathNode, f: (c: MathNode) => MathNode): MathNode {
     case 'lint':
     case 'sint':
       return { ...n, body: f(n.body) }
+    case 'lim':
+      return { ...n, to: f(n.to), body: f(n.body) }
+  }
+}
+
+/**
+ * Una relazione lineare F = 0 nelle incognite: i coefficienti delle incognite e il termine noto,
+ * [a₁, …, aₙ, c] con a₁x₁ + … + aₙxₙ = c; null se non è lineare (o i coefficienti non sono frazioni).
+ */
+export function linearCoefficients(F: MathNode, unknowns: string[], scope: SymbolScope): Rational[] | null {
+  try {
+    const f = new Converter(scope).scalarWith(F, unknowns)
+    const row: Rational[] = []
+    for (const u of unknowns) {
+      const d = derive(f, u)
+      if (d.t !== 'num') return null
+      row.push(d.v)
+    }
+    let c = f
+    for (const u of unknowns) c = subst(c, u, num(0))
+    return c.t === 'num' ? [...row, c.v.neg()] : null
+  } catch {
+    return null
   }
 }
 
@@ -1196,6 +1339,11 @@ function combine(x: Ex): Ex {
   const size = numerator.t === 'add' ? numerator.terms.length : 1
   if (size > x.terms.length * 4 || denominators(numerator).length) return x
   return mul(numerator, pow(D, num(-1)))
+}
+
+/** Un termine come formula, già semplificato (per i polinomi di Taylor, che restano in ordine). */
+function node0(x: Ex): MathNode {
+  return node(tidy(x))
 }
 
 function node(x: Ex): MathNode {

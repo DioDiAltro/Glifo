@@ -51,6 +51,7 @@ function level(n: MathNode): number {
     case 'mint':
     case 'lint':
     case 'sint':
+    case 'lim':
       return 1.8
     case 'diff':
       return n.body.k === 'name' || n.body.k === 'apply' ? 5 : 1.8
@@ -100,6 +101,9 @@ const COMPLEX_FUNCTIONS: Record<string, string> = {
   dist: '\\operatorname{distanza}',
   segment: '\\operatorname{segmento}',
   angle: '\\operatorname{angolo}',
+  levels: '\\operatorname{livelli}',
+  taylor: '\\operatorname{taylor}',
+  maclaurin: '\\operatorname{maclaurin}',
 }
 
 /** I nomi scritti attaccati di una figura (AB, ABC): \overline{AB}, \widehat{ABC}. */
@@ -189,6 +193,11 @@ export function toLatex(node: MathNode): string {
     }
     case 'diff':
       return diffLatex(node)
+    case 'lim': {
+      const side = node.side ? `^{${node.side > 0 ? '+' : '-'}}` : ''
+      const to = node.to.k === 'infty' ? '+\\infty' : toLatex(node.to)
+      return `\\lim_{${nameLatex(node.v)} \\to ${to}${side}} ${wrap(node.body, 2)}`
+    }
     case 'lint': {
       const head = `${node.closed ? '\\oint' : '\\int'}_{${nameLatex(node.curve)}}`
       if (node.ds) return `${head} ${wrap(node.body, 1.5)} \\, ds`

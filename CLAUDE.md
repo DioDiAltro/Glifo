@@ -70,7 +70,13 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   hessiana e jacobiana, con le semplificazioni (`tidy`: frazioni unite, polinomi in ordine, fattori
   raccolti); il foglio li usa con `expandCalculus` e, se restano lettere, mostra la formula;
   `calculus.ts` gli integrali di linea e di superficie (nodi `lint` e `sint`) sulle curve, superfici e
-  campi definiti (`Scope.vfns`, con l'intervallo dopo la virgola: t \in [0, 2\pi])), `sheet.ts` è il
+  campi definiti (`Scope.vfns`, con l'intervallo dopo la virgola: t \in [0, 2\pi]); `limits.ts` i limiti
+  (nodo `lim`, con i numeri: Richardson; le forme 0/0 prima con le derivate esatte, `zeroOverZero` in
+  `symbolic.ts`) e le serie fino a ∞, con `recognize` per π²/6, e, ln 2; `solve.ts` le equazioni, le
+  disequazioni e i sistemi di una formula che finisce con ⇒ (`solveRequest`); `differential.ts` le
+  equazioni differenziali di ogni ordine (`odeOf`, anche y'' + y = 0) con le condizioni iniziali anche in
+  formule dopo, risolte con Runge–Kutta (`odeSolution`); i polinomi di Taylor sono `\operatorname{taylor}`
+  in `symbolic.ts`), `sheet.ts` è il
   «foglio» della nota: le formule dall'alto in basso, `$a = 2$` e `$f(x) = …$` definiscono, una formula
   che finisce con `=` ha il risultato (nell'editor `src/editor/calcResults.ts`, Tab lo scrive;
   nell'anteprima colorato, classe `calc-result`). `\log` è il logaritmo naturale.
@@ -101,7 +107,11 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   li mette `nameSpot` in `svg.ts`, nella direzione libera più lontana dalla figura. I campi di vettori
   (`field`, `field3`), le curve con il nome (con `arrow`, la freccia del verso), le superfici con il nome
   e gli integrali di linea e di superficie sono in `fields.ts`: le definizioni con i valori vettori del
-  blocco passano dal foglio (`sheet.define`), come nella nota.
+  blocco passano dal foglio (`sheet.define`), come nella nota. Lì anche le curve di livello
+  (`\operatorname{livelli}(f)`, `kind: 'contour'`) e le equazioni differenziali: del primo ordine il campo di
+  direzioni (`kind: 'slopes'`, livelli e soluzioni in `ode.ts`), di ordine più alto la soluzione come
+  funzione. Un polinomio di Taylor da solo porta nel blocco anche la riga della sua funzione (se nessuna
+  la disegna già, `curveKeys`).
 - `src/ai/`: assistente AI. `src/host.ts`: funzioni della demo dentro claude.ai.
 - `src/account/`: account e sincronizzazione. `sync.ts` è il motore (manda, scarica, nei
   conflitti tiene tutte e due le versioni), `controller.ts` decide quando sincronizzare,

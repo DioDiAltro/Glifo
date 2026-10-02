@@ -176,6 +176,33 @@ chi sta provando Glifo.*
   forma (`\oint_\gamma (-y \, dx + x \, dy)`). Gli **integrali di superficie**: `\iint_S f \, dS` (con `1` l'area)
   e il flusso `\iint_S F \cdot d\mathbf{S}` (o `F \cdot n \, dS`), con la normale S_u × S_v; su una superficie chiusa
   (`\oiint_S`) sempre verso fuori.
+- **Limiti**: `\lim_{x \to 0} \frac{\sin x}{x} =` dà 1, anche da una parte sola (`x \to 0^+`, `x \to 0^-`) e
+  all'infinito (`x \to +\infty`). Le forme 0/0 si fanno con le derivate esatte (de l'Hôpital:
+  `\frac{\tan x - x}{x^3}` dà 1/3), le altre con i numeri, e il valore si riconosce quando è una frazione, una
+  radice o un multiplo di π, π², e, ln 2 (`(1 + \frac{1}{x})^x` dà e ≈ 2,718281…). Se va all'infinito il
+  risultato è +∞ o −∞; se non c'è, «non esiste», con i due valori quando da sinistra e da destra vengono
+  diversi (`\frac{|x|}{x}`). Con n (o k, m) che va all'infinito è una successione:
+  `\lim_{n \to \infty} \frac{n!}{n^n} =` dà 0, `(-1)^n` non ha limite.
+- **Serie** fino a ∞: `\sum_{n=1}^{\infty} \frac{1}{n^2} =` dà π²/6 ≈ 1,644934…, `\frac{(-1)^{n+1}}{n}` dà ln 2,
+  `\frac{1}{n!}` (da 0) dà e; quelle che divergono +∞ (`\frac{1}{n}`), quelle che oscillano «non esiste».
+- **Polinomi di Taylor**: `\operatorname{taylor}(\sin x, 0, 5) =` dà x − x³/6 + x⁵/120 (dalla potenza più
+  bassa, come nei libri), anche in un altro punto (`\operatorname{taylor}(\ln x, 1, 3)`) e delle funzioni
+  della nota; `\operatorname{maclaurin}(\cos x, 4)` è quello in 0. Con un nome
+  (`T(x) = \operatorname{taylor}(\sin x, 0, 3)`) si usa dopo, anche nei grafici.
+- **Equazioni, disequazioni e sistemi risolti**: con `\Rightarrow` (o `\implies`, ⇒) in fondo.
+  `x^2 - 5x + 6 = 0 \Rightarrow` dà x = 2 ∨ x = 3, `x^2 - x - 1 = 0` dà x = (1 ± √5)/2, `x^2 - 4x + 4 = 0`
+  x = 2 (doppia); senza soluzioni reali dice quelle complesse. Le goniometriche con il periodo
+  (`\sin x = \frac{1}{2}` dà x = π/6 + 2kπ ∨ x = 5π/6 + 2kπ), le esponenziali e le logaritmiche con il valore
+  esatto (`e^x = 2` dà x = ln 2), le altre con i numeri (`\cos x = x`). Le **disequazioni** danno gli
+  intervalli (`\frac{x - 1}{x + 2} \ge 0 \Rightarrow` dà x < −2 ∨ x ≥ 1; `(x - 1)^2 > 0` dà x ≠ 1). I
+  **sistemi** con le virgole o in `\begin{cases}`: lineari, con le frazioni esatte (anche con infinite
+  soluzioni, «y qualsiasi», o impossibili), e non lineari
+  (`\begin{cases} x^2 + y^2 = 25 \\ x - y = 1 \end{cases}` dà (x, y) = (−3, −4) ∨ (x, y) = (4, 3)).
+- **Equazioni differenziali**: `$y' = x - y, \; y(0) = 1$` fa di y la soluzione (calcolata con i numeri,
+  con Runge–Kutta): dopo, `$y(2) =$` dà 1,270670…, e y si usa come le altre funzioni (derivate,
+  integrali, grafici). Anche di ordine più alto, con le condizioni su y', y'' nello stesso punto
+  (`y'' + 2y' + 5y = 0, \; y(0) = 1, \; y'(0) = 0`), scritte in qualsiasi modo se la derivata più alta è al
+  primo grado; con x come funzione la variabile è il tempo t (`x'' = -x`).
 - **Integrali doppi e tripli**, con il dominio sotto: disuguaglianze (`\iint_{x^2 + y^2 \le 1} (x^2 + y^2) \, dA =`,
   `\iiint_{x^2 + y^2 \le 1, 0 \le z \le 2} dV =`), rettangoli (`\iint_{[0, 1] \times [0, 2]} x y \, dx \, dy =`,
   `[0, 1]^3`) o il nome di un insieme scritto prima (`$D = \{(x, y) : 0 \le y \le x \le 1\}$` e poi
@@ -184,8 +211,9 @@ chi sta provando Glifo.*
   `dx \, dy`, `dA`, `dV` o `d(x, y)`. Il risultato ha qualche cifra in meno degli integrali semplici
   (sono quelle sicure).
 - Il pulsante con gli **assi** nella barra mette nella nota un **grafico**: con il cursore su una
-  funzione (`$f(x) = …$`) disegna quella, su un integrale (`$\int_0^2 x^2 \, dx =$`) la sua area, se
-  no prepara il blocco da scrivere. Il grafico della formula sotto il cursore si vede anche nel
+  funzione (`$f(x) = …$`) disegna quella, su un integrale (`$\int_0^2 x^2 \, dx =$`) la sua area (e
+  così le curve di livello, i polinomi di Taylor, le equazioni differenziali), se no prepara il blocco
+  da scrivere. Il grafico della formula sotto il cursore si vede anche nel
   pannello a destra, con «Inserisci il grafico».
 - Il blocco ` ```grafico ` ha una riga per ogni cosa da disegnare: funzioni (`y = x^2`, `f(x) = \frac{1}{x}`,
   o solo `x^2`), anche dove vale una condizione (`y = \sqrt{x}, 0 \le x \le 4`), rette verticali
@@ -236,6 +264,14 @@ chi sta provando Glifo.*
   (`\gamma(t) = (\cos t, \sin t), \; t \in [0, 2\pi]`, anche nello spazio) e le superfici con il nome (`S(u, v)`).
   Un integrale di linea disegna la curva e il campo, con il lavoro nella legenda (`\oint_\gamma F \cdot dr = 6,283185…`);
   uno di superficie la superficie e le frecce del campo, con il flusso.
+- Le **curve di livello** di una funzione di x e y (`\operatorname{livelli}(x^2 + 2y^2)`, o
+  `\operatorname{livelli}(f)` con una f della nota o del blocco), con i valori scritti sulle curve (numeri
+  tondi scelti da Glifo); con `\nabla f` nello stesso grafico si vede il gradiente perpendicolare ai livelli.
+- Un'**equazione differenziale** del primo ordine disegna il **campo di direzioni** (un trattino con la
+  pendenza in ogni punto) e, con le condizioni iniziali (`y' = x - y, \; y(0) = 1, \; y(0) = -2`), le
+  soluzioni che partono da lì; una di ordine più alto (`y'' = -y, \; y(0) = 0, \; y'(0) = 1`) la soluzione,
+  una per ogni gruppo di condizioni. Un **polinomio di Taylor** da solo (`\operatorname{taylor}(\sin x, 0, 5)`)
+  si disegna insieme alla funzione da cui viene, per confrontarli (se un'altra riga non la disegna già).
 - Le figure della **geometria** si disegnano come si scrivono: punti con il nome (`A = (0, 0)`,
   `M = \operatorname{medio}(B, C)`), segmenti (`\overline{AM}`), triangoli e poligoni colorati
   (`\triangle ABC`), angoli con l'arco e l'ampiezza (`\widehat{BAC}`; quello retto con il quadratino),
@@ -275,6 +311,8 @@ chi sta provando Glifo.*
 ![Geometria: lunghezze, area, angoli, rette e circonferenze nella nota, e il triangolo con l'angolo e la mediana nel grafico](docs/geometria.png)
 
 ![Derivate e campi: la derivata di un quoziente, gradiente, derivata mista, lavoro e rotore nella nota; il campo con le frecce e la curva con il verso nel grafico](docs/campi.png)
+
+![Analisi: un limite, una serie, un polinomio di Taylor, un'equazione e una disequazione risolte e un'equazione differenziale nella nota; il campo di direzioni con le soluzioni nell'anteprima e, nel pannello, il polinomio di Taylor con la sua funzione](docs/analisi.png)
 
 **Schemi stile draw.io**
 - Il pulsante con i due riquadri nella barra apre un editor a tutto schermo: forme a sinistra
@@ -475,8 +513,11 @@ src/
     domain.ts             i domini degli integrali doppi e tripli (margine, condizioni, strati) e come si integrano
     complex.ts            i numeri complessi: conti (anche esatti), radici, forme a + bi e ρe^{iθ}, equazioni
     linear.ts             vettori e matrici: conti esatti o con la virgola, determinante, inversa, rango, nucleo, autovalori; la geometria (segmenti, rette, circonferenze, piani, angoli, intersezioni)
-    symbolic.ts           i conti con le lettere: derivate (anche parziali), gradiente, divergenza, rotore, hessiana, con le semplificazioni
+    symbolic.ts           i conti con le lettere: derivate (anche parziali), gradiente, divergenza, rotore, hessiana, polinomi di Taylor, i limiti 0/0, con le semplificazioni
     calculus.ts           gli integrali di linea e di superficie (lavoro e flusso) sulle curve e superfici definite
+    limits.ts             i limiti (Richardson, da una parte e dall'altra) e le serie (somme accelerate), e i valori riconosciuti (π²/6, e, ln 2)
+    solve.ts              le equazioni, le disequazioni e i sistemi risolti dopo ⇒
+    differential.ts       le equazioni differenziali di ogni ordine, risolte con Runge–Kutta dalle condizioni iniziali
     exact.ts, format.ts   i conti esatti con le frazioni; i risultati scritti all'italiana
     sheet.ts              il «foglio» della nota: definizioni dall'alto in basso e risultati dopo «=»
     latex.ts              un'espressione riscritta in LaTeX (le legende dei grafici)
@@ -484,7 +525,8 @@ src/
     spec.ts               le righe di un blocco ```grafico: funzioni, curve, punti, vettori, aree degli integrali, superfici, zone e solidi, la parte da mostrare, gli slider
     regions.ts            le zone e i solidi: disuguaglianze, insiemi, domini degli integrali doppi e tripli, volumi sotto le superfici
     gauss.ts              il piano di Gauss: numeri complessi, radici, equazioni e zone in z
-    fields.ts             i campi di vettori (le frecce), le curve con il verso, le superfici e gli integrali di linea e di superficie
+    fields.ts             i campi di vettori (le frecce), le curve con il verso, le superfici, gli integrali di linea e di superficie, le curve di livello e le equazioni differenziali
+    ode.ts                i livelli delle curve di livello e le soluzioni nel campo di direzioni
     plot.ts               dove calcolare le curve (salti, asintoti) e le aree, la finestra, le tacche
     svg.ts                il disegno in SVG, con i colori dei due temi
     space.ts              i conti del 3D: superfici a quadretti e a tetraedri, piani, solidi, curve nello spazio, la scatola da mostrare

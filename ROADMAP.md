@@ -8,61 +8,6 @@ il lavoro si parte da qui, e quando una voce è fatta si toglie.
 
 ## In programma
 
-### Matematica per i corsi: grafici e calcoli per tutto il programma
-
-**Cosa:** chiesto dallo studente il 2 ottobre 2026: grafici e calcoli devono bastare per un corso
-di matematica intero (Analisi 1 e 2, Geometria e algebra lineare). Si fa a tappe: ognuna viene
-pubblicata appena è pronta e qui si segna come fatta.
-
-1. Fatto (2 ottobre 2026): **grafici 3D** nel blocco ```grafico: superfici (`z = x^2 + y^2`,
-   `f(x, y) = …`), superfici date da un'equazione (`x^2 + y^2 + z^2 = 4`) e piani, superfici con due
-   parametri (`(u \cos v, u \sin v, u)`), curve nello spazio (`(\cos t, \sin t, t)`), punti e
-   vettori (anche nel piano). Si girano trascinandoli e hanno gli slider come quelli 2D. Da
-   migliorare se serve: dove due superfici curve si tagliano il bordo è a dentini (i piani invece
-   tagliano giusto).
-2. Fatto (2 ottobre 2026): **integrali doppi e tripli** nella nota, uno dentro l'altro
-   (`\int_0^1 \int_0^x xy \, dy \, dx`, anche in polari e sferiche) o sul dominio scritto sotto
-   (`\iint_{x^2 + y^2 \le 1}`, `[0, 1] \times [0, 2]`, il nome di un insieme `D = \{(x, y) : …\}`), e
-   nel grafico: il dominio colorato nel piano, il volume sotto la superficie e i solidi nel 3D
-   (anche cilindrici e sferici). Le **zone colorate** delle disuguaglianze (`y > x^2`,
-   `x^2 + y^2 \le 4`), tratteggiate dove il bordo è escluso, e i solidi (`x^2 + y^2 + z^2 \le 1`).
-   Da migliorare se serve: un dominio in coordinate cilindriche o sferiche con condizioni che non
-   tengono una variabile da sola tra due estremi (come `0 \le \rho \le 2\cos\varphi`) si disegna a
-   gradini; il volume sotto una superficie data in r e θ non si disegna (dentro la funzione c'è lo
-   jacobiano r).
-3. Fatto (2 ottobre 2026): **numeri complessi** nella nota (`i`, coniugato, modulo, argomento come
-   multiplo di π, parte reale e immaginaria, esponenziale e logaritmo, potenze, tutte le radici di
-   `\sqrt[n]{w}`; conti esatti con le frazioni) e nel grafico il **piano di Gauss**: numeri come
-   frecce con la forma esponenziale nella legenda e nel pannello, radici e soluzioni delle equazioni
-   (`z^3 = 8i`) come punti, curve (`|z - i| = 2`, `\arg z = \frac{\pi}{4}`), zone (`|z| \le 2`) e
-   curve con il parametro (`2e^{it}`). Da migliorare se serve: le soluzioni si cercano con parte
-   reale e immaginaria tra −32 e 32.
-4. Fatto (2 ottobre 2026): **vettori e matrici** nella nota (matrici con `pmatrix`, `bmatrix` e
-   `vmatrix`, determinante, inversa con le frazioni esatte, trasposta, potenze, rango, traccia,
-   riduzione a scala, nucleo e immagine come span, autovalori anche complessi, autovettori,
-   polinomio caratteristico, prodotto scalare e vettoriale, norma; i risultati disegnati anche
-   nell'editor) e nei grafici le frecce dei vettori della nota e dei loro conti (`u + v`, `A u`).
-   Da migliorare se serve: i sistemi lineari si risolvono con l'inversa (`A^{-1} b`); i sistemi
-   scritti per esteso arrivano con la tappa 7.
-5. Fatto (2 ottobre 2026): **geometria** nella nota con i punti scritti prima (lunghezze dei
-   segmenti con le radici esatte, punto medio e baricentro, retta per due punti, area e perimetro di
-   triangoli e poligoni, angoli in gradi, circonferenze con centro e raggio o per tre punti, piano per
-   tre punti, distanze punto-retta e punto-piano, intersezioni di rette, circonferenze e piani, anche
-   con le radici: `(−√2, −√2); (√2, √2)`) e nei grafici (punti con il nome, segmenti, poligoni colorati,
-   angoli con l'arco e l'ampiezza, rette, circonferenze, intersezioni, piani e triangoli nello spazio;
-   i nomi dei vertici fuori dalle figure). Da migliorare se serve: le coniche (ellisse, parabola,
-   iperbole) come figure con i loro elementi (fuochi, assi).
-6. Fatto (2 ottobre 2026): **integrali di linea e di superficie** su curve e superfici definite con i
-   loro parametri e l'intervallo (`\gamma(t) = (…), \; t \in [0, 2\pi]`): di una funzione (ds, dS), il
-   lavoro (anche delle forme P dx + Q dy) e il flusso (verso fuori sulle superfici chiuse); i campi di
-   vettori disegnati con le frecce, nel piano e nello spazio, e le curve con la freccia del verso; il
-   gradiente, la divergenza, il rotore, il laplaciano, l'hessiana e la jacobiana con le lettere. Con
-   questa tappa sono arrivate anche le **derivate scritte come formula** (`f'(x) =`, `\frac{d}{dx}`, le
-   derivate parziali), con le semplificazioni che servono a leggerle. Da migliorare se serve: le
-   superfici date come grafico (z = g(x, y) su un dominio) vanno scritte con i parametri, S(u, v) = (u, v, g(u, v)).
-7. **Il resto di Analisi**: limiti, serie, polinomi di Taylor, equazioni e sistemi risolti, curve di
-   livello, campi di direzioni delle equazioni differenziali.
-
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
 **Cosa:** ognuno ha il suo account e ritrova gli stessi appunti su PC, tablet e telefono.
@@ -255,7 +200,7 @@ ingrandire, grafici nei file .md come immagini, gli **slider** per i numeri (in 
 trascinare `a`, o scriverne il valore accanto, e vedere il grafico cambiare, come in GeoGebra e nelle
 Note matematiche) e l'**area degli integrali** (`\int_0^2 x^2 \, dx` colora l'area sotto la curva, con
 il valore nella legenda). Tutto è descritto nel README. Quello che serve per i corsi di matematica
-è «in programma» (sopra). Se serviranno anche:
+è nella voce dopo. Se serviranno anche:
 
 - l'area tra due curve (`\int_0^1 (f(x) - g(x)) \, dx` oggi colora quella sotto la differenza);
 - nelle aree degli integrali, le parti sotto l'asse x di un altro aspetto (oggi hanno lo stesso
@@ -264,6 +209,37 @@ il valore nella legenda). Tutto è descritto nel README. Quello che serve per i 
 - i calcoli anche fuori dalle formule (`12 * 3 =` nel testo) e con le unità di misura (`3 m/s`);
 - un'impostazione per spegnere i risultati dopo `=`, se a qualcuno danno fastidio;
 - «Copia come immagine» e PNG anche per i grafici (come per gli schemi).
+
+### Matematica per i corsi: idee in più
+
+Fatto con lo studente (2 ottobre 2026), in sette tappe pubblicate una per una: grafici e calcoli per
+un corso di matematica intero (Analisi 1 e 2, Geometria e algebra lineare). I grafici 3D (superfici,
+piani, superfici con due parametri, curve nello spazio, da girare trascinandoli); gli integrali doppi e
+tripli con il dominio colorato, il volume sotto la superficie e i solidi; le zone delle disuguaglianze;
+i numeri complessi e il piano di Gauss; vettori e matrici (inversa, rango, nucleo, autovalori e
+autovettori); la geometria (lunghezze, aree, angoli, rette, circonferenze, piani, intersezioni) con le
+figure nei grafici; le derivate scritte come formula, gradiente, divergenza, rotore, hessiana e
+jacobiana, gli integrali di linea e di superficie e i campi di vettori; i limiti (le forme 0/0 esatte),
+le serie, i polinomi di Taylor, le equazioni, disequazioni e sistemi risolti con ⇒, le equazioni
+differenziali di ogni ordine, le curve di livello e i campi di direzioni. Tutto è descritto nel README.
+Se serviranno:
+
+- dove due superfici curve si tagliano, il bordo è a dentini (i piani invece tagliano giusto);
+- un dominio in coordinate cilindriche o sferiche con condizioni che non tengono una variabile da sola
+  tra due estremi (come `0 \le \rho \le 2\cos\varphi`) si disegna a gradini; il volume sotto una
+  superficie data in r e θ non si disegna (dentro la funzione c'è lo jacobiano r);
+- nel piano di Gauss le soluzioni si cercano con parte reale e immaginaria tra −32 e 32;
+- risolvere anche `A x = b` scritto con le matrici (oggi `A^{-1} b`, o il sistema per esteso con ⇒);
+- le coniche (ellisse, parabola, iperbole) come figure con i loro elementi (fuochi, assi);
+- negli integrali di superficie, le superfici date come grafico (z = g(x, y) su un dominio): oggi vanno
+  scritte con i parametri, S(u, v) = (u, v, g(u, v));
+- i limiti con le lettere (`\lim_{x \to 0} \frac{\sin(a x)}{x}` con a non definita; oggi servono i
+  numeri) e quelli in più variabili;
+- le equazioni differenziali risolte con la formula (oggi con i numeri), i sistemi (x' = y, y' = −x) con
+  il ritratto di fase, e i problemi ai limiti (y(0) = 0, y(1) = 1);
+- le soluzioni con i numeri delle equazioni si cercano tra −100 e 100, quelle dei sistemi non lineari
+  partendo da una griglia di punti;
+- i polinomi di Taylor in più variabili.
 
 ### Non solo appunti
 

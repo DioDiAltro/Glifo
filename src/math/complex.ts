@@ -652,7 +652,7 @@ export function evaluateExactComplex(node: MathNode, scope: ExactComplexScope, l
 // ——— Come si scrivono ———
 
 /** Una frazione p/q (q fino a `most`) vicina a x, se c'è. */
-function nearFraction(x: number, most: number): { p: number; q: number } | null {
+export function nearFraction(x: number, most: number): { p: number; q: number } | null {
   for (let q = 1; q <= most; q++) {
     const p = Math.round(x * q)
     if (Math.abs(x - p / q) <= 1e-10 * Math.max(1, Math.abs(x)) && Math.abs(p) <= 1e6) return { p, q }
@@ -667,14 +667,14 @@ function gcdInt(a: number, b: number): number {
   return a
 }
 
-function fracTex(p: number, q: number, inner = ''): string {
+export function fracTex(p: number, q: number, inner = ''): string {
   const sign = p < 0 ? '-' : ''
   const n = Math.abs(p)
   const top = inner ? (n === 1 ? inner : `${n}${inner}`) : String(n)
   return q === 1 ? `${sign}${top}` : `${sign}\\frac{${top}}{${q}}`
 }
 
-function fracText(p: number, q: number, inner = ''): string {
+export function fracText(p: number, q: number, inner = ''): string {
   const sign = p < 0 ? '−' : ''
   const n = Math.abs(p)
   const top = inner ? (n === 1 ? inner : `${n}${inner}`) : String(n)

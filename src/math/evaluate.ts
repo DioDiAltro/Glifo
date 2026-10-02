@@ -4,6 +4,7 @@
  * numeri reali: dove una funzione non è definita (√-1, log 0, 1/0) il risultato è NaN o ±∞.
  */
 import { compileLineIntegral, compileSurfaceIntegral } from './calculus'
+import { limit, seriesSum, type LimitValue } from './limits'
 import { compileMultiple } from './domain'
 import { MathSyntaxError, type MathNode } from './parse'
 
@@ -100,6 +101,8 @@ const LANCZOS = [
 
 export function gamma(z: number): number {
   if (Number.isInteger(z) && z <= 0) return NaN
+  // Oltre 171 è più grande del più grande numero che si scrive (e i conti darebbero ∞ · 0).
+  if (z > 171.62) return Infinity
   if (z < 0.5) return Math.PI / (Math.sin(Math.PI * z) * gamma(1 - z))
   if (Number.isInteger(z) && z <= 171) {
     let r = 1
@@ -390,6 +393,11 @@ export function compile(node: MathNode, scope: Scope, options: CompileOptions = 
       return (v) => {
         const lo = from(v)
         const hi = to(v)
+        // Una serie: \sum_{n=1}^{\infty}.
+        if (sum && hi === Infinity && Number.isFinite(lo)) {
+          const local = { ...v }
+          return limitNumber(seriesSum((n) => ((local[index] = n), body(local)), Math.ceil(lo - 1e-9)))
+        }
         if (!Number.isFinite(lo) || !Number.isFinite(hi)) return NaN
         const start = Math.ceil(lo - 1e-9)
         const end = Math.floor(hi + 1e-9)
@@ -421,6 +429,15 @@ export function compile(node: MathNode, scope: Scope, options: CompileOptions = 
       return compileMultiple(node, scope, options)
     case 'diff':
       return compileDerivative(node, scope, options)
+    case 'lim': {
+      const to = bound(node.to, scope, options)
+      const body = c(node.body, scopeWith(scope, [node.v]))
+      const index = node.v
+      return (v) => {
+        const local = { ...v }
+        return limitNumber(limit((x) => ((local[index] = x), body(local)), to(v), node.side, isCounter(index) && !Number.isFinite(to(v))))
+      }
+    }
     case 'lint':
       return compileLineIntegral(node, scope, options)
     case 'sint':
@@ -445,6 +462,16 @@ export function compile(node: MathNode, scope: Scope, options: CompileOptions = 
       throw new MathError('Qui va un\'espressione, non una condizione')
   }
   throw new MathError('Espressione non valida')
+}
+
+/** Il valore di un limite come numero: ±∞, o NaN se non c'è. */
+function limitNumber(value: LimitValue): number {
+  return value.k === 'value' ? value.v : value.k === 'infinity' ? value.sign * Infinity : NaN
+}
+
+/** n, k, m: i nomi dei numeri interi (\lim_{n \to \infty} è una successione). */
+export function isCounter(name: string): boolean {
+  return /^[nkm](_.+)?$/.test(name)
 }
 
 /** Un estremo di somma o integrale (o di una disuguaglianza): può essere ±∞. */

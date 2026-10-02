@@ -178,7 +178,8 @@ describe('le espressioni, scritte in LaTeX o come in una calcolatrice', () => {
     expect(error('x^')).toMatch(/Manca l'esponente/)
     expect(error('(x + 1')).toMatch(/Manca la parentesi \)/)
     expect(error('x + 1)')).toMatch(/parentesi «\)» di troppo/)
-    expect(error('\\lim_{x \\to 0} x')).toMatch(/limiti/)
+    // Un limite senza dove tende la variabile.
+    expect(error('\\lim_{x} x')).toMatch(/Manca \\to: es/)
     expect(error('2 3')).toMatch(/Due numeri di seguito/)
     expect(error('q + 1')).toBe('q non è definita')
     expect(error('x +')).toMatch(/Manca qualcosa dopo \+/)
@@ -281,7 +282,6 @@ describe('il foglio: definizioni e risultati dopo «=»', () => {
     // Nei reali √−1 non c'è: il risultato sono le due radici complesse.
     expect(result('\\sqrt{-1} =')).toBe('i;\\ -i')
     expect(result('\\frac{1}{0} =')).toBeNull()
-    expect(result('\\lim_{x \\to 0} \\frac{\\sin x}{x} =')).toBeNull()
     expect(result('3 + 4 = 7')).toBeNull()
   })
 

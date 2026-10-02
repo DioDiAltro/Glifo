@@ -55,6 +55,8 @@ import {
   type Multiple,
   type PlanePart,
 } from './regions'
+import { expandCalculus, SYMBOLIC_FNS } from '../math/symbolic'
+import { odeOf } from '../math/differential'
 import { calculusDims, calculusItems, vectorDefinition, type FieldContext } from './fields'
 import { gaussItem, isComplexLine, onlyComplex } from './gauss'
 
@@ -120,6 +122,13 @@ export type GraphItem =
   | (ItemBase & { kind: 'field'; F: (x: number, y: number) => [number, number] })
   /** Un campo di vettori nello spazio. */
   | (ItemBase & { kind: 'field3'; F: (x: number, y: number, z: number) => Vec3 })
+  /** Le curve di livello di una funzione di x e y (\operatorname{livelli}(f)): i livelli li sceglie il disegno. */
+  | (ItemBase & { kind: 'contour'; F: (x: number, y: number) => number })
+  /**
+   * Il campo di direzioni di un'equazione differenziale y' = f(x, y): un trattino in ogni punto, e le
+   * soluzioni che passano per i punti `starts` (y(0) = 1).
+   */
+  | (ItemBase & { kind: 'slopes'; f: (x: number, y: number) => number; starts: [number, number][] })
   | (ItemBase & { kind: 'point3'; x: number; y: number; z: number; name: string | null })
   /**
    * Una zona del piano (y > x^2, un insieme, il dominio di un integrale doppio): dove M(x, y) ≥ 0;
@@ -439,6 +448,8 @@ function definitionOf(node: MathNode, space = false): Definition | null {
   if (value.k === 'tuple') return null
   if (lhs.k === 'name') {
     if (lhs.name === 'x' || lhs.name === 'y' || lhs.name === 'π') return null
+    // y' = x - y: un'equazione differenziale, non un numero.
+    if (lhs.name.endsWith("'")) return null
     if (lhs.name === 'z' && (space || dependsOn(value, 'x') || dependsOn(value, 'y'))) return null
     // r = 1 + \cos\theta è una curva in coordinate polari, r = 2 un numero.
     if (lhs.name === 'r' && dependsOn(value, 'θ')) return null
@@ -897,6 +908,36 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
       fail(l, err)
     }
   }
+  // I polinomi di Taylor si fanno con le lettere (anche delle funzioni del blocco), prima di tutto.
+  if (lines.some((l) => usesSymbolicFunction(l.main))) {
+    const symbols = sheet.symbolScope()
+    const fns = new Map(symbols.fns)
+    for (const l of lines) {
+      const def = definitionOf(l.main)
+      if (def?.params && !usesSymbolicFunction(def.value)) fns.set(def.name, { params: def.params, body: def.value })
+    }
+    /** Le righe con solo il polinomio (\operatorname{taylor}(\sin x, 0, 5)) e la funzione da cui viene. */
+    const compared: [Line, MathNode][] = []
+    for (const l of lines) {
+      if (!usesSymbolicFunction(l.main)) continue
+      const bare = l.main.k === 'fn' && SYMBOLIC_FNS.has(l.main.name) && !l.cond ? l.main.args[0] : undefined
+      try {
+        l.main = expandCalculus(l.main, { consts: symbols.consts, fns })
+        const def = definitionOf(l.main)
+        if (def?.params) fns.set(def.name, { params: def.params, body: def.value })
+        if (bare && dependsOn(bare, 'x')) compared.push([l, bare])
+      } catch (err) {
+        fail(l, err)
+      }
+    }
+    // Il polinomio da solo si disegna con la sua funzione, prima (se un'altra riga non la disegna già).
+    const noteScope = sheet.scope()
+    for (const [l, f] of compared) {
+      const keys = shapeKeys(f, 'x')
+      if (lines.some((o) => curveKeys(o.main, noteScope).some((k) => keys.includes(k)))) continue
+      lines.splice(lines.indexOf(l), 0, { line: l.line, text: l.text, main: f, cond: null })
+    }
+  }
   // Nello spazio se una riga usa la z (che la nota non definisce come numero), ha tre coordinate o è
   // una funzione di x e y (anche solo il suo nome, se è definita nella nota). Una formula della nota
   // come $z = x^2 - y^2$ non dà un numero: la z resta una coordinata.
@@ -944,9 +985,12 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   const shapes = { scope: sheet.scope(), symbols: sheet.symbolScope() }
   // f(x, y) = … per \nabla f è solo la funzione del gradiente: non fa il grafico 3D.
   const gradients = new Set(lines.flatMap((l) => (l.main.k === 'fn' && l.main.name === 'grad' && l.main.args[0]?.k === 'name' ? [l.main.args[0].name] : [])))
+  // y (o y(x)) se la nota ne fa una funzione di una variabile (la soluzione di y' = x - y): una curva.
+  const curveName = (m: MathNode) => (m.k === 'name' || (m.k === 'apply' && !m.primes && m.args.length === 1)) && noteFns.get(m.name)?.params.length === 1
   let space =
     !gauss &&
     lines.some((l) => {
+      if (curveName(l.main)) return false
       const dims = calculusDims(l.main, shapes)
       if (dims) return dims === 3
       const def = definitionOf(l.main)
@@ -1655,6 +1699,12 @@ function spaceItemFor(l: Line, scope: Scope, slot: number): GraphItem {
   return { kind: 'surface', line, label: `z = ${toLatex(main)}${condLabel(cond)}`, slot, f: (x, y) => ((v.x = x), (v.y = y), f(v)) }
 }
 
+/** La riga usa una funzione che si fa solo con le lettere (il polinomio di Taylor)? */
+function usesSymbolicFunction(node: MathNode): boolean {
+  if (node.k === 'fn' && SYMBOLIC_FNS.has(node.name)) return true
+  return children(node).some(usesSymbolicFunction)
+}
+
 /** I nomi che il blocco usa: quelli da cercare tra le definizioni della nota. */
 export function graphNames(source: string): Set<string> {
   const names = new Set<string>()
@@ -1720,7 +1770,9 @@ export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSp
   const drawable = !!figure && figure.k !== 'scalar' && figure.k !== 'length' && !(figure.k === 'matrix' && figure.m[0].length !== 1)
   const vector = drawable || (!!tuple && (tuple.coords.length === 2 || tuple.coords.length === 3) && !tuple.coords.some((c) => namesIn(c).size))
   // Un integrale di linea o di superficie, un gradiente: la curva, la superficie, il campo.
-  const calculus = main.k === 'lint' || main.k === 'sint' || (main.k === 'fn' && main.name === 'grad')
+  // Le curve di livello, il polinomio di Taylor (con la sua funzione), le equazioni differenziali.
+  const calculus =
+    main.k === 'lint' || main.k === 'sint' || (main.k === 'fn' && (main.name === 'grad' || main.name === 'levels' || SYMBOLIC_FNS.has(main.name))) || !!odeOf(main)
   if (!areaOf(main) && !multipleOf(main) && !setOf(main) && !zone && !complex && !vector && !calculus) {
     if (main.k !== 'rel' || main.ops.length !== 1 || main.ops[0] !== '=') return null
     const [lhs, rhs] = main.items

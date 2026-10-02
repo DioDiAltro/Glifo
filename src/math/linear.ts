@@ -1019,7 +1019,7 @@ export function polynomialIn(node: MathNode, name: string, scope: LinearScope, m
 }
 
 /** Le radici razionali di un polinomio a coefficienti frazioni (con la molteplicità), e quello che resta. */
-function rationalRoots(poly: Rational[]): { roots: Rational[]; rest: Rational[] } {
+export function rationalRoots(poly: Rational[]): { roots: Rational[]; rest: Rational[] } {
   let p = [...poly]
   const roots: Rational[] = []
   // Con i coefficienti interi: le radici sono ±(divisori del termine noto)/(divisori del primo coefficiente).
@@ -1074,7 +1074,7 @@ function rationalRoots(poly: Rational[]): { roots: Rational[]; rest: Rational[] 
 }
 
 /** Le radici (anche complesse) di un polinomio con i coefficienti con la virgola: Durand–Kerner. */
-function numericRoots(coeffs: number[]): { re: number; im: number }[] {
+export function numericRoots(coeffs: number[]): { re: number; im: number }[] {
   const n = coeffs.length - 1
   if (n < 1) return []
   const lead = coeffs[n]
@@ -1254,7 +1254,7 @@ export function formatLinear<T>(F: Field<T>, v: Lin<T>, options: FormatOptions):
  * La radice di una frazione come k√m, con m intero senza quadrati e k una frazione: √(8/9) = (2/3)√2.
  * Null se i numeri sono troppo grandi per cercarne i quadrati (o la frazione è negativa).
  */
-function splitRoot(r: Rational): { k: Rational; m: bigint } | null {
+export function splitRoot(r: Rational): { k: Rational; m: bigint } | null {
   if (r.sign < 0) return null
   // √(p/q) = √(p q)/q, poi fuori dalla radice i quadrati.
   let m = r.n * r.d
@@ -1270,7 +1270,7 @@ function splitRoot(r: Rational): { k: Rational; m: bigint } | null {
 }
 
 /** Il numero a + b√m (con le frazioni) con un denominatore solo: (1 + √5)/2, −√2, 3 − 2√3. */
-function surdText(a: Rational, b: Rational, m: bigint): FormattedResult {
+export function surdText(a: Rational, b: Rational, m: bigint): FormattedResult {
   if (b.n === 0n) return formatRational(a, { comma: true, decimal: false })
   const g = (x: bigint, y: bigint): bigint => (y ? g(y, x % y) : x)
   const q = (a.d / g(a.d, b.d)) * b.d
