@@ -245,3 +245,78 @@ export function recognize(x: number, options: FormatOptions): FormattedResult | 
   }
   return null
 }
+
+/** Un cammino verso il punto: la curva (per dirla) e i punti al variare di t → 0. */
+export interface LimitPath {
+  /** Lungo la retta y = x, la parabola y = x², l'asse x… come formula (con le variabili). */
+  label: { tex: string; text: string }
+  value: LimitValue
+}
+
+export interface SeveralLimit {
+  value: LimitValue
+  /** Se non esiste: due cammini con valori diversi (o uno dove non esiste). */
+  paths: LimitPath[]
+}
+
+const same = (a: LimitValue, b: LimitValue) =>
+  (a.k === 'value' && b.k === 'value' && close(a.v, b.v)) || (a.k === 'infinity' && b.k === 'infinity' && a.sign === b.sign)
+
+/**
+ * Il limite di f in più variabili per (x, y) → (a, b): prima lungo le rette e le parabole per il punto
+ * (se due cammini danno valori diversi il limite non esiste, e si dice quali), poi tutto attorno al
+ * punto (in coordinate polari: f si avvicina al valore uniformemente?). `labels` scrive i cammini.
+ */
+export function severalLimit(
+  f: (p: number[]) => number,
+  point: number[],
+  labels: (shift: number[], power: number[]) => { tex: string; text: string },
+): SeveralLimit | null {
+  const n = point.length
+  if (n < 2 || n > 3 || !point.every(Number.isFinite)) return null
+  // Le direzioni: gli assi, le bisettrici e qualche altra retta; poi le parabole (y = x², x = y²).
+  const dirs: { v: number[]; power: number[] }[] = []
+  const lines = n === 2 ? [[1, 0], [0, 1], [1, 1], [1, -1], [1, 2], [2, 1], [1, -3]] : [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0], [1, 0, 1], [0, 1, 1], [1, 1, 1], [1, -2, 1]]
+  for (const v of lines) dirs.push({ v, power: v.map(() => 1) })
+  const curves = n === 2 ? [[1, 1, 1, 2], [1, -1, 1, 2], [1, 1, 2, 1], [1, 1, 1, 3]] : [[1, 1, 1, 1, 2, 2], [1, 1, 1, 2, 1, 2]]
+  for (const c of curves) dirs.push({ v: c.slice(0, n), power: c.slice(n) })
+  const paths: LimitPath[] = []
+  for (const d of dirs) {
+    const along = (t: number) => f(point.map((a, i) => a + d.v[i] * Math.sign(t) ** d.power[i] * Math.abs(t) ** d.power[i]))
+    const value = limit(along, 0, 0)
+    paths.push({ label: labels(d.v, d.power), value })
+    if (value.k === 'none') return { value: { k: 'none' }, paths: [paths[paths.length - 1]] }
+    const other = paths.find((p) => !same(p.value, value))
+    if (other) return { value: { k: 'none' }, paths: [other, paths[paths.length - 1]] }
+  }
+  const L = paths[0].value
+  if (L.k === 'none') return null
+  // Tutto attorno al punto: lo scarto più grande da L su una circonferenza (una sfera) sempre più piccola.
+  const worst = (r: number): number => {
+    let most = 0
+    const steps = n === 2 ? 720 : 60
+    for (let i = 0; i < steps; i++) {
+      const theta = (2 * Math.PI * (i + 0.5)) / steps
+      const around = n === 2 ? [[Math.cos(theta), Math.sin(theta)]] : Array.from({ length: 30 }, (_, j) => {
+        const phi = (Math.PI * (j + 0.5)) / 30
+        return [Math.sin(phi) * Math.cos(theta), Math.sin(phi) * Math.sin(theta), Math.cos(phi)]
+      })
+      for (const u of around) {
+        const v = f(point.map((a, k) => a + r * u[k]))
+        if (Number.isNaN(v)) continue
+        if (L.k === 'infinity') most = Math.max(most, Number.isFinite(v) ? 1 / Math.max(L.sign * v, 1e-300) : 0)
+        else most = Math.max(most, Math.abs(v - L.v))
+      }
+    }
+    return most
+  }
+  const radii = [1e-2, 1e-3, 1e-4, 1e-5]
+  const gaps = radii.map(worst)
+  const scale = L.k === 'value' ? Math.max(1, Math.abs(L.v)) : 1
+  // Si avvicina: lo scarto va a zero (scende di almeno dieci volte, ed è piccolo).
+  if (gaps[3] < 1e-3 * scale && gaps[3] <= gaps[0] / 10 + 1e-12) return { value: L, paths: [] }
+  if (gaps[3] < 1e-9 * scale) return { value: L, paths: [] }
+  // Resta lontano: il limite non esiste (dipende da come ci si avvicina).
+  if (gaps[3] > 1e-2 * scale && gaps[3] >= gaps[2] * 0.5) return { value: { k: 'none' }, paths: [] }
+  return null
+}

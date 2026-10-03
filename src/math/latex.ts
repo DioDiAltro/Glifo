@@ -251,7 +251,8 @@ export function toLatex(node: MathNode): string {
     case 'lim': {
       const side = node.side ? `^{${node.side > 0 ? '+' : '-'}}` : ''
       const to = node.to.k === 'infty' ? '+\\infty' : toLatex(node.to)
-      return `\\lim_{${nameLatex(node.v)} \\to ${to}${side}} ${wrap(node.body, 2)}`
+      const vars = node.vars ? `\\left(${node.vars.map(nameLatex).join(', ')}\\right)` : nameLatex(node.v)
+      return `\\lim_{${vars} \\to ${to}${side}} ${wrap(node.body, 2)}`
     }
     case 'lint': {
       const head = `${node.closed ? '\\oint' : '\\int'}_{${nameLatex(node.curve)}}`

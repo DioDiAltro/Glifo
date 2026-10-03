@@ -56,9 +56,13 @@ Probabilità e statistica, Matematica discreta, Calcolo numerico. Chiesto dallo 
     (direzioni, traiettorie con il verso, punti di equilibrio). Le derivate anche come dy/dx, ẋ, y'(x).
     Restano: le omogenee y' = f(y/x) e le esatte, i sistemi di tre equazioni, la soluzione esatta al posto
     di Runge–Kutta quando y si definisce con le condizioni (senza ⇒).
-13. **Analisi 2 in più:** i punti critici e la loro natura (con l'hessiana), massimi e minimi
-    vincolati (moltiplicatori di Lagrange) e assoluti, i limiti in più variabili, Taylor in più
-    variabili.
+13. **Analisi 2 in più**, fatto: i limiti in più variabili (lungo rette e parabole, poi tutto attorno
+    al punto), i punti critici e la loro natura con l'hessiana (`\operatorname{critici}(f)`,
+    `\nabla f = 0 \Rightarrow`, anche in tre variabili), massimi e minimi vincolati con Lagrange
+    (`\operatorname{lagrange}`, `\max_{g = c} f`) e assoluti su un insieme chiuso e limitato
+    (`\operatorname{estremi}(f, D)`, `\max_{D} f`), Taylor in più variabili; nei grafici le curve di
+    livello con i punti critici, il vincolo e i punti di massimo e di minimo. Restano: i vincoli doppi
+    in tre variabili, gli estremi assoluti in tre variabili, il piano tangente scritto come tale.
 14. **Coniche e quadriche:** dall'equazione il tipo, la forma canonica, centro, assi, fuochi,
     eccentricità, asintoti e direttrice; nei grafici con i loro elementi; le quadriche in 3D.
 15. **Aritmetica, polinomi, logica e insiemi:** fattori primi, divisori, resto e congruenze (anche i

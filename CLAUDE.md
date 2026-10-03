@@ -72,7 +72,13 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   `calculus.ts` gli integrali di linea e di superficie (nodi `lint` e `sint`) sulle curve, superfici e
   campi definiti (`Scope.vfns`, con l'intervallo dopo la virgola: t \in [0, 2\pi]); `limits.ts` i limiti
   (nodo `lim`, con i numeri: Richardson; le forme 0/0 prima con le derivate esatte, `zeroOverZero` in
-  `symbolic.ts`) e le serie fino a ∞, con `recognize` per π²/6, e, ln 2; `solve.ts` le equazioni, le
+  `symbolic.ts`) e le serie fino a ∞, con `recognize` per π²/6, e, ln 2; in più variabili (`vars` nel nodo
+  `lim`, \lim_{(x, y) \to (0, 0)}) `severalLimit` prova le rette e le parabole e poi tutto attorno al punto;
+  `several.ts` l'analisi in più variabili: i punti critici con l'hessiana (`criticalPoints`, anche da
+  `\nabla f = 0 \Rightarrow`), gli estremi vincolati con Lagrange e assoluti su un insieme (`extremaOf`:
+  dentro, sul bordo e negli spigoli; `\max_{…} f` è un nodo `fn` max con `base`), i punti trovati con Newton
+  smorzato e riconosciuti esatti con `exactNear` (controllati con le lettere); Taylor in più variabili è
+  `taylorSeveral` in `symbolic.ts`; `solve.ts` le equazioni, le
   disequazioni e i sistemi di una formula che finisce con ⇒ (`solveRequest`); `differential.ts` le
   equazioni differenziali di ogni ordine (`odeOf`, anche y'' + y = 0; `withPrimes` scrive dy/dx, ẋ e y'(x)
   come y') con le condizioni iniziali anche in formule dopo, risolte con Runge–Kutta (`odeSolution`);
@@ -134,7 +140,8 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   (`\operatorname{livelli}(f)`, `kind: 'contour'`) e le equazioni differenziali: del primo ordine il campo di
   direzioni (`kind: 'slopes'`, livelli e soluzioni in `ode.ts`), di ordine più alto la soluzione come
   funzione; un sistema di due equazioni il ritratto di fase (`kind: 'phase'`, `systemOf` in
-  `differential.ts`, traiettorie e punti di equilibrio in `ode.ts`). Un polinomio di Taylor da solo porta nel blocco anche la riga della sua funzione (se nessuna
+  `differential.ts`, traiettorie e punti di equilibrio in `ode.ts`). I punti critici e gli estremi in più
+  variabili (curve di livello, vincolo, punti M, m, S) sono in `severalGraph.ts`. Un polinomio di Taylor da solo porta nel blocco anche la riga della sua funzione (se nessuna
   la disegna già, `curveKeys`). Lo studio di funzione (`\operatorname{studio}(f)` e le sue parti) è in
   `studyGraph.ts`: la funzione, gli asintoti con `dashed` (tratteggiati in `svg.ts` e nella legenda) e i
   punti M, m, F. La probabilità e i dati sono in `statsGraph.ts`: le distribuzioni come barre (`kind: 'bars'`) o

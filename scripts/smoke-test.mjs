@@ -1481,6 +1481,16 @@ try {
     ode === 'y = e^(−x)(c₁ cos(2x) + c₂ sin(2x))' && equilibria >= 1,
     `un'equazione differenziale si risolve con la formula, e un sistema ha il ritratto di fase con i punti di equilibrio (${JSON.stringify({ ode, equilibria })})`,
   )
+  // In più variabili: i punti critici con la loro natura e, nel pannello, le curve di livello con i punti.
+  await gp.keyboard.press('End')
+  await gp.keyboard.type('\n\nI punti critici $\\operatorname{critici}(x^3 + y^3 - 3xy) =')
+  const critical = await resultText('(0, 0)')
+  await gp.waitForFunction(() => [...document.querySelectorAll('.formula-graph:not([hidden]) svg text')].some((t) => t.textContent === 'S'), null, { timeout: 5000 })
+  const pointNames = await gp.locator('.formula-graph svg text').evaluateAll((els) => els.map((e) => e.textContent).filter((t) => t === 'S' || t === 'm'))
+  check(
+    critical === '(0, 0) punto di sella; (1, 1) minimo relativo, f = −1' && pointNames.length === 2,
+    `i punti critici hanno la loro natura, e nel pannello si vedono sulle curve di livello (${JSON.stringify({ critical, pointNames })})`,
+  )
   await gp.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)

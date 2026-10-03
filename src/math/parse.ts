@@ -55,7 +55,8 @@ export type MathNode =
   /** Un integrale sulla superficie `surface` (S(u, v) = (…)): di una funzione (`dS`) o il flusso di un campo. */
   | { k: 'sint'; surface: string; closed: boolean; dS: boolean; body: MathNode }
   /** \lim_{x \to a} …: `side` 1 da destra (a^+), −1 da sinistra (a^-), 0 da tutte e due le parti. */
-  | { k: 'lim'; v: string; to: MathNode; side: -1 | 0 | 1; body: MathNode }
+  /** `vars`: più variabili, \lim_{(x, y) \to (0, 0)} (allora `v` è la prima e `to` un punto). */
+  | { k: 'lim'; v: string; to: MathNode; side: -1 | 0 | 1; body: MathNode; vars?: string[] }
   /** `\{(x, y) \in \mathbb{R}^2 : x^2 + y^2 \le 1\}`: un insieme; `vars` null se non le scrive. */
   | { k: 'set'; vars: string[] | null; cond: MathNode }
   | { k: 'cases'; rows: { value: MathNode; cond: MathNode | null }[] }
@@ -126,6 +127,8 @@ const FUNCTION_NAMES: Record<string, string> = {
   lap: 'lap', laplaciano: 'lap', hess: 'hess', hessiana: 'hess', jac: 'jac', jacobiana: 'jac',
   // Il polinomio di Taylor: \operatorname{taylor}(\sin x, 0, 5), \operatorname{maclaurin}(e^x, 4).
   taylor: 'taylor', maclaurin: 'maclaurin', mclaurin: 'maclaurin',
+  // Analisi 2: i punti critici, gli estremi vincolati (Lagrange) e assoluti su un insieme.
+  critici: 'critical', stazionari: 'critical', lagrange: 'lagrange', vincolati: 'lagrange',
   // Le curve di livello di una funzione di x e y, nei grafici.
   livelli: 'levels', livello: 'levels', contour: 'levels',
   // Lo studio di funzione, tutto o una parte.
@@ -1251,6 +1254,12 @@ class Parser {
     let pow: MathNode | undefined
     for (let n = 0; n < 2; n++) {
       if (this.is('op', '_') && !base) {
+        // \max_{x^2 + y^2 \le 1} f: il massimo su un insieme (o con un vincolo).
+        if (name === 'max' || name === 'min') {
+          this.next()
+          base = this.optimumDomain()
+          continue
+        }
         if (name !== 'log') throw this.error(`${name} non ha una base: solo \\log_b`)
         this.next()
         base = this.latexArg('la base del logaritmo')
@@ -1264,6 +1273,18 @@ class Parser {
       pow = undefined
     }
     let args: MathNode[]
+    // \operatorname{lagrange}(f, x^2 + y^2 = 1), \operatorname{estremi}(f, x^2 + y^2 \le 1): una condizione tra gli argomenti.
+    if ((name === 'lagrange' || name === 'extrema') && this.is('open', '(')) {
+      this.next()
+      args = [this.expr()]
+      while (this.is('comma')) {
+        this.next()
+        args.push(this.relation())
+      }
+      this.expect('close', ')', 'la parentesi )')
+      if (args.length > 2) args = [args[0], { k: 'and', items: args.slice(1) }]
+      return { k: 'fn', name, args, ...(pow && { pow }) }
+    }
     if (this.is('open', '(') || (this.is('open', '\\{') && (name === 'max' || name === 'min' || name === 'gcd' || name === 'lcm'))) {
       const group = this.group(true)
       args = group.k === 'tuple' ? group.items : [group]
@@ -1272,6 +1293,20 @@ class Parser {
       args = [this.implicitArgument(true)]
     }
     return { k: 'fn', name, args, ...(pow && { pow }), ...(base && { base }) }
+  }
+
+  /** Sotto \max e \min: dove (x^2 + y^2 \le 1, x + y = 1, anche più condizioni con le virgole, o il nome di un insieme). */
+  private optimumDomain(): MathNode {
+    if (!this.is('open', '{')) return this.latexArg('dove cercare il massimo')
+    this.next()
+    if (this.is('close', '}')) throw this.error('Manca dove cercare: le graffe sono vuote')
+    const items = [this.relation()]
+    while (this.is('comma') || this.is('and')) {
+      this.next()
+      items.push(this.relation())
+    }
+    this.expect('close', '}', 'la graffa }')
+    return items.length === 1 ? items[0] : { k: 'and', items }
   }
 
   private startsArgument(): boolean {
@@ -1560,9 +1595,24 @@ class Parser {
     this.next()
     const braced = this.is('open', '{')
     if (braced) this.next()
-    const v = this.peek()
+    // \lim_{(x, y) \to (0, 0)}: più variabili.
+    let vars: string[] | undefined
+    if (this.is('open', '(')) {
+      this.next()
+      vars = []
+      for (;;) {
+        const t = this.peek()
+        if (!t || t.k !== 'name') throw this.error(`Sotto \\lim vanno le variabili, es. \\lim_{(x, y) \\to (0, 0)}`, start.pos)
+        vars.push(this.next().v)
+        if (this.is('close', ')')) break
+        this.expect('comma', ',', 'la virgola tra le variabili')
+      }
+      this.next()
+      if (vars.length < 2 || vars.length > 3) throw this.error('Il limite si fa in una, due o tre variabili', start.pos)
+    }
+    const v = vars ? { k: 'name', v: vars[0] } : this.peek()
     if (!v || v.k !== 'name') throw this.error(`Sotto \\lim va la variabile, ${example}`, start.pos)
-    this.next()
+    if (!vars) this.next()
     if (!this.is('to')) throw this.error(`Manca \\to: ${example}`, start.pos)
     this.next()
     // 0^+ e 0^-: da destra o da sinistra (tolti prima di leggere il punto).
@@ -1598,13 +1648,15 @@ class Parser {
         break
       }
       const next = this.term()
-      if (!namesIn(next).has(v.v)) {
+      const used = namesIn(next)
+      if (!(vars ?? [v.v]).some((name) => used.has(name))) {
         this.i = back
         break
       }
       body = { k: 'bin', op, a: body, b: next }
     }
-    return { k: 'lim', v: v.v, to, side, body }
+    if (vars && (to.k !== 'tuple' || to.items.length !== vars.length)) throw this.error(`Il punto ha ${vars.length} coordinate, come le variabili: es. \\lim_{(x, y) \\to (0, 0)}`, start.pos)
+    return { k: 'lim', v: v.v, to, side, body, ...(vars && { vars }) }
   }
 
   /** `\nabla f` (il gradiente), `\nabla \cdot F` (la divergenza), `\nabla \times F` (il rotore), `\nabla^2 f` (il laplaciano). */
@@ -1930,7 +1982,7 @@ export function namesIn(node: MathNode, out = new Set<string>(), bound: Readonly
         return
       case 'lim':
         visit(n.to, b)
-        visit(n.body, new Set([...b, n.v]))
+        visit(n.body, new Set([...b, ...(n.vars ?? [n.v])]))
         return
       case 'lint':
       case 'sint': {

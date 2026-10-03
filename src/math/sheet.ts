@@ -23,6 +23,7 @@ import { limit, recognize, seriesSum, type LimitValue } from './limits'
 import { solve } from './solve'
 import { compileOde, odeOf, odeSolution, primed, type Ode, type OdeFunction } from './differential'
 import { differentialRequest, solveDifferential } from './odesolve'
+import { criticalShown, extremaShown, optimumOf, severalLimitShown, severalOf } from './several'
 import {
   EXACT,
   FLOAT,
@@ -350,6 +351,16 @@ export class Sheet {
     const nodes = splitPieces(src).map(parseCached)
     if (!nodes.length || nodes.some((n) => !n)) return null
     const style = styleOf(nodes[0]!)
+    // \nabla f = 0: i punti critici di f, con la loro natura.
+    const only = nodes.length === 1 ? nodes[0]! : null
+    if (only?.k === 'rel' && only.ops.length === 1 && only.ops[0] === '=' && only.items[0].k === 'fn' && only.items[0].name === 'grad' && only.items[1].k === 'num' && only.items[1].v === 0) {
+      try {
+        const s = severalOf(only.items[0].args[0], this.symbolScope())
+        return s && withWorkLimit(WORK, () => criticalShown(s, style))
+      } catch {
+        return null
+      }
+    }
     // Un'equazione differenziale (y'' + y = 0), anche con le condizioni o un sistema: con la formula.
     const ode = differentialRequest(nodes as MathNode[], (name) => this.fns.has(name) || this.vfns.has(name) || this.consts.has(name))
     if (ode) {
@@ -792,6 +803,12 @@ export class Sheet {
         if (target && !target.params && limitShown.value) this.record(target, item, `${target.name} = ${src.slice(src.indexOf('=') + 1)}`, limitShown.value)
         return limitShown.shown
       }
+      // In più variabili: i punti critici, gli estremi vincolati (Lagrange) e assoluti su un insieme.
+      const several = this.showSeveral(item, style)
+      if (several) {
+        if (target && !target.params && several.value !== null) this.record(target, item, `${target.name} = ${src.slice(src.indexOf('=') + 1)}`, { float: several.value, exact: null })
+        return several.shown
+      }
       // Lo studio di funzione (\operatorname{studio}(f)), o una sua parte.
       if (item.k === 'fn' && STUDY.has(item.name) && item.args.length === 1) {
         const shown = this.showStudy(item, style)
@@ -846,6 +863,15 @@ export class Sheet {
   private showLimit(item: MathNode, style: ReturnType<typeof styleOf>): { shown: FormattedResult; value: Value | null } | null {
     const series = item.k === 'big' && item.op === 'sum' && (item.to.k === 'infty' || (item.to.k === 'bin' && item.to.op === '+' && item.to.b.k === 'infty'))
     if (item.k !== 'lim' && !series) return null
+    // In più variabili: lungo le rette e le parabole, poi tutto attorno al punto.
+    if (item.k === 'lim' && item.vars) {
+      try {
+        const found = withWorkLimit(WORK, () => severalLimitShown(item, this.symbolScope(), (n) => compile(this.prepare(n), this.scope(), { calc: true })({}), style))
+        return found && { shown: found.shown, value: found.value === null ? null : { float: found.value, exact: null } }
+      } catch {
+        return null
+      }
+    }
     let value: LimitValue
     let exact: Rational | null = null
     try {
@@ -879,6 +905,33 @@ export class Sheet {
     const shown = limitText(value, style, exact)
     const result: Value | null = value.k === 'value' ? { float: value.v, exact } : null
     return shown ? { shown, value: result } : null
+  }
+
+  /**
+   * L'analisi in più variabili: \operatorname{critici}(f) (e \operatorname{estremi}(f) con f di due o tre
+   * variabili), \operatorname{lagrange}(f, g = c), \operatorname{estremi}(f, D), \max_{…} f e \min_{…} f.
+   */
+  private showSeveral(item: MathNode, style: ReturnType<typeof styleOf>): { shown: FormattedResult; value: number | null } | null {
+    if (item.k !== 'fn' || item.pow) return null
+    const critical = item.name === 'critical' || (item.name === 'extrema' && item.args.length === 1)
+    const optimum = ((item.name === 'max' || item.name === 'min') && item.base && item.args.length === 1) || ((item.name === 'lagrange' || item.name === 'extrema') && item.args.length === 2)
+    if (!critical && !optimum) return null
+    try {
+      return withWorkLimit(WORK, () => {
+        const symbols = this.symbolScope()
+        if (critical) {
+          const s = severalOf(item.args[0], symbols)
+          const shown = s && criticalShown(s, style)
+          return shown && { shown, value: null }
+        }
+        const where = item.base ?? item.args[1]
+        const problem = optimumOf(item.args[0], where, symbols, this.sets)
+        if (!problem) return null
+        return extremaShown(problem.s, problem.constraints, item.name === 'max' ? 'max' : item.name === 'min' ? 'min' : 'both', style)
+      })
+    } catch {
+      return null
+    }
   }
 
   /** Lo studio di funzione, tutto (una tabella) o una parte (il dominio, gli asintoti…). */

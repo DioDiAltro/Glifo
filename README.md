@@ -225,6 +225,17 @@ chi sta provando Glifo.*
   (`\tan x` in [0, π], con x ≠ π/2 + kπ). Una parte sola: `\operatorname{dominio}(\ln(4 - x^2)) =` dà
   −2 < x < 2, e così `\operatorname{asintoti}`, `\operatorname{estremi}`, `\operatorname{flessi}`,
   `\operatorname{zeri}`.
+- **Analisi in più variabili**: i **limiti** `\lim_{(x, y) \to (0, 0)} \frac{x y}{x^2 + y^2} =` (lungo le rette
+  e le parabole per il punto: «non esiste (lungo y = 0 vale 0, lungo y = x vale 1/2)»; se i cammini danno lo
+  stesso valore, si controlla tutto attorno al punto, come in coordinate polari); i **punti critici** con
+  la loro natura dall'hessiana: `\operatorname{critici}(x^3 + y^3 - 3xy) =` (o `\nabla f = 0 \Rightarrow`) dà
+  (0, 0) punto di sella; (1, 1) minimo relativo, f = −1 (anche in tre variabili, i casi dubbi e gli infiniti
+  punti critici); i **massimi e minimi vincolati** con i moltiplicatori di Lagrange
+  (`\operatorname{lagrange}(x + y, x^2 + y^2 = 1) =`, `\max_{x^2 + y^2 = 1} (x + y) =`) e **assoluti** su un
+  insieme chiuso e limitato, dentro, sul bordo e negli spigoli (`\operatorname{estremi}(f, x^2 + y^2 \le 1) =`,
+  `\max_{x \ge 0, y \ge 0, x + y \le 1} x y =`, o con un insieme D della nota); il **polinomio di Taylor** in
+  più variabili (`\operatorname{taylor}(e^{x + y}, (0, 0), 2) =`). I punti si trovano con i numeri e si
+  riconoscono esatti (frazioni, radici, multipli di π) controllandoli con le lettere.
 - **Variabili aleatorie**: `$X \sim B(10, 0{,}3)$` definisce X (anche `B(10; 0,3)`, `\operatorname{Bin}`):
   binomiale, `\operatorname{Be}(p)` di Bernoulli, `\operatorname{Po}(\lambda)` di Poisson, `\operatorname{Geom}(p)`
   geometrica (le prove fino al primo successo: 1, 2, 3…), `\operatorname{H}(N, K, n)` ipergeometrica (N oggetti,
@@ -358,7 +369,10 @@ chi sta provando Glifo.*
   soluzioni che partono da lì; una di ordine più alto (`y'' = -y, \; y(0) = 0, \; y'(0) = 1`) la soluzione,
   una per ogni gruppo di condizioni. Un **sistema** (`x' = y, \; y' = -\sin x`, anche in `\begin{cases}`)
   disegna il **ritratto di fase**: la direzione del moto in ogni punto, le traiettorie con il verso (dai
-  punti iniziali, `x(0) = 1, \; y(0) = 0`, o da punti scelti da Glifo) e i punti di equilibrio. Un **polinomio di Taylor** da solo (`\operatorname{taylor}(\sin x, 0, 5)`)
+  punti iniziali, `x(0) = 1, \; y(0) = 0`, o da punti scelti da Glifo) e i punti di equilibrio.
+  `\operatorname{critici}(f)` disegna le curve di livello di f con i punti critici (M i massimi, m i minimi,
+  S le selle); `\operatorname{lagrange}(f, g = c)`, `\operatorname{estremi}(f, D)` e `\max_{…} f` anche il
+  vincolo (la curva, o l'insieme colorato) con i punti di massimo e di minimo. Un **polinomio di Taylor** da solo (`\operatorname{taylor}(\sin x, 0, 5)`)
   si disegna insieme alla funzione da cui viene, per confrontarli (se un'altra riga non la disegna già); una
   **primitiva** (`\int \cos x \, dx`) si disegna con c = 0.
 - Le figure della **geometria** si disegnano come si scrivono: punti con il nome (`A = (0, 0)`,
@@ -410,6 +424,8 @@ chi sta provando Glifo.*
 ![Studio di funzione: nella nota dominio, simmetria, segno, limiti, asintoti, derivate, massimi, minimi e flessi; nel grafico la funzione con gli asintoti tratteggiati e i punti M, m, F](docs/studio.png)
 
 ![Probabilità e statistica: binomiale, Poisson e normale con le probabilità esatte, il valore atteso e la varianza, i dati con media, mediana, varianza e quartili; nei grafici le barre della binomiale con l'evento colorato e l'area sotto la normale](docs/probabilita.png)
+
+![Analisi 2: un limite in due variabili che non esiste (con i due cammini) e uno che esiste, i punti critici con la loro natura, Taylor in due variabili, gli estremi vincolati con Lagrange e assoluti su un disco e su un triangolo; nel pannello le curve di livello con il punto di sella e il minimo](docs/analisi2.png)
 
 ![Equazioni differenziali: l'integrale generale di un oscillatore smorzato, la somiglianza in risonanza, la logistica con la soluzione costante, un problema di Cauchy, uno ai limiti con infinite soluzioni e un sistema; nel pannello il ritratto di fase del pendolo con la traiettoria e i punti di equilibrio](docs/equazioni-differenziali.png)
 
@@ -627,6 +643,7 @@ src/
     calculus.ts           gli integrali di linea e di superficie (lavoro e flusso) sulle curve e superfici definite
     limits.ts             i limiti (Richardson, da una parte e dall'altra) e le serie (somme accelerate), e i valori riconosciuti (π²/6, e, ln 2)
     solve.ts              le equazioni, le disequazioni e i sistemi risolti dopo ⇒
+    several.ts            l'analisi in più variabili: i limiti, i punti critici, gli estremi vincolati (Lagrange) e assoluti
     differential.ts       le equazioni differenziali di ogni ordine, risolte con Runge–Kutta dalle condizioni iniziali
     odesolve.ts           le equazioni differenziali e i sistemi risolti con la formula (dopo ⇒), con le condizioni
     exact.ts, format.ts   i conti esatti con le frazioni; i risultati scritti all'italiana
@@ -639,6 +656,7 @@ src/
     fields.ts             i campi di vettori (le frecce), le curve con il verso, le superfici, gli integrali di linea e di superficie, le curve di livello e le equazioni differenziali
     ode.ts                i livelli delle curve di livello, le soluzioni nel campo di direzioni, le traiettorie del ritratto di fase
     studyGraph.ts         lo studio di funzione nel grafico: asintoti tratteggiati, massimi, minimi e flessi
+    severalGraph.ts       i punti critici sulle curve di livello, gli estremi con il vincolo o l'insieme
     statsGraph.ts         le distribuzioni (barre e densità), le aree delle probabilità, istogrammi, barre, regressione
     plot.ts               dove calcolare le curve (salti, asintoti) e le aree, la finestra, le tacche
     svg.ts                il disegno in SVG, con i colori dei due temi

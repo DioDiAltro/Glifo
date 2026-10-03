@@ -4,7 +4,7 @@
  * numeri reali: dove una funzione non è definita (√-1, log 0, 1/0) il risultato è NaN o ±∞.
  */
 import { compileLineIntegral, compileSurfaceIntegral } from './calculus'
-import { limit, seriesSum, type LimitValue } from './limits'
+import { limit, seriesSum, severalLimit, type LimitValue } from './limits'
 import { compileMultiple } from './domain'
 import { MathSyntaxError, productPower, type MathNode } from './parse'
 import { normalCdf, normalQuantile } from './special'
@@ -455,6 +455,21 @@ export function compile(node: MathNode, scope: Scope, options: CompileOptions = 
     case 'diff':
       return compileDerivative(node, scope, options)
     case 'lim': {
+      // In più variabili: lungo le rette e le parabole, poi tutto attorno al punto.
+      if (node.vars) {
+        const vars = node.vars
+        const body = c(node.body, scopeWith(scope, vars))
+        const point = node.to.k === 'tuple' ? node.to.items.map((t) => bound(t, scope, options)) : []
+        return (v) => {
+          const local = { ...v }
+          const at = (p: number[]) => {
+            vars.forEach((name, i) => (local[name] = p[i]))
+            return body(local)
+          }
+          const found = severalLimit(at, point.map((t) => t(v)), () => ({ tex: '', text: '' }))
+          return found ? limitNumber(found.value) : NaN
+        }
+      }
       const to = bound(node.to, scope, options)
       const body = c(node.body, scopeWith(scope, [node.v]))
       const index = node.v
@@ -596,6 +611,7 @@ function compileFunction(node: Extract<MathNode, { k: 'fn' }>, scope: Scope, opt
       return Math.pow(x, 1 / n)
     }
   } else if (name === 'max' || name === 'min') {
+    if (node.base) throw new MathError(`Il ${name === 'max' ? 'massimo' : 'minimo'} su un insieme si scrive da solo: ${label}_{…} f =`)
     if (!args.length) throw new MathError(`${label} vuole almeno un valore`)
     const pick = name === 'max' ? Math.max : Math.min
     f = (v) => pick(...args.map((a) => a(v)))

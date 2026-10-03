@@ -817,6 +817,8 @@ class Converter {
     const nEx = this.scalar(order, locals)
     if (nEx.t !== 'num' || !nEx.v.isInteger || nEx.v.sign < 0 || nEx.v.n > 20n) throw new MathError('L\'ordine del polinomio è un numero intero da 0 a 20')
     const n = Number(nEx.v.n)
+    // In più variabili: \operatorname{taylor}(f, (0, 0), 2).
+    if (center && center.k === 'tuple') return this.taylorSeveral(fn, center.items, n, locals)
     const a = center ? this.scalar(center, locals) : num(0)
     if (symbols(a).some((s) => s !== 'π' && s !== 'e')) throw new MathError('Il punto del polinomio di Taylor è un numero')
     // La variabile: x, o l'unica lettera della funzione.
@@ -837,6 +839,58 @@ class Converter {
     }
     if (!terms.length) return num(0)
     // Dalla potenza più bassa: un nodo già scritto, che le semplificazioni non riordinano.
+    let out = node0(terms[0])
+    for (const t of terms.slice(1)) out = isNegative(t) ? { k: 'bin', op: '-', a: out, b: node0(neg(t)) } : { k: 'bin', op: '+', a: out, b: node0(t) }
+    return { t: 'node', node: out }
+  }
+
+  /**
+   * Il polinomio di Taylor in più variabili nel punto (a, b): Σ ∂^α f(a, b)/α! (x − a)^α, per i gradi da 0
+   * a n, e in ogni grado prima le potenze più alte di x (x², xy, y²). Le variabili sono quelle di f della
+   * nota, o x, y (e z).
+   */
+  private taylorSeveral(fnNode: MathNode, items: MathNode[], n: number, locals: ReadonlyMap<string, Ex>): Ex {
+    const k = items.length
+    if (k < 2 || k > 3) throw new MathError('Il punto del polinomio di Taylor ha due o tre coordinate')
+    const a = items.map((c) => this.scalar(c, locals))
+    if (a.some((c) => symbols(c).some((s) => s !== 'π' && s !== 'e'))) throw new MathError('Il punto del polinomio di Taylor è fatto di numeri')
+    const def = fnNode.k === 'name' ? this.scope.fns.get(fnNode.name) : undefined
+    const vars = def && def.params.length === k && !locals.has((fnNode as { name: string }).name) ? def.params : coordinates(k)
+    const f =
+      def && vars === def.params
+        ? this.withVariables(vars, () => this.scalar({ k: 'apply', name: (fnNode as { name: string }).name, args: vars.map((v) => ({ k: 'name', name: v })), primes: 0 }, locals))
+        : this.withVariables(vars, () => this.scalar(fnNode, locals))
+    const derivatives = new Map<string, Ex>([[Array(k).fill(0).join(','), f]])
+    const derivative = (alpha: number[]): Ex => {
+      const key0 = alpha.join(',')
+      const hit = derivatives.get(key0)
+      if (hit) return hit
+      const i = alpha.findIndex((p) => p > 0)
+      const lower = alpha.map((p, j) => (j === i ? p - 1 : p))
+      const d = derive(derivative(lower), vars[i])
+      derivatives.set(key0, d)
+      return d
+    }
+    const terms: Ex[] = []
+    for (let d = 0; d <= n; d++) {
+      // Gli esponenti con somma d, da x^d a y^d (a z^d).
+      const alphas: number[][] = []
+      const build = (prefix: number[], left: number) => {
+        if (prefix.length === k - 1) alphas.push([...prefix, left])
+        else for (let p = left; p >= 0; p--) build([...prefix, p], left - p)
+      }
+      build([], d)
+      for (const alpha of alphas) {
+        let factorial = ONE
+        for (const p of alpha) for (let q = 2; q <= p; q++) factorial = factorial.mul(new Rational(BigInt(q)))
+        const value = vars.reduce((e, v, i) => subst(e, v, a[i]), derivative(alpha))
+        const c = mul(value, num(ONE.div(factorial)))
+        if (isNum(c, 0)) continue
+        const shift = (i: number) => (isNum(a[i], 0) ? sym(vars[i]) : sub(sym(vars[i]), a[i]))
+        terms.push(mul(c, ...alpha.map((p, i) => pow(shift(i), num(p)))))
+      }
+    }
+    if (!terms.length) return num(0)
     let out = node0(terms[0])
     for (const t of terms.slice(1)) out = isNegative(t) ? { k: 'bin', op: '-', a: out, b: node0(neg(t)) } : { k: 'bin', op: '+', a: out, b: node0(t) }
     return { t: 'node', node: out }
