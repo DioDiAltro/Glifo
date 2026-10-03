@@ -1217,6 +1217,12 @@ function mapNode(n: MathNode, f: (c: MathNode) => MathNode): MathNode {
       return { ...n, body: f(n.body) }
     case 'lim':
       return { ...n, to: f(n.to), body: f(n.body) }
+    case 'prob':
+      return { ...n, event: f(n.event), given: n.given && f(n.given) }
+    case 'expect':
+      return { ...n, a: f(n.a) }
+    case 'dist':
+      return { ...n, params: n.params.map(f) }
   }
 }
 

@@ -7,6 +7,9 @@ import { compileLineIntegral, compileSurfaceIntegral } from './calculus'
 import { limit, seriesSum, type LimitValue } from './limits'
 import { compileMultiple } from './domain'
 import { MathSyntaxError, productPower, type MathNode } from './parse'
+import { normalCdf, normalQuantile } from './special'
+import type { Distribution, Interval } from './distributions'
+import { dataStatistic, DATA_FUNCTIONS } from './statistics'
 
 export type Vars = Record<string, number>
 export type Compiled = (v: Vars) => number
@@ -43,7 +46,25 @@ export interface Scope {
   sets?: ReadonlyMap<string, MathNode>
   /** Le curve, le superfici e i campi definiti, per gli integrali di linea e di superficie. */
   vfns?: ReadonlyMap<string, VectorFunction>
+  /** Le variabili aleatorie definite (X \sim B(10, 0{,}3)), per P(…), E[…] e \operatorname{Var}(…). */
+  random?: RandomScope
 }
+
+/** Le variabili aleatorie della nota: le probabilità e i valori attesi li calcola `probability.ts`. */
+export interface RandomScope {
+  has(name: string): boolean
+  /** L'espressione usa una variabile aleatoria. */
+  involves(node: MathNode): boolean
+  probability(node: Extract<MathNode, { k: 'prob' }>, scope: Scope, options: CompileOptions): Compiled
+  /** E[g(X)], \operatorname{Var}(g(X)) o lo scarto quadratico medio. */
+  moment(node: MathNode, kind: 'mean' | 'variance' | 'sd', scope: Scope, options: CompileOptions): Compiled
+  quantile(name: string, p: Compiled): Compiled
+  distribution(name: string): Distribution | undefined
+  /** L'evento di P(…) come intervalli di valori della variabile (per colorarlo nei grafici). */
+  event(node: Extract<MathNode, { k: 'prob' }>, scope: Scope): { X: string; set: Interval[] }
+}
+
+const NO_RANDOM = 'Prima va definita la variabile aleatoria, per esempio $X \\sim B(10, 0{,}3)$'
 
 export interface CompileOptions {
   /**
@@ -448,6 +469,14 @@ export function compile(node: MathNode, scope: Scope, options: CompileOptions = 
       return compileSurfaceIntegral(node, scope, options)
     case 'set':
       throw new MathError('Un insieme non è un numero: si usa sotto un integrale, \\iint_D')
+    case 'prob':
+      if (!scope.random) throw new MathError(NO_RANDOM)
+      return scope.random.probability(node, scope, options)
+    case 'expect':
+      if (!scope.random) throw new MathError(NO_RANDOM)
+      return scope.random.moment(node.a, 'mean', scope, options)
+    case 'dist':
+      throw new MathError(`${node.v} \\sim … definisce la variabile aleatoria: scrivila in una formula da sola`)
     case 'cases': {
       const rows = node.rows.map((r) => ({ value: c(r.value), cond: r.cond ? compileCondition(r.cond, scope, options) : null }))
       return (v) => {
@@ -542,6 +571,8 @@ const FIELD_OPERATIONS: Record<string, string> = {
 
 function compileFunction(node: Extract<MathNode, { k: 'fn' }>, scope: Scope, options: CompileOptions): Compiled {
   if (FIELD_OPERATIONS[node.name]) throw new MathError(`${FIELD_OPERATIONS[node.name]}: si calcola nella nota, con «=»`)
+  const random = compileRandomFunction(node, scope, options)
+  if (random) return random
   const args = node.args.map((a) => compile(a, scope, options))
   const pow = node.pow ? compile(node.pow, scope, options) : null
   const name = node.name
@@ -568,6 +599,27 @@ function compileFunction(node: Extract<MathNode, { k: 'fn' }>, scope: Scope, opt
     if (!args.length) throw new MathError(`${label} vuole almeno un valore`)
     const pick = name === 'max' ? Math.max : Math.min
     f = (v) => pick(...args.map((a) => a(v)))
+  } else if (name === 'comb' || name === 'combrep' || name === 'disp' || name === 'disprep') {
+    // C_{n,k} = \binom{n}{k}, C'_{n,k} = \binom{n + k - 1}{k}, D_{n,k} = n!/(n − k)!, D'_{n,k} = n^k.
+    if (args.length !== 2) throw new MathError(`${name.startsWith('comb') ? 'C' : 'D'}_{n,k} vuole due numeri`)
+    const [n, k] = args
+    f = (v) => {
+      const N = n(v)
+      const K = k(v)
+      if (name === 'comb') return binomial(N, K)
+      if (name === 'combrep') return binomial(N + K - 1, K)
+      if (name === 'disprep') return Math.pow(N, K)
+      if (!Number.isInteger(N) || !Number.isInteger(K) || K < 0 || K > N) return K > N ? 0 : NaN
+      let r = 1
+      for (let i = 0; i < K; i++) r *= N - i
+      return r
+    }
+  } else if (name === 'normq') {
+    const a = one()
+    f = (v) => normalQuantile(a(v))
+  } else if (DATA_FUNCTIONS.has(name)) {
+    // La statistica di numeri scritti uno per uno: \operatorname{media}(2, 3, 5).
+    f = (v) => dataStatistic(name, args.map((a) => a(v)))
   } else if (name === 'gcd' || name === 'lcm') {
     if (args.length < 2) throw new MathError(`${label} vuole almeno due numeri`)
     f = (v) => {
@@ -594,6 +646,27 @@ function compileFunction(node: Extract<MathNode, { k: 'fn' }>, scope: Scope, opt
   return (v) => power(f(v), pow(v))
 }
 
+/** \operatorname{Var}(X), \operatorname{sqm}(X), \operatorname{quantile}(X, 0{,}95) con X una variabile aleatoria; null se è altro. */
+function compileRandomFunction(node: Extract<MathNode, { k: 'fn' }>, scope: Scope, options: CompileOptions): Compiled | null {
+  const random = scope.random
+  if (!random || !node.args.length || !random.involves(node.args[0])) return null
+  const name = node.name
+  if ((name === 'var' || name === 'sd' || name === 'mean') && node.args.length === 1) {
+    const f = random.moment(node.args[0], name === 'var' ? 'variance' : name, scope, options)
+    if (!node.pow) return f
+    const pow = compile(node.pow, scope, options)
+    return (v) => power(f(v), pow(v))
+  }
+  if ((name === 'quantile' || name === 'percentile') && node.args.length === 2 && node.args[0].k === 'name') {
+    const p = compile(node.args[1], scope, options)
+    return random.quantile(node.args[0].name, name === 'percentile' ? (v) => p(v) / 100 : p)
+  }
+  if (name === 'var' || name === 'sd' || name === 'quantile' || name === 'percentile') {
+    throw new MathError(`Si scrive ${name === 'quantile' ? '\\operatorname{quantile}(X, 0{,}95)' : '\\operatorname{Var}(X)'}, con X la variabile aleatoria`)
+  }
+  return null
+}
+
 function compileApply(node: Extract<MathNode, { k: 'apply' }>, scope: Scope, options: CompileOptions): Compiled {
   const user = scope.vars.has(node.name) ? undefined : scope.fns.get(node.name)
   if (user) {
@@ -615,6 +688,14 @@ function compileApply(node: Extract<MathNode, { k: 'apply' }>, scope: Scope, opt
     return (v) => user.call(args.map((a) => a(v)))
   }
   if (node.primes) throw new MathError(`${node.name} non è una funzione definita`)
+  // Φ(z): la funzione di ripartizione della normale standard; E(X): il valore atteso.
+  if (node.name === 'Φ' && !scope.consts.has('Φ') && node.args.length === 1) {
+    const a = compile(node.args[0], scope, options)
+    return (v) => normalCdf(a(v))
+  }
+  if (node.name === 'E' && !scope.consts.has('E') && node.args.length === 1 && scope.random?.involves(node.args[0])) {
+    return scope.random.moment(node.args[0], 'mean', scope, options)
+  }
   // a(x + 1): se a è un numero è un prodotto.
   const isNumber = scope.vars.has(node.name) || scope.consts.has(node.name) || node.name === 'π' || node.name === 'e'
   if (!isNumber) throw new UndefinedName(node.name)

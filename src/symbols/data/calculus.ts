@@ -205,6 +205,32 @@ export const functions = [
   fn(r`\operatorname{Var}(#)`, 'varianza', 'varianza, var, variance', { id: 'var', w: 3 }),
   fn(r`\operatorname{Cov}(#, #)`, 'covarianza', 'covarianza, cov, covariance', { id: 'cov', w: 2 }),
   fn(r`\mathcal{N}(#, #)`, 'distribuzione normale', 'normale, gaussiana, distribuzione normale, n calligrafica, gaussian', { id: 'normal', w: 3, f: [[r`\mathcal{N}(#, #)`, 'N(μ, σ²)', r`\mathcal{N}(\mu, \sigma^2)`], [r`\sim \mathcal{N}(#, #)`, 'distribuita come']] }),
+  fn(r`B(#, #)`, 'distribuzione binomiale', 'binomiale, distribuzione binomiale, prove ripetute, bernoulli, binomial', {
+    id: 'binomialdist',
+    w: 3,
+    f: [[r`X \sim B(#, #)`, 'X ∼ B(n, p)', r`X \sim B(n, p)`], [r`B(#, #)`, 'B(n, p)', r`B(n, p)`]],
+  }),
+  fn(r`\operatorname{Po}(#)`, 'distribuzione di Poisson', 'poisson, distribuzione di poisson, eventi rari, poissoniana', {
+    id: 'poissondist',
+    w: 2,
+    f: [[r`X \sim \operatorname{Po}(#)`, 'X ∼ Po(λ)', r`X \sim \operatorname{Po}(\lambda)`]],
+  }),
+  fn(r`\operatorname{media}(#)`, 'media dei dati', 'media, media aritmetica, valore medio, mean, average', { id: 'datamean', w: 4 }),
+  fn(r`\operatorname{mediana}(#)`, 'mediana', 'mediana, valore centrale, median', { id: 'median', w: 3 }),
+  fn(r`\operatorname{moda}(#)`, 'moda', 'moda, valore più frequente, mode', { id: 'datamode', w: 2 }),
+  fn(r`\operatorname{quartili}(#)`, 'quartili', 'quartili, primo quartile, terzo quartile, quartiles', { id: 'quartiles', w: 2 }),
+  fn(r`\operatorname{regressione}(#, #)`, 'retta di regressione', 'regressione, retta di regressione, minimi quadrati, regression, correlazione', { id: 'regression', w: 2 }),
+  fn(r`\operatorname{statistiche}(#)`, 'statistiche dei dati', 'statistiche, riassunto dei dati, indici di posizione, indici di variabilità, summary', { id: 'summary', w: 2 }),
+  fn(r`C_{#,#}`, 'combinazioni', 'combinazioni, combinazioni semplici, c n k, calcolo combinatorio', {
+    id: 'combinations',
+    w: 3,
+    f: [[r`C_{#,#}`, 'semplici', r`C_{n,k}`], [r`C'_{#,#}`, 'con ripetizione', r`C'_{n,k}`]],
+  }),
+  fn(r`D_{#,#}`, 'disposizioni', 'disposizioni, disposizioni semplici, d n k, calcolo combinatorio', {
+    id: 'dispositions',
+    w: 3,
+    f: [[r`D_{#,#}`, 'semplici', r`D_{n,k}`], [r`D'_{#,#}`, 'con ripetizione', r`D'_{n,k}`]],
+  }),
   fn(r`\operatorname{#}`, 'operatore personalizzato', 'operatore, nome di funzione, funzione con nome, operatorname, testo dritto funzione', {
     id: 'operatorname',
     w: 4,

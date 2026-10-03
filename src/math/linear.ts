@@ -16,6 +16,7 @@ import { ExactUnavailable, Rational } from './exact'
 import { formatNumber, formatRational, type FormatOptions, type FormattedResult } from './format'
 import { numericRoots, rationalRoots } from './polynomial'
 import type { MathNode } from './parse'
+import { correlation, covariance, DATA_FUNCTIONS, statistic, type Data } from './statistics'
 
 // ——— I numeri: frazioni o con la virgola ———
 
@@ -41,6 +42,8 @@ export interface Field<T> {
   fromFloat(x: number): T
   /** Un numero intero (per gli esponenti). */
   integer(a: T): number | null
+  /** Negativo se a < b, zero se sono uguali, positivo se a > b (per ordinare i dati). */
+  cmp(a: T, b: T): number
 }
 
 const unavailable = (): never => {
@@ -85,6 +88,7 @@ export const EXACT: Field<Rational> = {
   sqrt: rationalSqrt,
   fromFloat: () => unavailable(),
   integer: (a) => (a.isInteger && a.n >= -1000000n && a.n <= 1000000n ? Number(a.n) : null),
+  cmp: (a, b) => a.cmp(b),
 }
 
 export const FLOAT: Field<number> = {
@@ -110,6 +114,7 @@ export const FLOAT: Field<number> = {
   sqrt: Math.sqrt,
   fromFloat: (x) => x,
   integer: (a) => (Number.isInteger(a) && Math.abs(a) <= 1e6 ? a : Math.abs(a - Math.round(a)) < 1e-9 ? Math.round(a) : null),
+  cmp: (a, b) => a - b,
 }
 
 // ——— I valori ———
@@ -460,6 +465,11 @@ function evaluate<T>(ctx: Ctx<T>, node: MathNode): Lin<T> {
     case 'name': {
       const value = valueOf(ctx, node.name)
       if (value) return value
+      // \bar{x}: la media dei dati x.
+      if (node.name.endsWith('\u0304')) {
+        const data = valueOf(ctx, node.name.slice(0, -1))
+        if (data && isVector(data)) return { k: 'scalar', v: statistic(F, 'mean', { values: data.m.map((r) => r[0]), weights: null }) }
+      }
       const id = identityName(node.name)
       if (id !== false) return { k: 'identity', n: id, c: null }
       if (node.name === 'π') return { k: 'scalar', v: F.fromFloat(Math.PI) }
@@ -556,11 +566,50 @@ function powerOf<T>(ctx: Ctx<T>, node: Extract<MathNode, { k: 'bin' }>): Lin<T> 
   return { k: 'matrix', m: power(F, base.m, n), tuple: false }
 }
 
+/** Le funzioni che si chiedono da sole, con «=», perché il risultato non è un numero solo. */
+const STATISTICS_SHOWN = new Set(['quartiles', 'regression', 'summary', 'frequencies', 'histogram', 'barchart', 'scatter'])
+
+/** I dati: un vettore (con le frequenze in un secondo vettore) o numeri scritti uno per uno. */
+export function dataOf<T>(args: Lin<T>[]): Data<T> {
+  const column = (v: Extract<Lin<T>, { k: 'matrix' }>) => v.m.map((row) => row[0])
+  if (args.length === 1 && isVector(args[0])) return { values: column(args[0]), weights: null }
+  if (args.length === 2 && isVector(args[0]) && isVector(args[1])) return { values: column(args[0]), weights: column(args[1]) }
+  if (args.length && args.every((a) => a.k === 'scalar')) return { values: args.map((a) => (a as { v: T }).v), weights: null }
+  throw new MathError('I dati si scrivono in un vettore, $x = (2, 3, 5, 7)$, o uno per uno: \\operatorname{media}(2, 3, 5, 7)')
+}
+
+/** La statistica dei dati (\operatorname{media}(x), \operatorname{Var}(x, f), \operatorname{corr}(x, y)); null se è altro. */
+function statisticOf<T>(F: Field<T>, name: string, args: Lin<T>[]): Lin<T> | null {
+  if (DATA_FUNCTIONS.has(name)) {
+    if (name === 'quantile' || name === 'percentile') {
+      const last = args[args.length - 1]
+      if (args.length < 2 || last.k !== 'scalar') throw new MathError(`Si scrive \\operatorname{${name}}(x, ${name === 'quantile' ? '0{,}9' : '90'}), con x i dati`)
+      return { k: 'scalar', v: statistic(F, name, dataOf(args.slice(0, -1)), last.v) }
+    }
+    return { k: 'scalar', v: statistic(F, name, dataOf(args)) }
+  }
+  if (name === 'cov' || name === 'corr') {
+    const [x, y] = args
+    if (args.length !== 2 || !isVector(x) || !isVector(y)) throw new MathError(`Si scrive \\operatorname{${name === 'cov' ? 'Cov' : 'corr'}}(x, y), con x e y due vettori di dati`)
+    const xs = x.m.map((r) => r[0])
+    const ys = y.m.map((r) => r[0])
+    return { k: 'scalar', v: name === 'cov' ? covariance(F, xs, ys) : correlation(F, xs, ys) }
+  }
+  if ((name === 'min' || name === 'max') && args.some(isVector)) {
+    const values = args.flatMap((a) => (isVector(a) ? a.m.map((r) => r[0]) : [scalarOf(a, `\\${name}`)]))
+    return { k: 'scalar', v: values.reduce((p, q) => ((name === 'max' ? F.cmp(q, p) > 0 : F.cmp(q, p) < 0) ? q : p)) }
+  }
+  if (STATISTICS_SHOWN.has(name)) throw new MathError('Questa si chiede da sola, con «=» in fondo: \\operatorname{quartili}(x) =')
+  return null
+}
+
 function functionOf<T>(ctx: Ctx<T>, node: Extract<MathNode, { k: 'fn' }>): Lin<T> {
   const { F } = ctx
   const figure = geometryOf(ctx, node.name, node.args)
   if (figure) return figure
   const args = node.args.map((a) => plain(F, evaluate(ctx, a)))
+  const stat = statisticOf(F, node.name, args)
+  if (stat) return stat
   const one = () => {
     if (args.length !== 1) throw new MathError(`\\${node.name} vuole un valore solo`)
     return args[0]

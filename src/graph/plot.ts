@@ -482,11 +482,19 @@ function findWindow(spec: GraphSpec, width: number, height: number): Viewport {
   // Anche le curve delle aree: la loro forma deve vedersi.
   const functions = items.filter((i): i is Extract<GraphItem, { kind: 'function' | 'area' }> => i.kind === 'function' || i.kind === 'area')
   // Le curve e le figure: con le stesse unità sui due assi, se no si deformano (e gli angoli non tornano).
-  const curves = items.filter((i) => ['implicit', 'parametric', 'region', 'segment', 'polygon', 'angle', 'points', 'field', 'contour', 'slopes'].includes(i.kind))
+  const curves = items.filter((i) => ['implicit', 'parametric', 'region', 'segment', 'polygon', 'angle', 'points', 'field', 'contour', 'slopes'].includes(i.kind) && !i.data)
   const xs: number[] = []
   const ys: number[] = []
+  // Le barre e le densità: dove sta quasi tutta la probabilità, o dove sono i dati.
+  const extents = items.flatMap((i) => (i.extent ? [i.extent] : []))
+  for (const e of extents) xs.push(e[0], e[1])
   for (const item of items) {
-    if (item.kind === 'point') {
+    if (item.kind === 'bars') {
+      for (const b of item.bars) {
+        xs.push(b.x0, b.x1)
+        ys.push(0, b.y)
+      }
+    } else if (item.kind === 'point') {
       xs.push(item.x)
       ys.push(item.y)
     } else if (item.kind === 'vertical') xs.push(item.x)
@@ -499,6 +507,8 @@ function findWindow(spec: GraphSpec, width: number, height: number): Viewport {
         xs.push(item.fx(t))
         ys.push(item.fy(t))
       }
+    } else if (item.kind === 'area' && item.extent) {
+      ys.push(0)
     } else if (item.kind === 'area') {
       // L'area intera, chiusa dall'asse x; verso un estremo infinito, un pezzo (\int_0^\infty: fino a 5).
       const lo = Math.min(item.from, item.to)
@@ -557,7 +567,7 @@ function findWindow(spec: GraphSpec, width: number, height: number): Viewport {
   else {
     const area = items.some((i) => i.kind === 'area' && (finite(i.from) || finite(i.to)))
     const found: number[] = []
-    if (!area) for (const f of functions) found.push(...features(f.f, -10, 10))
+    if (!area && !extents.length) for (const f of functions) found.push(...features(f.f, -10, 10))
     let near = found
     if (found.length > 16) {
       if (spec.trig) near = []
@@ -566,6 +576,9 @@ function findWindow(spec: GraphSpec, width: number, height: number): Viewport {
     if (spec.trig && found.length > 8) {
       // Seni e coseni: due giri da una parte e dall'altra (e i punti scritti nel blocco).
       x = [Math.min(-2 * Math.PI - 0.4, ...xs.map((v) => v - 1)), Math.max(2 * Math.PI + 0.4, ...xs.map((v) => v + 1))]
+    } else if (extents.length) {
+      // Le distribuzioni e i dati: dove stanno loro (con il loro margine), senza per forza lo zero.
+      x = [Math.min(...xs), Math.max(...xs)]
     } else {
       const all = [0, ...near, ...xs]
       let lo = Math.min(...all)

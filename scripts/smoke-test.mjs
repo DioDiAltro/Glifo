@@ -1433,6 +1433,25 @@ try {
     studyRows.includes('Asintoti: x = 0 verticale; y = x (x → ±∞) obliquo') && studyRows.includes('massimo (−1; −2); minimo (1; 2)') && asymptotes === 2 && namedPoints.length === 2,
     `lo studio di funzione ha le righe e nel pannello gli asintoti tratteggiati e i punti (${JSON.stringify({ studyRows: studyRows.slice(0, 60), asymptotes, namedPoints })})`,
   )
+  // La probabilità: una variabile aleatoria, P(…) esatta e, nel pannello, le barre con l'evento colorato
+  // (i risultati scritti come testo hanno il testo, quelli disegnati l'aria-label).
+  await gp.keyboard.press('End')
+  await gp.keyboard.type('\n\nLa binomiale $X \\sim B(4, \\frac{1}{2})$ e $P(X \\le 1) =')
+  const probability = await gp
+    .waitForFunction(() => [...document.querySelectorAll('.cm-calc-result')].map((e) => (e.getAttribute('aria-label') ?? e.textContent ?? '').replace(/Tab$/, '')).find((t) => t.startsWith('5/16')), null, { timeout: 8000 })
+    .then((h) => h.jsonValue())
+  await gp.waitForSelector('.formula-graph:not([hidden]) svg path[data-area]', { state: 'attached', timeout: 5000 })
+  const barGroups = await gp.locator('.formula-graph svg path[data-area]').count()
+  // I dati: la media e i quartili.
+  await gp.keyboard.press('End')
+  await gp.keyboard.type('\n\nI dati $x = (2, 3, 5, 7, 7, 9)$ e $\\operatorname{quartili}(x) =')
+  const quartiles = await gp
+    .waitForFunction(() => [...document.querySelectorAll('.cm-calc-result')].map((e) => (e.getAttribute('aria-label') ?? e.textContent ?? '').replace(/Tab$/, '')).find((t) => t.startsWith('Q₁')), null, { timeout: 8000 })
+    .then((h) => h.jsonValue())
+  check(
+    probability === '5/16 = 0,3125' && barGroups === 2 && quartiles === 'Q₁ = 3,5; Q₂ = 6; Q₃ = 7',
+    `la probabilità è esatta, con le barre nel pannello, e i dati hanno i quartili (${JSON.stringify({ probability, barGroups, quartiles })})`,
+  )
   await gp.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)

@@ -66,6 +66,12 @@ export type MathNode =
   | { k: 'in'; a: MathNode; lo: MathNode; hi: MathNode; loOpen: boolean; hiOpen: boolean }
   | { k: 'and' | 'or'; items: MathNode[] }
   | { k: 'infty' }
+  /** P(X \le 3), P(X > 2 \mid X > 1): la probabilità di un evento (con la condizione, se c'è). */
+  | { k: 'prob'; event: MathNode; given: MathNode | null }
+  /** E[X], \mathbb{E}[X^2]: il valore atteso. */
+  | { k: 'expect'; a: MathNode }
+  /** X \sim B(10, 0{,}3): la variabile aleatoria X con la sua distribuzione (`family` come in distributions.ts). */
+  | { k: 'dist'; v: string; family: string; params: MathNode[] }
 
 /** Un'espressione con, dopo una virgola o «per», la condizione in cui vale (`y = x^2, x > 0`). */
 export interface Statement {
@@ -125,6 +131,46 @@ const FUNCTION_NAMES: Record<string, string> = {
   // Lo studio di funzione, tutto o una parte.
   studio: 'study', dominio: 'domain', asintoti: 'asymptotes', estremi: 'extrema', massimi: 'extrema', minimi: 'extrema',
   flessi: 'flexes', zeri: 'zeros',
+  // La statistica dei dati: media, mediana, moda, varianza (con n e, campionaria, con n − 1), scarto
+  // quadratico medio, quartili e quantili, covarianza, correlazione, retta di regressione, il riassunto.
+  media: 'mean', mean: 'mean', mediana: 'median', median: 'median', moda: 'mode', mode: 'mode',
+  var: 'var', varianza: 'var', 'var.p': 'var', varp: 'var', varc: 'svar', 'var.c': 'svar', 'var.s': 'svar',
+  sqm: 'sd', ds: 'sd', sd: 'sd', std: 'sd', dev: 'sd', devst: 'sd', 'dev.st': 'sd', 'dev.st.p': 'sd',
+  sqmc: 'ssd', dsc: 'ssd', sdc: 'ssd', devstc: 'ssd', 'dev.st.c': 'ssd', 'dev.st.s': 'ssd',
+  quartili: 'quartiles', quartiles: 'quartiles', quantile: 'quantile', percentile: 'percentile',
+  cov: 'cov', covarianza: 'cov', corr: 'corr', correlazione: 'corr', regressione: 'regression', regression: 'regression',
+  statistiche: 'summary', statistica: 'summary', riassunto: 'summary', summary: 'summary',
+  frequenze: 'frequencies', frequenza: 'frequencies', campo: 'range', range: 'range',
+  // I grafici della statistica: istogramma, diagramma a barre, diagramma di dispersione.
+  istogramma: 'histogram', histogram: 'histogram', barre: 'barchart', dispersione: 'scatter', scatter: 'scatter',
+  // La probabilità: \Pr(X \le 3) come P(X \le 3).
+  Pr: 'prob', pr: 'prob',
+}
+
+/**
+ * Le distribuzioni dopo \sim, come si scrivono (in minuscolo): B(10, 0{,}3), \operatorname{Bin}(10, 0{,}3),
+ * \mathcal{N}(0, 1), \operatorname{Po}(3), \operatorname{Exp}(2), U(0, 1), t(10), \chi^2(3)…
+ */
+const DISTRIBUTIONS: Record<string, string> = {
+  b: 'binomial', bin: 'binomial', binom: 'binomial', binomiale: 'binomial', binomial: 'binomial',
+  be: 'bernoulli', ber: 'bernoulli', bern: 'bernoulli', bernoulli: 'bernoulli',
+  p: 'poisson', po: 'poisson', poi: 'poisson', pois: 'poisson', poisson: 'poisson',
+  g: 'geometric', ge: 'geometric', geo: 'geometric', geom: 'geometric', geometrica: 'geometric', geometric: 'geometric',
+  h: 'hypergeometric', hg: 'hypergeometric', hyp: 'hypergeometric', iper: 'hypergeometric', ipergeometrica: 'hypergeometric', hypergeometric: 'hypergeometric',
+  n: 'normal', norm: 'normal', normale: 'normal', normal: 'normal',
+  e: 'exponential', exp: 'exponential', expo: 'exponential', esponenziale: 'exponential', exponential: 'exponential',
+  u: 'uniform', unif: 'uniform', uniforme: 'uniform', uniform: 'uniform',
+  t: 'student', student: 'student', tstudent: 'student',
+  χ: 'chi2', chi: 'chi2', chi2: 'chi2', chiquadro: 'chi2',
+  f: 'fisher', fisher: 'fisher', snedecor: 'fisher',
+  γ: 'gamma', gamma: 'gamma',
+}
+
+/** Un esempio di come si scrive ogni distribuzione, per i messaggi. */
+const DISTRIBUTION_EXAMPLES: Record<string, string> = {
+  binomial: 'B(10, 0{,}3)', bernoulli: '\\operatorname{Be}(0{,}5)', poisson: '\\operatorname{Po}(3)', geometric: '\\operatorname{Geom}(0{,}2)',
+  hypergeometric: '\\operatorname{H}(50, 10, 5)', normal: 'N(0, 1)', exponential: '\\operatorname{Exp}(2)', uniform: 'U(0, 1)',
+  student: 't(10)', chi2: '\\chi^2(3)', fisher: 'F(3, 10)', gamma: '\\Gamma(2, 1)',
 }
 
 /** Le parole riconosciute anche senza barra (`sin x`, `sqrt(x)`, `pi`), come in una calcolatrice. */
@@ -158,7 +204,9 @@ const COMMAND_OPS: Record<string, [Kind, string]> = {
   lim: ['lim', 'lim'], to: ['to', 'to'], rightarrow: ['to', 'to'], longrightarrow: ['to', 'to'],
   Rightarrow: ['implies', '⇒'], implies: ['implies', '⇒'], Longrightarrow: ['implies', '⇒'], iff: ['implies', '⇔'],
   Leftrightarrow: ['implies', '⇔'], Longleftrightarrow: ['implies', '⇔'],
-  mid: ['bar', '|'],
+  // \mid è la barra di «tali che» e della probabilità condizionata, mai quella del valore assoluto.
+  mid: ['bar', 'mid'],
+  sim: ['sim', '∼'],
   quad: ['sep', 'quad'], qquad: ['sep', 'quad'], cr: ['row', '\\\\'], coloneqq: ['rel', '='], coloneq: ['rel', '='],
   lbrace: ['open', '\\{'], rbrace: ['close', '\\}'], lbrack: ['open', '['], rbrack: ['close', ']'],
   lfloor: ['open', 'floor'], rfloor: ['close', 'floor'], lceil: ['open', 'ceil'], rceil: ['close', 'ceil'],
@@ -177,7 +225,7 @@ const IGNORED = new Set([
 // ——— I pezzi del testo (token) ———
 
 type Kind =
-  | 'num' | 'name' | 'fn' | 'frac' | 'sqrt' | 'binom' | 'big' | 'int' | 'op' | 'rel' | 'open' | 'close' | 'bar'
+  | 'num' | 'name' | 'fn' | 'frac' | 'sqrt' | 'binom' | 'big' | 'int' | 'op' | 'rel' | 'open' | 'close' | 'bar' | 'sim'
   | 'comma' | 'semi' | 'sep' | 'in' | 'and' | 'or' | 'else' | 'amp' | 'row' | 'cases' | 'endcases' | 'matrix' | 'endmatrix' | 'infty'
   | 'deg' | 'prime' | 'set' | 'nabla' | 'partial' | 'lim' | 'to' | 'implies' | 'bad'
 
@@ -331,6 +379,7 @@ export function tokenize(src: string): Tok[] {
       case '∞': one('infty', '∞'); break
       case '°': one('deg', '°'); break
       case '∈': one('in', 'in'); break
+      case '∼': one('sim', '∼'); break
       case '∧': one('and', 'and'); break
       case '∨': one('or', 'or'); break
       case '√': one('sqrt', 'sqrt'); break
@@ -461,7 +510,7 @@ function readCommand(src: string, i: number, out: Tok[], depth: () => number, ad
     push(letter ? 'name' : 'bad', letter ? letter + ACCENTS[name] : '\\' + name)
     return end
   }
-  if (/^(mathbb|mathbf|mathrm|mathit|mathsf|boldsymbol|bm|text|textrm|textit|textbf|mbox|operatorname)$/.test(name)) {
+  if (/^(mathbb|mathbf|mathrm|mathit|mathsf|mathcal|mathscr|mathfrak|boldsymbol|bm|text|textrm|textit|textbf|mbox|operatorname)$/.test(name)) {
     let j = end
     if (name === 'operatorname' && src[j] === '*') j++
     const arg = readBraces(src, j)
@@ -566,6 +615,8 @@ class Parser {
   private integrals = 0
   /** Nell'intervallo ]a, b[ la [ alla fine chiude, non apre. */
   private reversedInterval = false
+  /** Dentro P(…): una | da sola separa l'evento dalla condizione (P(A | B)), non apre un valore assoluto. */
+  private condBar = false
 
   constructor(
     private readonly toks: Tok[],
@@ -646,6 +697,7 @@ class Parser {
   relation(): MathNode {
     const first = this.expr()
     if (this.is('in')) return this.interval(first)
+    if (this.is('sim')) return this.distribution(first)
     if (!this.is('rel')) return first
     const ops: RelOp[] = []
     const items = [first]
@@ -727,6 +779,150 @@ class Parser {
     return { k: 'in', a, lo, hi, loOpen, hiOpen: close.v !== ']' }
   }
 
+  /** `X \sim B(10, 0{,}3)`, `Y \sim \mathcal{N}(0, 1)`, `T \sim t_{10}`: la variabile aleatoria con la sua distribuzione. */
+  private distribution(first: MathNode): MathNode {
+    const sim = this.next()
+    if (first.k !== 'name') throw this.error('Prima di ∼ va il nome della variabile aleatoria: X \\sim B(10, 0{,}3)', sim.pos)
+    const t = this.peek()
+    if (!t) throw this.error('Dopo ∼ va la distribuzione, per esempio B(10, 0{,}3) o N(0, 1)')
+    this.next()
+    let word = t.v
+    // Bin, Exp, Unif scritti senza barra: le lettere attaccate.
+    if (t.k === 'name' && /^[A-Za-z]$/.test(t.v)) {
+      let end = t.end
+      while (this.peek()?.k === 'name' && /^[A-Za-z]$/.test(this.peek()!.v) && this.peek()!.pos === end) {
+        const u = this.next()
+        word += u.v
+        end = u.end
+      }
+    }
+    const family = t.k === 'name' || t.k === 'fn' || t.k === 'bad' ? DISTRIBUTIONS[word.toLowerCase()] : undefined
+    if (!family) {
+      throw this.error(`Non conosco la distribuzione «${word}»: per esempio B(n, p), N(μ, σ²), \\operatorname{Po}(λ), \\operatorname{Exp}(λ), U(a, b), t(n), \\chi^2(n)`, t.pos)
+    }
+    const params: MathNode[] = []
+    // \chi^2, e i gradi di libertà come pedice (\chi^2_3, t_{10}) o tra parentesi.
+    const square = () => {
+      if (!this.is('op', '^')) return
+      const hat = this.next()
+      const e = this.supArg(hat)
+      if (e.k !== 'num' || e.v !== 2) throw this.error('Si scrive \\chi^2', hat.pos)
+    }
+    if (family === 'chi2') square()
+    if (this.is('op', '_')) {
+      this.next()
+      params.push(this.latexArg('i gradi di libertà'))
+    }
+    if (family === 'chi2') square()
+    if (this.is('open', '(') || this.is('open', '[')) {
+      const group = this.group(true)
+      params.push(...(group.k === 'tuple' ? group.items : [group]))
+    }
+    if (!params.length) throw this.error(`Mancano i parametri della distribuzione: X \\sim ${DISTRIBUTION_EXAMPLES[family]}`)
+    return { k: 'dist', v: first.name, family, params }
+  }
+
+  /** Tra le parentesi che cominciano qui c'è un confronto (P(X \le 3)) o la barra della condizione? */
+  private eventAhead(): boolean {
+    let depth = 0
+    for (let j = this.i; j < this.toks.length; j++) {
+      const t = this.toks[j]
+      if (t.k === 'open') depth++
+      else if (t.k === 'close') {
+        if (--depth === 0) return false
+      } else if (depth === 1 && (t.k === 'rel' || t.k === 'in' || (t.k === 'bar' && t.v === 'mid'))) return true
+    }
+    return false
+  }
+
+  /** `P(X \le 3)`, `P(2 < X \le 5)`, `P(X > 3 \mid X > 1)`: la probabilità di un evento. */
+  private probability(): MathNode {
+    const open = this.next()
+    if (open.k !== 'open' || open.v !== '(') throw this.error('Dopo P va l\'evento tra parentesi: P(X \\le 3)', open.pos)
+    const saved = this.condBar
+    this.condBar = true
+    try {
+      const event = this.condition()
+      let given: MathNode | null = null
+      if (this.is('bar') && !this.is('bar', 'l|')) {
+        this.next()
+        given = this.condition()
+      }
+      this.expect('close', ')', 'la parentesi ) della probabilità')
+      return { k: 'prob', event, given }
+    } finally {
+      this.condBar = saved
+    }
+  }
+
+  /** `E[X]`, `\mathbb{E}[X^2]`, `\mathbb{E}(2X + 1)`: il valore atteso. */
+  private expectation(): MathNode {
+    const open = this.next()
+    const close = CLOSING[open.v]
+    const saved = this.condBar
+    this.condBar = false
+    try {
+      const a = this.expr()
+      this.expect('close', close, `la parentesi ${SHOW[close] ?? close} del valore atteso`)
+      return { k: 'expect', a }
+    } finally {
+      this.condBar = saved
+    }
+  }
+
+  /** Qui c'è ^{-1} (o ^-1) e poi una parentesi: la funzione inversa. */
+  private inverseAhead(): boolean {
+    const t = (o: number) => this.peek(o)
+    if (!this.is('op', '^')) return false
+    if (t(1)?.k === 'open' && t(1)!.v === '{') {
+      return t(2)?.k === 'op' && t(2)!.v === '-' && t(3)?.k === 'num' && t(3)!.v === '1' && t(4)?.k === 'close' && t(4)!.v === '}' && t(5)?.k === 'open' && t(5)!.v === '('
+    }
+    return t(1)?.k === 'op' && t(1)!.v === '-' && t(2)?.k === 'num' && t(2)!.v === '1' && t(3)?.k === 'open' && t(3)!.v === '('
+  }
+
+  /** C_{n,k}, D_{n,k} (con l'apice, D'_{n,k}, con ripetizione): le combinazioni e le disposizioni, come nei libri italiani. */
+  private combinatorialAhead(): boolean {
+    let j = this.i
+    while (this.toks[j]?.k === 'prime') j++
+    if (j - this.i > 1 || this.toks[j]?.k !== 'op' || this.toks[j].v !== '_' || this.toks[j + 1]?.k !== 'open' || this.toks[j + 1].v !== '{') return false
+    // C_{10,3}: la virgola tra due cifre è stata letta come quella dei decimali (10,3).
+    const inner = this.toks[j + 2]
+    if (inner?.k === 'num' && inner.comma && this.toks[j + 3]?.k === 'close' && this.toks[j + 3].v === '}') return true
+    let depth = 0
+    for (let k = j + 1; k < this.toks.length; k++) {
+      const t = this.toks[k]
+      if (t.k === 'open') depth++
+      else if (t.k === 'close') {
+        if (--depth === 0) return false
+      } else if (depth === 1 && (t.k === 'comma' || t.k === 'semi')) return true
+    }
+    return false
+  }
+
+  private combinatorial(letter: string): MathNode {
+    let repeated = false
+    if (this.is('prime')) {
+      this.next()
+      repeated = true
+    }
+    this.next()
+    this.next()
+    const t = this.peek()!
+    if (t.k === 'num' && t.comma && this.is('close', '}', 1)) {
+      this.next()
+      this.next()
+      const [a, b] = t.v.split('.')
+      const number = (text: string): MathNode => ({ k: 'num', v: Number(text), text, comma: false })
+      return { k: 'fn', name: letter === 'C' ? (repeated ? 'combrep' : 'comb') : repeated ? 'disprep' : 'disp', args: [number(a), number(b)] }
+    }
+    const n = this.expr()
+    this.next()
+    const k = this.expr()
+    this.expect('close', '}', 'la graffa } del pedice')
+    const name = letter === 'C' ? (repeated ? 'combrep' : 'comb') : repeated ? 'disprep' : 'disp'
+    return { k: 'fn', name, args: [n, k] }
+  }
+
   // ——— Espressioni ———
 
   expr(): MathNode {
@@ -783,7 +979,7 @@ class Parser {
         // \{ … \} dopo un'espressione è la sua condizione (y = x^2 \{x > 0\}).
         return t.v !== '\\{'
       case 'bar':
-        return t.v === 'l|' || (t.v === '|' && this.absDepth === 0)
+        return t.v === 'l|' || (t.v === '|' && this.absDepth === 0 && !this.condBar)
       default:
         return false
     }
@@ -948,6 +1144,17 @@ class Parser {
       case 'infty':
         this.next()
         return { k: 'infty' }
+      case 'set':
+        // \mathbb{E}[X]: il valore atteso; \mathbb{P}(X \le 3): la probabilità.
+        if (t.v === 'E' && (this.is('open', '[', 1) || this.is('open', '(', 1))) {
+          this.next()
+          return this.expectation()
+        }
+        if (t.v === 'P' && this.is('open', '(', 1)) {
+          this.next()
+          return this.probability()
+        }
+        throw this.error(`Non mi aspettavo ${describe(t)} qui`)
       case 'close':
         throw this.error(t.v === '}' ? 'C\'è una graffa } di troppo' : `Manca qualcosa prima di ${describe(t)}`)
       case 'bad':
@@ -993,6 +1200,16 @@ class Parser {
 
   private name(): MathNode {
     let name = this.next().v
+    // P(X \le 3): una probabilità; E[X]: un valore atteso; C_{10,3}, D_{10,3}: combinazioni e disposizioni.
+    if (name === 'P' && this.is('open', '(') && this.eventAhead()) return this.probability()
+    if (name === 'E' && this.is('open', '[')) return this.expectation()
+    if ((name === 'C' || name === 'D') && this.combinatorialAhead()) return this.combinatorial(name)
+    // Φ^{-1}(0{,}975): il quantile della normale standard (Φ(z) è la sua funzione di ripartizione).
+    if (name === 'Φ' && this.inverseAhead()) {
+      while (!this.is('open', '(')) this.next()
+      const group = this.group(true)
+      return { k: 'fn', name: 'normq', args: group.k === 'tuple' ? group.items : [group] }
+    }
     if (this.is('op', '_')) name += '_' + this.subscriptText()
     let primes = 0
     while (this.is('prime')) {
@@ -1010,6 +1227,8 @@ class Parser {
 
   private fnCall(): MathNode {
     let name = this.next().v
+    // \Pr(X \le 3): la probabilità.
+    if (name === 'prob') return this.probability()
     let base: MathNode | undefined
     let pow: MathNode | undefined
     for (let n = 0; n < 2; n++) {
@@ -1466,7 +1685,7 @@ class Parser {
       }
     }
     const t = this.peek()
-    if (!t || !((t.k === 'op' && t.colon) || (t.k === 'bar' && t.v === '|'))) return null
+    if (!t || !((t.k === 'op' && t.colon) || (t.k === 'bar' && (t.v === '|' || t.v === 'mid')))) return null
     this.next()
     return vars
   }
@@ -1756,5 +1975,11 @@ export function children(n: MathNode): MathNode[] {
       return [n.body]
     case 'lim':
       return [n.to, n.body]
+    case 'prob':
+      return n.given ? [n.event, n.given] : [n.event]
+    case 'expect':
+      return [n.a]
+    case 'dist':
+      return n.params
   }
 }

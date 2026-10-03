@@ -173,7 +173,7 @@ function swatchClass(item: GraphSpec['items'][number]): string {
   if (item.dashed) return 'graph-swatch is-dashed'
   if (kind === 'point' || kind === 'point3' || kind === 'points' || (kind === 'complex' && !item.arrows)) return 'graph-swatch is-point'
   if (kind === 'polygon') return 'graph-swatch is-region'
-  if (kind === 'area') return 'graph-swatch is-area'
+  if (kind === 'area' || kind === 'bars') return 'graph-swatch is-area'
   if (kind === 'region') return 'graph-swatch is-region'
   if (kind === 'surface' || kind === 'implicit3' || kind === 'patch' || kind === 'solid') return 'graph-swatch is-surface'
   if (kind === 'field' || kind === 'field3' || kind === 'vector' || (kind === 'complex' && item.arrows)) return 'graph-swatch is-arrow'
@@ -581,7 +581,7 @@ class GraphView {
   private legendHtml(): string {
     const rows = this.spec.items
       .map((item, i) => ({ item, color: this.colors[i] }))
-      .filter(({ item }) => item.kind !== 'point' || item.name)
+      .filter(({ item }) => (item.kind !== 'point' || item.name) && item.label !== '')
       .map(({ item, color }) => {
         const { html, error } = renderTex(item.label)
         const label = error ? `<code>${escapeHtml(item.label)}</code>` : html

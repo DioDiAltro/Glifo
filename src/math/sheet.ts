@@ -18,7 +18,7 @@ import {
   type ExactComplexScope,
 } from './complex'
 import { numericPartials } from './calculus'
-import { bound, compile, EMPTY_SCOPE, isCounter, scopeWith, withWorkLimit, type Scope, type UserFunction, type VectorFunction } from './evaluate'
+import { bound, compile, EMPTY_SCOPE, isCounter, MathError, scopeWith, withWorkLimit, type Scope, type UserFunction, type VectorFunction } from './evaluate'
 import { limit, recognize, seriesSum, type LimitValue } from './limits'
 import { solve } from './solve'
 import { compileOde, odeOf, odeSolution, primed, type Ode, type OdeFunction } from './differential'
@@ -33,11 +33,18 @@ import {
   formatPolynomial,
   polynomialIn,
   type Eigenvalue,
+  type Field,
+  type Lin,
   type LinearScope,
   type LinearValue,
   type Mat,
+  dataOf,
 } from './linear'
-import { evaluateExact, type ExactFunction, type ExactScope, type Rational } from './exact'
+import { evaluateExact, ExactUnavailable, type ExactFunction, type ExactScope, type Rational } from './exact'
+import { expSumValue, type Distribution } from './distributions'
+import { distributionOf, randomScope } from './probability'
+import { correlation, DATA_FUNCTIONS, regression } from './statistics'
+import { decimalShown, fractionShown, frequencyTable, modesShown, probabilityShown, quartilesShown, regressionShown, summaryRows } from './statsShown'
 import { formatNumber, formatRational, type FormattedResult } from './format'
 import { toLatex } from './latex'
 import { children, namesIn, parseMath, type MathNode } from './parse'
@@ -79,6 +86,9 @@ export function calculationRequest(tex: string): string | null {
 
 /** Lo studio di funzione e le sue parti: \operatorname{studio}, \operatorname{dominio}, \operatorname{asintoti}… */
 const STUDY = new Set(['study', 'domain', 'asymptotes', 'extrema', 'flexes', 'zeros'])
+
+/** Le funzioni della statistica dei dati che si mostrano a modo loro (le mode, i quartili, la tabella…). */
+const STATISTICS = new Set([...DATA_FUNCTIONS, 'cov', 'corr', 'quartiles', 'regression', 'summary', 'frequencies'])
 
 /** I passi di somme e integrali per ogni risultato: abbastanza per i conti veri, non per bloccare la pagina. */
 const WORK = 2e6
@@ -228,6 +238,9 @@ export class Sheet {
   private bodies = new Map<string, { params: string[]; body: MathNode }>()
   /** Le curve, le superfici e i campi ($\gamma(t) = (\cos t, \sin t)$, $F(x, y) = (-y, x)$). */
   private vfns = new Map<string, VectorFunction>()
+  /** Le variabili aleatorie ($X \sim B(10, 0{,}3)$). */
+  private randomVars = new Map<string, Distribution>()
+  private randomCache: ReturnType<typeof randomScope> | null = null
   /** L'ultima funzione definita: una condizione subito dopo ($t \in [0, 2\pi]$) dice dove variano i suoi parametri. */
   private lastFunction: Definition | null = null
   /**
@@ -246,7 +259,18 @@ export class Sheet {
 
   /** Lo stato di adesso, per calcolare un'espressione con le definizioni fatte fin qui. */
   scope(): Scope {
-    return { vars: EMPTY_SCOPE.vars, consts: new Map(this.consts), fns: new Map(this.fns), sets: new Map(this.sets), vfns: new Map(this.vfns) }
+    return { vars: EMPTY_SCOPE.vars, consts: new Map(this.consts), fns: new Map(this.fns), sets: new Map(this.sets), vfns: new Map(this.vfns), random: this.random() }
+  }
+
+  /** Le variabili aleatorie definite fin qui, per i conti; undefined se non ce ne sono. */
+  private random(): ReturnType<typeof randomScope> | undefined {
+    if (!this.randomVars.size) return undefined
+    return (this.randomCache ??= randomScope(new Map(this.randomVars)))
+  }
+
+  /** Le variabili aleatorie definite fin qui, con la loro distribuzione (per i grafici). */
+  randomVariables(): Map<string, Distribution> {
+    return new Map(this.randomVars)
   }
 
   /** Lo stato di adesso per i conti con le lettere (le derivate, il gradiente…); si rifà a ogni definizione. */
@@ -259,7 +283,7 @@ export class Sheet {
   }
 
   private exactScope(): ExactScope {
-    return { consts: new Map(this.exactConsts), fns: new Map(this.exactFns) }
+    return { consts: new Map(this.exactConsts), fns: new Map(this.exactFns), random: this.random() }
   }
 
   /** Lo stato di adesso per i conti con i numeri complessi: i numeri reali e quelli complessi. */
@@ -296,7 +320,7 @@ export class Sheet {
     // x^2 - 5x + 6 = 0 \Rightarrow: le soluzioni.
     const equations = solveRequest(tex)
     if (equations !== null) return this.solveAll(equations)
-    if (!tex.includes('=') && !tex.includes('≈') && !tex.includes('\\approx') && !tex.includes('\\coloneq')) return null
+    if (!tex.includes('=') && !tex.includes('≈') && !tex.includes('\\approx') && !tex.includes('\\coloneq') && !/\\sim\b|∼/.test(tex)) return null
     try {
       const request = calculationRequest(tex)
       const pieces = splitPieces(request ?? tex)
@@ -322,7 +346,8 @@ export class Sheet {
             real: this.scope(),
             linear: this.linearScope(),
             symbols: this.symbolScope(),
-            defined: (name) => this.consts.has(name) || this.complexConsts.has(name) || this.linearValues.has(name) || this.fns.has(name) || this.vfns.has(name),
+            defined: (name) =>
+              this.consts.has(name) || this.complexConsts.has(name) || this.linearValues.has(name) || this.fns.has(name) || this.vfns.has(name) || this.randomVars.has(name),
           },
           style,
         ),
@@ -354,6 +379,11 @@ export class Sheet {
       this.definitions.push(definition)
       this.lastOde = { ode, definition, x0: null, Y0: Array(ode.order).fill(undefined) }
       this.lastFunction = null
+      return
+    }
+    // X \sim B(10, 0{,}3): una variabile aleatoria.
+    if (node.k === 'dist') {
+      this.defineRandom(node, src)
       return
     }
     if (node.k !== 'rel' || node.ops.length !== 1 || node.ops[0] !== '=') return
@@ -421,13 +451,29 @@ export class Sheet {
     return found
   }
 
-  private record(target: { name: string; params: string[] | null }, value: MathNode, source: string, known?: Value): void {
-    const { name, params } = target
-    const uses = namesIn(value, new Set(), new Set(params ?? []))
-    const definition = { name, params, source: source.trim(), value, uses }
-    this.definitions.push(definition)
+  /** X \sim B(10, 0{,}3): la variabile aleatoria, con i parametri calcolati (esatti, se lo sono). */
+  private defineRandom(node: Extract<MathNode, { k: 'dist' }>, src: string): void {
+    this.forget(node.v)
+    this.definitions.push({ name: node.v, params: null, source: src.trim(), value: node, uses: namesIn(node) })
+    this.lastFunction = null
+    try {
+      const d = distributionOf(node, (n) => {
+        const r = this.evaluate(this.prepare(n))
+        if (!r || !Number.isFinite(r.float)) throw new MathError('Un parametro della distribuzione non è un numero')
+        return { v: r.float, exact: r.exact }
+      })
+      this.randomVars.set(node.v, d)
+    } catch {
+      // Parametri sbagliati (p = 1,5): la variabile resta non definita.
+    }
+    this.randomCache = null
+  }
+
+  /** Dimentica quello che il nome voleva dire prima (una nuova definizione lo cambia). */
+  private forget(name: string): void {
     this.symbols = null
-    this.lastFunction = params ? definition : null
+    this.randomVars.delete(name)
+    this.randomCache = null
     this.bodies.delete(name)
     this.vfns.delete(name)
     this.consts.delete(name)
@@ -440,6 +486,15 @@ export class Sheet {
     this.complexFns.delete(name)
     this.exactComplexFns.delete(name)
     this.linearValues.delete(name)
+  }
+
+  private record(target: { name: string; params: string[] | null }, value: MathNode, source: string, known?: Value): void {
+    const { name, params } = target
+    const uses = namesIn(value, new Set(), new Set(params ?? []))
+    const definition = { name, params, source: source.trim(), value, uses }
+    this.definitions.push(definition)
+    this.lastFunction = params ? definition : null
+    this.forget(name)
     if (!params && value.k === 'set') {
       this.sets.set(name, value)
       return
@@ -709,6 +764,12 @@ export class Sheet {
         if (shown) return shown
         continue
       }
+      // La probabilità, il valore atteso, la varianza di una variabile aleatoria; la statistica dei dati.
+      const chance = this.showRandom(item, style) ?? this.showStatistics(item, style)
+      if (chance) {
+        if (target && !target.params && chance.value) this.record(target, item, `${target.name} = ${src.slice(src.indexOf('=') + 1)}`, chance.value)
+        return chance.shown
+      }
       // Un integrale definito con la primitiva: il valore esatto, gli impropri, la funzione integrale.
       const integral = this.showIntegral(item, style)
       if (integral) {
@@ -800,6 +861,98 @@ export class Sheet {
     }
   }
 
+  /** P(X \le 3), E[X], \operatorname{Var}(X), \operatorname{quantile}(X, 0{,}95): esatti, se si può. */
+  private showRandom(item: MathNode, style: ReturnType<typeof styleOf>): { shown: FormattedResult; value: Value | null } | null {
+    const random = this.random()
+    if (!random) return null
+    let kind: 'prob' | 'mean' | 'variance' | 'sd' | 'quantile' | null = null
+    let arg: MathNode | null = null
+    if (item.k === 'prob') kind = 'prob'
+    else if (item.k === 'expect') [kind, arg] = ['mean', item.a]
+    else if (item.k === 'apply' && item.name === 'E' && !this.fns.has('E') && item.args.length === 1 && random.involves(item.args[0])) [kind, arg] = ['mean', item.args[0]]
+    else if (item.k === 'fn' && !item.pow && item.args.length && random.involves(item.args[0])) {
+      if ((item.name === 'var' || item.name === 'sd' || item.name === 'mean') && item.args.length === 1) [kind, arg] = [item.name === 'var' ? 'variance' : item.name, item.args[0]]
+      else if (item.name === 'quantile' || item.name === 'percentile') kind = 'quantile'
+    }
+    if (!kind) return null
+    try {
+      return withWorkLimit(WORK, () => {
+        const v = compile(item, this.scope(), { calc: true })({})
+        if (kind === 'prob') {
+          const exact = random.exactProbability(item as Extract<MathNode, { k: 'prob' }>, this.exactScope(), this.scope())
+          const shown = probabilityShown(exact, v, style)
+          return shown && { shown, value: { float: exact ? expSumValue(exact) : v, exact: exact && !exact.terms.length ? exact.c : null } }
+        }
+        if (kind !== 'quantile') {
+          const exact = random.exactMoment(arg!, kind, this.exactScope())
+          if (exact) return { shown: fractionShown(exact, style), value: { float: exact.toNumber(), exact } }
+          if (Number.isNaN(v)) return { shown: { tex: '\\nexists', text: 'non esiste' }, value: null }
+          if (v === Infinity) return { shown: { tex: '+\\infty', text: '+∞' }, value: null }
+        }
+        const shown = decimalShown(v, style)
+        return shown && { shown, value: { float: v, exact: null } }
+      })
+    } catch {
+      return null
+    }
+  }
+
+  /** La statistica dei dati: media, mediana, mode, quartili, retta di regressione, la tabella delle frequenze, il riassunto. */
+  private showStatistics(item: MathNode, style: ReturnType<typeof styleOf>): { shown: FormattedResult; value: Value | null } | null {
+    // \bar{x}: la media dei dati x.
+    if (item.k === 'name' && item.name.endsWith('\u0304') && this.linearValues.has(item.name.slice(0, -1))) {
+      item = { k: 'fn', name: 'mean', args: [{ k: 'name', name: item.name.slice(0, -1) }] }
+    }
+    if (item.k !== 'fn' || item.pow || !STATISTICS.has(item.name)) return null
+    try {
+      return withWorkLimit(WORK, () => {
+        // I numeri: \operatorname{media}(x), \operatorname{Var}(x, f), \operatorname{corr}(x, y).
+        if ((DATA_FUNCTIONS.has(item.name) && item.name !== 'mode') || item.name === 'cov' || item.name === 'corr') {
+          const value = this.evaluateLinear(item)
+          if (!value || value.float.k !== 'scalar') return null
+          if (value.exact?.k === 'scalar') return { shown: fractionShown(value.exact.v, style), value: { float: value.exact.v.toNumber(), exact: value.exact.v } }
+          const shown = decimalShown(value.float.v, style)
+          return shown && { shown, value: { float: value.float.v, exact: null } }
+        }
+        const values = item.args.map((a) => this.evaluateLinear(a))
+        if (!values.length || values.some((v) => !v)) return null
+        const names = item.args.map((a) => (a.k === 'name' ? a.name : null))
+        if (values.every((v) => v!.exact)) {
+          try {
+            return this.statisticsShown(EXACT, values.map((v) => v!.exact!), item.name, names, style)
+          } catch (e) {
+            if (!(e instanceof ExactUnavailable)) throw e
+          }
+        }
+        return this.statisticsShown(FLOAT, values.map((v) => v!.float), item.name, names, style)
+      })
+    } catch {
+      return null
+    }
+  }
+
+  private statisticsShown<T>(F: Field<T>, args: Lin<T>[], name: string, names: (string | null)[], style: ReturnType<typeof styleOf>): { shown: FormattedResult; value: Value | null } | null {
+    switch (name) {
+      case 'mode':
+        return { shown: modesShown(F, dataOf(args), style), value: null }
+      case 'quartiles':
+        return { shown: quartilesShown(F, dataOf(args), style), value: null }
+      case 'frequencies':
+        return { shown: frequencyTable(F, dataOf(args), style), value: null }
+      case 'summary':
+        return { shown: studyTable(summaryRows(F, dataOf(args), style)), value: null }
+      case 'regression': {
+        const [x, y] = args
+        if (args.length !== 2 || x.k !== 'matrix' || y.k !== 'matrix') throw new MathError('Si scrive \\operatorname{regressione}(x, y), con x e y due vettori di dati')
+        const xs = x.m.map((r) => r[0])
+        const ys = y.m.map((r) => r[0])
+        const r = correlation(FLOAT, xs.map((v) => F.toNumber(v)), ys.map((v) => F.toNumber(v)))
+        return { shown: regressionShown(F, regression(F, xs, ys), r, [names[0] ?? 'x', names[1] ?? 'y'], style), value: null }
+      }
+    }
+    return null
+  }
+
   /** La primitiva con la costante: + c (o + k, + C se la c c'è già). */
   private plusConstant(shown: FormattedResult, node: MathNode): FormattedResult {
     const used = namesIn(node)
@@ -883,6 +1036,7 @@ export class Sheet {
         !this.vfns.has(n) &&
         !this.bodies.has(n) &&
         !this.sets.has(n) &&
+        !this.randomVars.has(n) &&
         !['π', 'e', 'i'].includes(n),
     )
   }

@@ -49,7 +49,7 @@ export function graphImage(source: string, defs: readonly string[] = []): string
   const colors = itemColors(spec.items, palette)
   const rows = spec.items
     .map((item, i) => ({ item, color: colors[i] }))
-    .filter(({ item }) => (item.kind !== 'point' && item.kind !== 'point3') || item.name)
+    .filter(({ item }) => ((item.kind !== 'point' && item.kind !== 'point3') || item.name) && item.label !== '')
   const numbers = spec.sliders.map((s) => `${nameLatex(s.name)} = ${formatNumber(s.value, { comma: true, decimal: true, digits: 6 })?.tex ?? s.value}`)
   const lines = rows.length + (numbers.length ? 1 : 0)
   const legendHeight = lines ? lines * 28 + 12 : 0
@@ -62,7 +62,7 @@ export function graphImage(source: string, defs: readonly string[] = []): string
         const swatch =
           item.kind === 'point' || item.kind === 'point3' || item.kind === 'points' || (item.kind === 'complex' && !item.arrows)
             ? `<span style="width:9px;height:9px;border-radius:50%;background:${color}"></span>`
-            : item.kind === 'area'
+            : item.kind === 'area' || item.kind === 'bars'
               ? `<span style="width:18px;height:12px;box-sizing:border-box;border-top:3px solid ${color};border-radius:2px 2px 0 0;background:${areaColor(color, palette)}"></span>`
               : item.kind === 'region' || item.kind === 'polygon'
                 ? `<span style="width:14px;height:14px;box-sizing:border-box;border:2px solid ${color};border-radius:3px;background:${areaColor(color, palette)}"></span>`

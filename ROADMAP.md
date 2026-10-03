@@ -32,11 +32,15 @@ Probabilità e statistica, Matematica discreta, Calcolo numerico. Chiesto dallo 
    periodiche in un periodo; le parti da sole (`\operatorname{dominio}`, `asintoti`, `estremi`,
    `flessi`, `zeri`); nel grafico gli asintoti tratteggiati e i punti M, m, F. I punti si trovano con i
    numeri e si riconoscono esatti quando si può (√3, e^{3/2}, π/4); se no restano decimali.
-10. **Probabilità e statistica:** i dati (media, mediana, moda, varianza, quartili, correlazione, retta
-    di regressione), il calcolo combinatorio, le variabili aleatorie scritte con `X \sim B(10, 0{,}3)`
-    (binomiale, Poisson, geometrica, normale, esponenziale, uniforme, t di Student, χ²) con
-    `P(X \le 3)`, `E[X]`, `\operatorname{Var}(X)` e i quantili; nei grafici istogrammi, diagrammi a
-    barre, densità con l'area della probabilità, i dati con la retta di regressione.
+10. **Probabilità e statistica**, fatto: le variabili aleatorie `X \sim B(10, 0{,}3)` (Bernoulli,
+    binomiale, Poisson, geometrica, ipergeometrica, normale, esponenziale, uniforme, t, χ², F, Gamma) con
+    `P(X \le 3)` (anche condizionata e con |X − 5| < 2), esatta quando si può (frazioni, e^{−λ}), `E[X]`,
+    `E[X^2]`, `\operatorname{Var}(X)`, i quantili, Φ e Φ⁻¹; il calcolo combinatorio (C_{n,k}, D_{n,k}, con
+    ripetizione); i dati (media, mediana, mode, varianza e sqm anche campionari, quartili e quantili come
+    QUARTILE.INC, frequenze, il riassunto, covarianza, correlazione, retta di regressione); nei grafici le
+    barre delle discrete, le densità con l'area della probabilità, istogrammi, diagrammi a barre e di
+    dispersione con la retta. Restano: le variabili insieme (X + Y, la normale bivariata) e il box plot;
+    gli intervalli di confidenza e i test sono la voce 18.
 11. **Algebra lineare in più:** `A x = b`, i sistemi con un parametro (al variare di k, con
     Rouché–Capelli), diagonalizzare (P e D), Gram–Schmidt, somma e intersezione di sottospazi, le
     forme quadratiche (segnatura), le applicazioni lineari (matrice, nucleo, immagine).
@@ -56,6 +60,9 @@ Probabilità e statistica, Matematica discreta, Calcolo numerico. Chiesto dallo 
     (i coefficienti, e nel grafico le somme parziali), la trasformata di Laplace e l'antitrasformata.
 17. **Calcolo numerico:** bisezione, Newton e punto fisso con la tabella dei passi, interpolazione,
     minimi quadrati, trapezi e Simpson, LU, norme e condizionamento, Jacobi e Gauss–Seidel, Eulero.
+18. **Statistica inferenziale:** gli intervalli di confidenza (della media con σ nota e no, di una
+    proporzione, della varianza) e i test d'ipotesi (z, t, χ², il confronto di due medie), con il p-value
+    e, nel grafico, la regione di rifiuto colorata sotto la densità.
 
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 

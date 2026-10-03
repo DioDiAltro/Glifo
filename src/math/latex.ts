@@ -111,6 +111,43 @@ const COMPLEX_FUNCTIONS: Record<string, string> = {
   levels: '\\operatorname{livelli}',
   taylor: '\\operatorname{taylor}',
   maclaurin: '\\operatorname{maclaurin}',
+  mean: '\\operatorname{media}',
+  median: '\\operatorname{mediana}',
+  mode: '\\operatorname{moda}',
+  var: '\\operatorname{Var}',
+  svar: '\\operatorname{Var}_{c}',
+  sd: '\\operatorname{sqm}',
+  ssd: '\\operatorname{sqm}_{c}',
+  quartiles: '\\operatorname{quartili}',
+  quantile: '\\operatorname{quantile}',
+  percentile: '\\operatorname{percentile}',
+  cov: '\\operatorname{Cov}',
+  corr: '\\operatorname{corr}',
+  regression: '\\operatorname{regressione}',
+  summary: '\\operatorname{statistiche}',
+  frequencies: '\\operatorname{frequenze}',
+  range: '\\operatorname{campo}',
+  histogram: '\\operatorname{istogramma}',
+  barchart: '\\operatorname{barre}',
+  scatter: '\\operatorname{dispersione}',
+}
+
+/** Le funzioni della statistica: sempre con le parentesi. */
+const STATISTICS_NAMES = new Set([
+  'mean', 'median', 'mode', 'var', 'svar', 'sd', 'ssd', 'quartiles', 'quantile', 'percentile', 'cov', 'corr', 'regression',
+  'summary', 'frequencies', 'range', 'histogram', 'barchart', 'scatter',
+])
+
+/** Come si scrivono le distribuzioni dopo \sim. */
+const DISTRIBUTION_LATEX: Record<string, string> = {
+  bernoulli: '\\operatorname{Be}', binomial: 'B', poisson: '\\operatorname{Po}', geometric: '\\operatorname{Geom}',
+  hypergeometric: '\\operatorname{H}', normal: '\\mathcal{N}', exponential: '\\operatorname{Exp}', uniform: '\\mathcal{U}',
+  student: 't', chi2: '\\chi^2', fisher: 'F', gamma: '\\Gamma',
+}
+
+/** B(10, 0{,}3), \mathcal{N}(0, 1): una distribuzione con i suoi parametri. */
+export function distributionLatex(family: string, params: MathNode[]): string {
+  return `${DISTRIBUTION_LATEX[family] ?? family}(${params.map(toLatex).join(', ')})`
 }
 
 /** I nomi scritti attaccati di una figura (AB, ABC): \overline{AB}, \widehat{ABC}. */
@@ -233,6 +270,17 @@ export function toLatex(node: MathNode): string {
       return node.items.map(toLatex).join(',\\; ')
     case 'or':
       return node.items.map(toLatex).join('\\ \\text{o}\\ ')
+    case 'prob': {
+      // Le parentesi che si allungano solo attorno alle frazioni (come f(x)): P(X \le 3) senza spazio dopo la P.
+      const inner = `${toLatex(node.event)}${node.given ? ` \\mid ${toLatex(node.given)}` : ''}`
+      return /\\(frac|sum|int|prod|binom)/.test(inner) ? `P\\left(${inner}\\right)` : `P(${inner})`
+    }
+    case 'expect': {
+      const inner = toLatex(node.a)
+      return /\\(frac|sum|int|prod|binom)/.test(inner) ? `E\\left[${inner}\\right]` : `E[${inner}]`
+    }
+    case 'dist':
+      return `${nameLatex(node.v)} \\sim ${distributionLatex(node.family, node.params)}`
   }
   return ''
 }
@@ -345,9 +393,20 @@ function fnLatex(node: Extract<MathNode, { k: 'fn' }>, pow?: MathNode): string {
     case 'ceil':
       out = `\\left\\lceil ${inner}\\right\\rceil`
       break
+    case 'comb':
+    case 'combrep':
+    case 'disp':
+    case 'disprep':
+      // C_{10,3}, D'_{10,3}: come nei libri italiani.
+      out = `${node.name.startsWith('comb') ? 'C' : 'D'}${node.name.endsWith('rep') ? "'" : ''}_{${inner.replace(', ', ',')}}`
+      break
+    case 'normq':
+      out = `\\Phi^{-1}${paren(inner)}`
+      break
     default: {
       const head = fnName(node.name) + (node.base ? `_{${toLatex(node.base)}}` : '') + (pow ? `^{${toLatex(pow)}}` : '')
-      if (arg && isAtom(arg)) return `${head} ${toLatex(arg)}`
+      // Le funzioni della statistica con le parentesi, anche attorno a una lettera: \operatorname{media}(x).
+      if (arg && isAtom(arg) && !STATISTICS_NAMES.has(node.name)) return `${head} ${toLatex(arg)}`
       // \ln|x|, come si scrive: il valore assoluto ha già le sue sbarre.
       if (arg && arg.k === 'abs') return `${head}${inner}`
       return `${head}${paren(inner)}`

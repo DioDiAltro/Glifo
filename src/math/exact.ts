@@ -6,6 +6,7 @@
  */
 import { spend } from './evaluate'
 import { productPower, type MathNode } from './parse'
+import type { ExpSum } from './distributions'
 
 export class ExactUnavailable extends Error {}
 
@@ -174,6 +175,14 @@ export interface ExactFunction {
 export interface ExactScope {
   consts: ReadonlyMap<string, Rational | null>
   fns: ReadonlyMap<string, ExactFunction | null>
+  /** Le variabili aleatorie: le probabilità e i valori attesi esatti (li fa `probability.ts`). */
+  random?: ExactRandom
+}
+
+export interface ExactRandom {
+  involves(node: MathNode): boolean
+  exactProbability(node: Extract<MathNode, { k: 'prob' }>, scope: ExactScope): ExpSum | null
+  exactMoment(node: MathNode, kind: 'mean' | 'variance' | 'sd', scope: ExactScope): Rational | null
 }
 
 /** Il valore esatto di un'espressione, o `ExactUnavailable`. */
@@ -219,6 +228,10 @@ export function evaluateExact(node: MathNode, scope: ExactScope, locals: Readonl
         if (!p.isInteger) unavailable()
         return ev({ ...node, pow: undefined }).powInt(p.n)
       }
+      // \operatorname{Var}(X), \operatorname{sqm}(X) con X una variabile aleatoria.
+      if ((node.name === 'var' || node.name === 'sd' || node.name === 'mean') && node.args.length === 1 && scope.random?.involves(node.args[0])) {
+        return scope.random.exactMoment(node.args[0], node.name === 'var' ? 'variance' : node.name, scope) ?? unavailable()
+      }
       const args = node.args.map((a) => ev(a))
       const one = () => (args.length === 1 ? args[0] : unavailable())
       switch (node.name) {
@@ -241,6 +254,24 @@ export function evaluateExact(node: MathNode, scope: ExactScope, locals: Readonl
         case 'min':
           if (!args.length) unavailable()
           return args.reduce((p, q) => ((node.name === 'max' ? p.cmp(q) >= 0 : p.cmp(q) <= 0) ? p : q))
+        case 'comb':
+        case 'combrep':
+        case 'disp':
+        case 'disprep': {
+          // C_{n,k}, C'_{n,k}, D_{n,k}, D'_{n,k}.
+          if (args.length !== 2) unavailable()
+          const [n, k] = args
+          if (node.name === 'comb') return binomExact(n, k)
+          if (node.name === 'combrep') return binomExact(n.add(k).sub(Rational.int(1)), k)
+          if (node.name === 'disprep') return k.isInteger ? n.powInt(k.n) : unavailable()
+          const N = toBigInt(n)
+          const K = toBigInt(k)
+          if (K < 0n || K > 100000n) unavailable()
+          if (K > N) return Rational.int(0)
+          let r = 1n
+          for (let i = 0n; i < K; i++) r *= N - i
+          return new Rational(r)
+        }
         case 'gcd':
         case 'lcm': {
           if (args.length < 2) unavailable()
@@ -253,6 +284,10 @@ export function evaluateExact(node: MathNode, scope: ExactScope, locals: Readonl
     }
     case 'apply': {
       if (node.primes) unavailable()
+      // E(X): il valore atteso (se E non è definita).
+      if (node.name === 'E' && !scope.fns.has('E') && !scope.consts.has('E') && node.args.length === 1 && scope.random?.involves(node.args[0])) {
+        return scope.random.exactMoment(node.args[0], 'mean', scope) ?? unavailable()
+      }
       if (!locals.has(node.name) && scope.fns.has(node.name)) {
         const fn = scope.fns.get(node.name)
         if (!fn || fn.params.length !== node.args.length) unavailable()
@@ -277,6 +312,13 @@ export function evaluateExact(node: MathNode, scope: ExactScope, locals: Readonl
       return ev(node.a).ceil()
     case 'binom':
       return binomExact(ev(node.n), ev(node.r))
+    case 'prob': {
+      // Una probabilità esatta che è una frazione (senza e^{−λ}).
+      const p = scope.random?.exactProbability(node, scope)
+      return p && !p.terms.length ? p.c : unavailable()
+    }
+    case 'expect':
+      return scope.random?.exactMoment(node.a, 'mean', scope) ?? unavailable()
     case 'big': {
       const from = toBigInt(ev(node.from))
       const to = toBigInt(ev(node.to))

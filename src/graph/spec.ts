@@ -57,6 +57,8 @@ import {
 } from './regions'
 import { expandCalculus, SYMBOLIC_FNS, type SymbolScope } from '../math/symbolic'
 import { STUDY_GRAPH, studyItems } from './studyGraph'
+import { STATS_GRAPH, statisticsItems } from './statsGraph'
+import { distributionOf, randomScope } from '../math/probability'
 import { odeOf } from '../math/differential'
 import { calculusDims, calculusItems, vectorDefinition, type FieldContext } from './fields'
 import { gaussItem, isComplexLine, onlyComplex } from './gauss'
@@ -91,6 +93,10 @@ interface ItemBase {
   fromNote?: boolean
   /** Un asintoto (dello studio di funzione): tratteggiato. */
   dashed?: boolean
+  /** La parte dell'asse x che conta per questa riga (una distribuzione: dove sta quasi tutta la probabilità). */
+  extent?: Range
+  /** Dei dati (\operatorname{dispersione}(x, y)): le unità sui due assi non devono essere uguali. */
+  data?: boolean
 }
 
 export type GraphItem =
@@ -170,6 +176,8 @@ export type GraphItem =
    * disegna (se no l'area prende il colore di quella riga).
    */
   | (ItemBase & { kind: 'area'; f: (x: number) => number; from: number; to: number; value: number; curve: boolean })
+  /** Delle barre (un istogramma, le probabilità dei valori di una variabile discreta): da x0 a x1, alte y. */
+  | (ItemBase & { kind: 'bars'; bars: { x0: number; x1: number; y: number }[] })
 
 export interface GraphError {
   line: number
@@ -993,7 +1001,8 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   let space =
     !gauss &&
     lines.some((l) => {
-      if (curveName(l.main)) return false
+      // La probabilità e i dati (\operatorname{dispersione}(x, y) con x e y due vettori) stanno nel piano.
+      if (curveName(l.main) || l.main.k === 'dist' || l.main.k === 'prob' || (l.main.k === 'fn' && STATS_GRAPH.has(l.main.name))) return false
       const dims = calculusDims(l.main, shapes)
       if (dims) return dims === 3
       const def = definitionOf(l.main)
@@ -1022,7 +1031,9 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   const consts = new Map(sheet.scope().consts)
   const fns = new Map(sheet.scope().fns)
   const sets = new Map(sheet.scope().sets)
-  const scope = (): Scope => ({ vars: new Set(), consts, fns, sets })
+  /** Le variabili aleatorie della nota e del blocco (X \sim B(10, 0{,}3)). */
+  const randomVars = sheet.randomVariables()
+  const scope = (): Scope => ({ vars: new Set(), consts, fns, sets, random: randomVars.size ? randomScope(randomVars) : undefined })
   const complexes: ComplexDefinitions = {
     consts: new Map(sheet.complexValues()),
     fns: new Map(noteComplex.fns),
@@ -1086,6 +1097,21 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
       madeLines.push(l)
     } catch (err) {
       failLine(l, reaches(def.name, def.name, new Set()) ? new MathError(`${def.name} usa sé stessa (anche attraverso un'altra definizione)`) : err)
+    }
+  }
+
+  // Le variabili aleatorie del blocco (X \sim B(n, p)), con i numeri del blocco: prima di disegnare le probabilità.
+  /** Le variabili che una riga del blocco disegna già (X \sim N(0, 1)): P(X \le 1) colora solo l'area. */
+  const drawnRandom = new Set<string>()
+  for (const l of lines) {
+    if (l.main.k !== 'dist') continue
+    drawnRandom.add(l.main.v)
+    try {
+      randomVars.set(l.main.v, distributionOf(l.main, (n) => ({ v: compile(n, scope(), { calc: true })({}), exact: null })))
+    } catch (err) {
+      randomVars.delete(l.main.v)
+      failLine(l, err)
+      drawn.splice(drawn.indexOf(l), 1)
     }
   }
 
@@ -1166,6 +1192,14 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
         spec.items.push(...studied.items)
         slots.set(l.line, slot)
         slot += studied.colors
+        continue
+      }
+      // La probabilità e la statistica: le distribuzioni, le aree delle probabilità, gli istogrammi, la regressione.
+      const statistics = space ? null : statisticsItems(l, slot, scope(), linear, drawnRandom)
+      if (statistics) {
+        spec.items.push(...statistics.items)
+        slots.set(l.line, slot)
+        slot += statistics.colors
         continue
       }
       // Un campo, una curva o una superficie con il nome, un gradiente, un integrale di linea o di superficie.
@@ -1801,6 +1835,9 @@ export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSp
     main.k === 'sint' ||
     main.k === 'prim' ||
     (main.k === 'fn' && STUDY_GRAPH.has(main.name)) ||
+    main.k === 'dist' ||
+    main.k === 'prob' ||
+    (main.k === 'fn' && STATS_GRAPH.has(main.name)) ||
     (main.k === 'fn' && (main.name === 'grad' || main.name === 'levels' || SYMBOLIC_FNS.has(main.name))) ||
     !!odeOf(main)
   if (!areaOf(main) && !multipleOf(main) && !setOf(main) && !zone && !complex && !vector && !calculus) {

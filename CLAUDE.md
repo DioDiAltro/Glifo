@@ -81,7 +81,13 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   `definite.ts` gli integrali definiti con la primitiva, esatti o impropri, controllati con i numeri;
   `study.ts` lo studio di funzione, `\operatorname{studio}(f) =`: dominio a pezzi, segno, limiti,
   asintoti, derivate, massimi, minimi e flessi trovati con i numeri e riconosciuti esatti, le periodiche
-  in un periodo; `studyRows`/`studyTable` lo scrivono una riga per informazione, `studyPart` le parti),
+  in un periodo; `studyRows`/`studyTable` lo scrivono una riga per informazione, `studyPart` le parti;
+  la probabilità: `$X \sim B(10, 0{,}3)$` è un nodo `dist` che il foglio tiene in `randomVars`, `special.ts` le
+  funzioni speciali (Φ, gamma e beta incomplete), `distributions.ts` le distribuzioni (densità, ripartizione,
+  quantili, e i valori esatti come `ExpSum`: frazione + Σ coef·e^{−rate}), `probability.ts` gli eventi di P(…)
+  (nodo `prob`) come intervalli e E[…] (nodo `expect`), passati ai conti con `Scope.random` (e
+  `ExactScope.random`); `statistics.ts` la statistica dei dati sui vettori (con `Field`, esatta o con la
+  virgola, da `linear.ts`), `statsShown.ts` come si scrivono i risultati (3/8 = 0,375; tabelle; retta),
   `sheet.ts` è il
   «foglio» della nota: le formule dall'alto in basso, `$a = 2$` e `$f(x) = …$` definiscono, una formula
   che finisce con `=` ha il risultato (nell'editor `src/editor/calcResults.ts`, Tab lo scrive;
@@ -119,7 +125,10 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   funzione. Un polinomio di Taylor da solo porta nel blocco anche la riga della sua funzione (se nessuna
   la disegna già, `curveKeys`). Lo studio di funzione (`\operatorname{studio}(f)` e le sue parti) è in
   `studyGraph.ts`: la funzione, gli asintoti con `dashed` (tratteggiati in `svg.ts` e nella legenda) e i
-  punti M, m, F.
+  punti M, m, F. La probabilità e i dati sono in `statsGraph.ts`: le distribuzioni come barre (`kind: 'bars'`) o
+  densità, P(…) come area o barre dell'evento, istogrammi, barre, dispersione e regressione; `extent` dice la
+  parte dell'asse x da mostrare e `data` toglie le stesse unità sui due assi. Le variabili aleatorie del blocco
+  (`X \sim B(n, p)` con n e p del blocco) si fanno in `readGraph` prima di disegnare.
 - `src/ai/`: assistente AI. `src/host.ts`: funzioni della demo dentro claude.ai.
 - `src/account/`: account e sincronizzazione. `sync.ts` è il motore (manda, scarica, nei
   conflitti tiene tutte e due le versioni), `controller.ts` decide quando sincronizzare,

@@ -226,7 +226,12 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
   spec.items.forEach((item, i) => {
     let pieces: Polyline[] = []
     if (item.kind === 'area') pieces = sampleArea(item.f, item.from, item.to, vp)
-    else if (item.kind === 'region' && !item.same) pieces = sampleRegion(item.M, vp)
+    else if (item.kind === 'bars') {
+      // Le barre: più piene delle aree, così si leggono anche una accanto all'altra.
+      const d = item.bars.map((b) => `M${f1(sx(b.x0))} ${f1(sy(0))}V${f1(sy(b.y))}H${f1(sx(b.x1))}V${f1(sy(0))}Z`).join('')
+      if (d) areas.push(`<path d="${d}" fill="${colors[i]}" fill-opacity="${Math.min(0.6, palette.area * 2)}" data-area="${i}"/>`)
+      return
+    } else if (item.kind === 'region' && !item.same) pieces = sampleRegion(item.M, vp)
     else if (item.kind === 'polygon') pieces = [item.points.flatMap((p) => [sx(p[0]), sy(p[1])])]
     else if (item.kind === 'angle') {
       const arc = angleArc(item, sx, sy)
@@ -355,7 +360,11 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
       }
     }
     else if (item.kind === 'segment') lines = [[sx(item.a[0]), sy(item.a[1]), sx(item.b[0]), sy(item.b[1])]]
-    else if (item.kind === 'polygon') {
+    else if (item.kind === 'bars') {
+      // Il bordo di ogni barra, sottile.
+      const d = item.bars.map((b) => `M${f1(sx(b.x0))} ${f1(sy(0))}V${f1(sy(b.y))}H${f1(sx(b.x1))}V${f1(sy(0))}`).join('')
+      if (d) curves.push(`<path d="${d}" stroke="${color}" stroke-width="1.5" data-item="${i}"/>`)
+    } else if (item.kind === 'polygon') {
       const ring = item.points.flatMap((p) => [sx(p[0]), sy(p[1])])
       lines = [[...ring, ring[0], ring[1]]]
     } else if (item.kind === 'angle') {

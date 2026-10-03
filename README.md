@@ -210,6 +210,28 @@ chi sta provando Glifo.*
   (`\tan x` in [0, π], con x ≠ π/2 + kπ). Una parte sola: `\operatorname{dominio}(\ln(4 - x^2)) =` dà
   −2 < x < 2, e così `\operatorname{asintoti}`, `\operatorname{estremi}`, `\operatorname{flessi}`,
   `\operatorname{zeri}`.
+- **Variabili aleatorie**: `$X \sim B(10, 0{,}3)$` definisce X (anche `B(10; 0,3)`, `\operatorname{Bin}`):
+  binomiale, `\operatorname{Be}(p)` di Bernoulli, `\operatorname{Po}(\lambda)` di Poisson, `\operatorname{Geom}(p)`
+  geometrica (le prove fino al primo successo: 1, 2, 3…), `\operatorname{H}(N, K, n)` ipergeometrica (N oggetti,
+  K «buoni», n estratti), `N(\mu, \sigma^2)` normale (anche `\mathcal{N}`, con la varianza), `\operatorname{Exp}(\lambda)`,
+  `U(a, b)` uniforme, `t(n)` (o `t_{10}`) di Student, `\chi^2(n)`, `F(m, n)` di Fisher, `\Gamma(\alpha, \lambda)`. Poi
+  `P(X = 3) =`, `P(X \le 3) =`, `P(2 < X \le 5) =`, `P(|X - 5| < 2) =`, la probabilità condizionata
+  `P(X > 3 \mid X > 1) =` (anche `\Pr`, `\mathbb{P}`), `E[X] =` (anche `E(X)`, `\mathbb{E}[X]`, `E[X^2]`,
+  `E[2X + 1]`), `\operatorname{Var}(X) =`, `\operatorname{sqm}(X) =`, `\operatorname{quantile}(X, 0{,}95) =`.
+  Le probabilità sono esatte quando si può: 25/72 ≈ 0,347222…, con Poisson (9e⁻³)/2 ≈ 0,224041…, con
+  l'esponenziale 1 − e⁻² ≈ 0,864664…; la normale, la t e il χ² con le cifre. `\Phi(1{,}96) =` è la
+  normale standard e `\Phi^{-1}(0{,}975) =` il suo quantile; `P(X \le q) = 0{,}95 \Rightarrow` trova q.
+- **Calcolo combinatorio**: `n!`, `\binom{n}{k}`, le combinazioni `C_{10,3}` e le disposizioni `D_{10,3}`,
+  con ripetizione `C'_{10,3}` e `D'_{10,3}`, come nei libri italiani.
+- **Statistica dei dati**: i dati in un vettore (`$x = (2, 3, 5, 7, 7, 9)$`, con i decimali
+  `(1{,}5; 2{,}3; 4)`), o uno per uno. `\operatorname{media}(x) =` (o `\bar{x} =`), `\operatorname{mediana}`,
+  `\operatorname{moda}` (anche più di una, o nessuna), `\operatorname{Var}` e `\operatorname{sqm}` (dividendo per n;
+  quelle campionarie, per n − 1, sono `\operatorname{varc}` e `\operatorname{sqmc}`), `\operatorname{quartili}`,
+  `\operatorname{quantile}(x, 0{,}9)` e `\operatorname{percentile}(x, 90)` (come QUARTILE.INC di Excel),
+  `\operatorname{campo}`, `\min`, `\max`; con le frequenze in un secondo vettore `\operatorname{media}(v, f)`.
+  `\operatorname{frequenze}(x) =` dà la tabella (assolute, relative, cumulate), `\operatorname{statistiche}(x) =`
+  tutto insieme. Con due serie `\operatorname{Cov}(x, y)`, `\operatorname{corr}(x, y)` e
+  `\operatorname{regressione}(x, y) =`: y = 0,6x + 2,2 (r = 0,774596…).
 - **Equazioni, disequazioni e sistemi risolti**: con `\Rightarrow` (o `\implies`, ⇒) in fondo.
   `x^2 - 5x + 6 = 0 \Rightarrow` dà x = 2 ∨ x = 3, `x^2 - x - 1 = 0` dà x = (1 ± √5)/2, `x^2 - 4x + 4 = 0`
   x = 2 (doppia); senza soluzioni reali dice quelle complesse. Le goniometriche con il periodo
@@ -233,7 +255,8 @@ chi sta provando Glifo.*
   (sono quelle sicure).
 - Il pulsante con gli **assi** nella barra mette nella nota un **grafico**: con il cursore su una
   funzione (`$f(x) = …$`) disegna quella, su un integrale (`$\int_0^2 x^2 \, dx =$`) la sua area (e
-  così le curve di livello, i polinomi di Taylor, le primitive, gli studi di funzione, le equazioni differenziali), se no prepara il blocco
+  così le curve di livello, i polinomi di Taylor, le primitive, gli studi di funzione, le distribuzioni e le
+  probabilità, le equazioni differenziali), se no prepara il blocco
   da scrivere. Il grafico della formula sotto il cursore si vede anche nel
   pannello a destra, con «Inserisci il grafico».
 - Il blocco ` ```grafico ` ha una riga per ogni cosa da disegnare: funzioni (`y = x^2`, `f(x) = \frac{1}{x}`,
@@ -249,6 +272,14 @@ chi sta provando Glifo.*
   riga) l'area prende il suo colore; se no il grafico disegna anche la curva. Gli estremi possono
   essere numeri con lo slider (`\int_0^b`): muovendolo l'area cambia. Si può lasciare l'uguale
   finale o il risultato copiato dalla nota.
+- **Probabilità e statistica** nel blocco: `X \sim B(10, 0{,}3)` disegna le probabilità dei valori come
+  barre (una continua, `Z \sim N(0, 1)`, la sua densità); `P(X \le 3)` colora le barre dei valori dell'evento,
+  `P(-1 \le Z \le 1)` l'area sotto la densità, con il valore nella legenda (se nessuna riga disegna la
+  distribuzione, la disegna anche lei). `y = P(X \le x)` è la funzione di ripartizione. Con i dati:
+  `\operatorname{istogramma}(x)` (le classi le sceglie da solo; `\operatorname{istogramma}(x, 5)` con 5 classi,
+  `\operatorname{istogramma}(x, (0, 10, 20, 50))` con quegli estremi e l'altezza come densità),
+  `\operatorname{barre}(x)` (quante volte c'è ogni valore; `\operatorname{barre}(v, f)` con le frequenze),
+  `\operatorname{dispersione}(x, y)` e `\operatorname{regressione}(x, y)`, i punti con la retta.
 - Uno **studio di funzione** nel blocco (`\operatorname{studio}(f)`, anche dopo `f(x) = …` in un'altra riga)
   disegna la funzione con gli **asintoti tratteggiati** e i punti notevoli con il nome: i massimi M, i
   minimi m e i flessi F (M₁, M₂… se sono più di uno); `\operatorname{asintoti}(f)` solo gli asintoti,
@@ -343,6 +374,8 @@ chi sta provando Glifo.*
 ![Integrali: primitive per parti, con i fratti semplici e per sostituzione, integrali definiti esatti e impropri nella nota; il coseno e la sua primitiva nell'anteprima e, nel pannello, il grafico di una primitiva](docs/primitive.png)
 
 ![Studio di funzione: nella nota dominio, simmetria, segno, limiti, asintoti, derivate, massimi, minimi e flessi; nel grafico la funzione con gli asintoti tratteggiati e i punti M, m, F](docs/studio.png)
+
+![Probabilità e statistica: binomiale, Poisson e normale con le probabilità esatte, il valore atteso e la varianza, i dati con media, mediana, varianza e quartili; nei grafici le barre della binomiale con l'evento colorato e l'area sotto la normale](docs/probabilita.png)
 
 **Schemi stile draw.io**
 - Il pulsante con i due riquadri nella barra apre un editor a tutto schermo: forme a sinistra
@@ -548,6 +581,11 @@ src/
     polynomial.ts         i polinomi con le frazioni: divisione, MCD, radici razionali, scomposizione, fratti semplici
     definite.ts           gli integrali definiti con la primitiva: il valore esatto e gli impropri
     study.ts              lo studio di funzione: dominio, segno, limiti, asintoti, derivate, massimi, minimi e flessi
+    special.ts            le funzioni speciali della probabilità: ln Γ, gamma e beta incomplete, Φ e Φ⁻¹
+    distributions.ts      le distribuzioni (binomiale, Poisson, normale, t, χ²…): densità, ripartizione, quantili, valori esatti
+    probability.ts        le variabili aleatorie: gli eventi come intervalli, P(…), E[…], Var(…), anche esatti
+    statistics.ts         la statistica dei dati: media, mediana, mode, varianza, quantili, covarianza, regressione
+    statsShown.ts         come si scrivono i risultati della statistica: frazioni con il valore, tabelle, retta
     calculus.ts           gli integrali di linea e di superficie (lavoro e flusso) sulle curve e superfici definite
     limits.ts             i limiti (Richardson, da una parte e dall'altra) e le serie (somme accelerate), e i valori riconosciuti (π²/6, e, ln 2)
     solve.ts              le equazioni, le disequazioni e i sistemi risolti dopo ⇒
@@ -562,6 +600,7 @@ src/
     fields.ts             i campi di vettori (le frecce), le curve con il verso, le superfici, gli integrali di linea e di superficie, le curve di livello e le equazioni differenziali
     ode.ts                i livelli delle curve di livello e le soluzioni nel campo di direzioni
     studyGraph.ts         lo studio di funzione nel grafico: asintoti tratteggiati, massimi, minimi e flessi
+    statsGraph.ts         le distribuzioni (barre e densità), le aree delle probabilità, istogrammi, barre, regressione
     plot.ts               dove calcolare le curve (salti, asintoti) e le aree, la finestra, le tacche
     svg.ts                il disegno in SVG, con i colori dei due temi
     space.ts              i conti del 3D: superfici a quadretti e a tetraedri, piani, solidi, curve nello spazio, la scatola da mostrare
