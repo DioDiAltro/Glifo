@@ -6,7 +6,7 @@
 import { compileLineIntegral, compileSurfaceIntegral } from './calculus'
 import { limit, seriesSum, type LimitValue } from './limits'
 import { compileMultiple } from './domain'
-import { MathSyntaxError, type MathNode } from './parse'
+import { MathSyntaxError, productPower, type MathNode } from './parse'
 
 export type Vars = Record<string, number>
 export type Compiled = (v: Vars) => number
@@ -322,6 +322,8 @@ export function compile(node: MathNode, scope: Scope, options: CompileOptions = 
       return (v) => -a(v)
     }
     case 'bin': {
+      const split = productPower(node, (n) => !scope.vars.has(n) && scope.fns.has(n))
+      if (split) return c(split)
       const a = c(node.a)
       const b = c(node.b)
       switch (node.op) {
@@ -427,6 +429,8 @@ export function compile(node: MathNode, scope: Scope, options: CompileOptions = 
     }
     case 'mint':
       return compileMultiple(node, scope, options)
+    case 'prim':
+      throw new MathError('Non so trovare la primitiva di questa funzione')
     case 'diff':
       return compileDerivative(node, scope, options)
     case 'lim': {

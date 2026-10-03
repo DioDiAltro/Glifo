@@ -48,6 +48,7 @@ function level(n: MathNode): number {
       return 1.5
     case 'big':
     case 'int':
+    case 'prim':
     case 'mint':
     case 'lint':
     case 'sint':
@@ -187,6 +188,8 @@ export function toLatex(node: MathNode): string {
     case 'int':
       // Una somma tra parentesi: \int_0^1 (x + y) \, dx; un integrale dentro l'altro no.
       return `\\int_{${toLatex(node.from)}}^{${toLatex(node.to)}} ${node.body.k === 'int' ? toLatex(node.body) : wrap(node.body, 1.5)} \\, d${nameLatex(node.v)}`
+    case 'prim':
+      return `\\int ${wrap(node.body, 1.5)} \\, d${nameLatex(node.v)}`
     case 'mint': {
       const symbol = node.vars.length === 2 ? '\\iint' : '\\iiint'
       return `${symbol}_{${domainLatex(node.domain)}} ${wrap(node.body, 1.5)} \\, ${node.vars.map((v) => `d${nameLatex(v)}`).join(' \\, ')}`
@@ -339,6 +342,8 @@ function fnLatex(node: Extract<MathNode, { k: 'fn' }>, pow?: MathNode): string {
     default: {
       const head = fnName(node.name) + (node.base ? `_{${toLatex(node.base)}}` : '') + (pow ? `^{${toLatex(pow)}}` : '')
       if (arg && isAtom(arg)) return `${head} ${toLatex(arg)}`
+      // \ln|x|, come si scrive: il valore assoluto ha già le sue sbarre.
+      if (arg && arg.k === 'abs') return `${head}${inner}`
       return `${head}${paren(inner)}`
     }
   }

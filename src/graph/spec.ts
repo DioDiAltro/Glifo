@@ -1699,9 +1699,9 @@ function spaceItemFor(l: Line, scope: Scope, slot: number): GraphItem {
   return { kind: 'surface', line, label: `z = ${toLatex(main)}${condLabel(cond)}`, slot, f: (x, y) => ((v.x = x), (v.y = y), f(v)) }
 }
 
-/** La riga usa una funzione che si fa solo con le lettere (il polinomio di Taylor)? */
+/** La riga usa una funzione che si fa solo con le lettere (il polinomio di Taylor, una primitiva)? */
 function usesSymbolicFunction(node: MathNode): boolean {
-  if (node.k === 'fn' && SYMBOLIC_FNS.has(node.name)) return true
+  if ((node.k === 'fn' && SYMBOLIC_FNS.has(node.name)) || node.k === 'prim') return true
   return children(node).some(usesSymbolicFunction)
 }
 
@@ -1772,7 +1772,11 @@ export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSp
   // Un integrale di linea o di superficie, un gradiente: la curva, la superficie, il campo.
   // Le curve di livello, il polinomio di Taylor (con la sua funzione), le equazioni differenziali.
   const calculus =
-    main.k === 'lint' || main.k === 'sint' || (main.k === 'fn' && (main.name === 'grad' || main.name === 'levels' || SYMBOLIC_FNS.has(main.name))) || !!odeOf(main)
+    main.k === 'lint' ||
+    main.k === 'sint' ||
+    main.k === 'prim' ||
+    (main.k === 'fn' && (main.name === 'grad' || main.name === 'levels' || SYMBOLIC_FNS.has(main.name))) ||
+    !!odeOf(main)
   if (!areaOf(main) && !multipleOf(main) && !setOf(main) && !zone && !complex && !vector && !calculus) {
     if (main.k !== 'rel' || main.ops.length !== 1 || main.ops[0] !== '=') return null
     const [lhs, rhs] = main.items

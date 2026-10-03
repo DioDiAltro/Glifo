@@ -261,7 +261,8 @@ describe('il foglio: definizioni e risultati dopo «=»', () => {
   it('derivate e integrali', () => {
     expect(result('f(x) = x^3', "f'(2) =")).toBe('12')
     expect(result('f(x) = x^3', "f''(2) =")).toBe('12')
-    expect(result('\\int_0^1 x^2 \\, dx =')).toBe('0{,}333333\\ldots')
+    // Con la primitiva il valore esatto.
+    expect(result('\\int_0^1 x^2 \\, dx =')).toBe('\\frac{1}{3}')
     expect(result('\\int_0^{\\pi} \\sin x \\, dx =')).toBe('2')
     expect(result('\\sum_{k=1}^{100} k =')).toBe('5050')
     expect(result('\\sum_{k=1}^{3} \\frac{1}{k} =')).toBe('\\frac{11}{6}')

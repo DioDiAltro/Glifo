@@ -8,6 +8,51 @@ il lavoro si parte da qui, e quando una voce è fatta si toglie.
 
 ## In programma
 
+### Tutta la matematica dei corsi
+
+**Cosa:** dopo le prime sette tappe (vedi «Matematica per i corsi: idee in più», più avanti), tutto il
+resto che serve nei corsi universitari con la matematica: Analisi 1 e 2, Geometria e algebra lineare,
+Probabilità e statistica, Matematica discreta, Calcolo numerico. Chiesto dallo studente il 3 ottobre
+2026: Glifo servirà a prendere appunti agli studenti di qualsiasi corso. Ogni tappa si pubblica appena
+è pronta.
+
+**Piano:**
+
+8. **Primitive e integrali esatti**, fatto: `\int x e^x \, dx =` dà (x − 1)eˣ + c (integrali immediati,
+   sostituzione anche con l'inversa, per parti, fratti semplici, potenze di seno e coseno, radici; ogni
+   primitiva controllata derivandola); gli integrali definiti con il valore esatto (`\int_0^1 x^2 \, dx =`
+   dà 1/3, `\int_0^1 \frac{dx}{1 + x^2}` dà π/4), gli impropri (+∞ se divergono), la funzione integrale;
+   nei grafici la primitiva. Restano senza risultato gli integrali con un punto dove la funzione esplode
+   in mezzo agli estremi (`\int_{-1}^{1} \frac{dx}{x^2}`, che diverge) e le primitive con fattori
+   irrazionali (`\frac{1}{x^4 + 1}`).
+9. **Studio di funzione:** dominio, simmetrie, intersezioni con gli assi, segno, limiti agli estremi,
+   asintoti, crescenza, massimi e minimi, concavità e flessi; nel grafico gli asintoti tratteggiati e
+   i punti notevoli.
+10. **Probabilità e statistica:** i dati (media, mediana, moda, varianza, quartili, correlazione, retta
+    di regressione), il calcolo combinatorio, le variabili aleatorie scritte con `X \sim B(10, 0{,}3)`
+    (binomiale, Poisson, geometrica, normale, esponenziale, uniforme, t di Student, χ²) con
+    `P(X \le 3)`, `E[X]`, `\operatorname{Var}(X)` e i quantili; nei grafici istogrammi, diagrammi a
+    barre, densità con l'area della probabilità, i dati con la retta di regressione.
+11. **Algebra lineare in più:** `A x = b`, i sistemi con un parametro (al variare di k, con
+    Rouché–Capelli), diagonalizzare (P e D), Gram–Schmidt, somma e intersezione di sottospazi, le
+    forme quadratiche (segnatura), le applicazioni lineari (matrice, nucleo, immagine).
+12. **Equazioni differenziali con la formula:** l'integrale generale (a variabili separabili, lineari
+    del primo ordine, lineari a coefficienti costanti con il metodo di somiglianza) e il problema di
+    Cauchy; i sistemi (x' = y, y' = −x) con il ritratto di fase; i problemi ai limiti.
+13. **Analisi 2 in più:** i punti critici e la loro natura (con l'hessiana), massimi e minimi
+    vincolati (moltiplicatori di Lagrange) e assoluti, i limiti in più variabili, Taylor in più
+    variabili.
+14. **Coniche e quadriche:** dall'equazione il tipo, la forma canonica, centro, assi, fuochi,
+    eccentricità, asintoti e direttrice; nei grafici con i loro elementi; le quadriche in 3D.
+15. **Aritmetica, polinomi, logica e insiemi:** fattori primi, divisori, resto e congruenze (anche i
+    sistemi), inverso modulare, basi (binario, esadecimale); i polinomi (scomporre, sviluppare,
+    dividere, Ruffini); le tavole di verità; gli insiemi con gli elementi (∪, ∩, differenza, prodotto
+    cartesiano, insieme delle parti).
+16. **Serie di potenze, Fourier e Laplace:** raggio e insieme di convergenza, la serie di Fourier
+    (i coefficienti, e nel grafico le somme parziali), la trasformata di Laplace e l'antitrasformata.
+17. **Calcolo numerico:** bisezione, Newton e punto fisso con la tabella dei passi, interpolazione,
+    minimi quadrati, trapezi e Simpson, LU, norme e condizionamento, Jacobi e Gauss–Seidel, Eulero.
+
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
 **Cosa:** ognuno ha il suo account e ritrova gli stessi appunti su PC, tablet e telefono.

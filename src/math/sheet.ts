@@ -41,7 +41,8 @@ import { evaluateExact, type ExactFunction, type ExactScope, type Rational } fro
 import { formatNumber, formatRational, type FormattedResult } from './format'
 import { toLatex } from './latex'
 import { children, namesIn, parseMath, type MathNode } from './parse'
-import { expandCalculus, isVectorBody, needsSymbols, partialDerivative, plainText, symbolicValue, zeroOverZero, type SymbolScope } from './symbolic'
+import { definiteIntegral } from './definite'
+import { definiteParts, expandCalculus, isVectorBody, needsSymbols, partialDerivative, plainText, sub, subst, symbolicValue, symbols, toNode, zeroOverZero, type Ex, type SymbolScope } from './symbolic'
 
 export interface Definition {
   name: string
@@ -698,14 +699,23 @@ export class Sheet {
         if (target && !target.params && limitShown.value) this.record(target, item, `${target.name} = ${src.slice(src.indexOf('=') + 1)}`, limitShown.value)
         return limitShown.shown
       }
+      // Un integrale definito con la primitiva: il valore esatto, gli impropri, la funzione integrale.
+      const integral = this.showIntegral(item, style)
+      if (integral) {
+        if (target && !target.params && integral.value) this.record(target, item, `${target.name} = ${src.slice(src.indexOf('=') + 1)}`, integral.value)
+        return integral.shown
+      }
       // Le derivate e gli operatori dei campi con le lettere: se restano variabili, il risultato è una formula.
       if (needsSymbols(item, this.symbolScope())) {
         const decimal = style.decimal || this.usesDecimals(item)
-        // Una derivata, un gradiente, un polinomio di Taylor da soli: già scritti come vanno.
-        const single = item.k === 'diff' || item.k === 'fn' || (item.k === 'apply' && item.primes > 0)
+        // Una derivata, un gradiente, un polinomio di Taylor, una primitiva da soli: già scritti come vanno.
+        const indefinite = item.k === 'prim' ? item : null
+        const single = item.k === 'diff' || item.k === 'fn' || item.k === 'prim' || (item.k === 'apply' && item.primes > 0)
         item = this.prepare(item, [], decimal)
         if (this.freeNames(item).length) {
           const shown = single ? this.showSymbolic(item, decimal, false) : this.showSymbolic(item, decimal)
+          // \int f(x) \, dx: la primitiva più la costante.
+          if (shown && indefinite) return this.plusConstant(shown, indefinite)
           if (shown) return shown
           continue
         }
@@ -761,6 +771,67 @@ export class Sheet {
     const shown = limitText(value, style, exact)
     const result: Value | null = value.k === 'value' ? { float: value.v, exact } : null
     return shown ? { shown, value: result } : null
+  }
+
+  /** La primitiva con la costante: + c (o + k, + C se la c c'è già). */
+  private plusConstant(shown: FormattedResult, node: MathNode): FormattedResult {
+    const used = namesIn(node)
+    const c = ['c', 'k', 'C'].find((n) => !used.has(n) && !this.consts.has(n) && !this.fns.has(n)) ?? 'c'
+    return { ...shown, tex: `${shown.tex} + ${c}`, text: `${shown.text} + ${c}` }
+  }
+
+  /**
+   * Un integrale definito con la primitiva: il valore esatto (\int_0^1 \frac{dx}{1 + x^2} = π/4), gli
+   * integrali impropri (+∞ se divergono) e, con le lettere negli estremi, la funzione integrale
+   * (\int_0^x t^2 \, dt = x³/3). Null se la primitiva non si trova: allora l'integrale con i numeri.
+   */
+  private showIntegral(item: MathNode, style: ReturnType<typeof styleOf>): { shown: FormattedResult; value: Value | null } | null {
+    if (item.k !== 'int' || item.body.k === 'int') return null
+    try {
+      return withWorkLimit(WORK, () => {
+        const parts = definiteParts(item, this.symbolScope())
+        if (!parts) return null
+        const { F, a, b } = parts
+        const v = item.v
+        const letters = (e: Ex | null) => (e ? this.freeNames(toNode(e)) : [])
+        // Con le lettere: F(b) − F(a) come formula.
+        if ([...letters(F).filter((n) => n !== v), ...letters(a), ...letters(b)].length) {
+          if (!a || !b) return null
+          const node = toNode(sub(subst(F, v, b), subst(F, v, a)), style.decimal)
+          const tex = toLatex(node)
+          return tex ? { shown: { tex, text: plainText(node), rich: true }, value: null } : null
+        }
+        const scope = this.scope()
+        const A = bound(item.from, scope)({})
+        const B = bound(item.to, scope)({})
+        const body = compile(item.body, scopeWith(scope, [v]), { calc: true })
+        const vars: Record<string, number> = {}
+        const f = (x: number) => ((vars[v] = x), body(vars))
+        let numeric = NaN
+        try {
+          numeric = compile(item, scope, { calc: true })({})
+        } catch {
+          // Si decide con la primitiva.
+        }
+        const found = definiteIntegral(F, v, f, a, b, A, B, numeric, scope)
+        if (!found) return null
+        if (found.value.k === 'infinity') return { shown: found.value.sign > 0 ? { tex: '+\\infty', text: '+∞' } : { tex: '-\\infty', text: '−∞' }, value: null }
+        if (found.value.k !== 'value') return null
+        const x = found.value.v
+        const exact = found.exact && !symbols(found.exact).some((n) => n !== 'π' && n !== 'e') ? found.exact : null
+        if (exact?.t === 'num') return { shown: formatRational(exact.v, style), value: { float: x, exact: exact.v } }
+        if (exact && !style.decimal) {
+          const node = toNode(exact)
+          const tex = toLatex(node)
+          const digits = formatNumber(x, { ...style, decimal: true })
+          if (tex && digits && tex.length < 160) return { shown: { tex: `${tex} \\approx ${digits.tex}`, text: `${plainText(node)} ≈ ${digits.text}`, rich: true }, value: { float: x, exact: null } }
+        }
+        const shown = (style.decimal ? null : recognize(x, style)) ?? formatNumber(x, { ...style, decimal: true, digits: 9 })
+        return shown ? { shown, value: { float: x, exact: null } } : null
+      })
+    } catch {
+      return null
+    }
   }
 
   /** Il valore esatto della funzione nel punto, se c'è e torna con il limite trovato con i numeri. */

@@ -14,6 +14,7 @@
 import { compile, MathError, UndefinedName, type Scope } from './evaluate'
 import { ExactUnavailable, Rational } from './exact'
 import { formatNumber, formatRational, type FormatOptions, type FormattedResult } from './format'
+import { numericRoots, rationalRoots } from './polynomial'
 import type { MathNode } from './parse'
 
 // ——— I numeri: frazioni o con la virgola ———
@@ -1016,93 +1017,6 @@ export function polynomialIn(node: MathNode, name: string, scope: LinearScope, m
   } catch {
     return null
   }
-}
-
-/** Le radici razionali di un polinomio a coefficienti frazioni (con la molteplicità), e quello che resta. */
-export function rationalRoots(poly: Rational[]): { roots: Rational[]; rest: Rational[] } {
-  let p = [...poly]
-  const roots: Rational[] = []
-  // Con i coefficienti interi: le radici sono ±(divisori del termine noto)/(divisori del primo coefficiente).
-  const lcm = p.reduce((m, c) => {
-    const g = (a: bigint, b: bigint): bigint => (b ? g(b, a % b) : a < 0n ? -a : a)
-    return (m * c.d) / g(m, c.d)
-  }, 1n)
-  const ints = () => p.map((c) => (c.n * lcm) / c.d)
-  const divisors = (n: bigint): bigint[] => {
-    n = n < 0n ? -n : n
-    if (n === 0n || n > 1000000n) return []
-    const out: bigint[] = []
-    for (let d = 1n; d * d <= n; d++) {
-      if (n % d === 0n) {
-        out.push(d)
-        if (d * d !== n) out.push(n / d)
-      }
-    }
-    return out
-  }
-  const value = (q: Rational[], x: Rational) => {
-    let y = Rational.int(0)
-    for (let k = q.length - 1; k >= 0; k--) y = y.mul(x).add(q[k])
-    return y
-  }
-  const deflate = (q: Rational[], x: Rational) => {
-    // (q) / (t − x), con Ruffini.
-    const out: Rational[] = Array.from({ length: q.length - 1 }, () => Rational.int(0))
-    let carry = Rational.int(0)
-    for (let k = q.length - 1; k >= 1; k--) {
-      carry = carry.mul(x).add(q[k])
-      out[k - 1] = carry
-    }
-    return out
-  }
-  for (;;) {
-    if (p.length <= 1) break
-    if (p[0].sign === 0) {
-      roots.push(Rational.int(0))
-      p = p.slice(1)
-      continue
-    }
-    const c = ints()
-    const candidates: Rational[] = []
-    for (const a of divisors(c[0])) for (const b of divisors(c[c.length - 1])) for (const s of [1n, -1n]) candidates.push(new Rational(s * a, b))
-    const root = candidates.find((x) => value(p, x).sign === 0)
-    if (!root) break
-    roots.push(root)
-    p = deflate(p, root)
-  }
-  return { roots, rest: p }
-}
-
-/** Le radici (anche complesse) di un polinomio con i coefficienti con la virgola: Durand–Kerner. */
-export function numericRoots(coeffs: number[]): { re: number; im: number }[] {
-  const n = coeffs.length - 1
-  if (n < 1) return []
-  const lead = coeffs[n]
-  const a = coeffs.map((c) => c / lead)
-  let z = Array.from({ length: n }, (_, k) => ({ re: Math.cos((2 * Math.PI * k) / n + 0.4) * 1.3, im: Math.sin((2 * Math.PI * k) / n + 0.4) * 1.3 }))
-  const mul = (p: { re: number; im: number }, q: { re: number; im: number }) => ({ re: p.re * q.re - p.im * q.im, im: p.re * q.im + p.im * q.re })
-  const evalAt = (x: { re: number; im: number }) => {
-    let y = { re: 0, im: 0 }
-    for (let k = n; k >= 0; k--) y = { re: mul(y, x).re + a[k], im: mul(y, x).im }
-    return y
-  }
-  for (let it = 0; it < 500; it++) {
-    let moved = 0
-    z = z.map((zi, i) => {
-      let d = { re: 1, im: 0 }
-      z.forEach((zj, j) => {
-        if (i !== j) d = mul(d, { re: zi.re - zj.re, im: zi.im - zj.im })
-      })
-      const f = evalAt(zi)
-      const den = d.re * d.re + d.im * d.im
-      if (!den) return zi
-      const step = { re: (f.re * d.re + f.im * d.im) / den, im: (f.im * d.re - f.re * d.im) / den }
-      moved = Math.max(moved, Math.hypot(step.re, step.im))
-      return { re: zi.re - step.re, im: zi.im - step.im }
-    })
-    if (moved < 1e-15) break
-  }
-  return z.map((r) => ({ re: r.re, im: Math.abs(r.im) < 1e-9 * Math.max(1, Math.abs(r.re)) ? 0 : r.im }))
 }
 
 export interface Eigenvalue {

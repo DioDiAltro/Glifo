@@ -76,7 +76,10 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   disequazioni e i sistemi di una formula che finisce con ⇒ (`solveRequest`); `differential.ts` le
   equazioni differenziali di ogni ordine (`odeOf`, anche y'' + y = 0) con le condizioni iniziali anche in
   formule dopo, risolte con Runge–Kutta (`odeSolution`); i polinomi di Taylor sono `\operatorname{taylor}`
-  in `symbolic.ts`), `sheet.ts` è il
+  in `symbolic.ts`; `primitive.ts` le primitive (nodo `prim`, `\int f \, dx` senza estremi; ognuna
+  controllata derivandola con i numeri, `verified`), con i polinomi di `polynomial.ts` (fratti semplici);
+  `definite.ts` gli integrali definiti con la primitiva, esatti o impropri, controllati con i numeri),
+  `sheet.ts` è il
   «foglio» della nota: le formule dall'alto in basso, `$a = 2$` e `$f(x) = …$` definiscono, una formula
   che finisce con `=` ha il risultato (nell'editor `src/editor/calcResults.ts`, Tab lo scrive;
   nell'anteprima colorato, classe `calc-result`). `\log` è il logaritmo naturale.

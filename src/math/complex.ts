@@ -12,7 +12,7 @@
 import { binomial, factorial, integrate, MathError, spend, UndefinedName } from './evaluate'
 import { ExactUnavailable, Rational } from './exact'
 import { formatNumber, formatRational, type FormatOptions, type FormattedResult } from './format'
-import type { MathNode } from './parse'
+import { productPower, type MathNode } from './parse'
 
 export interface Complex {
   re: number
@@ -268,6 +268,8 @@ export function compileComplex(node: MathNode, scope: ComplexScope): ComplexComp
       return (v) => neg(a(v))
     }
     case 'bin': {
+      const split = productPower(node, (n) => !scope.vars.has(n) && scope.fns.has(n))
+      if (split) return c(split)
       const a = c(node.a)
       const b = c(node.b)
       switch (node.op) {
@@ -570,6 +572,8 @@ export function evaluateExactComplex(node: MathNode, scope: ExactComplexScope, l
     case 'neg':
       return ev(node.a).neg()
     case 'bin': {
+      const split = productPower(node, (n) => !locals.has(n) && scope.fns.has(n))
+      if (split) return ev(split)
       const a = ev(node.a)
       const b = ev(node.b)
       switch (node.op) {

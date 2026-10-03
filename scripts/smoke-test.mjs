@@ -1408,6 +1408,17 @@ try {
   await gp.waitForSelector('.formula-graph:not([hidden]) svg [data-item="1"]', { timeout: 5000 })
   const taylorCurves = await gp.locator('.formula-graph svg path[data-item]').evaluateAll((els) => new Set(els.map((e) => e.getAttribute('data-item'))).size)
   check(taylorCurves === 2, `il polinomio di Taylor ha il risultato e nel pannello la funzione e il polinomio (${taylorCurves} curve)`)
+  // Le primitive: la funzione con la costante e, nel pannello, il grafico; un integrale definito esatto.
+  await gp.keyboard.press('End')
+  await gp.keyboard.type('\n\nPer parti: $\\int x e^x \\, dx =')
+  await gp.waitForFunction(() => [...document.querySelectorAll('.cm-calc-result')].some((e) => e.getAttribute('aria-label') === '(x − 1)e^(x) + c'), null, { timeout: 5000 })
+  await gp.waitForSelector('.formula-graph:not([hidden]) svg path[data-item]', { timeout: 5000 })
+  await gp.keyboard.press('End')
+  await gp.keyboard.type('\n\nEsatto: $\\int_0^1 \\frac{dx}{1 + x^2} =')
+  const exactIntegral = await gp
+    .waitForFunction(() => [...document.querySelectorAll('.cm-calc-result')].map((e) => e.getAttribute('aria-label') ?? '').find((t) => t.startsWith('π/4')), null, { timeout: 5000 })
+    .then((h) => h.jsonValue())
+  check(exactIntegral === 'π/4 ≈ 0,785398…', `una primitiva ha la costante e il grafico nel pannello, un integrale definito il valore esatto (${exactIntegral})`)
   await gp.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)

@@ -5,7 +5,7 @@
  * dice di usare i conti con la virgola mobile di `evaluate.ts`.
  */
 import { spend } from './evaluate'
-import type { MathNode } from './parse'
+import { productPower, type MathNode } from './parse'
 
 export class ExactUnavailable extends Error {}
 
@@ -191,6 +191,8 @@ export function evaluateExact(node: MathNode, scope: ExactScope, locals: Readonl
     case 'neg':
       return ev(node.a).neg()
     case 'bin': {
+      const split = productPower(node, (n) => !locals.has(n) && scope.fns.has(n))
+      if (split) return ev(split)
       const a = ev(node.a)
       const b = ev(node.b)
       switch (node.op) {

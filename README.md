@@ -189,6 +189,18 @@ chi sta provando Glifo.*
   bassa, come nei libri), anche in un altro punto (`\operatorname{taylor}(\ln x, 1, 3)`) e delle funzioni
   della nota; `\operatorname{maclaurin}(\cos x, 4)` è quello in 0. Con un nome
   (`T(x) = \operatorname{taylor}(\sin x, 0, 3)`) si usa dopo, anche nei grafici.
+- **Primitive** (integrali indefiniti): `\int x e^x \, dx =` dà (x − 1)eˣ + c, come a lezione: gli integrali
+  immediati, per sostituzione (`\int x e^{x^2} \, dx`, `\int \frac{\ln x}{x} \, dx`, anche `\int \sin(\ln x) \, dx`),
+  per parti (`x^2 \cos x`, `\ln x`, `\arctan x`, `e^x \sin x`), le funzioni razionali con i fratti semplici
+  (`\frac{1}{x^2 - 1}` dà ½ ln|(x − 1)/(x + 1)|), le potenze di seno e coseno (`\sin^4 x`), le radici
+  (`\sqrt{1 - x^2}`, `x \sqrt{x + 1}`), anche con il dx nella frazione (`\int \frac{dx}{1 + x^2}`). Ogni
+  primitiva si controlla derivandola; quelle che non si scrivono con le funzioni elementari (`e^{-x^2}`,
+  `\frac{\sin x}{x}`) non hanno risultato. La costante è c (k se la c c'è già); con un nome
+  (`F(x) = \int x e^x \, dx`) la primitiva si usa dopo, anche nei grafici.
+- **Integrali definiti esatti**: con la primitiva il valore esatto (`\int_0^1 \frac{dx}{1 + x^2} =` dà
+  π/4 ≈ 0,785398…, `\int_0^1 \arctan x \, dx` dà π/4 − ln(2)/2), anche **impropri** (`\int_1^{\infty} \frac{dx}{x^2} =`
+  dà 1, `\int_0^1 \frac{dx}{x}` dà +∞: diverge); con una lettera negli estremi la funzione integrale
+  (`\int_0^x t^2 \, dt =` dà x³/3). Se la primitiva non si trova resta il valore con i numeri.
 - **Equazioni, disequazioni e sistemi risolti**: con `\Rightarrow` (o `\implies`, ⇒) in fondo.
   `x^2 - 5x + 6 = 0 \Rightarrow` dà x = 2 ∨ x = 3, `x^2 - x - 1 = 0` dà x = (1 ± √5)/2, `x^2 - 4x + 4 = 0`
   x = 2 (doppia); senza soluzioni reali dice quelle complesse. Le goniometriche con il periodo
@@ -212,7 +224,7 @@ chi sta provando Glifo.*
   (sono quelle sicure).
 - Il pulsante con gli **assi** nella barra mette nella nota un **grafico**: con il cursore su una
   funzione (`$f(x) = …$`) disegna quella, su un integrale (`$\int_0^2 x^2 \, dx =$`) la sua area (e
-  così le curve di livello, i polinomi di Taylor, le equazioni differenziali), se no prepara il blocco
+  così le curve di livello, i polinomi di Taylor, le primitive, le equazioni differenziali), se no prepara il blocco
   da scrivere. Il grafico della formula sotto il cursore si vede anche nel
   pannello a destra, con «Inserisci il grafico».
 - Il blocco ` ```grafico ` ha una riga per ogni cosa da disegnare: funzioni (`y = x^2`, `f(x) = \frac{1}{x}`,
@@ -271,7 +283,8 @@ chi sta provando Glifo.*
   pendenza in ogni punto) e, con le condizioni iniziali (`y' = x - y, \; y(0) = 1, \; y(0) = -2`), le
   soluzioni che partono da lì; una di ordine più alto (`y'' = -y, \; y(0) = 0, \; y'(0) = 1`) la soluzione,
   una per ogni gruppo di condizioni. Un **polinomio di Taylor** da solo (`\operatorname{taylor}(\sin x, 0, 5)`)
-  si disegna insieme alla funzione da cui viene, per confrontarli (se un'altra riga non la disegna già).
+  si disegna insieme alla funzione da cui viene, per confrontarli (se un'altra riga non la disegna già); una
+  **primitiva** (`\int \cos x \, dx`) si disegna con c = 0.
 - Le figure della **geometria** si disegnano come si scrivono: punti con il nome (`A = (0, 0)`,
   `M = \operatorname{medio}(B, C)`), segmenti (`\overline{AM}`), triangoli e poligoni colorati
   (`\triangle ABC`), angoli con l'arco e l'ampiezza (`\widehat{BAC}`; quello retto con il quadratino),
@@ -313,6 +326,8 @@ chi sta provando Glifo.*
 ![Derivate e campi: la derivata di un quoziente, gradiente, derivata mista, lavoro e rotore nella nota; il campo con le frecce e la curva con il verso nel grafico](docs/campi.png)
 
 ![Analisi: un limite, una serie, un polinomio di Taylor, un'equazione e una disequazione risolte e un'equazione differenziale nella nota; il campo di direzioni con le soluzioni nell'anteprima e, nel pannello, il polinomio di Taylor con la sua funzione](docs/analisi.png)
+
+![Integrali: primitive per parti, con i fratti semplici e per sostituzione, integrali definiti esatti e impropri nella nota; il coseno e la sua primitiva nell'anteprima e, nel pannello, il grafico di una primitiva](docs/primitive.png)
 
 **Schemi stile draw.io**
 - Il pulsante con i due riquadri nella barra apre un editor a tutto schermo: forme a sinistra
@@ -514,6 +529,9 @@ src/
     complex.ts            i numeri complessi: conti (anche esatti), radici, forme a + bi e ρe^{iθ}, equazioni
     linear.ts             vettori e matrici: conti esatti o con la virgola, determinante, inversa, rango, nucleo, autovalori; la geometria (segmenti, rette, circonferenze, piani, angoli, intersezioni)
     symbolic.ts           i conti con le lettere: derivate (anche parziali), gradiente, divergenza, rotore, hessiana, polinomi di Taylor, i limiti 0/0, con le semplificazioni
+    primitive.ts          le primitive: integrali immediati, sostituzione, per parti, fratti semplici, seno e coseno, radici (ognuna controllata derivandola)
+    polynomial.ts         i polinomi con le frazioni: divisione, MCD, radici razionali, scomposizione, fratti semplici
+    definite.ts           gli integrali definiti con la primitiva: il valore esatto e gli impropri
     calculus.ts           gli integrali di linea e di superficie (lavoro e flusso) sulle curve e superfici definite
     limits.ts             i limiti (Richardson, da una parte e dall'altra) e le serie (somme accelerate), e i valori riconosciuti (π²/6, e, ln 2)
     solve.ts              le equazioni, le disequazioni e i sistemi risolti dopo ⇒

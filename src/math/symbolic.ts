@@ -7,7 +7,8 @@
  */
 import { compile, EMPTY_SCOPE, fnLabel, MathError, UndefinedName } from './evaluate'
 import { ExactUnavailable, Rational } from './exact'
-import { children, namesIn, type MathNode } from './parse'
+import { children, namesIn, productPower, type MathNode } from './parse'
+import { primitive } from './primitive'
 
 export type Ex =
   | { t: 'num'; v: Rational }
@@ -308,14 +309,15 @@ export function pow(b: Ex, e: Ex): Ex {
       const exact = numPow(b.v, e.v)
       if (exact) return exact
     }
-    // (x²)³ = x⁶; ma √(x²) resta così (è |x|).
-    if (b.t === 'pow' && e.v.isInteger) return pow(b.base, mul(b.exp, e))
+    // (x²)³ = x⁶; ma √(x²) resta così (è |x|). Con una base positiva sempre: √(e^{2x}) = eˣ.
+    if (b.t === 'pow' && (e.v.isInteger || (b.base.t === 'sym' && b.base.name === 'e') || (b.base.t === 'num' && b.base.v.sign > 0))) return pow(b.base, mul(b.exp, e))
     if (b.t === 'mul' && e.v.isInteger) return mul(numPow(b.c, e.v) ?? num(1), ...b.factors.map((f) => pow(f, e)))
   }
   if (isNum(b, 1)) return num(1)
   if (isNum(b, 0) && e.t === 'num' && e.v.sign > 0) return num(0)
-  // e^{\ln u} = u
+  // e^{\ln u} = u, e^{3 \ln u} = u³
   if (b.t === 'sym' && b.name === 'e' && e.t === 'fn' && e.name === 'ln') return e.args[0]
+  if (b.t === 'sym' && b.name === 'e' && e.t === 'mul' && e.factors.length === 1 && e.factors[0].t === 'fn' && e.factors[0].name === 'ln') return pow(e.factors[0].args[0], num(e.c))
   return { t: 'pow', base: b, exp: e }
 }
 
@@ -357,6 +359,50 @@ function trigOfPi(name: 'sin' | 'cos', a: Ex): Ex | null {
   return table[deg] ?? null
 }
 
+const INVERSE_TRIG: Record<string, (x: number) => number> = { arcsin: Math.asin, arccos: Math.acos, arctan: Math.atan }
+
+/** arcsin, arccos e arctan dei valori delle tabelle (1/2, √2/2, √3…): i multipli di π. */
+function inverseTrigOfPi(name: string, a: Ex): Ex | null {
+  if (symbols(a).length) return null
+  let x: number
+  try {
+    x = floatOf(a)
+  } catch {
+    return null
+  }
+  const angle = INVERSE_TRIG[name](x)
+  if (!Number.isFinite(angle)) return null
+  for (const q of [1, 2, 3, 4, 6, 12]) {
+    const p = Math.round((angle / Math.PI) * q)
+    if (Math.abs(angle - (p * Math.PI) / q) < 1e-12) return mul(num(R(p, q)), sym('π'))
+  }
+  return null
+}
+
+/** Un'espressione che non è mai negativa (dove esiste): eˣ, x², √x, x² + 1, cosh x, |x|. */
+function nonNegative(x: Ex): boolean {
+  switch (x.t) {
+    case 'num':
+      return x.v.sign >= 0
+    case 'sym':
+      return x.name === 'π' || x.name === 'e'
+    case 'pow':
+      if (x.base.t === 'sym' && x.base.name === 'e') return true
+      if (x.base.t === 'num' && x.base.v.sign > 0) return true
+      // x², x^{-2}, x^{2/3}; √x e x^{3/2} esistono solo per x ≥ 0.
+      if (x.exp.t === 'num' && (x.exp.v.n % 2n === 0n || x.exp.v.d % 2n === 0n)) return true
+      return nonNegative(x.base)
+    case 'mul':
+      return x.c.sign > 0 && x.factors.every(nonNegative)
+    case 'add':
+      return x.terms.every(nonNegative)
+    case 'fn':
+      return x.name === 'abs' || x.name === 'cosh'
+    default:
+      return false
+  }
+}
+
 export function fn(name: string, args: Ex[], base?: Ex): Ex {
   const a = args[0]
   switch (name) {
@@ -375,9 +421,19 @@ export function fn(name: string, args: Ex[], base?: Ex): Ex {
       if (exact) return exact
       break
     }
-    case 'tan':
+    case 'tan': {
+      const s = trigOfPi('sin', a)
+      const c = trigOfPi('cos', a)
+      if (s && c && !isNum(c, 0)) return mul(s, pow(c, num(-1)))
+      break
+    }
     case 'arcsin':
-    case 'arctan':
+    case 'arccos':
+    case 'arctan': {
+      const exact = inverseTrigOfPi(name, a)
+      if (exact) return exact
+      break
+    }
     case 'sinh':
     case 'tanh':
     case 'arsinh':
@@ -389,6 +445,8 @@ export function fn(name: string, args: Ex[], base?: Ex): Ex {
       break
     case 'abs':
       if (a.t === 'num') return num(a.v.abs())
+      // |e^x| = e^x, |x² + 1| = x² + 1.
+      if (nonNegative(a)) return a
       break
     case 'sgn':
       if (a.t === 'num') return num(a.v.sign)
@@ -622,6 +680,8 @@ class Converter {
         return neg(s(node.a))
       case 'bin': {
         if (node.cross) throw new MathError('Il prodotto vettoriale dà un vettore: qui va un numero')
+        const split = productPower(node, (n) => this.scope.fns.has(n) && !locals.has(n) && !this.variables.has(n))
+        if (split) return s(split)
         const a = s(node.a)
         const b = s(node.b)
         switch (node.op) {
@@ -642,10 +702,10 @@ class Converter {
         return this.fnNode(node, locals)
       case 'apply': {
         const f = this.scope.fns.get(node.name)
-        if (!f || locals.has(node.name)) {
-          // a(x + 1) con a un numero: un prodotto.
+        if (!f || locals.has(node.name) || this.variables.has(node.name)) {
+          // a(x + 1) con a un numero, x(x + 1) con x la variabile: un prodotto.
           if (node.primes) throw new MathError(`${node.name} non è una funzione definita`)
-          if (this.scope.consts.has(node.name) && node.args.length === 1) return mul(s({ k: 'name', name: node.name }), s(node.args[0]))
+          if ((this.scope.consts.has(node.name) || locals.has(node.name) || this.variables.has(node.name)) && node.args.length === 1) return mul(s({ k: 'name', name: node.name }), s(node.args[0]))
           throw new UndefinedName(node.name)
         }
         if (f.params.length !== node.args.length) throw new MathError(`${node.name} vuole ${f.params.length === 1 ? 'un valore' : `${f.params.length} valori`}`)
@@ -679,6 +739,15 @@ class Converter {
         const inner = new Map(locals)
         inner.delete(node.v)
         return { t: 'int', v: node.v, from: s(node.from), to: s(node.to), body: this.scalar(node.body, inner) }
+      }
+      case 'prim': {
+        // \int f(x) \, dx: una primitiva (senza la costante).
+        const inner = new Map(locals)
+        inner.delete(node.v)
+        const body = this.withVariables([node.v], () => this.scalar(node.body, inner))
+        const F = primitive(body, node.v)
+        if (!F) throw new MathError('Non so trovare la primitiva di questa funzione')
+        return F
       }
       case 'cases':
         return { t: 'cases', rows: node.rows.map((r) => ({ value: s(r.value), cond: r.cond })) }
@@ -910,7 +979,7 @@ export function hasCalculus(node: MathNode): boolean {
   let found = false
   const visit = (n: MathNode): void => {
     if (found) return
-    if (n.k === 'diff' || (n.k === 'apply' && n.primes > 0) || (n.k === 'fn' && (VECTOR_OPS.has(n.name) || SYMBOLIC_FNS.has(n.name)))) {
+    if (n.k === 'diff' || n.k === 'prim' || (n.k === 'apply' && n.primes > 0) || (n.k === 'fn' && (VECTOR_OPS.has(n.name) || SYMBOLIC_FNS.has(n.name)))) {
       found = true
       return
     }
@@ -1010,6 +1079,23 @@ export function zeroOverZero(body: MathNode, v: string, to: MathNode, scope: Sym
   }
 }
 
+/**
+ * Per un integrale definito: la primitiva della funzione e gli estremi con le lettere (null per ±∞);
+ * null se la primitiva non si trova. Che F(b) − F(a) sia giusto (F continua tra gli estremi) lo
+ * controlla chi chiama, con i numeri.
+ */
+export function definiteParts(node: Extract<MathNode, { k: 'int' }>, scope: SymbolScope): { F: Ex; a: Ex | null; b: Ex | null } | null {
+  const infinite = (n: MathNode) => n.k === 'infty' || (n.k === 'neg' && n.a.k === 'infty') || (n.k === 'bin' && n.op === '+' && n.b.k === 'infty')
+  try {
+    const c = new Converter(scope)
+    const F = primitive(c.scalarWith(node.body, [node.v]), node.v)
+    if (!F) return null
+    return { F, a: infinite(node.from) ? null : c.scalar(node.from), b: infinite(node.to) ? null : c.scalar(node.to) }
+  } catch {
+    return null
+  }
+}
+
 /** La derivata di `body` rispetto a `v`, con le lettere `variables` che restano variabili (i parametri di una curva). */
 export function partialDerivative(body: MathNode, v: string, variables: string[], scope: SymbolScope): MathNode {
   return toNode(derive(new Converter(scope).scalarWith(body, variables), v))
@@ -1025,7 +1111,7 @@ export function needsSymbols(node: MathNode, scope: SymbolScope): boolean {
   let found = false
   const visit = (n: MathNode): void => {
     if (found) return
-    if (n.k === 'diff' || (n.k === 'apply' && n.primes > 0) || (n.k === 'fn' && (VECTOR_OPS.has(n.name) || SYMBOLIC_FNS.has(n.name)))) found = true
+    if (n.k === 'diff' || n.k === 'prim' || (n.k === 'apply' && n.primes > 0) || (n.k === 'fn' && (VECTOR_OPS.has(n.name) || SYMBOLIC_FNS.has(n.name)))) found = true
     else if ((n.k === 'apply' || n.k === 'name') && isField(n.name, scope)) found = true
     else children(n).forEach(visit)
   }
@@ -1047,7 +1133,7 @@ export function expandCalculus(node: MathNode, scope: SymbolScope, decimal = fal
     }
   }
   const visit = (n: MathNode): MathNode => {
-    if (n.k === 'diff' || (n.k === 'apply' && n.primes > 0) || (n.k === 'fn' && SYMBOLIC_FNS.has(n.name))) return attempt(n, () => toNode(c.scalar(n), decimal))
+    if (n.k === 'diff' || n.k === 'prim' || (n.k === 'apply' && n.primes > 0) || (n.k === 'fn' && SYMBOLIC_FNS.has(n.name))) return attempt(n, () => toNode(c.scalar(n), decimal))
     if (n.k === 'fn' && VECTOR_OPS.has(n.name)) return attempt(n, () => valueNode(c.operator(n, new Map()), decimal))
     if (n.k === 'apply' && !n.primes && isField(n.name, scope)) return attempt(n, () => valueNode(c.vector(n).value, decimal))
     return mapNode(n, visit)
@@ -1097,6 +1183,7 @@ function mapNode(n: MathNode, f: (c: MathNode) => MathNode): MathNode {
     case 'diff':
     case 'lint':
     case 'sint':
+    case 'prim':
       return { ...n, body: f(n.body) }
     case 'lim':
       return { ...n, to: f(n.to), body: f(n.body) }
@@ -1232,16 +1319,19 @@ function factorOut(x: Extract<Ex, { t: 'add' }>): Ex {
     if (degree(f) !== null) continue
     const [base, k] = exponent(f)
     let least = k
+    let same = true
     const everywhere = x.terms.slice(1).every((t) =>
       factorsOf(t).some((g) => {
         const [b, j] = exponent(g)
         if (key(b) !== key(base)) return false
         if (k === null || j === null) return k === null && j === null
+        if (j.cmp(k) !== 0) same = false
         if (j.cmp(least!) < 0) least = j
         return true
       }),
     )
-    if (everywhere) common.push(least ? pow(base, num(least)) : f)
+    // Potenze diverse di una somma restano separate: 2(x + 1)^{5/2}/5 − 2(x + 1)^{3/2}/3.
+    if (everywhere && (same || base.t !== 'add')) common.push(least ? pow(base, num(least)) : f)
   }
   if (!common.length) return lead(ordered(x))
   const factor = mul(...common)
@@ -1273,13 +1363,18 @@ function degree(x: Ex): number | null {
 /** Un polinomio dal grado più alto (x² + 4x + 1, x + y + z); le altre somme come vengono. */
 function ordered(x: Extract<Ex, { t: 'add' }>): Ex {
   const degrees = x.terms.map(degree)
-  if (degrees.some((d) => d === null)) return x
   const letters = (t: Ex) => symbols(t).join('')
-  const terms = x.terms
-    .map((t, i) => ({ t, d: degrees[i]!, i }))
-    .sort((a, b) => b.d - a.d || letters(a.t).localeCompare(letters(b.t)) || a.i - b.i)
+  const polynomial = x.terms
+    .map((t, i) => ({ t, d: degrees[i], i }))
+    .filter((e) => e.d !== null)
+    .sort((a, b) => b.d! - a.d! || letters(a.t).localeCompare(letters(b.t)) || a.i - b.i)
     .map((e) => e.t)
-  return { t: 'add', terms }
+  // Con altri termini (ln x, √(…)): il polinomio tutto insieme, dove comincia (x + 1 + √(x² + 1)).
+  const first = degrees.findIndex((d) => d !== null)
+  if (first < 0) return x
+  const others = x.terms.filter((_, i) => degrees[i] === null)
+  const before = x.terms.slice(0, first).length
+  return { t: 'add', terms: [...others.slice(0, before), ...polynomial, ...others.slice(before)] }
 }
 
 /** Sviluppa i prodotti e le potenze delle somme: (x + 1)² → x² + 2x + 1. */
@@ -1299,9 +1394,16 @@ export function expand(x: Ex): Ex {
     }
     case 'pow':
       if (x.base.t === 'add' && x.exp.t === 'num' && x.exp.v.isInteger && x.exp.v.sign > 0 && x.exp.v.n <= 8n) {
-        let out = expand(x.base)
-        for (let i = 1n; i < x.exp.v.n; i++) out = expand(mul(out, x.base))
-        return out
+        // Termine per termine: mul di due somme uguali tornerebbe la potenza.
+        const base = expand(x.base)
+        const parts = base.t === 'add' ? base.terms : [base]
+        let terms: Ex[] = [num(1)]
+        for (let i = 0n; i < x.exp.v.n; i++) {
+          const next = add(...terms.flatMap((a) => parts.map((b) => expand(mul(a, b)))))
+          terms = next.t === 'add' ? next.terms : [next]
+          if (terms.length > 400) return x
+        }
+        return add(...terms)
       }
       return x
     default:
@@ -1329,6 +1431,10 @@ function combine(x: Ex): Ex {
   if (x.t !== 'add') return x
   const parts = x.terms.map(denominators)
   if (parts.filter((d) => d.length).length < 2) return x
+  // Denominatori diversi con logaritmi e arcotangenti: meglio i termini separati (come nelle primitive).
+  const below = new Set(parts.map((d) => d.map(({ base, k }) => `${key(base)}^${k}`).join('*')))
+  const transcendental = (e: Ex): boolean => e.t === 'fn' || (e.t === 'pow' && (transcendental(e.base) || e.exp.t !== 'num')) || (e.t === 'mul' && e.factors.some(transcendental)) || (e.t === 'add' && e.terms.some(transcendental))
+  if (below.size > 1 && x.terms.some(transcendental)) return x
   const common = new Map<string, { base: Ex; k: bigint }>()
   for (const { base, k } of parts.flat()) {
     const before = common.get(key(base))
@@ -1339,6 +1445,11 @@ function combine(x: Ex): Ex {
   const size = numerator.t === 'add' ? numerator.terms.length : 1
   if (size > x.terms.length * 4 || denominators(numerator).length) return x
   return mul(numerator, pow(D, num(-1)))
+}
+
+/** Una somma dentro una potenza o una funzione, in ordine: √(1 − x²), e^{x² + 2x}. */
+function inOrder(x: Ex): Ex {
+  return x.t === 'add' ? lead(ordered(x)) : x
 }
 
 /** Un termine come formula, già semplificato (per i polinomi di Taylor, che restano in ordine). */
@@ -1381,15 +1492,15 @@ function node(x: Ex): MathNode {
     case 'pow': {
       const below = denominatorPart(x)
       if (below) return { k: 'bin', op: '/', a: NUM(1), b: node(below), frac: true }
-      const base = node(x.base)
+      const base = node(inOrder(x.base))
       if (x.exp.t === 'num' && x.exp.v.n === 1n && x.exp.v.d === 2n) return { k: 'fn', name: 'sqrt', args: [base] }
       if (x.exp.t === 'num' && x.exp.v.n === 1n && x.exp.v.d > 2n) return { k: 'fn', name: 'root', args: [base], base: NUM(x.exp.v.d) }
       // sin² x come nei libri.
       if (x.base.t === 'fn' && x.exp.t === 'num' && x.exp.v.isInteger && x.exp.v.sign > 0 && base.k === 'fn') return { ...base, pow: NUM(x.exp.v.n) }
-      return { k: 'bin', op: '^', a: base, b: node(x.exp) }
+      return { k: 'bin', op: '^', a: base, b: node(inOrder(x.exp)) }
     }
     case 'fn': {
-      const args = x.args.map((a) => node(a))
+      const args = x.args.map((a) => node(inOrder(a)))
       if (x.name === 'abs') return { k: 'abs', a: args[0] }
       if (x.name === 'floor' || x.name === 'ceil') return { k: x.name, a: args[0] }
       return { k: 'fn', name: x.name, args, ...(x.base && { base: node(x.base) }) }
@@ -1431,7 +1542,8 @@ export function plainText(node: MathNode): string {
         case '*': {
           const a = p(node.a, 2)
           const b = p(node.b, 2)
-          return node.implicit && !/^\d/.test(b) ? `${a}${/[A-Za-zα-ω)]$/.test(a) && /^[A-Za-z]{2}/.test(b) ? ' ' : ''}${b}` : `${a} · ${b}`
+          // Prima del nome di una funzione uno spazio: x² ln(x), 2 sin(x).
+          return node.implicit && !/^\d/.test(b) ? `${a}${/^[A-Za-z]{2}/.test(b) ? ' ' : ''}${b}` : `${a} · ${b}`
         }
         case '/':
           return `${p(node.a, 3)}/${p(node.b, 3)}`
@@ -1444,9 +1556,16 @@ export function plainText(node: MathNode): string {
       break
     case 'fn': {
       const inner = node.args.map(plainText).join(', ')
-      if (node.name === 'sqrt') return `√${node.args[0].k === 'name' || node.args[0].k === 'num' ? inner : `(${inner})`}`
-      if (node.name === 'root') return `${plainText(node.base!)}√(${inner})`
+      const atom = node.args[0].k === 'name' || node.args[0].k === 'num'
+      if (node.name === 'sqrt') return `√${atom ? inner : `(${inner})`}`
+      if (node.name === 'root') {
+        const index = plainText(node.base!)
+        const mark = index === '3' ? '∛' : index === '4' ? '∜' : /^\d+$/.test(index) ? `${[...index].map((c) => SUPERSCRIPTS[c]).join('')}√` : `(${index})√`
+        return `${mark}${atom ? inner : `(${inner})`}`
+      }
       const pow = node.pow ? [...plainText(node.pow)].map((c) => SUPERSCRIPTS[c] ?? c).join('') : ''
+      // ln|x|, come si scrive.
+      if (node.args.length === 1 && node.args[0].k === 'abs') return `${node.name}${pow}${inner}`
       return `${node.name}${pow}(${inner})`
     }
     case 'abs':

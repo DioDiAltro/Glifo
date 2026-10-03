@@ -34,6 +34,8 @@ export type MathNode =
   | { k: 'binom'; n: MathNode; r: MathNode }
   | { k: 'big'; op: 'sum' | 'prod'; v: string; from: MathNode; to: MathNode; body: MathNode }
   | { k: 'int'; v: string; from: MathNode; to: MathNode; body: MathNode }
+  /** `\int f(x) \, dx` senza gli estremi: la primitiva (l'integrale indefinito). */
+  | { k: 'prim'; v: string; body: MathNode }
   /**
    * `\iint_D f \, dx \, dy`, `\iiint_E f \, dV`: l'integrale su un dominio, che è un insieme, una
    * condizione (x^2 + y^2 \le 1), un rettangolo ([0, 1] \times [0, 2]) o il nome di un insieme.
@@ -187,6 +189,8 @@ interface Tok {
   colon?: boolean
   /** Solo \times e ×. */
   cross?: boolean
+  /** Prima c'è uno spazio scritto (\, \; \:): chiude l'argomento di una funzione. */
+  spaced?: boolean
 }
 
 const isDigit = (c: string | undefined) => c !== undefined && c >= '0' && c <= '9'
@@ -350,6 +354,7 @@ export function tokenize(src: string): Tok[] {
         else one('bad', c)
     }
   }
+  for (let t = 1; t < out.length; t++) if (/\\[,;: >]/.test(src.slice(out[t - 1].end, out[t].pos))) out[t].spaced = true
   return out
 }
 
@@ -884,9 +889,16 @@ class Parser {
         const derivative = this.derivativeFrac()
         if (derivative) return derivative
         this.next()
-        const a = this.latexArg('il numeratore di \\frac')
-        const b = this.latexArg('il denominatore di \\frac')
-        return { k: 'bin', op: '/', a, b, frac: true }
+        // Nella frazione il dx è un prodotto (\int \frac{x \, dx}{x^2 + 1}): lo toglie dopo l'integrale.
+        const integrals = this.integrals
+        this.integrals = 0
+        try {
+          const a = this.latexArg('il numeratore di \\frac')
+          const b = this.latexArg('il denominatore di \\frac')
+          return { k: 'bin', op: '/', a, b, frac: true }
+        } finally {
+          this.integrals = integrals
+        }
       }
       case 'sqrt': {
         this.next()
@@ -1017,7 +1029,7 @@ class Parser {
       args = group.k === 'tuple' ? group.items : [group]
     } else {
       if (!this.peek() || !this.startsArgument()) throw this.error(`Manca l'argomento di ${name}`)
-      args = [this.implicitArgument()]
+      args = [this.implicitArgument(true)]
     }
     return { k: 'fn', name, args, ...(pow && { pow }), ...(base && { base }) }
   }
@@ -1026,10 +1038,13 @@ class Parser {
     return this.startsFactor(true) || this.is('op', '-') || this.is('fn') || this.is('big') || this.is('int') || this.is('bar', '|')
   }
 
-  /** L'argomento senza parentesi: `\sin 2x` è sin(2x), `\sin x \cos x` è sin(x)·cos(x). */
-  private implicitArgument(): MathNode {
+  /**
+   * L'argomento senza parentesi: `\sin 2x` è sin(2x), `\sin x \cos x` è sin(x)·cos(x). Con `spaced`
+   * uno spazio (`\,`) lo chiude: `\cos x \, e^{\sin x}` è cos(x)·e^{sin x}.
+   */
+  private implicitArgument(spaced = false): MathNode {
     let left = this.unary()
-    while (this.startsFactor(true)) {
+    while (this.startsFactor(true) && !(spaced && this.peek()!.spaced)) {
       if (left.k === 'num' && this.is('num')) throw this.error('Due numeri di seguito: manca un\'operazione?')
       left = { k: 'bin', op: '*', a: left, b: this.power(), implicit: true }
     }
@@ -1087,7 +1102,7 @@ class Parser {
     }
     // \int_\gamma f \, ds, \oint_C F \cdot dr: sulla curva.
     if (kind === 'oint' || (from && !to && from.k === 'name')) return this.lineIntegral(from, kind === 'oint', start)
-    if (!from || !to) throw this.error('Si sanno calcolare solo gli integrali con gli estremi, es. \\int_0^1', start.pos)
+    if (!from !== !to) throw this.error('Un integrale vuole tutti e due gli estremi, es. \\int_0^1, o nessuno: \\int x \\, dx', start.pos)
     this.integrals++
     let body: MathNode
     try {
@@ -1096,9 +1111,18 @@ class Parser {
     } finally {
       this.integrals--
     }
-    if (!this.is('name', 'd') || !this.is('name', undefined, 1)) throw this.error('Manca il dx alla fine dell\'integrale')
-    this.next()
-    const v = this.next().v
+    let v: string
+    if (this.is('name', 'd') && this.is('name', undefined, 1)) {
+      this.next()
+      v = this.next().v
+    } else {
+      // \int \frac{dx}{1 + x^2}: il dx nel numeratore.
+      const inside = differentialInFraction(body)
+      if (!inside) throw this.error('Manca il dx alla fine dell\'integrale')
+      body = inside.body
+      v = inside.v
+    }
+    if (!from || !to) return { k: 'prim', v, body }
     return { k: 'int', v, from, to, body }
   }
 
@@ -1563,6 +1587,27 @@ class Parser {
 
 /** La funzione 1 di \int_0^1 dx (e dell'area di un dominio, \iint_D dx \, dy). */
 const ONE: MathNode = { k: 'num', v: 1, text: '1', comma: false }
+
+/** \frac{dx}{1 + x^2}, \frac{x \, dx}{x^2 + 1}: la frazione senza il dx, e la variabile; null se il dx non c'è. */
+function differentialInFraction(body: MathNode): { body: MathNode; v: string } | null {
+  if (body.k !== 'bin' || body.op !== '/') return null
+  const factors: MathNode[] = []
+  const flat = (n: MathNode): void => {
+    if (n.k === 'bin' && n.op === '*' && !n.cross) {
+      flat(n.a)
+      flat(n.b)
+    } else factors.push(n)
+  }
+  flat(body.a)
+  for (let i = 0; i + 1 < factors.length; i++) {
+    const [d, x] = [factors[i], factors[i + 1]]
+    if (d.k !== 'name' || d.name !== 'd' || x.k !== 'name') continue
+    const rest = [...factors.slice(0, i), ...factors.slice(i + 2)]
+    const top = rest.length ? rest.reduce((a, b): MathNode => ({ k: 'bin', op: '*', a, b, implicit: true })) : ONE
+    return { body: { ...body, a: top }, v: x.name }
+  }
+  return null
+}
 const ZERO: MathNode = { k: 'num', v: 0, text: '0', comma: false }
 
 /** I differenziali di superficie: dS, dσ, d\mathbf{S}, d\vec{S}. */
@@ -1600,6 +1645,15 @@ export function parseStatement(src: string): Statement {
   const statement = parser.statement()
   parser.finish()
   return statement
+}
+
+/**
+ * a(x + 1)^2 con a un numero (o la variabile, come in x(x + 1)^2): a · (x + 1)², non (a(x + 1))². Null se
+ * non è così (f(x)^2 con f una funzione è il quadrato di f). `isFunction` dice se il nome è una funzione.
+ */
+export function productPower(node: MathNode, isFunction: (name: string) => boolean): MathNode | null {
+  if (node.k !== 'bin' || node.op !== '^' || node.a.k !== 'apply' || node.a.primes || node.a.args.length !== 1 || isFunction(node.a.name)) return null
+  return { k: 'bin', op: '*', a: { k: 'name', name: node.a.name }, b: { ...node, a: node.a.args[0] }, implicit: true }
 }
 
 /** I nomi (variabili e funzioni definite nella nota) che l'espressione usa. */
@@ -1695,6 +1749,7 @@ export function children(n: MathNode): MathNode[] {
     case 'diff':
     case 'lint':
     case 'sint':
+    case 'prim':
       return [n.body]
     case 'lim':
       return [n.to, n.body]
