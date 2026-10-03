@@ -85,8 +85,12 @@ Probabilità e statistica, Matematica discreta, Calcolo numerico. Chiesto dallo 
     razionali con i fratti semplici. Corrette anche le serie a segni alterni con i termini che vanno piano
     a zero (Σ(−1)ⁿ/√n). Restano: la somma delle serie di potenze (−ln(1 − x)), la trasformata di Fourier,
     la Heaviside e la delta nella trasformata di Laplace, le equazioni differenziali risolte con Laplace.
-17. **Calcolo numerico:** bisezione, Newton e punto fisso con la tabella dei passi, interpolazione,
-    minimi quadrati, trapezi e Simpson, LU, norme e condizionamento, Jacobi e Gauss–Seidel, Eulero.
+17. **Calcolo numerico**, fatto: bisezione, Newton, secanti e punto fisso con la tabella dei passi, il
+    polinomio interpolante e quello dei minimi quadrati, trapezi, Simpson e rettangoli con l'errore, LU
+    (con il pivot) e Cholesky, le norme e il condizionamento, Jacobi e Gauss–Seidel con il raggio
+    spettrale, Eulero, Heun e Runge–Kutta 4; nel pannello i disegni. Restano: le spline, QR e i minimi
+    quadrati con le matrici, il metodo delle potenze, i metodi impliciti e i sistemi di equazioni
+    differenziali.
 18. **Statistica inferenziale:** gli intervalli di confidenza (della media con σ nota e no, di una
     proporzione, della varianza) e i test d'ipotesi (z, t, χ², il confronto di due medie), con il p-value
     e, nel grafico, la regione di rifiuto colorata sotto la densità.

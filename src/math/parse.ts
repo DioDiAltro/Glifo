@@ -135,6 +135,12 @@ const FUNCTION_NAMES: Record<string, string> = {
   conica: 'conic', quadrica: 'quadric',
   // La serie di Fourier, la trasformata di Laplace e l'antitrasformata.
   fourier: 'fourier', laplace: 'laplace', antilaplace: 'ilaplace',
+  // Il calcolo numerico: gli zeri, l'interpolazione, la quadratura, le matrici, le equazioni differenziali.
+  bisezione: 'bisection', newton: 'newton', secanti: 'secant', secante: 'secant', puntofisso: 'fixedpoint',
+  interpola: 'interpolate', interpolazione: 'interpolate', minimiquadrati: 'leastsquares',
+  rettangoli: 'midpoint', trapezi: 'trapezoid', simpson: 'simpson', lu: 'lu', cholesky: 'cholesky', norma: 'norm',
+  cond: 'cond', condizionamento: 'cond', jacobi: 'jacobi', gaussseidel: 'gaussseidel', 'gauss-seidel': 'gaussseidel',
+  eulero: 'euler', heun: 'heun', rk4: 'rk4', rungekutta: 'rk4',
   // L'aritmetica e i polinomi: fattori primi e scomposizione, divisori, primi, resto, divisione, Ruffini,
   // l'inverso modulo n, le basi, la funzione di Eulero, le equazioni diofantee, Bézout ed Euclide; gli
   // insiemi (quanti elementi, l'insieme delle parti).
@@ -693,6 +699,9 @@ const CLOSING: Record<string, string> = { '(': ')', '[': ']', '{': '}', '\\{': '
 const SHOW: Record<string, string> = { '\\{': '\\{', '\\}': '\\}', floor: '⌊', ceil: '⌈', '\\\\': '\\\\' }
 
 /** Le funzioni trigonometriche e iperboliche: per loro `^{-1}` è la funzione inversa. */
+/** Le funzioni che hanno delle equazioni tra gli argomenti, tutte tenute (non come \operatorname{lagrange}). */
+const EQUATION_ARGS = new Set(['euler', 'heun', 'rk4', 'bisection', 'newton', 'secant', 'fixedpoint'])
+
 const INVERSE: Record<string, string> = {
   sin: 'arcsin', cos: 'arccos', tan: 'arctan', cot: 'arccot', sinh: 'arsinh', cosh: 'arcosh', tanh: 'artanh', laplace: 'ilaplace',
 }
@@ -1390,6 +1399,17 @@ class Parser {
       pow = undefined
     }
     let args: MathNode[]
+    // \operatorname{eulero}(y' = x + y, y(0) = 1, 0.1, 5), \operatorname{newton}(x^3 = 2, 1): le equazioni tra gli argomenti.
+    if (EQUATION_ARGS.has(name) && this.is('open', '(')) {
+      this.next()
+      args = [this.relation()]
+      while (this.is('comma')) {
+        this.next()
+        args.push(this.relation())
+      }
+      this.expect('close', ')', 'la parentesi )')
+      return { k: 'fn', name, args, ...(pow && { pow }) }
+    }
     // \operatorname{lagrange}(f, x^2 + y^2 = 1), \operatorname{estremi}(f, x^2 + y^2 \le 1): una condizione tra gli argomenti.
     if ((name === 'lagrange' || name === 'extrema' || name === 'conic' || name === 'quadric' || name === 'diophantine') && this.is('open', '(')) {
       this.next()

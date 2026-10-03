@@ -28,6 +28,7 @@ import { conicOf, quadricOf } from './conics'
 import { powerSeriesOf, powerSeriesShown } from './powerseries'
 import { fourierProblem, fourierShown } from './fourier'
 import { inverseLaplaceShown, laplaceShown } from './laplace'
+import { NUMERICAL, numericalShown, type NumericContext } from './numerical'
 import { arithmeticShown, solveCongruences } from './arithmetic'
 import { finiteSetOf, finiteValue, type FiniteContext } from './finite'
 import { logicShown } from './logic'
@@ -65,7 +66,7 @@ import { toLatex } from './latex'
 import { children, namesIn, parseMath, type MathNode } from './parse'
 import { definiteIntegral } from './definite'
 import { study, studyPart, studyRows, studyTable } from './study'
-import { definiteParts, expandCalculus, functionOf, isVectorBody, needsSymbols, partialDerivative, plainText, sub, subst, symbolicValue, symbols, toNode, zeroOverZero, type Ex, type SymbolScope } from './symbolic'
+import { definiteParts, derive, exOf, expandCalculus, functionOf, isVectorBody, needsSymbols, partialDerivative, plainText, sub, subst, symbolicValue, symbols, tidy, toNode, zeroOverZero, type Ex, type SymbolScope } from './symbolic'
 
 export interface Definition {
   name: string
@@ -839,6 +840,17 @@ export class Sheet {
       const totient = item.k === 'apply' && item.name === 'φ' && item.args.length === 1 && !item.primes && !this.fns.has('φ') ? item.args : null
       const arithmetic = this.showArithmetic(totient ? { k: 'fn', name: 'totient', args: totient } : item)
       if (arithmetic) return arithmetic
+      // Il calcolo numerico: la tabella dei passi, il polinomio interpolante, le matrici LU, Jacobi…
+      if (item.k === 'fn' && NUMERICAL.has(item.name) && !item.pow) {
+        const node = item
+        try {
+          const shown = withWorkLimit(WORK, () => numericalShown(node, this.numericContext(style)))
+          if (shown) return shown
+        } catch {
+          // Non si fa (gli argomenti non vanno).
+        }
+        continue
+      }
       // La trasformata di Laplace e l'antitrasformata.
       if (item.k === 'fn' && (item.name === 'laplace' || item.name === 'ilaplace') && item.args.length >= 1 && item.args.length <= 2 && !item.pow) {
         const args = item.args
@@ -940,6 +952,56 @@ export class Sheet {
       return withWorkLimit(WORK, () => arithmeticShown(item, this.symbolScope()))
     } catch {
       return null
+    }
+  }
+
+  /** Quello che serve al calcolo numerico: le funzioni di una variabile, i numeri, le matrici, le equazioni differenziali. */
+  numericContext(style: ReturnType<typeof styleOf>): NumericContext {
+    const scope = this.scope()
+    return {
+      style,
+      number: (node) => {
+        const v = bound(this.prepare(node), scope)({})
+        if (!Number.isFinite(v)) throw new MathError('Qui va un numero')
+        return v
+      },
+      fn: (node) => {
+        let body = node.k === 'rel' && node.ops.length === 1 && node.ops[0] === '=' ? ({ k: 'bin', op: '-', a: node.items[0], b: node.items[1] } as MathNode) : node
+        let v: string
+        const named = (node.k === 'name' || (node.k === 'apply' && node.args.length === 1 && node.args[0].k === 'name')) && this.bodies.get(node.name)
+        if (named && named.params.length === 1) {
+          body = named.body
+          v = named.params[0]
+        } else {
+          const free = this.freeNames(body)
+          if (free.length > 1) return null
+          v = free[0] ?? 'x'
+        }
+        const f = compile(this.prepare(body, [v]), scopeWith(scope, [v]), { calc: true })
+        const vars: Record<string, number> = {}
+        let df: ((x: number) => number) | null = null
+        try {
+          const d = compile(toNode(tidy(derive(exOf(body, this.symbolScope(), [v]), v))), scopeWith(scope, [v]), { calc: true })
+          df = (x) => ((vars[v] = x), d(vars))
+        } catch {
+          df = null
+        }
+        return { v, f: (x) => ((vars[v] = x), f(vars)), df }
+      },
+      matrix: (node) => {
+        const value = this.evaluateLinear(node)
+        if (!value || value.float.k !== 'matrix') return null
+        return { exact: value.exact?.k === 'matrix' ? value.exact.m : null, float: value.float.m }
+      },
+      ode: (eq, start) => {
+        const ode = odeOf(eq, (name) => this.fns.has(name) || this.vfns.has(name))
+        if (!ode || ode.order !== 1) return null
+        const F = compileOde(ode, scope)
+        if (start.k !== 'rel' || start.ops.length !== 1 || start.ops[0] !== '=' || start.items[0].k !== 'apply' || start.items[0].name !== ode.y || start.items[0].args.length !== 1) return null
+        const x0 = bound(this.prepare(start.items[0].args[0]), scope)({})
+        const y0 = bound(this.prepare(start.items[1]), scope)({})
+        return { f: (x, y) => F(x, [y]), x: ode.x, y: ode.y, x0, y0 }
+      },
     }
   }
 

@@ -60,6 +60,7 @@ import { STUDY_GRAPH, studyItems } from './studyGraph'
 import { isSeveralLine, severalItems } from './severalGraph'
 import { conicItems, isConicLine, quadricEquation } from './conicGraph'
 import { fourierItems, isFourierLine } from './fourierGraph'
+import { isNumericalLine, numericalItems } from './numericalGraph'
 import { STATS_GRAPH, statisticsItems } from './statsGraph'
 import { distributionOf, randomScope } from '../math/probability'
 import { odeOf, systemOf } from '../math/differential'
@@ -1013,7 +1014,7 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
     !gauss &&
     lines.some((l) => {
       // La probabilità e i dati (\operatorname{dispersione}(x, y) con x e y due vettori) stanno nel piano.
-      if (curveName(l.main) || l.main.k === 'dist' || l.main.k === 'prob' || (l.main.k === 'fn' && (STATS_GRAPH.has(l.main.name) || STUDY_GRAPH.has(l.main.name))) || isSeveralLine(l.main) || isConicLine(l.main) || isFourierLine(l.main)) return false
+      if (curveName(l.main) || l.main.k === 'dist' || l.main.k === 'prob' || (l.main.k === 'fn' && (STATS_GRAPH.has(l.main.name) || STUDY_GRAPH.has(l.main.name))) || isSeveralLine(l.main) || isConicLine(l.main) || isFourierLine(l.main) || isNumericalLine(l.main)) return false
       const dims = calculusDims(l.main, shapes)
       if (dims) return dims === 3
       const def = definitionOf(l.main)
@@ -1198,6 +1199,14 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
       // Lo studio di funzione: la funzione, gli asintoti, i massimi, i minimi e i flessi.
       const studiedName = l.main.k === 'fn' && l.main.args[0]?.k === 'name' ? l.main.args[0].name : null
       const drawsIt = !!studiedName && drawn.some((o) => o !== l && definitionOf(o.main)?.name === studiedName)
+      // Il calcolo numerico: lo zero sulla curva, i dati con il polinomio, i passi di Eulero.
+      const numeric = space ? null : numericalItems(l.main, l.line, slot, sheet)
+      if (numeric) {
+        spec.items.push(...numeric.items)
+        slots.set(l.line, slot)
+        slot += numeric.colors
+        continue
+      }
       // La serie di Fourier: la funzione ripetuta e la somma parziale.
       const fourier = space ? null : fourierItems(l.main, l.line, slot, scope(), studySymbols())
       if (fourier) {
@@ -1873,6 +1882,7 @@ export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSp
     isSeveralLine(main) ||
     isConicLine(main) ||
     isFourierLine(main) ||
+    isNumericalLine(main) ||
     !!quadricEquation(main) ||
     main.k === 'dist' ||
     main.k === 'prob' ||

@@ -256,6 +256,15 @@ chi sta provando Glifo.*
   seni e coseni anche moltiplicati, sinh e cosh, con le lettere come e^{at}), e l'antitrasformata
   `\mathcal{L}^{-1}\{\frac{s + 3}{s^2 + 2s + 5}\} =` con i fratti semplici; tutte e due controllate con
   l'integrale fatto con i numeri.
+- **Calcolo numerico**, con la tabella dei passi: gli zeri con la bisezione
+  (`\operatorname{bisezione}(x^3 - x - 2, [1, 2]) =`, anche con la tolleranza), Newton (con la derivata fatta
+  con le lettere; anche `\operatorname{newton}(x^2 = 2, 1)`), le secanti e il punto fisso (con |g′(x*)|);
+  il polinomio interpolante (`\operatorname{interpola}((0, 1), (1, 3), (2, 2)) =`, esatto) e quello dei minimi
+  quadrati (con il grado e la somma dei quadrati dei residui); trapezi, Simpson e rettangoli con l'errore;
+  la fattorizzazione LU (PA = LU quando serve un pivot) e Cholesky; le norme 1, 2, ∞, di Frobenius e il
+  numero di condizionamento; Jacobi e Gauss–Seidel con il raggio spettrale e la diagonale dominante;
+  Eulero, Heun e Runge–Kutta 4 per y′ = f(x, y) con l'errore. Con il cursore sulla formula, nel pannello
+  il disegno: lo zero sulla curva, i dati con il polinomio, i passi di Eulero con la soluzione.
 - **Aritmetica**: `\operatorname{fattori}(360) =` (2³ · 3² · 5), `\operatorname{divisori}(12) =`,
   `\operatorname{primo}(97) =` (anche grandi), il resto `17 \bmod 5 =` (anche `3^{1000} \bmod 7` e
   `3^{-1} \bmod 7`), `\operatorname{divisione}(17, 5) =` (17 = 5 · 3 + 2), l'algoritmo di Euclide passo per
@@ -477,6 +486,8 @@ chi sta provando Glifo.*
 ![Coniche e quadriche: un'ellisse, un'iperbole e una parabola con la forma canonica e gli elementi, un iperboloide; nel grafico l'iperbole con i fuochi e gli asintoti tratteggiati e, nel pannello, la parabola con il vertice, il fuoco e la direttrice](docs/coniche.png)
 
 ![Serie, Fourier e Laplace: il raggio e l'insieme di convergenza di due serie di potenze, la serie di Fourier di x sin x con a₁ a parte, una trasformata e un'antitrasformata di Laplace; nel grafico la somma di Fourier con 7 termini dell'onda a dente di sega, con lo slider per N, e nel pannello quella di x sin x](docs/fourier.png)
+
+![Calcolo numerico: Newton con la tabella dei passi, il polinomio interpolante, Simpson con l'errore, la fattorizzazione LU e Eulero con la tabella; nel pannello i passi di Eulero sotto la soluzione vera](docs/calcolo-numerico.png)
 
 ![Aritmetica, polinomi, logica e insiemi: i fattori primi, una potenza modulo 7 e un inverso, un sistema di congruenze, un'equazione diofantea, due scomposizioni, la tabella di Ruffini, le operazioni tra insiemi e l'insieme delle parti, la tavola di verità del modus ponens](docs/aritmetica.png)
 
@@ -704,6 +715,7 @@ src/
     powerseries.ts        le serie di potenze: il raggio e l'insieme di convergenza
     fourier.ts            la serie di Fourier: i coefficienti con le lettere e la somma parziale
     laplace.ts            la trasformata di Laplace con la tabella e l'antitrasformata con i fratti semplici
+    numerical.ts          il calcolo numerico: zeri, interpolazione, quadratura, LU, norme, Jacobi, Eulero
     differential.ts       le equazioni differenziali di ogni ordine, risolte con Runge–Kutta dalle condizioni iniziali
     odesolve.ts           le equazioni differenziali e i sistemi risolti con la formula (dopo ⇒), con le condizioni
     exact.ts, format.ts   i conti esatti con le frazioni; i risultati scritti all'italiana

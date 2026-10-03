@@ -1524,6 +1524,12 @@ try {
     power.startsWith('R = 1; converge per x ∈ [−1, 1)') && laplace === '1/(s + 1)²' && fourier.startsWith('a₀ = (2π²)/3; aₙ = (4(−1)^(n))/n²'),
     `una serie di potenze ha il raggio, Laplace la trasformata e Fourier i coefficienti con il grafico (${JSON.stringify({ power: power.slice(0, 30), laplace, fourier: fourier.slice(0, 30) })})`,
   )
+  // Il calcolo numerico: Newton con la tabella dei passi e lo zero nel pannello.
+  await gp.keyboard.press('End')
+  await gp.keyboard.type('\n\nNewton $\\operatorname{newton}(x^2 = 2, 1) =')
+  const newton = await resultText('x ≈ 1,41421356237')
+  await gp.waitForFunction(() => [...document.querySelectorAll('.formula-graph:not([hidden]) svg text')].some((t) => t.textContent?.startsWith('x')), null, { timeout: 5000 })
+  check(newton.startsWith('x ≈ 1,41421356237 (5 passi)'), `Newton ha la tabella dei passi e lo zero nel pannello (${JSON.stringify(newton.slice(0, 40))})`)
   await gp.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)

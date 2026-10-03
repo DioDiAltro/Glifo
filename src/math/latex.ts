@@ -161,6 +161,15 @@ const COMPLEX_FUNCTIONS: Record<string, string> = {
   fourier: '\\operatorname{fourier}',
   laplace: '\\mathcal{L}',
   ilaplace: '\\mathcal{L}^{-1}',
+  bisection: '\\operatorname{bisezione}',
+  secant: '\\operatorname{secanti}',
+  fixedpoint: '\\operatorname{puntofisso}',
+  interpolate: '\\operatorname{interpola}',
+  leastsquares: '\\operatorname{minimiquadrati}',
+  midpoint: '\\operatorname{rettangoli}',
+  trapezoid: '\\operatorname{trapezi}',
+  norm: '\\operatorname{norma}',
+  euler: '\\operatorname{eulero}',
 }
 
 /** Le funzioni della statistica: sempre con le parentesi. */
