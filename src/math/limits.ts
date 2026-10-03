@@ -23,6 +23,15 @@ function towards(values: number[]): LimitValue {
   const last = values.slice(-6)
   if (last.every((v) => v === Infinity)) return { k: 'infinity', sign: 1 }
   if (last.every((v) => v === -Infinity)) return { k: 'infinity', sign: -1 }
+  // Valori che crescono finché non superano il numero più grande che si scrive (x e^{-x} per x → −∞).
+  const end = values[n - 1]
+  if (end === Infinity || end === -Infinity) {
+    const k = values.indexOf(end)
+    const before = values.slice(Math.max(0, k - 3), k)
+    if (values.slice(k).every((v) => v === end) && before.length >= 2 && before.every((v, i) => Number.isFinite(v) && Math.sign(v) === Math.sign(end) && (i === 0 || Math.abs(v) > Math.abs(before[i - 1])))) {
+      return { k: 'infinity', sign: end > 0 ? 1 : -1 }
+    }
+  }
   if (!last.every(Number.isFinite)) return { k: 'none' }
   // Richardson: se la funzione è regolare in h, i valori corretti a ogni livello convergono in fretta.
   const table: number[][] = []

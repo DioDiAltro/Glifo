@@ -25,9 +25,13 @@ Probabilità e statistica, Matematica discreta, Calcolo numerico. Chiesto dallo 
    nei grafici la primitiva. Restano senza risultato gli integrali con un punto dove la funzione esplode
    in mezzo agli estremi (`\int_{-1}^{1} \frac{dx}{x^2}`, che diverge) e le primitive con fattori
    irrazionali (`\frac{1}{x^4 + 1}`).
-9. **Studio di funzione:** dominio, simmetrie, intersezioni con gli assi, segno, limiti agli estremi,
-   asintoti, crescenza, massimi e minimi, concavità e flessi; nel grafico gli asintoti tratteggiati e
-   i punti notevoli.
+9. **Studio di funzione**, fatto: `\operatorname{studio}(f) =` dà dominio, simmetria, periodo,
+   intersezioni con gli assi, segno, limiti agli estremi, asintoti (verticali, orizzontali, obliqui),
+   derivata e crescenza, massimi e minimi (anche punti angolosi e cuspidi), derivata seconda, concavità
+   e flessi (anche a tangente orizzontale o verticale), con i punti esatti quando si può; le funzioni
+   periodiche in un periodo; le parti da sole (`\operatorname{dominio}`, `asintoti`, `estremi`,
+   `flessi`, `zeri`); nel grafico gli asintoti tratteggiati e i punti M, m, F. I punti si trovano con i
+   numeri e si riconoscono esatti quando si può (√3, e^{3/2}, π/4); se no restano decimali.
 10. **Probabilità e statistica:** i dati (media, mediana, moda, varianza, quartili, correlazione, retta
     di regressione), il calcolo combinatorio, le variabili aleatorie scritte con `X \sim B(10, 0{,}3)`
     (binomiale, Poisson, geometrica, normale, esponenziale, uniforme, t di Student, χ²) con

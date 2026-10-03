@@ -170,6 +170,7 @@ function addLabel(add: NonNullable<GraphError['add']>): string {
 /** Il quadratino della legenda: una linea per le curve, un pallino per i punti, un riquadro per aree e superfici. */
 function swatchClass(item: GraphSpec['items'][number]): string {
   const kind = item.kind
+  if (item.dashed) return 'graph-swatch is-dashed'
   if (kind === 'point' || kind === 'point3' || kind === 'points' || (kind === 'complex' && !item.arrows)) return 'graph-swatch is-point'
   if (kind === 'polygon') return 'graph-swatch is-region'
   if (kind === 'area') return 'graph-swatch is-area'

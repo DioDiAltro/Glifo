@@ -78,7 +78,10 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   formule dopo, risolte con Runge–Kutta (`odeSolution`); i polinomi di Taylor sono `\operatorname{taylor}`
   in `symbolic.ts`; `primitive.ts` le primitive (nodo `prim`, `\int f \, dx` senza estremi; ognuna
   controllata derivandola con i numeri, `verified`), con i polinomi di `polynomial.ts` (fratti semplici);
-  `definite.ts` gli integrali definiti con la primitiva, esatti o impropri, controllati con i numeri),
+  `definite.ts` gli integrali definiti con la primitiva, esatti o impropri, controllati con i numeri;
+  `study.ts` lo studio di funzione, `\operatorname{studio}(f) =`: dominio a pezzi, segno, limiti,
+  asintoti, derivate, massimi, minimi e flessi trovati con i numeri e riconosciuti esatti, le periodiche
+  in un periodo; `studyRows`/`studyTable` lo scrivono una riga per informazione, `studyPart` le parti),
   `sheet.ts` è il
   «foglio» della nota: le formule dall'alto in basso, `$a = 2$` e `$f(x) = …$` definiscono, una formula
   che finisce con `=` ha il risultato (nell'editor `src/editor/calcResults.ts`, Tab lo scrive;
@@ -114,7 +117,9 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   (`\operatorname{livelli}(f)`, `kind: 'contour'`) e le equazioni differenziali: del primo ordine il campo di
   direzioni (`kind: 'slopes'`, livelli e soluzioni in `ode.ts`), di ordine più alto la soluzione come
   funzione. Un polinomio di Taylor da solo porta nel blocco anche la riga della sua funzione (se nessuna
-  la disegna già, `curveKeys`).
+  la disegna già, `curveKeys`). Lo studio di funzione (`\operatorname{studio}(f)` e le sue parti) è in
+  `studyGraph.ts`: la funzione, gli asintoti con `dashed` (tratteggiati in `svg.ts` e nella legenda) e i
+  punti M, m, F.
 - `src/ai/`: assistente AI. `src/host.ts`: funzioni della demo dentro claude.ai.
 - `src/account/`: account e sincronizzazione. `sync.ts` è il motore (manda, scarica, nei
   conflitti tiene tutte e due le versioni), `controller.ts` decide quando sincronizzare,

@@ -201,6 +201,15 @@ chi sta provando Glifo.*
   π/4 ≈ 0,785398…, `\int_0^1 \arctan x \, dx` dà π/4 − ln(2)/2), anche **impropri** (`\int_1^{\infty} \frac{dx}{x^2} =`
   dà 1, `\int_0^1 \frac{dx}{x}` dà +∞: diverge); con una lettera negli estremi la funzione integrale
   (`\int_0^x t^2 \, dt =` dà x³/3). Se la primitiva non si trova resta il valore con i numeri.
+- **Studio di funzione**: `\operatorname{studio}(f) =` (con f definita prima, o la funzione stessa:
+  `\operatorname{studio}(x e^{-x}) =`) fa lo studio come a lezione, una parte per riga: dominio, simmetria
+  (pari o dispari), periodo, intersezioni con gli assi, segno, limiti agli estremi del dominio, asintoti
+  (verticali, orizzontali e obliqui), la derivata con la crescenza e i massimi e minimi (anche i punti
+  angolosi e le cuspidi), la derivata seconda con la concavità e i flessi (anche a tangente orizzontale o verticale). I
+  punti sono esatti quando si può (massimo (1; e⁻¹)); le funzioni periodiche si studiano in un periodo
+  (`\tan x` in [0, π], con x ≠ π/2 + kπ). Una parte sola: `\operatorname{dominio}(\ln(4 - x^2)) =` dà
+  −2 < x < 2, e così `\operatorname{asintoti}`, `\operatorname{estremi}`, `\operatorname{flessi}`,
+  `\operatorname{zeri}`.
 - **Equazioni, disequazioni e sistemi risolti**: con `\Rightarrow` (o `\implies`, ⇒) in fondo.
   `x^2 - 5x + 6 = 0 \Rightarrow` dà x = 2 ∨ x = 3, `x^2 - x - 1 = 0` dà x = (1 ± √5)/2, `x^2 - 4x + 4 = 0`
   x = 2 (doppia); senza soluzioni reali dice quelle complesse. Le goniometriche con il periodo
@@ -224,7 +233,7 @@ chi sta provando Glifo.*
   (sono quelle sicure).
 - Il pulsante con gli **assi** nella barra mette nella nota un **grafico**: con il cursore su una
   funzione (`$f(x) = …$`) disegna quella, su un integrale (`$\int_0^2 x^2 \, dx =$`) la sua area (e
-  così le curve di livello, i polinomi di Taylor, le primitive, le equazioni differenziali), se no prepara il blocco
+  così le curve di livello, i polinomi di Taylor, le primitive, gli studi di funzione, le equazioni differenziali), se no prepara il blocco
   da scrivere. Il grafico della formula sotto il cursore si vede anche nel
   pannello a destra, con «Inserisci il grafico».
 - Il blocco ` ```grafico ` ha una riga per ogni cosa da disegnare: funzioni (`y = x^2`, `f(x) = \frac{1}{x}`,
@@ -240,6 +249,10 @@ chi sta provando Glifo.*
   riga) l'area prende il suo colore; se no il grafico disegna anche la curva. Gli estremi possono
   essere numeri con lo slider (`\int_0^b`): muovendolo l'area cambia. Si può lasciare l'uguale
   finale o il risultato copiato dalla nota.
+- Uno **studio di funzione** nel blocco (`\operatorname{studio}(f)`, anche dopo `f(x) = …` in un'altra riga)
+  disegna la funzione con gli **asintoti tratteggiati** e i punti notevoli con il nome: i massimi M, i
+  minimi m e i flessi F (M₁, M₂… se sono più di uno); `\operatorname{asintoti}(f)` solo gli asintoti,
+  `\operatorname{estremi}(f)`, `\operatorname{flessi}(f)` e `\operatorname{zeri}(f)` solo quei punti.
 - Le **disuguaglianze** colorano una **zona**: `y > x^2`, `x^2 + y^2 \le 4`, `y \le 4 - x^2, y \ge 0`; il
   bordo è tratteggiato dove non ne fa parte (con < e >). Anche gli **insiemi**
   (`D = \{(x, y) : 0 \le x \le 1, x^2 \le y \le x\}`, o il nome di uno della nota) e i **domini degli
@@ -328,6 +341,8 @@ chi sta provando Glifo.*
 ![Analisi: un limite, una serie, un polinomio di Taylor, un'equazione e una disequazione risolte e un'equazione differenziale nella nota; il campo di direzioni con le soluzioni nell'anteprima e, nel pannello, il polinomio di Taylor con la sua funzione](docs/analisi.png)
 
 ![Integrali: primitive per parti, con i fratti semplici e per sostituzione, integrali definiti esatti e impropri nella nota; il coseno e la sua primitiva nell'anteprima e, nel pannello, il grafico di una primitiva](docs/primitive.png)
+
+![Studio di funzione: nella nota dominio, simmetria, segno, limiti, asintoti, derivate, massimi, minimi e flessi; nel grafico la funzione con gli asintoti tratteggiati e i punti M, m, F](docs/studio.png)
 
 **Schemi stile draw.io**
 - Il pulsante con i due riquadri nella barra apre un editor a tutto schermo: forme a sinistra
@@ -532,6 +547,7 @@ src/
     primitive.ts          le primitive: integrali immediati, sostituzione, per parti, fratti semplici, seno e coseno, radici (ognuna controllata derivandola)
     polynomial.ts         i polinomi con le frazioni: divisione, MCD, radici razionali, scomposizione, fratti semplici
     definite.ts           gli integrali definiti con la primitiva: il valore esatto e gli impropri
+    study.ts              lo studio di funzione: dominio, segno, limiti, asintoti, derivate, massimi, minimi e flessi
     calculus.ts           gli integrali di linea e di superficie (lavoro e flusso) sulle curve e superfici definite
     limits.ts             i limiti (Richardson, da una parte e dall'altra) e le serie (somme accelerate), e i valori riconosciuti (π²/6, e, ln 2)
     solve.ts              le equazioni, le disequazioni e i sistemi risolti dopo ⇒
@@ -545,6 +561,7 @@ src/
     gauss.ts              il piano di Gauss: numeri complessi, radici, equazioni e zone in z
     fields.ts             i campi di vettori (le frecce), le curve con il verso, le superfici, gli integrali di linea e di superficie, le curve di livello e le equazioni differenziali
     ode.ts                i livelli delle curve di livello e le soluzioni nel campo di direzioni
+    studyGraph.ts         lo studio di funzione nel grafico: asintoti tratteggiati, massimi, minimi e flessi
     plot.ts               dove calcolare le curve (salti, asintoti) e le aree, la finestra, le tacche
     svg.ts                il disegno in SVG, con i colori dei due temi
     space.ts              i conti del 3D: superfici a quadretti e a tetraedri, piani, solidi, curve nello spazio, la scatola da mostrare

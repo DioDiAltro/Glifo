@@ -55,7 +55,8 @@ import {
   type Multiple,
   type PlanePart,
 } from './regions'
-import { expandCalculus, SYMBOLIC_FNS } from '../math/symbolic'
+import { expandCalculus, SYMBOLIC_FNS, type SymbolScope } from '../math/symbolic'
+import { STUDY_GRAPH, studyItems } from './studyGraph'
 import { odeOf } from '../math/differential'
 import { calculusDims, calculusItems, vectorDefinition, type FieldContext } from './fields'
 import { gaussItem, isComplexLine, onlyComplex } from './gauss'
@@ -88,6 +89,8 @@ interface ItemBase {
    * nota): si disegna con il suo nome, ma non è una riga del blocco.
    */
   fromNote?: boolean
+  /** Un asintoto (dello studio di funzione): tratteggiato. */
+  dashed?: boolean
 }
 
 export type GraphItem =
@@ -1098,6 +1101,18 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   }
   /** Gli integrali sulle curve e sulle superfici che un'altra riga disegna: prendono il suo colore. */
   const sameLines = new Map<GraphItem, number>()
+  /** Le funzioni della nota e del blocco con le lettere, per lo studio di funzione. */
+  const studySymbols = (): SymbolScope => {
+    const base = sheet.symbolScope()
+    const symbolFns = new Map(base.fns)
+    const symbolConsts = new Map(base.consts)
+    for (const l of madeLines) {
+      const def = definitionOf(l.main)
+      if (def?.params) symbolFns.set(def.name, { params: def.params, body: def.value })
+      else if (def) symbolConsts.set(def.name, null)
+    }
+    return { consts: symbolConsts, fns: symbolFns }
+  }
 
   // Poi le righe da disegnare, nell'ordine in cui sono scritte, e quelle che dicono da dove a dove.
   const ranges = new Map<string, Range>()
@@ -1143,6 +1158,16 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
     }
     const own = !under.has(l.line)
     try {
+      // Lo studio di funzione: la funzione, gli asintoti, i massimi, i minimi e i flessi.
+      const studiedName = l.main.k === 'fn' && l.main.args[0]?.k === 'name' ? l.main.args[0].name : null
+      const drawsIt = !!studiedName && drawn.some((o) => o !== l && definitionOf(o.main)?.name === studiedName)
+      const studied = space ? null : studyItems(l.main, l.line, slot, scope(), studySymbols(), drawsIt)
+      if (studied) {
+        spec.items.push(...studied.items)
+        slots.set(l.line, slot)
+        slot += studied.colors
+        continue
+      }
       // Un campo, una curva o una superficie con il nome, un gradiente, un integrale di linea o di superficie.
       const calculus = calculusItems(l, fieldContext, slot, space)
       if (calculus) {
@@ -1775,6 +1800,7 @@ export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSp
     main.k === 'lint' ||
     main.k === 'sint' ||
     main.k === 'prim' ||
+    (main.k === 'fn' && STUDY_GRAPH.has(main.name)) ||
     (main.k === 'fn' && (main.name === 'grad' || main.name === 'levels' || SYMBOLIC_FNS.has(main.name))) ||
     !!odeOf(main)
   if (!areaOf(main) && !multipleOf(main) && !setOf(main) && !zone && !complex && !vector && !calculus) {

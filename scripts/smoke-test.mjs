@@ -1419,6 +1419,20 @@ try {
     .waitForFunction(() => [...document.querySelectorAll('.cm-calc-result')].map((e) => e.getAttribute('aria-label') ?? '').find((t) => t.startsWith('π/4')), null, { timeout: 5000 })
     .then((h) => h.jsonValue())
   check(exactIntegral === 'π/4 ≈ 0,785398…', `una primitiva ha la costante e il grafico nel pannello, un integrale definito il valore esatto (${exactIntegral})`)
+  // Lo studio di funzione: le righe nella nota e, nel pannello, gli asintoti tratteggiati e i punti notevoli.
+  await gp.keyboard.press('End')
+  await gp.keyboard.type('\n\nStudio: $\\operatorname{studio}(\\frac{x^2 + 1}{x}) =')
+  const studyRows = await gp
+    .waitForFunction(() => [...document.querySelectorAll('.cm-calc-result')].map((e) => e.getAttribute('aria-label') ?? '').find((t) => t.startsWith('Dominio')), null, { timeout: 8000 })
+    .then((h) => h.jsonValue())
+  // Un asintoto verticale è largo zero: per Playwright non «si vede», quindi basta che ci sia.
+  await gp.waitForSelector('.formula-graph:not([hidden]) svg path[stroke-dasharray="7 5"]', { state: 'attached', timeout: 5000 })
+  const asymptotes = await gp.locator('.formula-graph svg path[stroke-dasharray="7 5"]').count()
+  const namedPoints = await gp.locator('.formula-graph svg text').evaluateAll((els) => els.map((e) => e.textContent).filter((t) => t === 'M' || t === 'm'))
+  check(
+    studyRows.includes('Asintoti: x = 0 verticale; y = x (x → ±∞) obliquo') && studyRows.includes('massimo (−1; −2); minimo (1; 2)') && asymptotes === 2 && namedPoints.length === 2,
+    `lo studio di funzione ha le righe e nel pannello gli asintoti tratteggiati e i punti (${JSON.stringify({ studyRows: studyRows.slice(0, 60), asymptotes, namedPoints })})`,
+  )
   await gp.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)

@@ -122,6 +122,9 @@ const FUNCTION_NAMES: Record<string, string> = {
   taylor: 'taylor', maclaurin: 'maclaurin', mclaurin: 'maclaurin',
   // Le curve di livello di una funzione di x e y, nei grafici.
   livelli: 'levels', livello: 'levels', contour: 'levels',
+  // Lo studio di funzione, tutto o una parte.
+  studio: 'study', dominio: 'domain', asintoti: 'asymptotes', estremi: 'extrema', massimi: 'extrema', minimi: 'extrema',
+  flessi: 'flexes', zeri: 'zeros',
 }
 
 /** Le parole riconosciute anche senza barra (`sin x`, `sqrt(x)`, `pi`), come in una calcolatrice. */

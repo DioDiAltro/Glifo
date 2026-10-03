@@ -163,7 +163,7 @@ function numeric(F: MathNode, x: string, scope: SolveScope): (v: number) => numb
 }
 
 /** Le radici di f tra a e b: dove cambia segno (non per un asintoto) e dove tocca lo zero. */
-function scanRoots(f: (v: number) => number, a: number, b: number, n: number): number[] {
+export function scanRoots(f: (v: number) => number, a: number, b: number, n: number): number[] {
   const roots: number[] = []
   const h = (b - a) / n
   let x0 = a
@@ -215,7 +215,7 @@ function scanRoots(f: (v: number) => number, a: number, b: number, n: number): n
 }
 
 /** Il periodo della funzione (2π o π), se lo è: allora le soluzioni si scrivono con + 2kπ. */
-function periodOf(f: (v: number) => number): number | null {
+export function periodOf(f: (v: number) => number): number | null {
   const probes = [0.3, 1.7, -2.4, 4.1, 0.9, -0.6, 2.2]
   for (const P of [2 * Math.PI, Math.PI]) {
     let ok = true
@@ -328,7 +328,7 @@ function holds(op: RelOp, v: number): boolean {
 }
 
 /** I punti dove la funzione non esiste o salta (gli asintoti, il bordo del dominio). */
-function breaks(f: (v: number) => number, a: number, b: number, n: number): number[] {
+export function breaks(f: (v: number) => number, a: number, b: number, n: number): number[] {
   const out: number[] = []
   const h = (b - a) / n
   let prev = f(a)

@@ -8,7 +8,9 @@
 import { compile, EMPTY_SCOPE, fnLabel, MathError, UndefinedName } from './evaluate'
 import { ExactUnavailable, Rational } from './exact'
 import { children, namesIn, productPower, type MathNode } from './parse'
-import { primitive } from './primitive'
+import { asFraction, polyEx, primitive } from './primitive'
+import { squareFree as squareFreeFactors } from './polynomial'
+import { toLatex } from './latex'
 
 export type Ex =
   | { t: 'num'; v: Rational }
@@ -210,7 +212,8 @@ export function mul(...xs: Ex[]): Ex {
     const [base, exp] = x.t === 'pow' ? [x.base, x.exp] : [x, num(1)]
     const k = key(base)
     const group = groups.get(k)
-    if (group) group.exp = add(group.exp, exp)
+    // Gli esponenti con le lettere sviluppati: e^{a} e^{−(a)} = 1.
+    if (group) group.exp = group.exp.t === 'num' && exp.t === 'num' ? add(group.exp, exp) : expand(add(group.exp, exp))
     else {
       groups.set(k, { base, exp })
       order.push(k)
@@ -310,7 +313,10 @@ export function pow(b: Ex, e: Ex): Ex {
       if (exact) return exact
     }
     // (x²)³ = x⁶; ma √(x²) resta così (è |x|). Con una base positiva sempre: √(e^{2x}) = eˣ.
-    if (b.t === 'pow' && (e.v.isInteger || (b.base.t === 'sym' && b.base.name === 'e') || (b.base.t === 'num' && b.base.v.sign > 0))) return pow(b.base, mul(b.exp, e))
+    // Anche con le radici dispari, che si scambiano con le potenze (∛(x²)² = x^{4/3}), e dentro una radice
+    // pari, dove la base è positiva (∛√x = x^{1/6}); √(x²) no.
+    const oddRoot = b.t === 'pow' && b.exp.t === 'num' && (b.exp.v.d % 2n === 0n || e.v.d % 2n === 1n)
+    if (b.t === 'pow' && (e.v.isInteger || oddRoot || (b.base.t === 'sym' && b.base.name === 'e') || (b.base.t === 'num' && b.base.v.sign > 0))) return pow(b.base, mul(b.exp, e))
     if (b.t === 'mul' && e.v.isInteger) return mul(numPow(b.c, e.v) ?? num(1), ...b.factors.map((f) => pow(f, e)))
   }
   if (isNum(b, 1)) return num(1)
@@ -1096,6 +1102,30 @@ export function definiteParts(node: Extract<MathNode, { k: 'int' }>, scope: Symb
   }
 }
 
+/**
+ * La funzione di una variabile di \operatorname{studio}(f): una f della nota (con la sua variabile), f(x)
+ * o un'espressione (nella x, o nell'unica lettera che ha); `name` per scriverla (f se non ha un nome).
+ */
+export function functionOf(node: MathNode, scope: SymbolScope): { f: Ex; v: string; name: string } | null {
+  const c = new Converter(scope)
+  try {
+    const named = node.k === 'name' || (node.k === 'apply' && !node.primes && node.args.length === 1 && node.args[0].k === 'name')
+    const def = named ? scope.fns.get((node as { name: string }).name) : undefined
+    if (def && (node.k === 'name' || node.k === 'apply')) {
+      if (def.params.length !== 1 || isVectorBody(def.body)) return null
+      const v = node.k === 'apply' ? (node.args[0] as { name: string }).name : def.params[0]
+      return { f: c.scalarWith({ k: 'apply', name: node.name, args: [{ k: 'name', name: v }], primes: 0 }, [v]), v, name: node.name }
+    }
+    const f = c.scalarWith(node, ['x'])
+    const free = symbols(f).filter((s) => s !== 'π' && s !== 'e')
+    const v = free.includes('x') || !free.length ? 'x' : free.length === 1 ? free[0] : null
+    if (!v) return null
+    return { f: v === 'x' ? f : c.scalarWith(node, [v]), v, name: 'f' }
+  } catch {
+    return null
+  }
+}
+
 /** La derivata di `body` rispetto a `v`, con le lettere `variables` che restano variabili (i parametri di una curva). */
 export function partialDerivative(body: MathNode, v: string, variables: string[], scope: SymbolScope): MathNode {
   return toNode(derive(new Converter(scope).scalarWith(body, variables), v))
@@ -1282,10 +1312,38 @@ export function toNode(x: Ex, decimal = false): MathNode {
   const saved = decimals
   decimals = decimal
   try {
-    return node(tidy(x))
+    const out = node(tidy(x))
+    // Una funzione razionale scritta più semplice, se lo è: −1/(x²(1/x² + 1)) = −1/(x² + 1).
+    const simpler = rationalForm(x)
+    if (simpler) {
+      const other = node(tidy(simpler))
+      if (toLatex(other).length < toLatex(out).length) return other
+    }
+    return out
   } finally {
     decimals = saved
   }
+}
+
+/**
+ * Una funzione razionale di una lettera come N/D: il numeratore sviluppato (con i fattori comuni
+ * fuori), il denominatore come prodotto di potenze di fattori senza quadrati ((x² − 1)³). Null se non lo è.
+ */
+function rationalForm(x: Ex): Ex | null {
+  if (x.t !== 'mul' && x.t !== 'add') return null
+  const letters = symbols(x).filter((n) => n !== 'π' && n !== 'e')
+  if (letters.length !== 1) return null
+  const v = letters[0]
+  const r = asFraction(x, v)
+  if (!r || r.D.length <= 1) return null
+  const lead = r.D[r.D.length - 1]
+  let N = polyEx(r.N.map((c) => c.div(lead)), v)
+  if (N.t === 'add' && N.terms.every(isNegative)) {
+    const positive = add(...N.terms.map(neg))
+    N = mul(num(-1), (positive.t === 'add' ? commonMonomial(positive) : null) ?? positive)
+  } else if (N.t === 'add') N = commonMonomial(N) ?? N
+  const D = mul(...squareFreeFactors(r.D).map(({ p, m }) => pow(polyEx(p, v), num(m))))
+  return mul(N, pow(D, num(-1)))
 }
 
 // ——— In ordine, come nei libri ———
@@ -1412,39 +1470,67 @@ export function expand(x: Ex): Ex {
 }
 
 /** I fattori al denominatore di un termine: le potenze con l'esponente intero negativo (non e^{-x}). */
-function denominators(t: Ex): { base: Ex; k: bigint }[] {
+function denominators(t: Ex): { base: Ex; k: Rational }[] {
   const factors = t.t === 'mul' ? t.factors : [t]
-  const out: { base: Ex; k: bigint }[] = []
+  const out: { base: Ex; k: Rational }[] = []
   for (const f of factors) {
-    if (f.t === 'pow' && f.exp.t === 'num' && f.exp.v.isInteger && f.exp.v.sign < 0 && !(f.base.t === 'sym' && f.base.name === 'e')) {
-      out.push({ base: f.base, k: -f.exp.v.n })
-    }
+    if (f.t !== 'pow' || f.exp.t !== 'num' || f.exp.v.sign >= 0 || (f.base.t === 'sym' && f.base.name === 'e')) continue
+    // Anche le radici sotto: 1/√(x² − 4) e x²/(x² − 4)^{3/2} hanno lo stesso denominatore.
+    if (f.exp.v.isInteger || f.base.t === 'add' || f.base.t === 'sym') out.push({ base: f.base, k: f.exp.v.neg() })
   }
   return out
 }
 
+/** Il numero e la potenza della variabile che i termini di un polinomio hanno in comune: 2x³ + 6x = 2x(x² + 3). */
+function commonMonomial(x: Extract<Ex, { t: 'add' }>): Ex | null {
+  const letters = symbols(x).filter((n) => n !== 'π' && n !== 'e')
+  if (letters.length !== 1 || x.terms.some((t) => degree(t) === null)) return null
+  const v = sym(letters[0])
+  let n = 0n
+  let d = 1n
+  let least = Infinity
+  const gcd = (a: bigint, b: bigint): bigint => (b ? gcd(b, a % b) : a < 0n ? -a : a)
+  for (const t of x.terms) {
+    const c = t.t === 'num' ? t.v : t.t === 'mul' ? t.c : ONE
+    n = gcd(n, c.n)
+    d = (d * c.d) / gcd(d, c.d)
+    least = Math.min(least, degree(t)!)
+  }
+  const g = new Rational(n || 1n, d)
+  if (g.n === 1n && g.d === 1n && !least) return null
+  const factor = mul(num(g), pow(v, num(least)))
+  const rest = add(...x.terms.map((t) => mul(t, pow(factor, num(-1)))))
+  return { t: 'mul', c: g, factors: sortFactors([...(least ? [pow(v, num(least))] : []), rest]) }
+}
+
 /**
- * Una somma con due o più frazioni con un denominatore solo, se il numeratore viene semplice:
+ * Una somma con delle frazioni con un denominatore solo, se il numeratore viene semplice:
  * 1/(x + 1) − x/(x + 1)² = 1/(x + 1)², come si fa nelle derivate dei quozienti.
  */
 function combine(x: Ex): Ex {
   if (x.t !== 'add') return x
   const parts = x.terms.map(denominators)
-  if (parts.filter((d) => d.length).length < 2) return x
+  if (!parts.some((d) => d.length)) return x
   // Denominatori diversi con logaritmi e arcotangenti: meglio i termini separati (come nelle primitive).
-  const below = new Set(parts.map((d) => d.map(({ base, k }) => `${key(base)}^${k}`).join('*')))
+  const below = new Set(parts.map((d) => d.map(({ base, k }) => `${key(base)}^${k.n}/${k.d}`).join('*')))
   const transcendental = (e: Ex): boolean => e.t === 'fn' || (e.t === 'pow' && (transcendental(e.base) || e.exp.t !== 'num')) || (e.t === 'mul' && e.factors.some(transcendental)) || (e.t === 'add' && e.terms.some(transcendental))
   if (below.size > 1 && x.terms.some(transcendental)) return x
-  const common = new Map<string, { base: Ex; k: bigint }>()
+  const common = new Map<string, { base: Ex; k: Rational }>()
   for (const { base, k } of parts.flat()) {
     const before = common.get(key(base))
-    if (!before || before.k < k) common.set(key(base), { base, k })
+    if (!before || before.k.cmp(k) < 0) common.set(key(base), { base, k })
   }
-  const D = mul(...[...common.values()].map(({ base, k }) => pow(base, num(new Rational(k)))))
+  const D = mul(...[...common.values()].map(({ base, k }) => pow(base, num(k))))
   const numerator = expand(add(...x.terms.map((t) => mul(t, D))))
   const size = numerator.t === 'add' ? numerator.terms.length : 1
   if (size > x.terms.length * 4 || denominators(numerator).length) return x
-  return mul(numerator, pow(D, num(-1)))
+  // −x² − 1 sopra: meglio −(x² + 1); 2x³ + 6x: 2x(x² + 3).
+  if (numerator.t === 'add' && numerator.terms.every(isNegative)) {
+    const positive = add(...numerator.terms.map(neg))
+    return mul(num(-1), (positive.t === 'add' ? commonMonomial(positive) : null) ?? positive, pow(D, num(-1)))
+  }
+  const factored = numerator.t === 'add' ? commonMonomial(numerator) : null
+  return mul(factored ?? numerator, pow(D, num(-1)))
 }
 
 /** Una somma dentro una potenza o una funzione, in ordine: √(1 − x²), e^{x² + 2x}. */

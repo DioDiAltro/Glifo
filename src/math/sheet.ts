@@ -42,7 +42,8 @@ import { formatNumber, formatRational, type FormattedResult } from './format'
 import { toLatex } from './latex'
 import { children, namesIn, parseMath, type MathNode } from './parse'
 import { definiteIntegral } from './definite'
-import { definiteParts, expandCalculus, isVectorBody, needsSymbols, partialDerivative, plainText, sub, subst, symbolicValue, symbols, toNode, zeroOverZero, type Ex, type SymbolScope } from './symbolic'
+import { study, studyPart, studyRows, studyTable } from './study'
+import { definiteParts, expandCalculus, functionOf, isVectorBody, needsSymbols, partialDerivative, plainText, sub, subst, symbolicValue, symbols, toNode, zeroOverZero, type Ex, type SymbolScope } from './symbolic'
 
 export interface Definition {
   name: string
@@ -75,6 +76,9 @@ export function calculationRequest(tex: string): string | null {
   const body = tex.slice(0, m.index)
   return body.trim() ? body : null
 }
+
+/** Lo studio di funzione e le sue parti: \operatorname{studio}, \operatorname{dominio}, \operatorname{asintoti}… */
+const STUDY = new Set(['study', 'domain', 'asymptotes', 'extrema', 'flexes', 'zeros'])
 
 /** I passi di somme e integrali per ogni risultato: abbastanza per i conti veri, non per bloccare la pagina. */
 const WORK = 2e6
@@ -699,6 +703,12 @@ export class Sheet {
         if (target && !target.params && limitShown.value) this.record(target, item, `${target.name} = ${src.slice(src.indexOf('=') + 1)}`, limitShown.value)
         return limitShown.shown
       }
+      // Lo studio di funzione (\operatorname{studio}(f)), o una sua parte.
+      if (item.k === 'fn' && STUDY.has(item.name) && item.args.length === 1) {
+        const shown = this.showStudy(item, style)
+        if (shown) return shown
+        continue
+      }
       // Un integrale definito con la primitiva: il valore esatto, gli impropri, la funzione integrale.
       const integral = this.showIntegral(item, style)
       if (integral) {
@@ -771,6 +781,23 @@ export class Sheet {
     const shown = limitText(value, style, exact)
     const result: Value | null = value.k === 'value' ? { float: value.v, exact } : null
     return shown ? { shown, value: result } : null
+  }
+
+  /** Lo studio di funzione, tutto (una tabella) o una parte (il dominio, gli asintoti…). */
+  private showStudy(item: Extract<MathNode, { k: 'fn' }>, style: ReturnType<typeof styleOf>): FormattedResult | null {
+    try {
+      return withWorkLimit(WORK, () => {
+        const target = functionOf(item.args[0], this.symbolScope())
+        if (!target) return null
+        const s = study(target.f, target.v, this.scope(), style, target.name)
+        if (!s) return null
+        if (item.name === 'study') return studyTable(studyRows(s, target.name, style))
+        const part = studyPart(s, item.name, style)
+        return part && { ...part, rich: true }
+      })
+    } catch {
+      return null
+    }
   }
 
   /** La primitiva con la costante: + c (o + k, + C se la c c'è già). */

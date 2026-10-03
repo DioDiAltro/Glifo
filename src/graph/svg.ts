@@ -372,7 +372,8 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
         heads.push(`<path d="${arrow(ax, ay, bx, by)}" fill="${color}"/>`)
       }
     }
-    if (lines.length) curves.push(`<path d="${lines.map(path).join('')}" stroke="${color}" data-item="${i}"/>`)
+    // Un asintoto: tratteggiato e più sottile.
+    if (lines.length) curves.push(`<path d="${lines.map(path).join('')}" stroke="${color}"${item.dashed ? ' stroke-width="1.75" stroke-dasharray="7 5"' : ''} data-item="${i}"/>`)
     drawn.push(...lines)
   })
   out.push(`<g clip-path="url(#${clip})" fill="none" stroke-linecap="round" stroke-linejoin="round">`)
