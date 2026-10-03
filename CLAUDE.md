@@ -78,7 +78,9 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   `\nabla f = 0 \Rightarrow`), gli estremi vincolati con Lagrange e assoluti su un insieme (`extremaOf`:
   dentro, sul bordo e negli spigoli; `\max_{…} f` è un nodo `fn` max con `base`), i punti trovati con Newton
   smorzato e riconosciuti esatti con `exactNear` (controllati con le lettere); Taylor in più variabili è
-  `taylorSeveral` in `symbolic.ts`; `solve.ts` le equazioni, le
+  `taylorSeveral` in `symbolic.ts`; `conics.ts` le coniche e le quadriche dall'equazione
+  (`\operatorname{conica}`, `\operatorname{quadrica}`: le matrici dei coefficienti, gli elementi esatti con gli
+  assi cartesiani, `ConicElements` per i grafici); `solve.ts` le equazioni, le
   disequazioni e i sistemi di una formula che finisce con ⇒ (`solveRequest`); `differential.ts` le
   equazioni differenziali di ogni ordine (`odeOf`, anche y'' + y = 0; `withPrimes` scrive dy/dx, ẋ e y'(x)
   come y') con le condizioni iniziali anche in formule dopo, risolte con Runge–Kutta (`odeSolution`);
@@ -141,7 +143,8 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   direzioni (`kind: 'slopes'`, livelli e soluzioni in `ode.ts`), di ordine più alto la soluzione come
   funzione; un sistema di due equazioni il ritratto di fase (`kind: 'phase'`, `systemOf` in
   `differential.ts`, traiettorie e punti di equilibrio in `ode.ts`). I punti critici e gli estremi in più
-  variabili (curve di livello, vincolo, punti M, m, S) sono in `severalGraph.ts`. Un polinomio di Taylor da solo porta nel blocco anche la riga della sua funzione (se nessuna
+  variabili (curve di livello, vincolo, punti M, m, S) sono in `severalGraph.ts`, le coniche con i loro
+  elementi in `conicGraph.ts` (una riga `\operatorname{quadrica}(…)` diventa la sua equazione). Un polinomio di Taylor da solo porta nel blocco anche la riga della sua funzione (se nessuna
   la disegna già, `curveKeys`). Lo studio di funzione (`\operatorname{studio}(f)` e le sue parti) è in
   `studyGraph.ts`: la funzione, gli asintoti con `dashed` (tratteggiati in `svg.ts` e nella legenda) e i
   punti M, m, F. La probabilità e i dati sono in `statsGraph.ts`: le distribuzioni come barre (`kind: 'bars'`) o

@@ -236,6 +236,13 @@ chi sta provando Glifo.*
   `\max_{x \ge 0, y \ge 0, x + y \le 1} x y =`, o con un insieme D della nota); il **polinomio di Taylor** in
   più variabili (`\operatorname{taylor}(e^{x + y}, (0, 0), 2) =`). I punti si trovano con i numeri e si
   riconoscono esatti (frazioni, radici, multipli di π) controllandoli con le lettere.
+- **Coniche e quadriche**: `\operatorname{conica}(4x^2 + 9y^2 - 8x - 36y + 4 = 0) =` dà il tipo, la forma
+  canonica ((x − 1)²/9 + (y − 2)²/4 = 1) e gli elementi: centro, semiassi, fuochi (1 ± √5, 2) ed
+  eccentricità per l'ellisse; raggio per la circonferenza; fuochi e asintoti per l'iperbole; vertice,
+  fuoco, direttrice e asse per la parabola; le degeneri (due rette, un punto) e quelle senza punti reali.
+  Con il termine in xy la forma canonica negli assi ruotati (con l'angolo). `\operatorname{quadrica}(…) =`
+  dà ellissoide (e sfera, con centro e raggio), iperboloide a una o a due falde, paraboloide ellittico o
+  iperbolico, cono, cilindri, con la forma canonica.
 - **Variabili aleatorie**: `$X \sim B(10, 0{,}3)$` definisce X (anche `B(10; 0,3)`, `\operatorname{Bin}`):
   binomiale, `\operatorname{Be}(p)` di Bernoulli, `\operatorname{Po}(\lambda)` di Poisson, `\operatorname{Geom}(p)`
   geometrica (le prove fino al primo successo: 1, 2, 3…), `\operatorname{H}(N, K, n)` ipergeometrica (N oggetti,
@@ -372,7 +379,9 @@ chi sta provando Glifo.*
   punti iniziali, `x(0) = 1, \; y(0) = 0`, o da punti scelti da Glifo) e i punti di equilibrio.
   `\operatorname{critici}(f)` disegna le curve di livello di f con i punti critici (M i massimi, m i minimi,
   S le selle); `\operatorname{lagrange}(f, g = c)`, `\operatorname{estremi}(f, D)` e `\max_{…} f` anche il
-  vincolo (la curva, o l'insieme colorato) con i punti di massimo e di minimo. Un **polinomio di Taylor** da solo (`\operatorname{taylor}(\sin x, 0, 5)`)
+  vincolo (la curva, o l'insieme colorato) con i punti di massimo e di minimo. `\operatorname{conica}(…)`
+  disegna la conica con il centro C, i fuochi, il vertice V e, tratteggiati, gli asintoti e la direttrice;
+  `\operatorname{quadrica}(…)` la superficie in 3D. Un **polinomio di Taylor** da solo (`\operatorname{taylor}(\sin x, 0, 5)`)
   si disegna insieme alla funzione da cui viene, per confrontarli (se un'altra riga non la disegna già); una
   **primitiva** (`\int \cos x \, dx`) si disegna con c = 0.
 - Le figure della **geometria** si disegnano come si scrivono: punti con il nome (`A = (0, 0)`,
@@ -426,6 +435,8 @@ chi sta provando Glifo.*
 ![Probabilità e statistica: binomiale, Poisson e normale con le probabilità esatte, il valore atteso e la varianza, i dati con media, mediana, varianza e quartili; nei grafici le barre della binomiale con l'evento colorato e l'area sotto la normale](docs/probabilita.png)
 
 ![Analisi 2: un limite in due variabili che non esiste (con i due cammini) e uno che esiste, i punti critici con la loro natura, Taylor in due variabili, gli estremi vincolati con Lagrange e assoluti su un disco e su un triangolo; nel pannello le curve di livello con il punto di sella e il minimo](docs/analisi2.png)
+
+![Coniche e quadriche: un'ellisse, un'iperbole e una parabola con la forma canonica e gli elementi, un iperboloide; nel grafico l'iperbole con i fuochi e gli asintoti tratteggiati e, nel pannello, la parabola con il vertice, il fuoco e la direttrice](docs/coniche.png)
 
 ![Equazioni differenziali: l'integrale generale di un oscillatore smorzato, la somiglianza in risonanza, la logistica con la soluzione costante, un problema di Cauchy, uno ai limiti con infinite soluzioni e un sistema; nel pannello il ritratto di fase del pendolo con la traiettoria e i punti di equilibrio](docs/equazioni-differenziali.png)
 
@@ -644,6 +655,7 @@ src/
     limits.ts             i limiti (Richardson, da una parte e dall'altra) e le serie (somme accelerate), e i valori riconosciuti (π²/6, e, ln 2)
     solve.ts              le equazioni, le disequazioni e i sistemi risolti dopo ⇒
     several.ts            l'analisi in più variabili: i limiti, i punti critici, gli estremi vincolati (Lagrange) e assoluti
+    conics.ts             le coniche e le quadriche: il tipo, la forma canonica, gli elementi
     differential.ts       le equazioni differenziali di ogni ordine, risolte con Runge–Kutta dalle condizioni iniziali
     odesolve.ts           le equazioni differenziali e i sistemi risolti con la formula (dopo ⇒), con le condizioni
     exact.ts, format.ts   i conti esatti con le frazioni; i risultati scritti all'italiana
@@ -657,6 +669,7 @@ src/
     ode.ts                i livelli delle curve di livello, le soluzioni nel campo di direzioni, le traiettorie del ritratto di fase
     studyGraph.ts         lo studio di funzione nel grafico: asintoti tratteggiati, massimi, minimi e flessi
     severalGraph.ts       i punti critici sulle curve di livello, gli estremi con il vincolo o l'insieme
+    conicGraph.ts         le coniche con centro, fuochi, vertice, asintoti e direttrice; le quadriche come superfici
     statsGraph.ts         le distribuzioni (barre e densità), le aree delle probabilità, istogrammi, barre, regressione
     plot.ts               dove calcolare le curve (salti, asintoti) e le aree, la finestra, le tacche
     svg.ts                il disegno in SVG, con i colori dei due temi

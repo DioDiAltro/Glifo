@@ -24,6 +24,7 @@ import { solve } from './solve'
 import { compileOde, odeOf, odeSolution, primed, type Ode, type OdeFunction } from './differential'
 import { differentialRequest, solveDifferential } from './odesolve'
 import { criticalShown, extremaShown, optimumOf, severalLimitShown, severalOf } from './several'
+import { conicOf, quadricOf } from './conics'
 import {
   EXACT,
   FLOAT,
@@ -802,6 +803,18 @@ export class Sheet {
       if (limitShown) {
         if (target && !target.params && limitShown.value) this.record(target, item, `${target.name} = ${src.slice(src.indexOf('=') + 1)}`, limitShown.value)
         return limitShown.shown
+      }
+      // Le coniche e le quadriche: il tipo, la forma canonica, gli elementi.
+      if (item.k === 'fn' && (item.name === 'conic' || item.name === 'quadric') && item.args.length === 1) {
+        const [equation] = item.args
+        const conic = item.name === 'conic'
+        try {
+          const shown = withWorkLimit(WORK, () => (conic ? conicOf(equation, this.symbolScope())?.shown : quadricOf(equation, this.symbolScope())))
+          if (shown) return shown
+        } catch {
+          // Non è un'equazione di secondo grado.
+        }
+        continue
       }
       // In più variabili: i punti critici, gli estremi vincolati (Lagrange) e assoluti su un insieme.
       const several = this.showSeveral(item, style)

@@ -607,7 +607,11 @@ export function openHelpDialog(): void {
       h('code', {}, '\\operatorname{estremi}(f, D) ='),
       '), Taylor in un punto (',
       h('code', {}, '\\operatorname{taylor}(f, (0, 0), 2) ='),
-      ').',
+      '). Le coniche e le quadriche dall\'equazione: ',
+      h('code', {}, '\\operatorname{conica}(x^2 + 4y^2 = 4) ='),
+      ' (tipo, forma canonica, fuochi, asintoti, direttrice…), ',
+      h('code', {}, '\\operatorname{quadrica}(x^2 + y^2 - z^2 = 1) ='),
+      '.',
     ),
     h(
       'p',

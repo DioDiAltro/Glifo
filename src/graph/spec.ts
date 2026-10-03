@@ -58,6 +58,7 @@ import {
 import { expandCalculus, SYMBOLIC_FNS, type SymbolScope } from '../math/symbolic'
 import { STUDY_GRAPH, studyItems } from './studyGraph'
 import { isSeveralLine, severalItems } from './severalGraph'
+import { conicItems, isConicLine, quadricEquation } from './conicGraph'
 import { STATS_GRAPH, statisticsItems } from './statsGraph'
 import { distributionOf, randomScope } from '../math/probability'
 import { odeOf, systemOf } from '../math/differential'
@@ -919,7 +920,8 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   for (const l of blockLines(source)) {
     try {
       const { main, cond } = parseLine(l.text)
-      lines.push({ ...l, main, cond })
+      // \operatorname{quadrica}(…): la superficie della sua equazione.
+      lines.push({ ...l, main: quadricEquation(main) ?? main, cond })
       if (usesTrig(main)) trig.add(l.line)
     } catch (err) {
       fail(l, err)
@@ -1008,7 +1010,7 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
     !gauss &&
     lines.some((l) => {
       // La probabilità e i dati (\operatorname{dispersione}(x, y) con x e y due vettori) stanno nel piano.
-      if (curveName(l.main) || l.main.k === 'dist' || l.main.k === 'prob' || (l.main.k === 'fn' && (STATS_GRAPH.has(l.main.name) || STUDY_GRAPH.has(l.main.name))) || isSeveralLine(l.main)) return false
+      if (curveName(l.main) || l.main.k === 'dist' || l.main.k === 'prob' || (l.main.k === 'fn' && (STATS_GRAPH.has(l.main.name) || STUDY_GRAPH.has(l.main.name))) || isSeveralLine(l.main) || isConicLine(l.main)) return false
       const dims = calculusDims(l.main, shapes)
       if (dims) return dims === 3
       const def = definitionOf(l.main)
@@ -1193,6 +1195,14 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
       // Lo studio di funzione: la funzione, gli asintoti, i massimi, i minimi e i flessi.
       const studiedName = l.main.k === 'fn' && l.main.args[0]?.k === 'name' ? l.main.args[0].name : null
       const drawsIt = !!studiedName && drawn.some((o) => o !== l && definitionOf(o.main)?.name === studiedName)
+      // Una conica con i suoi elementi: centro, fuochi, vertice, asintoti, direttrice.
+      const conic = space ? null : conicItems(l.main, l.line, slot, scope(), studySymbols())
+      if (conic) {
+        spec.items.push(...conic.items)
+        slots.set(l.line, slot)
+        slot += conic.colors
+        continue
+      }
       // In più variabili: i punti critici sulle curve di livello, gli estremi con il vincolo.
       const several = space ? null : severalItems(l.main, l.line, slot, scope(), studySymbols(), sets)
       if (several) {
@@ -1850,6 +1860,8 @@ export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSp
     main.k === 'prim' ||
     (main.k === 'fn' && STUDY_GRAPH.has(main.name)) ||
     isSeveralLine(main) ||
+    isConicLine(main) ||
+    !!quadricEquation(main) ||
     main.k === 'dist' ||
     main.k === 'prob' ||
     (main.k === 'fn' && STATS_GRAPH.has(main.name)) ||

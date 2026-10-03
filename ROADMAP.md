@@ -63,8 +63,12 @@ Probabilità e statistica, Matematica discreta, Calcolo numerico. Chiesto dallo 
     (`\operatorname{estremi}(f, D)`, `\max_{D} f`), Taylor in più variabili; nei grafici le curve di
     livello con i punti critici, il vincolo e i punti di massimo e di minimo. Restano: i vincoli doppi
     in tre variabili, gli estremi assoluti in tre variabili, il piano tangente scritto come tale.
-14. **Coniche e quadriche:** dall'equazione il tipo, la forma canonica, centro, assi, fuochi,
-    eccentricità, asintoti e direttrice; nei grafici con i loro elementi; le quadriche in 3D.
+14. **Coniche e quadriche**, fatto: `\operatorname{conica}(…)` dà il tipo (anche degeneri e senza punti
+    reali), la forma canonica e gli elementi (centro, semiassi, fuochi, eccentricità, asintoti, vertice,
+    direttrice, asse), con il termine in xy la forma canonica negli assi ruotati; `\operatorname{quadrica}(…)`
+    il tipo e la forma canonica; nei grafici la conica con i suoi elementi e la quadrica in 3D. Restano:
+    gli elementi delle coniche ruotate nelle coordinate di partenza, i fasci di coniche, il centro e gli
+    assi delle quadriche con i termini misti.
 15. **Aritmetica, polinomi, logica e insiemi:** fattori primi, divisori, resto e congruenze (anche i
     sistemi), inverso modulare, basi (binario, esadecimale); i polinomi (scomporre, sviluppare,
     dividere, Ruffini); le tavole di verità; gli insiemi con gli elementi (∪, ∩, differenza, prodotto

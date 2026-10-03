@@ -129,6 +129,8 @@ const FUNCTION_NAMES: Record<string, string> = {
   taylor: 'taylor', maclaurin: 'maclaurin', mclaurin: 'maclaurin',
   // Analisi 2: i punti critici, gli estremi vincolati (Lagrange) e assoluti su un insieme.
   critici: 'critical', stazionari: 'critical', lagrange: 'lagrange', vincolati: 'lagrange',
+  // Le coniche e le quadriche dall'equazione.
+  conica: 'conic', quadrica: 'quadric',
   // Le curve di livello di una funzione di x e y, nei grafici.
   livelli: 'levels', livello: 'levels', contour: 'levels',
   // Lo studio di funzione, tutto o una parte.
@@ -1274,9 +1276,9 @@ class Parser {
     }
     let args: MathNode[]
     // \operatorname{lagrange}(f, x^2 + y^2 = 1), \operatorname{estremi}(f, x^2 + y^2 \le 1): una condizione tra gli argomenti.
-    if ((name === 'lagrange' || name === 'extrema') && this.is('open', '(')) {
+    if ((name === 'lagrange' || name === 'extrema' || name === 'conic' || name === 'quadric') && this.is('open', '(')) {
       this.next()
-      args = [this.expr()]
+      args = [name === 'conic' || name === 'quadric' ? this.relation() : this.expr()]
       while (this.is('comma')) {
         this.next()
         args.push(this.relation())

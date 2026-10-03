@@ -1491,6 +1491,12 @@ try {
     critical === '(0, 0) punto di sella; (1, 1) minimo relativo, f = −1' && pointNames.length === 2,
     `i punti critici hanno la loro natura, e nel pannello si vedono sulle curve di livello (${JSON.stringify({ critical, pointNames })})`,
   )
+  // Una conica: il tipo e gli elementi, e nel pannello la curva con il centro e i fuochi.
+  await gp.keyboard.press('End')
+  await gp.keyboard.type('\n\nLa conica $\\operatorname{conica}(x^2 + 4y^2 = 4) =')
+  const conic = await resultText('ellisse')
+  await gp.waitForFunction(() => [...document.querySelectorAll('.formula-graph:not([hidden]) svg text')].some((t) => t.textContent === 'C'), null, { timeout: 5000 })
+  check(conic.startsWith('ellisse; x²/4 + y² = 1; C = (0, 0)'), `una conica ha il tipo, la forma canonica e gli elementi, e il centro nel pannello (${JSON.stringify(conic.slice(0, 40))})`)
   await gp.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)
