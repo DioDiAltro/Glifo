@@ -16,6 +16,11 @@ li scrivi:
 - una formula che finisce con `=` ha già il **risultato**, come nelle Note matematiche dell'iPad, e un
   blocco `grafico` **disegna le funzioni**.
 
+Calcoli e grafici non sono lo scopo, ma un aiuto a quello che scrivi. Servono a **controllare** che sia
+giusto: scrivi che x² è una parabola rivolta verso l'alto e il grafico te lo conferma; calcoli il volume
+della sfera con un integrale e deve venire 4/3 πr³. E servono a **mostrare** quello che studi: chi
+scrive un articolo ci mette i grafici di quello che sta studiando o scoprendo.
+
 **Usala subito: <https://diodialtro.github.io/Glifo/>**
 
 ![Suggerimenti mentre si scrive \su](docs/suggerimenti.png)

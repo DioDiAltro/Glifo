@@ -6,100 +6,31 @@ il lavoro si parte da qui, e quando una voce è fatta si toglie.
 **Per chi è Glifo:** non solo studenti universitari, ma chiunque lavori con file Markdown
 (`.md`): appunti, paper scientifici, file `SKILL.md` per gli assistenti AI.
 
+**A cosa servono calcoli e grafici** (spiegato dallo studente il 3 ottobre 2026): Glifo è prima di
+tutto un posto dove si scrive. Calcoli e grafici servono a quello che si scrive, in due modi: a
+**controllare** che sia giusto (scrivo che x² è una parabola rivolta verso l'alto e il grafico me lo
+conferma; calcolo il volume della sfera con un integrale e deve venire 4/3 πr³) e a **mostrare**
+quello che si studia (chi scrive un articolo ci mette i grafici di quello che sta studiando o
+scoprendo). Conta che il controllo funzioni su quello che uno scrive davvero e che i grafici si
+possano mostrare, più che coprire ogni argomento dei corsi.
+
 ## In programma
 
-### Tutta la matematica dei corsi
+### Controllare e mostrare quello che si scrive
 
-**Cosa:** dopo le prime sette tappe (vedi «Matematica per i corsi: idee in più», più avanti), tutto il
-resto che serve nei corsi universitari con la matematica: Analisi 1 e 2, Geometria e algebra lineare,
-Probabilità e statistica, Matematica discreta, Calcolo numerico. Chiesto dallo studente il 3 ottobre
-2026: Glifo servirà a prendere appunti agli studenti di qualsiasi corso. Ogni tappa si pubblica appena
-è pronta.
+**Cosa:** con lo scopo chiarito (vedi sopra), prima delle voci «Restano» della matematica dei corsi
+vengono tre cose, in quest'ordine (decise con lo studente il 3 ottobre 2026):
 
-**Stato:** tutte le tappe, dalla 8 alla 18, sono fatte e online (3 ottobre 2026). Quello che si può
-aggiungere è scritto in «Restano» in fondo a ogni tappa.
-
-**Piano:**
-
-8. **Primitive e integrali esatti**, fatto: `\int x e^x \, dx =` dà (x − 1)eˣ + c (integrali immediati,
-   sostituzione anche con l'inversa, per parti, fratti semplici, potenze di seno e coseno, radici; ogni
-   primitiva controllata derivandola); gli integrali definiti con il valore esatto (`\int_0^1 x^2 \, dx =`
-   dà 1/3, `\int_0^1 \frac{dx}{1 + x^2}` dà π/4), gli impropri (+∞ se divergono), la funzione integrale;
-   nei grafici la primitiva. Restano senza risultato gli integrali con un punto dove la funzione esplode
-   in mezzo agli estremi (`\int_{-1}^{1} \frac{dx}{x^2}`, che diverge) e le primitive con fattori
-   irrazionali (`\frac{1}{x^4 + 1}`).
-9. **Studio di funzione**, fatto: `\operatorname{studio}(f) =` dà dominio, simmetria, periodo,
-   intersezioni con gli assi, segno, limiti agli estremi, asintoti (verticali, orizzontali, obliqui),
-   derivata e crescenza, massimi e minimi (anche punti angolosi e cuspidi), derivata seconda, concavità
-   e flessi (anche a tangente orizzontale o verticale), con i punti esatti quando si può; le funzioni
-   periodiche in un periodo; le parti da sole (`\operatorname{dominio}`, `asintoti`, `estremi`,
-   `flessi`, `zeri`); nel grafico gli asintoti tratteggiati e i punti M, m, F. I punti si trovano con i
-   numeri e si riconoscono esatti quando si può (√3, e^{3/2}, π/4); se no restano decimali.
-10. **Probabilità e statistica**, fatto: le variabili aleatorie `X \sim B(10, 0{,}3)` (Bernoulli,
-    binomiale, Poisson, geometrica, ipergeometrica, normale, esponenziale, uniforme, t, χ², F, Gamma) con
-    `P(X \le 3)` (anche condizionata e con |X − 5| < 2), esatta quando si può (frazioni, e^{−λ}), `E[X]`,
-    `E[X^2]`, `\operatorname{Var}(X)`, i quantili, Φ e Φ⁻¹; il calcolo combinatorio (C_{n,k}, D_{n,k}, con
-    ripetizione); i dati (media, mediana, mode, varianza e sqm anche campionari, quartili e quantili come
-    QUARTILE.INC, frequenze, il riassunto, covarianza, correlazione, retta di regressione); nei grafici le
-    barre delle discrete, le densità con l'area della probabilità, istogrammi, diagrammi a barre e di
-    dispersione con la retta. Restano: le variabili insieme (X + Y, la normale bivariata) e il box plot;
-    gli intervalli di confidenza e i test sono la voce 18.
-11. **Algebra lineare in più**, fatto: `A x = b \Rightarrow` (Rouché–Capelli, con le soluzioni infinite
-    scritte con i parametri), i sistemi con un parametro discussi al variare del parametro (anche con la
-    matrice: rango, determinante), diagonalizzare (P e D, P ortogonale per le simmetriche), Gram–Schmidt,
-    la dipendenza lineare, somma, intersezione, complemento ortogonale, equazioni cartesiane e proiezione
-    sui sottospazi, le forme quadratiche (matrice e segnatura), le applicazioni lineari (matrice, nucleo,
-    immagine). Restano: l'inversa con un parametro, i cambi di base e la matrice rispetto a basi date.
-12. **Equazioni differenziali con la formula**, fatto: con ⇒ l'integrale generale (lineari a
-    coefficienti costanti con il polinomio caratteristico, la somiglianza anche in risonanza e la
-    variazione delle costanti; anche con i parametri, y'' + ω²y = 0; lineari del primo ordine con il
-    fattore integrante; a variabili separabili, con le soluzioni costanti e la forma implicita se y non si
-    ricava; Bernoulli; Eulero; senza la y), il problema di Cauchy e i problemi ai limiti (una, nessuna o
-    infinite soluzioni), i sistemi lineari di due equazioni; nei grafici il ritratto di fase dei sistemi
-    (direzioni, traiettorie con il verso, punti di equilibrio). Le derivate anche come dy/dx, ẋ, y'(x).
-    Restano: le omogenee y' = f(y/x) e le esatte, i sistemi di tre equazioni, la soluzione esatta al posto
-    di Runge–Kutta quando y si definisce con le condizioni (senza ⇒).
-13. **Analisi 2 in più**, fatto: i limiti in più variabili (lungo rette e parabole, poi tutto attorno
-    al punto), i punti critici e la loro natura con l'hessiana (`\operatorname{critici}(f)`,
-    `\nabla f = 0 \Rightarrow`, anche in tre variabili), massimi e minimi vincolati con Lagrange
-    (`\operatorname{lagrange}`, `\max_{g = c} f`) e assoluti su un insieme chiuso e limitato
-    (`\operatorname{estremi}(f, D)`, `\max_{D} f`), Taylor in più variabili; nei grafici le curve di
-    livello con i punti critici, il vincolo e i punti di massimo e di minimo. Restano: i vincoli doppi
-    in tre variabili, gli estremi assoluti in tre variabili, il piano tangente scritto come tale.
-14. **Coniche e quadriche**, fatto: `\operatorname{conica}(…)` dà il tipo (anche degeneri e senza punti
-    reali), la forma canonica e gli elementi (centro, semiassi, fuochi, eccentricità, asintoti, vertice,
-    direttrice, asse), con il termine in xy la forma canonica negli assi ruotati; `\operatorname{quadrica}(…)`
-    il tipo e la forma canonica; nei grafici la conica con i suoi elementi e la quadrica in 3D. Restano:
-    gli elementi delle coniche ruotate nelle coordinate di partenza, i fasci di coniche, il centro e gli
-    assi delle quadriche con i termini misti.
-15. **Aritmetica, polinomi, logica e insiemi**, fatto: fattori primi, divisori, numeri primi (anche
-    grandi), resto (anche delle potenze grandi), divisione con il resto, Euclide e Bézout, inverso modulo n,
-    funzione di Eulero, equazioni diofantee, congruenze con ⇒ (anche i sistemi con il teorema cinese del
-    resto e quelle di grado più alto), basi ((1011)_2, binario, esadecimale); i polinomi (scomporre, anche
-    con più lettere con il raccoglimento e i prodotti notevoli, sviluppare, dividere, Ruffini con la
-    tabella, mcd e mcm); le tavole di verità con le sottoformule, tautologie e forme normali; gli insiemi
-    con gli elementi (∪, ∩, differenza anche simmetrica, prodotto cartesiano, parti, complementare,
-    cardinalità, la probabilità classica con Ω). Restano: il raccoglimento parziale (ax + ay + bx + by),
-    i diagrammi di Venn, le relazioni (riflessiva, simmetrica, transitiva) e le funzioni tra insiemi finiti.
-16. **Serie di potenze, Fourier e Laplace**, fatto: il raggio e l'insieme di convergenza delle serie di
-    potenze (con gli estremi); la serie di Fourier con i coefficienti esatti (anche a tratti, con |x|, su
-    un intervallo qualsiasi, con i coefficienti a parte dove la formula non vale) e, nel grafico, la somma
-    parziale con lo slider; la trasformata di Laplace con la tabella e l'antitrasformata delle funzioni
-    razionali con i fratti semplici. Corrette anche le serie a segni alterni con i termini che vanno piano
-    a zero (Σ(−1)ⁿ/√n). Restano: la somma delle serie di potenze (−ln(1 − x)), la trasformata di Fourier,
-    la Heaviside e la delta nella trasformata di Laplace, le equazioni differenziali risolte con Laplace.
-17. **Calcolo numerico**, fatto: bisezione, Newton, secanti e punto fisso con la tabella dei passi, il
-    polinomio interpolante e quello dei minimi quadrati, trapezi, Simpson e rettangoli con l'errore, LU
-    (con il pivot) e Cholesky, le norme e il condizionamento, Jacobi e Gauss–Seidel con il raggio
-    spettrale, Eulero, Heun e Runge–Kutta 4; nel pannello i disegni. Restano: le spline, QR e i minimi
-    quadrati con le matrici, il metodo delle potenze, i metodi impliciti e i sistemi di equazioni
-    differenziali.
-18. **Statistica inferenziale**, fatto: gli intervalli di confidenza (della media con σ nota e no, di una
-    proporzione, della varianza) e i test d'ipotesi (z e t sulla media, sulla proporzione, χ² sulla
-    varianza, due medie con Welch, il χ² di adattamento e di indipendenza), con il p-value e la decisione
-    e, nel grafico, la regione di rifiuto colorata sotto la densità. Restano: due medie con le varianze
-    uguali (t combinata) e appaiate, due proporzioni, la potenza del test, l'ANOVA e la regressione con
-    l'inferenza sui coefficienti.
+1. **Controllare le uguaglianze che si scrivono.** Se scrivo io il risultato, per esempio
+   `\int_0^1 x^2 \, dx = \frac{1}{3}`, Glifo dice se è giusto (✓) o sbagliato (✗, con il valore
+   giusto). Oggi non succede niente.
+2. **I calcoli con le lettere**, partendo dagli integrali definiti: il volume della sfera scritto come
+   sul quaderno, `\int_{-R}^{R} \pi (R^2 - x^2) \, dx =` o l'integrale in coordinate sferiche, deve dare
+   4/3 πR³. Oggi non dà nessun risultato: funziona solo con un numero (con r = 2 l'integrale triplo dà
+   33,51…, come 4/3 πr³).
+3. **I grafici da mostrare**: scaricare un grafico o copiarlo come immagine (SVG e PNG, come già gli
+   schemi), con il titolo e i nomi degli assi scelti da chi scrive. Oggi un grafico finisce solo nel
+   file .md e nella stampa.
 
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
@@ -300,8 +231,7 @@ il valore nella legenda). Tutto è descritto nel README. Quello che serve per i 
   colore: nell'integrale contano con il meno);
 - segnare da soli zeri, massimi, minimi e intersezioni (con un clic sulla curva);
 - i calcoli anche fuori dalle formule (`12 * 3 =` nel testo) e con le unità di misura (`3 m/s`);
-- un'impostazione per spegnere i risultati dopo `=`, se a qualcuno danno fastidio;
-- «Copia come immagine» e PNG anche per i grafici (come per gli schemi).
+- un'impostazione per spegnere i risultati dopo `=`, se a qualcuno danno fastidio.
 
 ### Matematica per i corsi: idee in più
 
@@ -333,6 +263,99 @@ Se serviranno:
 - le soluzioni con i numeri delle equazioni si cercano tra −100 e 100, quelle dei sistemi non lineari
   partendo da una griglia di punti;
 - i polinomi di Taylor in più variabili.
+
+### Tutta la matematica dei corsi: idee in più
+
+**Cosa:** dopo le prime sette tappe (vedi «Matematica per i corsi: idee in più», sopra), tutto il
+resto che serve nei corsi universitari con la matematica: Analisi 1 e 2, Geometria e algebra lineare,
+Probabilità e statistica, Matematica discreta, Calcolo numerico. Chiesto dallo studente il 3 ottobre
+2026; ogni tappa è stata pubblicata appena pronta.
+
+**Stato:** tutte le tappe, dalla 8 alla 18, sono fatte e online (3 ottobre 2026). Quello che si può
+aggiungere è scritto in «Restano» in fondo a ogni tappa: viene dopo «Controllare e mostrare quello
+che si scrive».
+
+**Piano:**
+
+8. **Primitive e integrali esatti**, fatto: `\int x e^x \, dx =` dà (x − 1)eˣ + c (integrali immediati,
+   sostituzione anche con l'inversa, per parti, fratti semplici, potenze di seno e coseno, radici; ogni
+   primitiva controllata derivandola); gli integrali definiti con il valore esatto (`\int_0^1 x^2 \, dx =`
+   dà 1/3, `\int_0^1 \frac{dx}{1 + x^2}` dà π/4), gli impropri (+∞ se divergono), la funzione integrale;
+   nei grafici la primitiva. Restano senza risultato gli integrali con un punto dove la funzione esplode
+   in mezzo agli estremi (`\int_{-1}^{1} \frac{dx}{x^2}`, che diverge) e le primitive con fattori
+   irrazionali (`\frac{1}{x^4 + 1}`).
+9. **Studio di funzione**, fatto: `\operatorname{studio}(f) =` dà dominio, simmetria, periodo,
+   intersezioni con gli assi, segno, limiti agli estremi, asintoti (verticali, orizzontali, obliqui),
+   derivata e crescenza, massimi e minimi (anche punti angolosi e cuspidi), derivata seconda, concavità
+   e flessi (anche a tangente orizzontale o verticale), con i punti esatti quando si può; le funzioni
+   periodiche in un periodo; le parti da sole (`\operatorname{dominio}`, `asintoti`, `estremi`,
+   `flessi`, `zeri`); nel grafico gli asintoti tratteggiati e i punti M, m, F. I punti si trovano con i
+   numeri e si riconoscono esatti quando si può (√3, e^{3/2}, π/4); se no restano decimali.
+10. **Probabilità e statistica**, fatto: le variabili aleatorie `X \sim B(10, 0{,}3)` (Bernoulli,
+    binomiale, Poisson, geometrica, ipergeometrica, normale, esponenziale, uniforme, t, χ², F, Gamma) con
+    `P(X \le 3)` (anche condizionata e con |X − 5| < 2), esatta quando si può (frazioni, e^{−λ}), `E[X]`,
+    `E[X^2]`, `\operatorname{Var}(X)`, i quantili, Φ e Φ⁻¹; il calcolo combinatorio (C_{n,k}, D_{n,k}, con
+    ripetizione); i dati (media, mediana, mode, varianza e sqm anche campionari, quartili e quantili come
+    QUARTILE.INC, frequenze, il riassunto, covarianza, correlazione, retta di regressione); nei grafici le
+    barre delle discrete, le densità con l'area della probabilità, istogrammi, diagrammi a barre e di
+    dispersione con la retta. Restano: le variabili insieme (X + Y, la normale bivariata) e il box plot;
+    gli intervalli di confidenza e i test sono la voce 18.
+11. **Algebra lineare in più**, fatto: `A x = b \Rightarrow` (Rouché–Capelli, con le soluzioni infinite
+    scritte con i parametri), i sistemi con un parametro discussi al variare del parametro (anche con la
+    matrice: rango, determinante), diagonalizzare (P e D, P ortogonale per le simmetriche), Gram–Schmidt,
+    la dipendenza lineare, somma, intersezione, complemento ortogonale, equazioni cartesiane e proiezione
+    sui sottospazi, le forme quadratiche (matrice e segnatura), le applicazioni lineari (matrice, nucleo,
+    immagine). Restano: l'inversa con un parametro, i cambi di base e la matrice rispetto a basi date.
+12. **Equazioni differenziali con la formula**, fatto: con ⇒ l'integrale generale (lineari a
+    coefficienti costanti con il polinomio caratteristico, la somiglianza anche in risonanza e la
+    variazione delle costanti; anche con i parametri, y'' + ω²y = 0; lineari del primo ordine con il
+    fattore integrante; a variabili separabili, con le soluzioni costanti e la forma implicita se y non si
+    ricava; Bernoulli; Eulero; senza la y), il problema di Cauchy e i problemi ai limiti (una, nessuna o
+    infinite soluzioni), i sistemi lineari di due equazioni; nei grafici il ritratto di fase dei sistemi
+    (direzioni, traiettorie con il verso, punti di equilibrio). Le derivate anche come dy/dx, ẋ, y'(x).
+    Restano: le omogenee y' = f(y/x) e le esatte, i sistemi di tre equazioni, la soluzione esatta al posto
+    di Runge–Kutta quando y si definisce con le condizioni (senza ⇒).
+13. **Analisi 2 in più**, fatto: i limiti in più variabili (lungo rette e parabole, poi tutto attorno
+    al punto), i punti critici e la loro natura con l'hessiana (`\operatorname{critici}(f)`,
+    `\nabla f = 0 \Rightarrow`, anche in tre variabili), massimi e minimi vincolati con Lagrange
+    (`\operatorname{lagrange}`, `\max_{g = c} f`) e assoluti su un insieme chiuso e limitato
+    (`\operatorname{estremi}(f, D)`, `\max_{D} f`), Taylor in più variabili; nei grafici le curve di
+    livello con i punti critici, il vincolo e i punti di massimo e di minimo. Restano: i vincoli doppi
+    in tre variabili, gli estremi assoluti in tre variabili, il piano tangente scritto come tale.
+14. **Coniche e quadriche**, fatto: `\operatorname{conica}(…)` dà il tipo (anche degeneri e senza punti
+    reali), la forma canonica e gli elementi (centro, semiassi, fuochi, eccentricità, asintoti, vertice,
+    direttrice, asse), con il termine in xy la forma canonica negli assi ruotati; `\operatorname{quadrica}(…)`
+    il tipo e la forma canonica; nei grafici la conica con i suoi elementi e la quadrica in 3D. Restano:
+    gli elementi delle coniche ruotate nelle coordinate di partenza, i fasci di coniche, il centro e gli
+    assi delle quadriche con i termini misti.
+15. **Aritmetica, polinomi, logica e insiemi**, fatto: fattori primi, divisori, numeri primi (anche
+    grandi), resto (anche delle potenze grandi), divisione con il resto, Euclide e Bézout, inverso modulo n,
+    funzione di Eulero, equazioni diofantee, congruenze con ⇒ (anche i sistemi con il teorema cinese del
+    resto e quelle di grado più alto), basi ((1011)_2, binario, esadecimale); i polinomi (scomporre, anche
+    con più lettere con il raccoglimento e i prodotti notevoli, sviluppare, dividere, Ruffini con la
+    tabella, mcd e mcm); le tavole di verità con le sottoformule, tautologie e forme normali; gli insiemi
+    con gli elementi (∪, ∩, differenza anche simmetrica, prodotto cartesiano, parti, complementare,
+    cardinalità, la probabilità classica con Ω). Restano: il raccoglimento parziale (ax + ay + bx + by),
+    i diagrammi di Venn, le relazioni (riflessiva, simmetrica, transitiva) e le funzioni tra insiemi finiti.
+16. **Serie di potenze, Fourier e Laplace**, fatto: il raggio e l'insieme di convergenza delle serie di
+    potenze (con gli estremi); la serie di Fourier con i coefficienti esatti (anche a tratti, con |x|, su
+    un intervallo qualsiasi, con i coefficienti a parte dove la formula non vale) e, nel grafico, la somma
+    parziale con lo slider; la trasformata di Laplace con la tabella e l'antitrasformata delle funzioni
+    razionali con i fratti semplici. Corrette anche le serie a segni alterni con i termini che vanno piano
+    a zero (Σ(−1)ⁿ/√n). Restano: la somma delle serie di potenze (−ln(1 − x)), la trasformata di Fourier,
+    la Heaviside e la delta nella trasformata di Laplace, le equazioni differenziali risolte con Laplace.
+17. **Calcolo numerico**, fatto: bisezione, Newton, secanti e punto fisso con la tabella dei passi, il
+    polinomio interpolante e quello dei minimi quadrati, trapezi, Simpson e rettangoli con l'errore, LU
+    (con il pivot) e Cholesky, le norme e il condizionamento, Jacobi e Gauss–Seidel con il raggio
+    spettrale, Eulero, Heun e Runge–Kutta 4; nel pannello i disegni. Restano: le spline, QR e i minimi
+    quadrati con le matrici, il metodo delle potenze, i metodi impliciti e i sistemi di equazioni
+    differenziali.
+18. **Statistica inferenziale**, fatto: gli intervalli di confidenza (della media con σ nota e no, di una
+    proporzione, della varianza) e i test d'ipotesi (z e t sulla media, sulla proporzione, χ² sulla
+    varianza, due medie con Welch, il χ² di adattamento e di indipendenza), con il p-value e la decisione
+    e, nel grafico, la regione di rifiuto colorata sotto la densità. Restano: due medie con le varianze
+    uguali (t combinata) e appaiate, due proporzioni, la potenza del test, l'ANOVA e la regressione con
+    l'inferenza sui coefficienti.
 
 ### Non solo appunti
 

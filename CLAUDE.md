@@ -4,6 +4,14 @@ Web app per prendere appunti universitari in Markdown con formule LaTeX (KaTeX) 
 pannello che suggerisce i simboli. Sito statico (Vite + TypeScript, senza framework),
 installabile come app, pubblicato su GitHub Pages: non c'è un server.
 
+**Lo scopo** (spiegato dallo studente il 3 ottobre 2026): Glifo è prima di tutto un posto dove si
+scrive (appunti, esercizi, tesi, articoli). Calcoli e grafici servono a quello che si scrive: a
+**controllare** che sia vero (x² è una parabola rivolta verso l'alto → il grafico lo conferma; il volume
+della sfera con l'integrale deve dare 4/3 πr³) e a **mostrare** quello che si studia (il ricercatore
+mette i grafici nell'articolo). Nello scegliere cosa fare conta che il controllo funzioni su quello che
+si scrive davvero e che i grafici si possano mostrare, più che coprire ogni argomento dei corsi. I
+prossimi passi sono in «In programma» nella ROADMAP.
+
 - L'utente è uno studente italiano: rispondi **sempre** in italiano, anche nei messaggi brevi
   mentre lavori (cosa stai facendo, attese, riepiloghi) e nelle descrizioni dei comandi; lo ha
   chiesto più volte. Interfaccia, commenti e messaggi di commit sono in italiano.
