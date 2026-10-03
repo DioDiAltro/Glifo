@@ -4,5 +4,5 @@ coverage/
 *.log
 .DS_Store
 .vite/
-# Il grafo di graphify: nel repository vanno solo graph.json, GRAPH_REPORT.md e manifest.json (aggiunti con git add -f).
+# Il grafo di graphify: nel repository vanno solo graph.json e GRAPH_REPORT.md (aggiunti con git add -f).
 graphify-out/

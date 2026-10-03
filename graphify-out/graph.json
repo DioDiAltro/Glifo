@@ -34903,7 +34903,7 @@
       "node_kind": "heading",
       "norm_label": "dove sono le cose",
       "source_file": "CLAUDE.md",
-      "source_location": "L40"
+      "source_location": "L41"
     },
     {
       "id": "src_editor_lists",
@@ -35412,7 +35412,7 @@
       "node_kind": "heading",
       "norm_label": "come controllare il lavoro",
       "source_file": "CLAUDE.md",
-      "source_location": "L224"
+      "source_location": "L225"
     },
     {
       "id": "claude_glifo_note_per_claude",
@@ -35436,7 +35436,7 @@
       "node_kind": "heading",
       "norm_label": "graphify",
       "source_file": "CLAUDE.md",
-      "source_location": "L240"
+      "source_location": "L241"
     },
     {
       "id": "claude_promemoria_per_lo_studente",
@@ -35448,7 +35448,7 @@
       "node_kind": "heading",
       "norm_label": "promemoria per lo studente",
       "source_file": "CLAUDE.md",
-      "source_location": "L200"
+      "source_location": "L201"
     },
     {
       "id": "claude_regole",
@@ -35460,7 +35460,7 @@
       "node_kind": "heading",
       "norm_label": "regole",
       "source_file": "CLAUDE.md",
-      "source_location": "L209"
+      "source_location": "L210"
     },
     {
       "id": "readme",
@@ -146190,7 +146190,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L200",
+      "source_location": "L201",
       "weight": 1.0
     },
     {
@@ -146201,7 +146201,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L209",
+      "source_location": "L210",
       "weight": 1.0
     },
     {
@@ -146212,7 +146212,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L224",
+      "source_location": "L225",
       "weight": 1.0
     },
     {
@@ -146234,7 +146234,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L240",
+      "source_location": "L241",
       "weight": 1.0
     },
     {
@@ -146245,7 +146245,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L40",
+      "source_location": "L41",
       "weight": 1.0
     },
     {
@@ -181022,7 +181022,7 @@
       "confidence_score": 0.95,
       "context": "ConicElements",
       "source_file": "CLAUDE.md",
-      "source_location": "L96",
+      "source_location": "L97",
       "weight": 1.0
     },
     {
@@ -181034,7 +181034,7 @@
       "confidence_score": 0.95,
       "context": "ExpSum",
       "source_file": "CLAUDE.md",
-      "source_location": "L131",
+      "source_location": "L132",
       "weight": 1.0
     },
     {
@@ -181046,7 +181046,7 @@
       "confidence_score": 0.95,
       "context": "GaussRational",
       "source_file": "CLAUDE.md",
-      "source_location": "L77",
+      "source_location": "L78",
       "weight": 1.0
     },
     {
@@ -181058,7 +181058,7 @@
       "confidence_score": 0.95,
       "context": "InferenceContext",
       "source_file": "CLAUDE.md",
-      "source_location": "L112",
+      "source_location": "L113",
       "weight": 1.0
     },
     {
@@ -181070,7 +181070,7 @@
       "confidence_score": 0.95,
       "context": "NumericContext",
       "source_file": "CLAUDE.md",
-      "source_location": "L110",
+      "source_location": "L111",
       "weight": 1.0
     },
     {
@@ -181082,7 +181082,7 @@
       "confidence_score": 0.95,
       "context": "Shape",
       "source_file": "CLAUDE.md",
-      "source_location": "L120",
+      "source_location": "L121",
       "weight": 1.0
     },
     {
@@ -181094,7 +181094,7 @@
       "confidence_score": 0.95,
       "context": "Wave",
       "source_file": "CLAUDE.md",
-      "source_location": "L121",
+      "source_location": "L122",
       "weight": 1.0
     },
     {
@@ -181106,7 +181106,7 @@
       "confidence_score": 0.95,
       "context": "addToGraphBlock",
       "source_file": "CLAUDE.md",
-      "source_location": "L158",
+      "source_location": "L159",
       "weight": 1.0
     },
     {
@@ -181118,7 +181118,7 @@
       "confidence_score": 0.95,
       "context": "arithmeticShown",
       "source_file": "CLAUDE.md",
-      "source_location": "L97",
+      "source_location": "L98",
       "weight": 1.0
     },
     {
@@ -181130,7 +181130,7 @@
       "confidence_score": 0.95,
       "context": "arrow",
       "source_file": "CLAUDE.md",
-      "source_location": "L170",
+      "source_location": "L171",
       "weight": 1.0
     },
     {
@@ -181142,7 +181142,7 @@
       "confidence_score": 0.95,
       "context": "cauchy",
       "source_file": "CLAUDE.md",
-      "source_location": "L122",
+      "source_location": "L123",
       "weight": 1.0
     },
     {
@@ -181154,7 +181154,7 @@
       "confidence_score": 0.95,
       "context": "chiSquareTest",
       "source_file": "CLAUDE.md",
-      "source_location": "L112",
+      "source_location": "L113",
       "weight": 1.0
     },
     {
@@ -181166,7 +181166,7 @@
       "confidence_score": 0.95,
       "context": "compileComplex",
       "source_file": "CLAUDE.md",
-      "source_location": "L165",
+      "source_location": "L166",
       "weight": 1.0
     },
     {
@@ -181178,7 +181178,7 @@
       "confidence_score": 0.95,
       "context": "confidenceShown",
       "source_file": "CLAUDE.md",
-      "source_location": "L111",
+      "source_location": "L112",
       "weight": 1.0
     },
     {
@@ -181190,7 +181190,7 @@
       "confidence_score": 0.95,
       "context": "criticalPoints",
       "source_file": "CLAUDE.md",
-      "source_location": "L90",
+      "source_location": "L91",
       "weight": 1.0
     },
     {
@@ -181214,7 +181214,7 @@
       "confidence_score": 0.95,
       "context": "curveKeys",
       "source_file": "CLAUDE.md",
-      "source_location": "L153",
+      "source_location": "L154",
       "weight": 1.0
     },
     {
@@ -181226,7 +181226,7 @@
       "confidence_score": 0.95,
       "context": "data",
       "source_file": "CLAUDE.md",
-      "source_location": "L183",
+      "source_location": "L184",
       "weight": 1.0
     },
     {
@@ -181238,7 +181238,7 @@
       "confidence_score": 0.95,
       "context": "exactNear",
       "source_file": "CLAUDE.md",
-      "source_location": "L93",
+      "source_location": "L94",
       "weight": 1.0
     },
     {
@@ -181250,7 +181250,7 @@
       "confidence_score": 0.95,
       "context": "expandCalculus",
       "source_file": "CLAUDE.md",
-      "source_location": "L84",
+      "source_location": "L85",
       "weight": 1.0
     },
     {
@@ -181262,7 +181262,7 @@
       "confidence_score": 0.95,
       "context": "expect",
       "source_file": "CLAUDE.md",
-      "source_location": "L132",
+      "source_location": "L133",
       "weight": 1.0
     },
     {
@@ -181274,7 +181274,7 @@
       "confidence_score": 0.95,
       "context": "extremaOf",
       "source_file": "CLAUDE.md",
-      "source_location": "L91",
+      "source_location": "L92",
       "weight": 1.0
     },
     {
@@ -181286,7 +181286,7 @@
       "confidence_score": 0.95,
       "context": "fieldLine",
       "source_file": "CLAUDE.md",
-      "source_location": "L68",
+      "source_location": "L69",
       "weight": 1.0
     },
     {
@@ -181298,7 +181298,7 @@
       "confidence_score": 0.95,
       "context": "finiteSetOf",
       "source_file": "CLAUDE.md",
-      "source_location": "L101",
+      "source_location": "L102",
       "weight": 1.0
     },
     {
@@ -181310,7 +181310,7 @@
       "confidence_score": 0.95,
       "context": "finiteValue",
       "source_file": "CLAUDE.md",
-      "source_location": "L100",
+      "source_location": "L101",
       "weight": 1.0
     },
     {
@@ -181322,7 +181322,7 @@
       "confidence_score": 0.95,
       "context": "geometryOf",
       "source_file": "CLAUDE.md",
-      "source_location": "L80",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
@@ -181334,7 +181334,7 @@
       "confidence_score": 0.95,
       "context": "hypothesisTest",
       "source_file": "CLAUDE.md",
-      "source_location": "L112",
+      "source_location": "L113",
       "weight": 1.0
     },
     {
@@ -181346,7 +181346,7 @@
       "confidence_score": 0.95,
       "context": "isComplexLine",
       "source_file": "CLAUDE.md",
-      "source_location": "L168",
+      "source_location": "L169",
       "weight": 1.0
     },
     {
@@ -181358,7 +181358,7 @@
       "confidence_score": 0.95,
       "context": "isSpaceLine",
       "source_file": "CLAUDE.md",
-      "source_location": "L154",
+      "source_location": "L155",
       "weight": 1.0
     },
     {
@@ -181370,7 +181370,7 @@
       "confidence_score": 0.95,
       "context": "joinTable",
       "source_file": "CLAUDE.md",
-      "source_location": "L67",
+      "source_location": "L68",
       "weight": 1.0
     },
     {
@@ -181394,7 +181394,7 @@
       "confidence_score": 0.95,
       "context": "layeredFaces",
       "source_file": "CLAUDE.md",
-      "source_location": "L162",
+      "source_location": "L163",
       "weight": 1.0
     },
     {
@@ -181406,7 +181406,7 @@
       "confidence_score": 0.95,
       "context": "linearItem",
       "source_file": "CLAUDE.md",
-      "source_location": "L167",
+      "source_location": "L168",
       "weight": 1.0
     },
     {
@@ -181418,7 +181418,7 @@
       "confidence_score": 0.95,
       "context": "linearTrig",
       "source_file": "CLAUDE.md",
-      "source_location": "L106",
+      "source_location": "L107",
       "weight": 1.0
     },
     {
@@ -181430,7 +181430,7 @@
       "confidence_score": 0.95,
       "context": "logicShown",
       "source_file": "CLAUDE.md",
-      "source_location": "L102",
+      "source_location": "L103",
       "weight": 1.0
     },
     {
@@ -181442,7 +181442,7 @@
       "confidence_score": 0.95,
       "context": "matrixEquation",
       "source_file": "CLAUDE.md",
-      "source_location": "L135",
+      "source_location": "L136",
       "weight": 1.0
     },
     {
@@ -181466,7 +181466,7 @@
       "confidence_score": 0.95,
       "context": "nameSpot",
       "source_file": "CLAUDE.md",
-      "source_location": "L169",
+      "source_location": "L170",
       "weight": 1.0
     },
     {
@@ -181478,7 +181478,7 @@
       "confidence_score": 0.95,
       "context": "numericContext",
       "source_file": "CLAUDE.md",
-      "source_location": "L110",
+      "source_location": "L111",
       "weight": 1.0
     },
     {
@@ -181490,7 +181490,7 @@
       "confidence_score": 0.95,
       "context": "numericalPlot",
       "source_file": "CLAUDE.md",
-      "source_location": "L110",
+      "source_location": "L111",
       "weight": 1.0
     },
     {
@@ -181502,7 +181502,7 @@
       "confidence_score": 0.95,
       "context": "numericalShown",
       "source_file": "CLAUDE.md",
-      "source_location": "L109",
+      "source_location": "L110",
       "weight": 1.0
     },
     {
@@ -181514,7 +181514,7 @@
       "confidence_score": 0.95,
       "context": "odeOf",
       "source_file": "CLAUDE.md",
-      "source_location": "L116",
+      "source_location": "L117",
       "weight": 1.0
     },
     {
@@ -181526,7 +181526,7 @@
       "confidence_score": 0.95,
       "context": "odeSolution",
       "source_file": "CLAUDE.md",
-      "source_location": "L117",
+      "source_location": "L118",
       "weight": 1.0
     },
     {
@@ -181538,7 +181538,7 @@
       "confidence_score": 0.95,
       "context": "onAddToGraph",
       "source_file": "CLAUDE.md",
-      "source_location": "L157",
+      "source_location": "L158",
       "weight": 1.0
     },
     {
@@ -181550,7 +181550,7 @@
       "confidence_score": 0.95,
       "context": "parametricSystem",
       "source_file": "CLAUDE.md",
-      "source_location": "L136",
+      "source_location": "L137",
       "weight": 1.0
     },
     {
@@ -181562,7 +181562,7 @@
       "confidence_score": 0.95,
       "context": "partialSum",
       "source_file": "CLAUDE.md",
-      "source_location": "L107",
+      "source_location": "L108",
       "weight": 1.0
     },
     {
@@ -181574,7 +181574,7 @@
       "confidence_score": 0.95,
       "context": "polyDeterminant",
       "source_file": "CLAUDE.md",
-      "source_location": "L136",
+      "source_location": "L137",
       "weight": 1.0
     },
     {
@@ -181586,7 +181586,7 @@
       "confidence_score": 0.95,
       "context": "readBases",
       "source_file": "CLAUDE.md",
-      "source_location": "L99",
+      "source_location": "L100",
       "weight": 1.0
     },
     {
@@ -181598,7 +181598,7 @@
       "confidence_score": 0.95,
       "context": "readGraph",
       "source_file": "CLAUDE.md",
-      "source_location": "L184",
+      "source_location": "L185",
       "weight": 1.0
     },
     {
@@ -181610,7 +181610,7 @@
       "confidence_score": 0.95,
       "context": "recognize",
       "source_file": "CLAUDE.md",
-      "source_location": "L88",
+      "source_location": "L89",
       "weight": 1.0
     },
     {
@@ -181622,7 +181622,7 @@
       "confidence_score": 0.95,
       "context": "sampleArea",
       "source_file": "CLAUDE.md",
-      "source_location": "L151",
+      "source_location": "L152",
       "weight": 1.0
     },
     {
@@ -181634,7 +181634,7 @@
       "confidence_score": 0.95,
       "context": "satisfies",
       "source_file": "CLAUDE.md",
-      "source_location": "L121",
+      "source_location": "L122",
       "weight": 1.0
     },
     {
@@ -181646,7 +181646,7 @@
       "confidence_score": 0.95,
       "context": "seriesSum",
       "source_file": "CLAUDE.md",
-      "source_location": "L104",
+      "source_location": "L105",
       "weight": 1.0
     },
     {
@@ -181658,7 +181658,7 @@
       "confidence_score": 0.95,
       "context": "sheet.define",
       "source_file": "CLAUDE.md",
-      "source_location": "L172",
+      "source_location": "L173",
       "weight": 1.0
     },
     {
@@ -181670,7 +181670,7 @@
       "confidence_score": 0.95,
       "context": "showLimit",
       "source_file": "CLAUDE.md",
-      "source_location": "L103",
+      "source_location": "L104",
       "weight": 1.0
     },
     {
@@ -181682,7 +181682,7 @@
       "confidence_score": 0.95,
       "context": "similar",
       "source_file": "CLAUDE.md",
-      "source_location": "L121",
+      "source_location": "L122",
       "weight": 1.0
     },
     {
@@ -181694,7 +181694,7 @@
       "confidence_score": 0.95,
       "context": "solidFaces",
       "source_file": "CLAUDE.md",
-      "source_location": "L162",
+      "source_location": "L163",
       "weight": 1.0
     },
     {
@@ -181706,7 +181706,7 @@
       "confidence_score": 0.95,
       "context": "solveAll",
       "source_file": "CLAUDE.md",
-      "source_location": "L119",
+      "source_location": "L120",
       "weight": 1.0
     },
     {
@@ -181718,7 +181718,7 @@
       "confidence_score": 0.95,
       "context": "solveCongruences",
       "source_file": "CLAUDE.md",
-      "source_location": "L98",
+      "source_location": "L99",
       "weight": 1.0
     },
     {
@@ -181730,7 +181730,7 @@
       "confidence_score": 0.95,
       "context": "solveDifferential",
       "source_file": "CLAUDE.md",
-      "source_location": "L118",
+      "source_location": "L119",
       "weight": 1.0
     },
     {
@@ -181742,7 +181742,7 @@
       "confidence_score": 0.95,
       "context": "solveRequest",
       "source_file": "CLAUDE.md",
-      "source_location": "L115",
+      "source_location": "L116",
       "weight": 1.0
     },
     {
@@ -181754,7 +181754,7 @@
       "confidence_score": 0.95,
       "context": "spaceItemFor",
       "source_file": "CLAUDE.md",
-      "source_location": "L154",
+      "source_location": "L155",
       "weight": 1.0
     },
     {
@@ -181766,7 +181766,7 @@
       "confidence_score": 0.95,
       "context": "splitTable",
       "source_file": "CLAUDE.md",
-      "source_location": "L67",
+      "source_location": "L68",
       "weight": 1.0
     },
     {
@@ -181778,7 +181778,7 @@
       "confidence_score": 0.95,
       "context": "sqlite()",
       "source_file": "CLAUDE.md",
-      "source_location": "L234",
+      "source_location": "L235",
       "weight": 1.0
     },
     {
@@ -181790,7 +181790,7 @@
       "confidence_score": 0.95,
       "context": "studyPart",
       "source_file": "CLAUDE.md",
-      "source_location": "L128",
+      "source_location": "L129",
       "weight": 1.0
     },
     {
@@ -181802,7 +181802,7 @@
       "confidence_score": 0.95,
       "context": "studyRows",
       "source_file": "CLAUDE.md",
-      "source_location": "L128",
+      "source_location": "L129",
       "weight": 1.0
     },
     {
@@ -181814,7 +181814,7 @@
       "confidence_score": 0.95,
       "context": "studyTable",
       "source_file": "CLAUDE.md",
-      "source_location": "L128",
+      "source_location": "L129",
       "weight": 1.0
     },
     {
@@ -181826,7 +181826,7 @@
       "confidence_score": 0.95,
       "context": "systemOf",
       "source_file": "CLAUDE.md",
-      "source_location": "L175",
+      "source_location": "L176",
       "weight": 1.0
     },
     {
@@ -181838,7 +181838,7 @@
       "confidence_score": 0.95,
       "context": "tableHtml",
       "source_file": "CLAUDE.md",
-      "source_location": "L66",
+      "source_location": "L67",
       "weight": 1.0
     },
     {
@@ -181850,7 +181850,7 @@
       "confidence_score": 0.95,
       "context": "tableSection",
       "source_file": "CLAUDE.md",
-      "source_location": "L69",
+      "source_location": "L70",
       "weight": 1.0
     },
     {
@@ -181862,7 +181862,7 @@
       "confidence_score": 0.95,
       "context": "taylorSeveral",
       "source_file": "CLAUDE.md",
-      "source_location": "L94",
+      "source_location": "L95",
       "weight": 1.0
     },
     {
@@ -181874,7 +181874,7 @@
       "confidence_score": 0.95,
       "context": "typedSliderValue",
       "source_file": "CLAUDE.md",
-      "source_location": "L156",
+      "source_location": "L157",
       "weight": 1.0
     },
     {
@@ -181886,7 +181886,7 @@
       "confidence_score": 0.95,
       "context": "verified",
       "source_file": "CLAUDE.md",
-      "source_location": "L124",
+      "source_location": "L125",
       "weight": 1.0
     },
     {
@@ -181898,7 +181898,7 @@
       "confidence_score": 0.95,
       "context": "widenSlider",
       "source_file": "CLAUDE.md",
-      "source_location": "L157",
+      "source_location": "L158",
       "weight": 1.0
     },
     {
@@ -181910,7 +181910,7 @@
       "confidence_score": 0.95,
       "context": "withPrimes",
       "source_file": "CLAUDE.md",
-      "source_location": "L116",
+      "source_location": "L117",
       "weight": 1.0
     },
     {
@@ -181922,10 +181922,10 @@
       "confidence_score": 0.95,
       "context": "zeroOverZero",
       "source_file": "CLAUDE.md",
-      "source_location": "L87",
+      "source_location": "L88",
       "weight": 1.0
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "8309327e6b8a7bee199c51e33450f604cc5ad75f"
+  "built_at_commit": "f981b817001466781394b3a31f2ea64e3af0095a"
 }

@@ -33,9 +33,10 @@ prossimi passi sono in «In programma» nella ROADMAP.
   ∮ in `src/ui/logo.ts` (serve `CHROMIUM_PATH`). Va rifatto ogni volta che cambia il simbolo.
 - `graphify update .`: rifà il grafo del codice in `graphify-out/` (in locale, senza modelli AI).
   Lo fanno da soli l'hook SessionStart (`.claude/hooks/session-start.sh`, che installa graphify
-  se manca) e, dopo ogni commit, gli hook git. Del grafo sono nel repository solo `graph.json`,
-  `GRAPH_REPORT.md` e `manifest.json` (`graphify-out/` è nel .gitignore: si aggiungono con
-  `git add -f`); se dopo un commit risultano modificati, vanno nel commit successivo.
+  se manca) e, dopo ogni commit, gli hook git. Del grafo sono nel repository solo `graph.json` e
+  `GRAPH_REPORT.md` (`graphify-out/` è nel .gitignore: si aggiungono con `git add -f`); se dopo un
+  commit risultano modificati, vanno nel commit successivo. `manifest.json` resta solo in locale:
+  segna le date dei file, che sono diverse in ogni copia del repository.
 
 ## Dove sono le cose
 
