@@ -1269,6 +1269,8 @@ export function mapNode(n: MathNode, f: (c: MathNode) => MathNode): MathNode {
       return { ...n, items: n.items.map(f) }
     case 'in':
       return { ...n, a: f(n.a), lo: f(n.lo), hi: f(n.hi) }
+    case 'congr':
+      return { ...n, a: f(n.a), b: f(n.b), m: f(n.m) }
     case 'diff':
     case 'lint':
     case 'sint':

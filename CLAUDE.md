@@ -80,7 +80,14 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   smorzato e riconosciuti esatti con `exactNear` (controllati con le lettere); Taylor in più variabili è
   `taylorSeveral` in `symbolic.ts`; `conics.ts` le coniche e le quadriche dall'equazione
   (`\operatorname{conica}`, `\operatorname{quadrica}`: le matrici dei coefficienti, gli elementi esatti con gli
-  assi cartesiani, `ConicElements` per i grafici); `solve.ts` le equazioni, le
+  assi cartesiani, `ConicElements` per i grafici); `arithmetic.ts` l'aritmetica e i polinomi
+  (`arithmeticShown`: fattori primi, divisori, primi, Euclide, Bézout, inverso, Eulero, diofantee, basi,
+  scomporre con il raccoglimento e i prodotti notevoli, Ruffini; `solveCongruences` per le congruenze con ⇒,
+  nodi `congr`; `(1011)_2` lo legge `readBases` in `parse.ts`, prima dei token; `b^e \bmod n` esatto in
+  `exact.ts`); `finite.ts` gli insiemi scritti elemento per elemento (`finiteValue`, nel foglio prima di
+  tutto; quelli che vengono dalle operazioni restano nella nota con `finiteSetOf`; ∅, 𝒫, ∁ e … sono nomi);
+  `logic.ts` la logica (`logicShown`, sul testo prima della lettura: le tavole di verità, le forme
+  normali); `solve.ts` le equazioni, le
   disequazioni e i sistemi di una formula che finisce con ⇒ (`solveRequest`); `differential.ts` le
   equazioni differenziali di ogni ordine (`odeOf`, anche y'' + y = 0; `withPrimes` scrive dy/dx, ẋ e y'(x)
   come y') con le condizioni iniziali anche in formule dopo, risolte con Runge–Kutta (`odeSolution`);

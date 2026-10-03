@@ -26,8 +26,11 @@ function letters(s: string): string {
   return out.trim()
 }
 
+/** I nomi che sono simboli: l'insieme vuoto, l'insieme delle parti, il complementare, i puntini. */
+const SYMBOL_NAMES: Record<string, string> = { '⊥': '\\perp', '∅': '\\emptyset', '𝒫': '\\mathcal{P}', '∁': '\\complement', '…': '\\ldots' }
+
 export function nameLatex(name: string): string {
-  if (name === '⊥') return '\\perp'
+  if (name in SYMBOL_NAMES) return SYMBOL_NAMES[name]
   const [base, ...sub] = name.split('_')
   let head = letters(base)
   const accent = ACCENT_COMMANDS[base.slice(-1)]
@@ -138,6 +141,23 @@ const COMPLEX_FUNCTIONS: Record<string, string> = {
   matrixof: '\\operatorname{matrice}',
   equations: '\\operatorname{equazioni}',
   projection: '\\operatorname{proiezione}',
+  factor: '\\operatorname{scomponi}',
+  divisors: '\\operatorname{divisori}',
+  isprime: '\\operatorname{primo}',
+  division: '\\operatorname{divisione}',
+  ruffini: '\\operatorname{ruffini}',
+  expandpoly: '\\operatorname{sviluppa}',
+  modinv: '\\operatorname{inverso}',
+  base: '\\operatorname{base}',
+  binary: '\\operatorname{binario}',
+  hex: '\\operatorname{esadecimale}',
+  powerset: '\\mathcal{P}',
+  card: '\\operatorname{card}',
+  totient: '\\varphi',
+  diophantine: '\\operatorname{diofantea}',
+  bezout: '\\operatorname{bezout}',
+  euclid: '\\operatorname{euclide}',
+  lcm: '\\operatorname{mcm}',
 }
 
 /** Le funzioni della statistica: sempre con le parentesi. */
@@ -191,13 +211,17 @@ export function toLatex(node: MathNode): string {
       return nameLatex(node.name)
     case 'infty':
       return '\\infty'
+    case 'congr':
+      return `${toLatex(node.a)} \\equiv ${toLatex(node.b)} \\pmod{${toLatex(node.m)}}`
     case 'neg':
       return `-${wrap(node.a, 2)}`
     case 'bin': {
       switch (node.op) {
         case '+':
+          if (node.cup) return `${toLatex(node.a)} \\cup ${wrap(node.b, 1.6)}`
           return `${toLatex(node.a)} + ${wrap(node.b, 1.6)}`
         case '-':
+          if (node.setminus) return `${toLatex(node.a)} \\setminus ${wrap(node.b, 1.6)}`
           return `${toLatex(node.a)} - ${wrap(node.b, 1.6)}`
         case '*': {
           const a = wrap(node.a, 1.9)
@@ -397,6 +421,11 @@ function fnLatex(node: Extract<MathNode, { k: 'fn' }>, pow?: MathNode): string {
       out = arg && arg.k === 'name' ? `${letter}_{${toLatex(arg)}}` : `${letter}_{${arg && arg.k === 'apply' ? nameLatex(arg.name) : ''}}${arg && arg.k === 'apply' ? `(${arg.args.map(toLatex).join(', ')})` : paren(inner)}`
       break
     }
+    case 'mod':
+      // 17 \bmod 5, come si scrive.
+      if (node.args.length === 2) return `${wrap(node.args[0], 2)} \\bmod ${wrap(node.args[1], 2)}`
+      out = `\\operatorname{mod}${paren(inner)}`
+      break
     case 'floor':
       out = `\\left\\lfloor ${inner}\\right\\rfloor`
       break

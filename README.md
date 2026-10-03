@@ -243,6 +243,31 @@ chi sta provando Glifo.*
   Con il termine in xy la forma canonica negli assi ruotati (con l'angolo). `\operatorname{quadrica}(…) =`
   dà ellissoide (e sfera, con centro e raggio), iperboloide a una o a due falde, paraboloide ellittico o
   iperbolico, cono, cilindri, con la forma canonica.
+- **Aritmetica**: `\operatorname{fattori}(360) =` (2³ · 3² · 5), `\operatorname{divisori}(12) =`,
+  `\operatorname{primo}(97) =` (anche grandi), il resto `17 \bmod 5 =` (anche `3^{1000} \bmod 7` e
+  `3^{-1} \bmod 7`), `\operatorname{divisione}(17, 5) =` (17 = 5 · 3 + 2), l'algoritmo di Euclide passo per
+  passo (`\operatorname{euclide}(252, 198) =`), Bézout, l'inverso modulo n (`\operatorname{inverso}(3, 7) =`),
+  la funzione di Eulero (`\varphi(12) =`), le equazioni diofantee (`\operatorname{diofantea}(3x + 5y = 7) =`:
+  x = 4 + 5k, y = −1 − 3k). Le **congruenze** con ⇒: `3x \equiv 2 \pmod{5} \Rightarrow` (x ≡ 4 (mod 5)),
+  i sistemi con il teorema cinese del resto (anche con i moduli non primi tra loro), quelle di grado più
+  alto provando i resti. Le **basi**: `(1011)_2` nelle formule vale 11, `\operatorname{binario}(11) =`,
+  `\operatorname{esadecimale}(255) =`, `\operatorname{base}(100, 3) =`.
+- **Polinomi**: `\operatorname{scomponi}(…) =` scompone in fattori: con una lettera con le frazioni
+  (x(x − 1)(x + 1), (2x − 1)(3x − 1), (x³ − 2)(x³ − 3); «irriducibile in ℚ» se non si può), con più lettere
+  il raccoglimento e i prodotti notevoli ((a − b)(a + b), (x + y)², 2a(x + 2y)). `\operatorname{sviluppa}(…) =`,
+  la divisione con il resto (`\operatorname{divisione}(P, D) =`: quoziente e resto), la **regola di Ruffini**
+  con la tabella (`\operatorname{ruffini}(x^3 - 2x + 1, x - 1) =`), mcd e mcm di polinomi.
+- **Insiemi** scritti elemento per elemento (`A = \{1, 2, 3\}`, anche `\{1, 2, \ldots, 10\}`): `A \cup B`,
+  `A \cap B`, `A \setminus B`, la differenza simmetrica `A \triangle B`, il prodotto cartesiano `A \times B`
+  (e `A^2`), l'insieme delle parti `\mathcal{P}(A)` (o `2^A`), il complementare `A^c` o `\overline{A}`
+  rispetto a U, quanti elementi `|A|` (o `\#A`); con lo spazio Ω la probabilità classica `P(A) =` |A|/|Ω|, anche
+  `P(A \mid B)`. Gli insiemi che vengono dalle operazioni si usano dopo (`C = A \cup B`).
+- **Logica**: una formula con i connettivi e «=» (`p \land q \Rightarrow p =`), o
+  `\operatorname{verità}(…) =`, fa la **tavola di verità** con la colonna di ogni sottoformula (dalla riga
+  con tutto vero) e dice se è una tautologia (le due formule sono equivalenti, la conclusione segue dalle
+  premesse), una contraddizione, o in quanti casi è vera. Connettivi: ¬ ∧ ∨ ⊕ ⇒ ⇔, NAND (↑) e NOR (↓), ⊤ e ⊥;
+  anche come nell'algebra di Boole (`A + B\overline{C}`). `\operatorname{fnd}(…)` e `\operatorname{fnc}(…)`
+  danno le forme normali canoniche.
 - **Variabili aleatorie**: `$X \sim B(10, 0{,}3)$` definisce X (anche `B(10; 0,3)`, `\operatorname{Bin}`):
   binomiale, `\operatorname{Be}(p)` di Bernoulli, `\operatorname{Po}(\lambda)` di Poisson, `\operatorname{Geom}(p)`
   geometrica (le prove fino al primo successo: 1, 2, 3…), `\operatorname{H}(N, K, n)` ipergeometrica (N oggetti,
@@ -437,6 +462,8 @@ chi sta provando Glifo.*
 ![Analisi 2: un limite in due variabili che non esiste (con i due cammini) e uno che esiste, i punti critici con la loro natura, Taylor in due variabili, gli estremi vincolati con Lagrange e assoluti su un disco e su un triangolo; nel pannello le curve di livello con il punto di sella e il minimo](docs/analisi2.png)
 
 ![Coniche e quadriche: un'ellisse, un'iperbole e una parabola con la forma canonica e gli elementi, un iperboloide; nel grafico l'iperbole con i fuochi e gli asintoti tratteggiati e, nel pannello, la parabola con il vertice, il fuoco e la direttrice](docs/coniche.png)
+
+![Aritmetica, polinomi, logica e insiemi: i fattori primi, una potenza modulo 7 e un inverso, un sistema di congruenze, un'equazione diofantea, due scomposizioni, la tabella di Ruffini, le operazioni tra insiemi e l'insieme delle parti, la tavola di verità del modus ponens](docs/aritmetica.png)
 
 ![Equazioni differenziali: l'integrale generale di un oscillatore smorzato, la somiglianza in risonanza, la logistica con la soluzione costante, un problema di Cauchy, uno ai limiti con infinite soluzioni e un sistema; nel pannello il ritratto di fase del pendolo con la traiettoria e i punti di equilibrio](docs/equazioni-differenziali.png)
 
@@ -656,6 +683,9 @@ src/
     solve.ts              le equazioni, le disequazioni e i sistemi risolti dopo ⇒
     several.ts            l'analisi in più variabili: i limiti, i punti critici, gli estremi vincolati (Lagrange) e assoluti
     conics.ts             le coniche e le quadriche: il tipo, la forma canonica, gli elementi
+    arithmetic.ts         l'aritmetica (fattori primi, congruenze, basi, diofantee) e i polinomi (scomporre, Ruffini)
+    finite.ts             gli insiemi scritti elemento per elemento: operazioni, parti, quanti elementi, P(A) con Ω
+    logic.ts              la logica delle proposizioni: tavole di verità, tautologie, forme normali
     differential.ts       le equazioni differenziali di ogni ordine, risolte con Runge–Kutta dalle condizioni iniziali
     odesolve.ts           le equazioni differenziali e i sistemi risolti con la formula (dopo ⇒), con le condizioni
     exact.ts, format.ts   i conti esatti con le frazioni; i risultati scritti all'italiana

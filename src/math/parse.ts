@@ -21,7 +21,9 @@ export type MathNode =
   | { k: 'name'; name: string }
   | { k: 'neg'; a: MathNode }
   /** `cross`: scritto con \times (o ×): tra due vettori è il prodotto vettoriale, tra due intervalli un rettangolo. */
-  | { k: 'bin'; op: '+' | '-' | '*' | '/' | '^'; a: MathNode; b: MathNode; implicit?: boolean; frac?: boolean; cross?: boolean; cap?: boolean }
+  | { k: 'bin'; op: '+' | '-' | '*' | '/' | '^'; a: MathNode; b: MathNode; implicit?: boolean; frac?: boolean; cross?: boolean; cap?: boolean; cup?: boolean; setminus?: boolean }
+  /** a ≡ b (mod m): una congruenza. */
+  | { k: 'congr'; a: MathNode; b: MathNode; m: MathNode }
   /**
    * Una funzione nota: `\sin x`, `\log_2 x` (base), `\sqrt[3]{x}` (indice in `base`), `\sin^2 x` (pow).
    * Gradiente, divergenza, rotore e laplaciano scritti con \nabla hanno `nabla`.
@@ -131,6 +133,13 @@ const FUNCTION_NAMES: Record<string, string> = {
   critici: 'critical', stazionari: 'critical', lagrange: 'lagrange', vincolati: 'lagrange',
   // Le coniche e le quadriche dall'equazione.
   conica: 'conic', quadrica: 'quadric',
+  // L'aritmetica e i polinomi: fattori primi e scomposizione, divisori, primi, resto, divisione, Ruffini,
+  // l'inverso modulo n, le basi, la funzione di Eulero, le equazioni diofantee, Bézout ed Euclide; gli
+  // insiemi (quanti elementi, l'insieme delle parti).
+  card: 'card', cardinalita: 'card', 'cardinalità': 'card', totiente: 'totient', diofantea: 'diophantine', bezout: 'bezout',
+  euclide: 'euclid', fattori: 'factor', scomponi: 'factor', fattorizza: 'factor', divisori: 'divisors', primo: 'isprime',
+  mod: 'mod', divisione: 'division', ruffini: 'ruffini', sviluppa: 'expandpoly', inverso: 'modinv',
+  base: 'base', binario: 'binary', esadecimale: 'hex', parti: 'powerset',
   // Le curve di livello di una funzione di x e y, nei grafici.
   livelli: 'levels', livello: 'levels', contour: 'levels',
   // Lo studio di funzione, tutto o una parte.
@@ -217,6 +226,8 @@ const COMMAND_OPS: Record<string, [Kind, string]> = {
   Leftrightarrow: ['implies', '⇔'], Longleftrightarrow: ['implies', '⇔'],
   // \mid è la barra di «tali che» e della probabilità condizionata, mai quella del valore assoluto.
   mid: ['bar', 'mid'],
+  // Il resto della divisione (17 \bmod 5) e le congruenze (x \equiv 3 \pmod{5}).
+  bmod: ['op', 'mod'], equiv: ['congr', '≡'], pmod: ['pmod', 'pmod'], mod: ['pmod', 'mod'],
   sim: ['sim', '∼'],
   quad: ['sep', 'quad'], qquad: ['sep', 'quad'], cr: ['row', '\\\\'], coloneqq: ['rel', '='], coloneq: ['rel', '='],
   lbrace: ['open', '\\{'], rbrace: ['close', '\\}'], lbrack: ['open', '['], rbrack: ['close', ']'],
@@ -238,6 +249,7 @@ const IGNORED = new Set([
 type Kind =
   | 'num' | 'name' | 'fn' | 'frac' | 'sqrt' | 'binom' | 'big' | 'int' | 'op' | 'rel' | 'open' | 'close' | 'bar' | 'sim'
   | 'comma' | 'semi' | 'sep' | 'in' | 'and' | 'or' | 'else' | 'amp' | 'row' | 'cases' | 'endcases' | 'matrix' | 'endmatrix' | 'infty'
+  | 'congr' | 'pmod'
   | 'deg' | 'prime' | 'set' | 'nabla' | 'partial' | 'lim' | 'to' | 'implies' | 'bad'
 
 interface Tok {
@@ -253,6 +265,9 @@ interface Tok {
   cross?: boolean
   /** Solo \cap e ∩: l'intersezione (di due sottospazi, di due rette). */
   cap?: boolean
+  /** \cup e ∪: l'unione di due insiemi; \setminus e ∖ la differenza. */
+  cup?: boolean
+  setminus?: boolean
   /** Prima c'è uno spazio scritto (\, \; \:): chiude l'argomento di una funzione. */
   spaced?: boolean
 }
@@ -277,7 +292,26 @@ function readBraces(src: string, i: number): { text: string; end: number } | nul
   return null
 }
 
+const BASE_DIGITS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+/**
+ * (1011)_2 e (FF)_{16} scritti nella formula: il numero in base 10, con degli spazi dopo perché le altre
+ * posizioni non cambino. Servono almeno due cifre (con una sola sarebbe un'altra cosa, come (x)_n).
+ */
+export function readBases(src: string): string {
+  if (!src.includes(')_')) return src
+  return src.replace(/\(([0-9A-Z]{2,})\)_(?:\{(\d{1,2})\}|(\d))/g, (whole, digits: string, braced: string | undefined, single: string | undefined) => {
+    const b = Number(braced ?? single)
+    if (b < 2 || b > 36 || [...digits].some((d) => BASE_DIGITS.indexOf(d) >= b)) return whole
+    let n = 0n
+    for (const d of digits) n = n * BigInt(b) + BigInt(BASE_DIGITS.indexOf(d))
+    const text = n.toString()
+    return text.length <= whole.length ? text + ' '.repeat(whole.length - text.length) : whole
+  })
+}
+
 export function tokenize(src: string): Tok[] {
+  src = readBases(src)
   const out: Tok[] = []
   /** Profondità di ( [ e \{: lì dentro la virgola separa sempre. */
   let depth = 0
@@ -354,6 +388,9 @@ export function tokenize(src: string): Tok[] {
       case '-': case '−': case '–': one('op', '-'); break
       case '×': push('op', '*', i, i + 1, { cross: true }); i++; break
       case '∩': push('op', '*', i, i + 1, { cap: true }); i++; break
+      case '∪': push('op', '+', i, i + 1, { cup: true }); i++; break
+      case '∖': push('op', '-', i, i + 1, { setminus: true }); i++; break
+      case '≡': push('congr', '≡', i, i + 1); i++; break
       case '*': case '·': case '⋅': case '∙': one('op', '*'); break
       case ':':
         // a := 3 è una definizione, come a = 3; da solo «:» è la divisione (6 : 3).
@@ -404,6 +441,8 @@ export function tokenize(src: string): Tok[] {
       case '∂': one('partial', 'partial'); break
       case '∮': one('int', 'oint'); break
       case 'ℝ': one('set', 'R'); break
+      case '∅': one('name', '∅'); break
+      case '∁': one('name', '∁'); break
       case '⟨': one('open', '⟨'); break
       case '⟩': one('close', '⟩'); break
       case '⌊': one('open', 'floor'); break
@@ -486,6 +525,14 @@ function readCommand(src: string, i: number, out: Tok[], depth: () => number, ad
     out.push({ k: 'op', v: '*', pos: i, end, cap: true })
     return end
   }
+  if (name === 'cup') {
+    out.push({ k: 'op', v: '+', pos: i, end, cup: true })
+    return end
+  }
+  if (name === 'setminus' || name === 'smallsetminus' || name === 'backslash') {
+    out.push({ k: 'op', v: '-', pos: i, end, setminus: true })
+    return end
+  }
   if (name === 'colon') {
     out.push({ k: 'op', v: '/', pos: i, end, colon: true })
     return end
@@ -543,6 +590,11 @@ function readCommand(src: string, i: number, out: Tok[], depth: () => number, ad
       push(/^[A-Za-z]$/.test(text) ? 'set' : 'bad', text)
       return end
     }
+    if ((name === 'mathcal' || name === 'mathscr') && text === 'P') {
+      // \mathcal{P}(A): l'insieme delle parti.
+      push('name', '𝒫')
+      return end
+    }
     if (!text) return end
     // In \text{…} «e» e «o» sono parole («x > 0 \text{ e } x < 2»); in \mathrm{e} è il numero e.
     const isText = /^(text|textrm|textit|textbf|mbox)$/.test(name)
@@ -582,6 +634,20 @@ function readCommand(src: string, i: number, out: Tok[], depth: () => number, ad
   if (name === 'top' || name === 'intercal') {
     // A^\top: la trasposta.
     push('name', 'T')
+    return end
+  }
+  if (name === 'emptyset' || name === 'varnothing') {
+    push('name', '∅')
+    return end
+  }
+  if (name === 'complement') {
+    // A^{\complement}: il complementare.
+    push('name', '∁')
+    return end
+  }
+  if (name === '#') {
+    // \#A: quanti elementi ha A.
+    push('fn', 'card')
     return end
   }
   if (name === 'perp' || name === 'bot') {
@@ -721,6 +787,7 @@ class Parser {
     const first = this.expr()
     if (this.is('in')) return this.interval(first)
     if (this.is('sim')) return this.distribution(first)
+    if (this.is('congr')) return this.congruenceOf(first)
     if (!this.is('rel')) return first
     const ops: RelOp[] = []
     const items = [first]
@@ -733,13 +800,46 @@ class Parser {
     return { k: 'rel', ops, items }
   }
 
+  /** Dentro una congruenza \mod è il modulo, non il resto. */
+  private congruence = false
+
+  /** a \equiv b \pmod{m}, anche (\bmod m), \mod m, (\mod m). */
+  private congruenceOf(a: MathNode): MathNode {
+    const start = this.next()
+    const example = 'es. x \\equiv 3 \\pmod{5}'
+    this.congruence = true
+    let b: MathNode
+    try {
+      b = this.expr()
+    } finally {
+      this.congruence = false
+    }
+    let m: MathNode | null = null
+    if (this.is('pmod')) {
+      this.next()
+      m = this.is('open', '{') ? this.latexArg('il modulo') : this.unary()
+    } else if (this.is('open', '(') && (this.is('pmod', undefined, 1) || this.is('op', 'mod', 1))) {
+      this.next()
+      this.next()
+      m = this.expr()
+      this.expect('close', ')', 'la parentesi )')
+    }
+    if (!m) throw this.error(`Manca il modulo della congruenza, ${example}`, start.pos)
+    return { k: 'congr', a, b, m }
+  }
+
   /** Condizioni legate da «e» (anche la virgola) e «o». */
   condition(): MathNode {
     const ors: MathNode[] = []
     let ands: MathNode[] = []
     for (;;) {
       while (this.is('sep')) this.next()
-      ands.push(this.relation())
+      // \{1, 2, \ldots, 10\}: i puntini tra gli elementi di un insieme.
+      const dots = this.peek()
+      if (dots?.k === 'bad' && /^(\\[lc]?dots|…)$/.test(dots.v)) {
+        this.next()
+        ands.push({ k: 'name', name: '…' })
+      } else ands.push(this.relation())
       if (this.is('and') || ((this.is('comma') || this.is('semi')) && this.peek(1) && this.peek(1)!.k !== 'close')) {
         this.next()
         continue
@@ -951,9 +1051,10 @@ class Parser {
   expr(): MathNode {
     let left = this.term()
     while (this.is('op', '+') || this.is('op', '-')) {
-      const op = this.next().v as '+' | '-'
+      const sign = this.next()
+      const op = sign.v as '+' | '-'
       if (!this.peek()) throw this.error(`Manca qualcosa dopo ${op}`)
-      left = { k: 'bin', op, a: left, b: this.term() }
+      left = { k: 'bin', op, a: left, b: this.term(), ...(sign.cup && { cup: true }), ...(sign.setminus && { setminus: true }) }
     }
     return left
   }
@@ -961,6 +1062,13 @@ class Parser {
   private term(): MathNode {
     let left = this.unary()
     for (;;) {
+      // 17 \bmod 5 (e 17 \mod 5 fuori da una congruenza): il resto.
+      if (this.is('op', 'mod') || (!this.congruence && this.is('pmod', 'mod'))) {
+        this.next()
+        if (!this.peek()) throw this.error('Manca il divisore dopo mod')
+        left = { k: 'fn', name: 'mod', args: [left, this.unary()] }
+        continue
+      }
       if (this.is('op', '*') || this.is('op', '/')) {
         // F \cdot dr, F \cdot d\mathbf{S}: il differenziale chiude la funzione da integrare.
         if (this.integrals > 0 && this.is('op', '*') && this.atDifferential(1)) break
@@ -1276,9 +1384,9 @@ class Parser {
     }
     let args: MathNode[]
     // \operatorname{lagrange}(f, x^2 + y^2 = 1), \operatorname{estremi}(f, x^2 + y^2 \le 1): una condizione tra gli argomenti.
-    if ((name === 'lagrange' || name === 'extrema' || name === 'conic' || name === 'quadric') && this.is('open', '(')) {
+    if ((name === 'lagrange' || name === 'extrema' || name === 'conic' || name === 'quadric' || name === 'diophantine') && this.is('open', '(')) {
       this.next()
-      args = [name === 'conic' || name === 'quadric' ? this.relation() : this.expr()]
+      args = [name === 'conic' || name === 'quadric' || name === 'diophantine' ? this.relation() : this.expr()]
       while (this.is('comma')) {
         this.next()
         args.push(this.relation())
@@ -2040,6 +2148,8 @@ export function children(n: MathNode): MathNode[] {
       return n.items
     case 'in':
       return [n.a, n.lo, n.hi]
+    case 'congr':
+      return [n.a, n.b, n.m]
     case 'diff':
     case 'lint':
     case 'sint':

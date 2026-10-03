@@ -42,7 +42,7 @@ export const sets = [
   s(r`\mathbb{C}`, 'numeri complessi', 'complessi, numeri complessi, piano complesso, c grassetto, complex numbers', { u: 'ℂ', w: 8 }),
   s(r`\mathbb{R}^{#}`, 'ℝⁿ (spazio euclideo)', 'spazio r n, erre enne, r alla n, spazio euclideo, spazio vettoriale, reali alla n', { id: 'Rn', w: 6, f: [[r`\mathbb{R}^{#}`, 'ℝ elevato', r`\mathbb{R}^{n}`], [r`\mathbb{R}^{2}`, 'piano'], [r`\mathbb{R}^{3}`, 'spazio']] }),
   s(r`\mathbb{K}`, 'campo K', 'campo, k grassetto, campo generico', { w: 2 }),
-  s(r`\mathcal{P}(#)`, 'insieme delle parti', 'insieme delle parti, insieme potenza, parti di, power set', { id: 'powerset', w: 4, f: [[r`\mathcal{P}(#)`, 'P calligrafica', r`\mathcal{P}(A)`], [r`2^{#}`, 'come potenza di 2', r`2^{A}`]] }),
+  s(r`\mathcal{P}(#)`, 'insieme delle parti', 'insieme delle parti, insieme potenza, parti di, power set', { id: 'powerset', w: 4, f: [[r`\mathcal{P}(#)`, 'P calligrafica', r`\mathcal{P}(A)`], [r`2^{#}`, 'come potenza di 2', r`2^{A}`], [r`\operatorname{parti}(#)`, 'con il nome', r`\operatorname{parti}(A)`]] }),
   s(r`\{ # \}`, 'insieme (graffe)', 'insieme, parentesi graffe, graffe, elenco elementi, insieme di elementi, set', { id: 'set', w: 8, p: r`\{ # \}` }),
   s(r`\{ # \mid # \}`, 'insieme per proprietà', 'insieme definito per proprietà, tale che, insieme tale che, set builder, insieme degli x tali che', {
     id: 'setbuilder',
@@ -66,6 +66,11 @@ export const logic = [
   l(r`\land`, 'e logico (and)', 'e logico, and, congiunzione, e, et', { u: '∧', w: 6 }),
   l(r`\lor`, 'o logico (or)', 'o logico, or, disgiunzione, oppure, vel', { u: '∨', w: 6 }),
   l(r`\veebar`, 'o esclusivo (xor)', 'xor, o esclusivo, aut, disgiunzione esclusiva', { u: '⊻', w: 2 }),
+  l(r`\operatorname{verità}(#)`, 'tavola di verità', 'tavola di verità, tabella di verità, tautologia, contraddizione, verità, connettivi, equivalenza logica', {
+    id: 'truthtable',
+    w: 3,
+    f: [[r`\operatorname{verità}(#)`, 'tavola', r`\operatorname{verità}(p \land q \Rightarrow p)`], [r`\operatorname{fnd}(#)`, 'forma normale disgiuntiva'], [r`\operatorname{fnc}(#)`, 'forma normale congiuntiva']],
+  }),
   l(r`\top`, 'vero (top)', 'vero, tautologia, top, true', { u: '⊤', w: 2 }),
   l(r`\bot`, 'falso (bottom)', 'falso, contraddizione, assurdo, bottom, false', { u: '⊥', w: 3 }),
   l(r`\therefore`, 'quindi (∴)', 'quindi, perciò, dunque, pertanto, therefore, tre puntini a triangolo', { u: '∴', w: 4 }),

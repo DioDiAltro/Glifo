@@ -610,6 +610,15 @@ function compileFunction(node: Extract<MathNode, { k: 'fn' }>, scope: Scope, opt
       if (x < 0 && Number.isInteger(n) && n % 2 !== 0) return -Math.pow(-x, 1 / n)
       return Math.pow(x, 1 / n)
     }
+  } else if (name === 'mod') {
+    // Il resto della divisione, sempre tra 0 e il divisore (−7 \bmod 3 = 2).
+    if (args.length !== 2) throw new MathError('Si scrive a \\bmod n')
+    const [a, n] = args
+    f = (v) => {
+      const m = n(v)
+      const x = a(v)
+      return x - m * Math.floor(x / m)
+    }
   } else if (name === 'max' || name === 'min') {
     if (node.base) throw new MathError(`Il ${name === 'max' ? 'massimo' : 'minimo'} su un insieme si scrive da solo: ${label}_{…} f =`)
     if (!args.length) throw new MathError(`${label} vuole almeno un valore`)

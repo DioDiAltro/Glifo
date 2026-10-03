@@ -69,10 +69,15 @@ Probabilità e statistica, Matematica discreta, Calcolo numerico. Chiesto dallo 
     il tipo e la forma canonica; nei grafici la conica con i suoi elementi e la quadrica in 3D. Restano:
     gli elementi delle coniche ruotate nelle coordinate di partenza, i fasci di coniche, il centro e gli
     assi delle quadriche con i termini misti.
-15. **Aritmetica, polinomi, logica e insiemi:** fattori primi, divisori, resto e congruenze (anche i
-    sistemi), inverso modulare, basi (binario, esadecimale); i polinomi (scomporre, sviluppare,
-    dividere, Ruffini); le tavole di verità; gli insiemi con gli elementi (∪, ∩, differenza, prodotto
-    cartesiano, insieme delle parti).
+15. **Aritmetica, polinomi, logica e insiemi**, fatto: fattori primi, divisori, numeri primi (anche
+    grandi), resto (anche delle potenze grandi), divisione con il resto, Euclide e Bézout, inverso modulo n,
+    funzione di Eulero, equazioni diofantee, congruenze con ⇒ (anche i sistemi con il teorema cinese del
+    resto e quelle di grado più alto), basi ((1011)_2, binario, esadecimale); i polinomi (scomporre, anche
+    con più lettere con il raccoglimento e i prodotti notevoli, sviluppare, dividere, Ruffini con la
+    tabella, mcd e mcm); le tavole di verità con le sottoformule, tautologie e forme normali; gli insiemi
+    con gli elementi (∪, ∩, differenza anche simmetrica, prodotto cartesiano, parti, complementare,
+    cardinalità, la probabilità classica con Ω). Restano: il raccoglimento parziale (ax + ay + bx + by),
+    i diagrammi di Venn, le relazioni (riflessiva, simmetrica, transitiva) e le funzioni tra insiemi finiti.
 16. **Serie di potenze, Fourier e Laplace:** raggio e insieme di convergenza, la serie di Fourier
     (i coefficienti, e nel grafico le somme parziali), la trasformata di Laplace e l'antitrasformata.
 17. **Calcolo numerico:** bisezione, Newton e punto fisso con la tabella dei passi, interpolazione,

@@ -25,6 +25,9 @@ import { compileOde, odeOf, odeSolution, primed, type Ode, type OdeFunction } fr
 import { differentialRequest, solveDifferential } from './odesolve'
 import { criticalShown, extremaShown, optimumOf, severalLimitShown, severalOf } from './several'
 import { conicOf, quadricOf } from './conics'
+import { arithmeticShown, solveCongruences } from './arithmetic'
+import { finiteSetOf, finiteValue, type FiniteContext } from './finite'
+import { logicShown } from './logic'
 import {
   EXACT,
   FLOAT,
@@ -362,6 +365,15 @@ export class Sheet {
         return null
       }
     }
+    // Le congruenze (3x \equiv 2 \pmod{5}), anche più insieme o in \begin{cases}: con il teorema cinese del resto.
+    const congruences = only?.k === 'cases' && only.rows.every((r) => !r.cond) ? only.rows.map((r) => r.value) : (nodes as MathNode[])
+    if (congruences.every((n) => n.k === 'congr')) {
+      try {
+        return withWorkLimit(WORK, () => solveCongruences(congruences, this.symbolScope()))
+      } catch {
+        return null
+      }
+    }
     // Un'equazione differenziale (y'' + y = 0), anche con le condizioni o un sistema: con la formula.
     const ode = differentialRequest(nodes as MathNode[], (name) => this.fns.has(name) || this.vfns.has(name) || this.consts.has(name))
     if (ode) {
@@ -526,11 +538,13 @@ export class Sheet {
     const { name, params } = target
     const uses = namesIn(value, new Set(), new Set(params ?? []))
     const definition = { name, params, source: source.trim(), value, uses }
+    // C = A \cup B: l'insieme che viene, scritto elemento per elemento.
+    const finite = !params && value.k !== 'set' ? finiteSetOf(value, this.finiteContext()) : null
     this.definitions.push(definition)
     this.lastFunction = params ? definition : null
     this.forget(name)
-    if (!params && value.k === 'set') {
-      this.sets.set(name, value)
+    if (!params && (value.k === 'set' || finite)) {
+      this.sets.set(name, finite ?? value)
       return
     }
     try {
@@ -787,6 +801,9 @@ export class Sheet {
   }
 
   private calculate(src: string): FormattedResult | null {
+    // Una formula della logica (p \land q \Rightarrow p, \operatorname{verità}(…)): la tavola di verità.
+    const logic = logicShown(src)
+    if (logic) return logic
     const node = parseCached(src)
     let items: (MathNode | null)[]
     if (node) items = node.k === 'rel' && node.ops.every((op) => op === '=' || op === '≈') ? node.items : [node]
@@ -804,6 +821,21 @@ export class Sheet {
         if (target && !target.params && limitShown.value) this.record(target, item, `${target.name} = ${src.slice(src.indexOf('=') + 1)}`, limitShown.value)
         return limitShown.shown
       }
+      // Gli insiemi scritti elemento per elemento: unione, intersezione, parti, quanti elementi, P(A) con Ω.
+      const finite = this.showFinite(item, style)
+      if (finite) {
+        if (target && !target.params) {
+          const source = `${target.name} = ${src.slice(src.indexOf('=') + 1)}`
+          if (finite.set) this.record(target, finite.set, source)
+          else if (finite.value) this.record(target, item, source, finite.value)
+        }
+        return finite.shown
+      }
+      // L'aritmetica e i polinomi: i fattori primi, i divisori, la divisione con il resto, Ruffini, le basi…
+      // (\varphi(n), se φ non è una funzione della nota, è la funzione di Eulero).
+      const totient = item.k === 'apply' && item.name === 'φ' && item.args.length === 1 && !item.primes && !this.fns.has('φ') ? item.args : null
+      const arithmetic = this.showArithmetic(totient ? { k: 'fn', name: 'totient', args: totient } : item)
+      if (arithmetic) return arithmetic
       // Le coniche e le quadriche: il tipo, la forma canonica, gli elementi.
       if (item.k === 'fn' && (item.name === 'conic' || item.name === 'quadric') && item.args.length === 1) {
         const [equation] = item.args
@@ -867,6 +899,30 @@ export class Sheet {
       return found.shown
     }
     return null
+  }
+
+  private showArithmetic(item: MathNode): FormattedResult | null {
+    try {
+      return withWorkLimit(WORK, () => arithmeticShown(item, this.symbolScope()))
+    } catch {
+      return null
+    }
+  }
+
+  private finiteContext(): FiniteContext {
+    return { sets: this.sets, symbols: this.symbolScope(), isFunction: (name) => this.fns.has(name) || this.vfns.has(name) }
+  }
+
+  /** Un'espressione con gli insiemi scritti elemento per elemento: l'insieme che viene, o un numero (|A|, P(A)). */
+  private showFinite(item: MathNode, style: ReturnType<typeof styleOf>): { shown: FormattedResult; value: Value | null; set: MathNode | null } | null {
+    try {
+      const found = withWorkLimit(WORK, () => finiteValue(item, this.finiteContext()))
+      if (!found) return null
+      if ('count' in found) return { shown: formatRational(found.count, style), value: { float: found.count.toNumber(), exact: found.count }, set: null }
+      return { shown: found.shown, value: null, set: found.set }
+    } catch {
+      return null
+    }
   }
 
   /**

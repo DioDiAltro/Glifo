@@ -1497,6 +1497,18 @@ try {
   const conic = await resultText('ellisse')
   await gp.waitForFunction(() => [...document.querySelectorAll('.formula-graph:not([hidden]) svg text')].some((t) => t.textContent === 'C'), null, { timeout: 5000 })
   check(conic.startsWith('ellisse; x²/4 + y² = 1; C = (0, 0)'), `una conica ha il tipo, la forma canonica e gli elementi, e il centro nel pannello (${JSON.stringify(conic.slice(0, 40))})`)
+  // I polinomi e la logica: una scomposizione e una tavola di verità (disegnata con KaTeX).
+  await gp.keyboard.press('End')
+  await gp.keyboard.type('\n\nScomposto $\\operatorname{scomponi}(a^2 - b^2) =')
+  const factored = await resultText('(a')
+  await gp.keyboard.press('End')
+  await gp.keyboard.type('\n\nIl modus ponens $(p \\Rightarrow q) \\land p \\Rightarrow q =')
+  const truth = await resultText('tautologia')
+  const table = await gp.locator('.cm-calc-result.is-rich .katex').last().evaluate((e) => e.querySelectorAll('.mord').length)
+  check(
+    factored === '(a − b)(a + b)' && truth.startsWith('tautologia') && table > 20,
+    `un polinomio si scompone e una formula della logica ha la tavola di verità (${JSON.stringify({ factored, truth: truth.slice(0, 30), table })})`,
+  )
   await gp.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)

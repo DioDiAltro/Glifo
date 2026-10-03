@@ -21,6 +21,30 @@ function bigGcd(a: bigint, b: bigint): bigint {
   return a
 }
 
+/** a^e modulo m, anche con l'esponente grande (3^{1000} \bmod 7). */
+export function modPow(a: bigint, e: bigint, m: bigint): bigint {
+  if (m === 1n) return 0n
+  let result = 1n
+  let base = ((a % m) + m) % m
+  while (e > 0n) {
+    if (e & 1n) result = (result * base) % m
+    base = (base * base) % m
+    e >>= 1n
+  }
+  return result
+}
+
+/** a⁻¹ modulo m, se esiste (mcd(a, m) = 1), con l'algoritmo di Euclide esteso. */
+export function modInverse(a: bigint, m: bigint): bigint | null {
+  let [r0, r1, s0, s1] = [((a % m) + m) % m, m, 1n, 0n]
+  while (r1) {
+    const q = r0 / r1
+    ;[r0, r1] = [r1, r0 - q * r1]
+    ;[s0, s1] = [s1, s0 - q * s1]
+  }
+  return r0 === 1n ? ((s0 % m) + m) % m : null
+}
+
 /** Numeri più lunghi di così non si tengono esatti (e i conti restano veloci). */
 const MAX_BITS = 4000
 
@@ -231,6 +255,23 @@ export function evaluateExact(node: MathNode, scope: ExactScope, locals: Readonl
       // \operatorname{Var}(X), \operatorname{sqm}(X) con X una variabile aleatoria.
       if ((node.name === 'var' || node.name === 'sd' || node.name === 'mean') && node.args.length === 1 && scope.random?.involves(node.args[0])) {
         return scope.random.exactMoment(node.args[0], node.name === 'var' ? 'variance' : node.name, scope) ?? unavailable()
+      }
+      if (node.name === 'mod' && node.args.length === 2) {
+        // b^e \bmod n: la potenza modulo n, anche con l'esponente grande (3^{1000} \bmod 7) o −1 (l'inverso).
+        const [x, n] = node.args
+        const m = ev(n)
+        if (m.sign === 0) unavailable()
+        if (m.isInteger && m.n > 0n && x.k === 'bin' && x.op === '^') {
+          const b = ev(x.a)
+          const e = ev(x.b)
+          if (b.isInteger && e.isInteger) {
+            if (e.n >= 0n) return new Rational(modPow(b.n, e.n, m.n))
+            const inv = modInverse(b.n, m.n)
+            return inv === null ? unavailable() : new Rational(modPow(inv, -e.n, m.n))
+          }
+        }
+        const a = ev(x)
+        return a.sub(m.mul(a.div(m).floor()))
       }
       const args = node.args.map((a) => ev(a))
       const one = () => (args.length === 1 ? args[0] : unavailable())
