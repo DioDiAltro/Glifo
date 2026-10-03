@@ -170,6 +170,10 @@ const COMPLEX_FUNCTIONS: Record<string, string> = {
   trapezoid: '\\operatorname{trapezi}',
   norm: '\\operatorname{norma}',
   euler: '\\operatorname{eulero}',
+  ci: '\\operatorname{ic}',
+  civar: '\\operatorname{icvarianza}',
+  htest: '\\operatorname{test}',
+  chisq: '\\operatorname{chiquadro}',
 }
 
 /** Le funzioni della statistica: sempre con le parentesi. */

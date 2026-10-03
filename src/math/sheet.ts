@@ -29,6 +29,7 @@ import { powerSeriesOf, powerSeriesShown } from './powerseries'
 import { fourierProblem, fourierShown } from './fourier'
 import { inverseLaplaceShown, laplaceShown } from './laplace'
 import { NUMERICAL, numericalShown, type NumericContext } from './numerical'
+import { chiSquareTest, confidenceShown, hypothesisTest, testShown, varianceConfidenceShown, type InferenceContext } from './inference'
 import { arithmeticShown, solveCongruences } from './arithmetic'
 import { finiteSetOf, finiteValue, type FiniteContext } from './finite'
 import { logicShown } from './logic'
@@ -105,6 +106,9 @@ const STUDY = new Set(['study', 'domain', 'asymptotes', 'extrema', 'flexes', 'ze
 
 /** Le funzioni dell'algebra lineare che si mostrano a modo loro. */
 const SPACES = new Set(['diagonalize', 'gramschmidt', 'signature', 'independent', 'matrixof', 'equations'])
+
+/** La statistica inferenziale: gli intervalli di confidenza e i test. */
+const INFERENCE = new Set(['ci', 'civar', 'htest', 'chisq'])
 
 /** Le funzioni della statistica dei dati che si mostrano a modo loro (le mode, i quartili, la tabella…). */
 const STATISTICS = new Set([...DATA_FUNCTIONS, 'cov', 'corr', 'quartiles', 'regression', 'summary', 'frequencies'])
@@ -840,6 +844,23 @@ export class Sheet {
       const totient = item.k === 'apply' && item.name === 'φ' && item.args.length === 1 && !item.primes && !this.fns.has('φ') ? item.args : null
       const arithmetic = this.showArithmetic(totient ? { k: 'fn', name: 'totient', args: totient } : item)
       if (arithmetic) return arithmetic
+      // La statistica inferenziale: gli intervalli di confidenza e i test d'ipotesi.
+      if (item.k === 'fn' && INFERENCE.has(item.name) && !item.pow) {
+        const node = item
+        try {
+          const ctx = this.inferenceContext()
+          const shown =
+            node.name === 'ci'
+              ? confidenceShown(node.args, ctx)
+              : node.name === 'civar'
+                ? varianceConfidenceShown(node.args, ctx)
+                : testShown(node.name === 'chisq' ? chiSquareTest(node.args, ctx) : hypothesisTest(node.args, ctx))
+          if (shown) return shown
+        } catch {
+          // Gli argomenti non vanno.
+        }
+        continue
+      }
       // Il calcolo numerico: la tabella dei passi, il polinomio interpolante, le matrici LU, Jacobi…
       if (item.k === 'fn' && NUMERICAL.has(item.name) && !item.pow) {
         const node = item
@@ -1002,6 +1023,27 @@ export class Sheet {
         const y0 = bound(this.prepare(start.items[1]), scope)({})
         return { f: (x, y) => F(x, [y]), x: ode.x, y: ode.y, x0, y0 }
       },
+    }
+  }
+
+  /** Quello che serve alla statistica inferenziale: i numeri, i vettori di dati, le tabelle. */
+  inferenceContext(): InferenceContext {
+    const scope = this.scope()
+    const matrixOf = (node: MathNode) => {
+      const value = this.evaluateLinear(node)
+      return value?.float.k === 'matrix' ? value.float.m : null
+    }
+    return {
+      number: (node) => {
+        const v = bound(this.prepare(node), scope)({})
+        if (!Number.isFinite(v)) throw new MathError('Qui va un numero')
+        return v
+      },
+      data: (node) => {
+        const m = matrixOf(node)
+        return m && m[0].length === 1 && m.length > 1 ? m.map((r) => r[0]) : null
+      },
+      matrix: matrixOf,
     }
   }
 

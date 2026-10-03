@@ -91,9 +91,12 @@ Probabilità e statistica, Matematica discreta, Calcolo numerico. Chiesto dallo 
     spettrale, Eulero, Heun e Runge–Kutta 4; nel pannello i disegni. Restano: le spline, QR e i minimi
     quadrati con le matrici, il metodo delle potenze, i metodi impliciti e i sistemi di equazioni
     differenziali.
-18. **Statistica inferenziale:** gli intervalli di confidenza (della media con σ nota e no, di una
-    proporzione, della varianza) e i test d'ipotesi (z, t, χ², il confronto di due medie), con il p-value
-    e, nel grafico, la regione di rifiuto colorata sotto la densità.
+18. **Statistica inferenziale**, fatto: gli intervalli di confidenza (della media con σ nota e no, di una
+    proporzione, della varianza) e i test d'ipotesi (z e t sulla media, sulla proporzione, χ² sulla
+    varianza, due medie con Welch, il χ² di adattamento e di indipendenza), con il p-value e la decisione
+    e, nel grafico, la regione di rifiuto colorata sotto la densità. Restano: due medie con le varianze
+    uguali (t combinata) e appaiate, due proporzioni, la potenza del test, l'ANOVA e la regressione con
+    l'inferenza sui coefficienti.
 
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 

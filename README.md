@@ -256,6 +256,14 @@ chi sta provando Glifo.*
   seni e coseni anche moltiplicati, sinh e cosh, con le lettere come e^{at}), e l'antitrasformata
   `\mathcal{L}^{-1}\{\frac{s + 3}{s^2 + 2s + 5}\} =` con i fratti semplici; tutte e due controllate con
   l'integrale fatto con i numeri.
+- **Statistica inferenziale**: gli intervalli di confidenza della media (`\operatorname{ic}(x, 0{,}95) =` con i dati,
+  o `\operatorname{ic}(\bar{x} = 12, s = 2, n = 25, 0{,}95)`; con la t, o con la z se c'è σ), di una proporzione
+  (con `\hat{p}`) e della varianza (`\operatorname{icvarianza}`); i test d'ipotesi con l'ipotesi alternativa
+  scritta come relazione: `\operatorname{test}(x, \mu > 10) =` (t o z), su una proporzione
+  (`p > 0{,}5`), sulla varianza con il χ² (`\sigma^2 > 4`), due medie con Welch (`\operatorname{test}(x, y)`),
+  il χ² di adattamento e di indipendenza (`\operatorname{chiquadro}(o, e)`, o una tabella); con la statistica,
+  il p-value, la regione di rifiuto e la decisione al livello α (0,05 se non è scritto). Nel pannello e nei
+  grafici la densità con la regione di rifiuto colorata e la statistica tratteggiata.
 - **Calcolo numerico**, con la tabella dei passi: gli zeri con la bisezione
   (`\operatorname{bisezione}(x^3 - x - 2, [1, 2]) =`, anche con la tolleranza), Newton (con la derivata fatta
   con le lettere; anche `\operatorname{newton}(x^2 = 2, 1)`), le secanti e il punto fisso (con |g′(x*)|);
@@ -487,6 +495,8 @@ chi sta provando Glifo.*
 
 ![Serie, Fourier e Laplace: il raggio e l'insieme di convergenza di due serie di potenze, la serie di Fourier di x sin x con a₁ a parte, una trasformata e un'antitrasformata di Laplace; nel grafico la somma di Fourier con 7 termini dell'onda a dente di sega, con lo slider per N, e nel pannello quella di x sin x](docs/fourier.png)
 
+![Statistica inferenziale: due intervalli di confidenza (della media dai dati e di una proporzione), un test z a due code e un χ² di adattamento con le ipotesi, la statistica, il p-value e la decisione; nel grafico la densità t(29) con la regione di rifiuto colorata e la statistica tratteggiata](docs/statistica-inferenziale.png)
+
 ![Calcolo numerico: Newton con la tabella dei passi, il polinomio interpolante, Simpson con l'errore, la fattorizzazione LU e Eulero con la tabella; nel pannello i passi di Eulero sotto la soluzione vera](docs/calcolo-numerico.png)
 
 ![Aritmetica, polinomi, logica e insiemi: i fattori primi, una potenza modulo 7 e un inverso, un sistema di congruenze, un'equazione diofantea, due scomposizioni, la tabella di Ruffini, le operazioni tra insiemi e l'insieme delle parti, la tavola di verità del modus ponens](docs/aritmetica.png)
@@ -716,6 +726,7 @@ src/
     fourier.ts            la serie di Fourier: i coefficienti con le lettere e la somma parziale
     laplace.ts            la trasformata di Laplace con la tabella e l'antitrasformata con i fratti semplici
     numerical.ts          il calcolo numerico: zeri, interpolazione, quadratura, LU, norme, Jacobi, Eulero
+    inference.ts          la statistica inferenziale: gli intervalli di confidenza e i test d'ipotesi
     differential.ts       le equazioni differenziali di ogni ordine, risolte con Runge–Kutta dalle condizioni iniziali
     odesolve.ts           le equazioni differenziali e i sistemi risolti con la formula (dopo ⇒), con le condizioni
     exact.ts, format.ts   i conti esatti con le frazioni; i risultati scritti all'italiana

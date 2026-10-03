@@ -141,6 +141,8 @@ const FUNCTION_NAMES: Record<string, string> = {
   rettangoli: 'midpoint', trapezi: 'trapezoid', simpson: 'simpson', lu: 'lu', cholesky: 'cholesky', norma: 'norm',
   cond: 'cond', condizionamento: 'cond', jacobi: 'jacobi', gaussseidel: 'gaussseidel', 'gauss-seidel': 'gaussseidel',
   eulero: 'euler', heun: 'heun', rk4: 'rk4', rungekutta: 'rk4',
+  // La statistica inferenziale: gli intervalli di confidenza e i test d'ipotesi.
+  ic: 'ci', icvarianza: 'civar', icvar: 'civar', test: 'htest', chiquadro: 'chisq',
   // L'aritmetica e i polinomi: fattori primi e scomposizione, divisori, primi, resto, divisione, Ruffini,
   // l'inverso modulo n, le basi, la funzione di Eulero, le equazioni diofantee, Bézout ed Euclide; gli
   // insiemi (quanti elementi, l'insieme delle parti).
@@ -700,7 +702,7 @@ const SHOW: Record<string, string> = { '\\{': '\\{', '\\}': '\\}', floor: '⌊',
 
 /** Le funzioni trigonometriche e iperboliche: per loro `^{-1}` è la funzione inversa. */
 /** Le funzioni che hanno delle equazioni tra gli argomenti, tutte tenute (non come \operatorname{lagrange}). */
-const EQUATION_ARGS = new Set(['euler', 'heun', 'rk4', 'bisection', 'newton', 'secant', 'fixedpoint'])
+const EQUATION_ARGS = new Set(['euler', 'heun', 'rk4', 'bisection', 'newton', 'secant', 'fixedpoint', 'ci', 'civar', 'htest'])
 
 const INVERSE: Record<string, string> = {
   sin: 'arcsin', cos: 'arccos', tan: 'arctan', cot: 'arccot', sinh: 'arsinh', cosh: 'arcosh', tanh: 'artanh', laplace: 'ilaplace',

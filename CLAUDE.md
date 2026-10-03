@@ -95,7 +95,10 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   l'antitrasformata con i fratti semplici (`\mathcal{L}` è il nodo `fn` laplace, con ^{-1} ilaplace),
   controllate con l'integrale fatto con i numeri; `numerical.ts` il calcolo numerico (`numericalShown`
   con un `NumericContext` dal foglio, `numericContext`; le tabelle dei passi; `numericalPlot` per il disegno,
-  `src/graph/numericalGraph.ts`); `solve.ts` le equazioni, le
+  `src/graph/numericalGraph.ts`); `inference.ts` la statistica inferenziale (`confidenceShown`,
+  `hypothesisTest` e `chiSquareTest` con un `InferenceContext` dal foglio: le statistiche scritte come
+  relazioni, \bar{x} = …, s = …, n = …, e l'ipotesi alternativa \mu > 10; il disegno della regione di rifiuto
+  in `src/graph/inferenceGraph.ts`); `solve.ts` le equazioni, le
   disequazioni e i sistemi di una formula che finisce con ⇒ (`solveRequest`); `differential.ts` le
   equazioni differenziali di ogni ordine (`odeOf`, anche y'' + y = 0; `withPrimes` scrive dy/dx, ẋ e y'(x)
   come y') con le condizioni iniziali anche in formule dopo, risolte con Runge–Kutta (`odeSolution`);

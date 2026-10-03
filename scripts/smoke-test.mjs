@@ -1530,6 +1530,12 @@ try {
   const newton = await resultText('x ≈ 1,41421356237')
   await gp.waitForFunction(() => [...document.querySelectorAll('.formula-graph:not([hidden]) svg text')].some((t) => t.textContent?.startsWith('x')), null, { timeout: 5000 })
   check(newton.startsWith('x ≈ 1,41421356237 (5 passi)'), `Newton ha la tabella dei passi e lo zero nel pannello (${JSON.stringify(newton.slice(0, 40))})`)
+  // Un test d'ipotesi: la decisione, e nel pannello la regione di rifiuto colorata.
+  await gp.keyboard.press('End')
+  await gp.keyboard.type('\n\nIl test $\\operatorname{test}(\\bar{x} = 10.5, s = 2, n = 30, \\mu > 10) =')
+  const test = await resultText('t = 1,3693')
+  await gp.waitForSelector('.formula-graph:not([hidden]) svg path[data-area]', { state: 'attached', timeout: 5000 })
+  check(test.includes('non si rifiuta H₀'), `un test d'ipotesi ha il p-value e la decisione, con la regione di rifiuto nel pannello (${JSON.stringify(test.slice(0, 50))})`)
   await gp.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)

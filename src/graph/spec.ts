@@ -61,6 +61,7 @@ import { isSeveralLine, severalItems } from './severalGraph'
 import { conicItems, isConicLine, quadricEquation } from './conicGraph'
 import { fourierItems, isFourierLine } from './fourierGraph'
 import { isNumericalLine, numericalItems } from './numericalGraph'
+import { isTestLine, testItems } from './inferenceGraph'
 import { STATS_GRAPH, statisticsItems } from './statsGraph'
 import { distributionOf, randomScope } from '../math/probability'
 import { odeOf, systemOf } from '../math/differential'
@@ -973,7 +974,8 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   const noteComplex = sheet.complexScope()
   const realNames = new Set(sheet.scope().consts.keys())
   const realValue = (n: MathNode) => compile(n, sheet.scope(), { calc: true })({})
-  const gauss = lines.some((l) => isComplexLine(l.main, noteComplex, realNames) || onlyComplex(l.main, realValue, noteComplex))
+  // (Nei test \bar{x} è la media, non il coniugato.)
+  const gauss = lines.some((l) => !isTestLine(l.main) && (isComplexLine(l.main, noteComplex, realNames) || onlyComplex(l.main, realValue, noteComplex)))
   // I punti e le figure del blocco (A = (1, 2), r = \operatorname{retta}(A, B)), per le righe dopo.
   const noteLinear = sheet.linearScope()
   const linearValues = new Map<string, LinearValue>(noteLinear.values)
@@ -1014,7 +1016,7 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
     !gauss &&
     lines.some((l) => {
       // La probabilità e i dati (\operatorname{dispersione}(x, y) con x e y due vettori) stanno nel piano.
-      if (curveName(l.main) || l.main.k === 'dist' || l.main.k === 'prob' || (l.main.k === 'fn' && (STATS_GRAPH.has(l.main.name) || STUDY_GRAPH.has(l.main.name))) || isSeveralLine(l.main) || isConicLine(l.main) || isFourierLine(l.main) || isNumericalLine(l.main)) return false
+      if (curveName(l.main) || l.main.k === 'dist' || l.main.k === 'prob' || (l.main.k === 'fn' && (STATS_GRAPH.has(l.main.name) || STUDY_GRAPH.has(l.main.name))) || isSeveralLine(l.main) || isConicLine(l.main) || isFourierLine(l.main) || isNumericalLine(l.main) || isTestLine(l.main)) return false
       const dims = calculusDims(l.main, shapes)
       if (dims) return dims === 3
       const def = definitionOf(l.main)
@@ -1199,6 +1201,14 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
       // Lo studio di funzione: la funzione, gli asintoti, i massimi, i minimi e i flessi.
       const studiedName = l.main.k === 'fn' && l.main.args[0]?.k === 'name' ? l.main.args[0].name : null
       const drawsIt = !!studiedName && drawn.some((o) => o !== l && definitionOf(o.main)?.name === studiedName)
+      // Un test d'ipotesi: la densità con la regione di rifiuto e la statistica.
+      const test = space ? null : testItems(l.main, l.line, slot, sheet)
+      if (test) {
+        spec.items.push(...test.items)
+        slots.set(l.line, slot)
+        slot += test.colors
+        continue
+      }
       // Il calcolo numerico: lo zero sulla curva, i dati con il polinomio, i passi di Eulero.
       const numeric = space ? null : numericalItems(l.main, l.line, slot, sheet)
       if (numeric) {
@@ -1866,7 +1876,7 @@ export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSp
   // Un numero complesso, un'equazione o una zona nel piano di Gauss.
   const sheet = new Sheet()
   for (const d of defs) sheet.define(d)
-  const complex = isComplexLine(main, sheet.complexScope(), new Set(sheet.scope().consts.keys()))
+  const complex = !isTestLine(main) && isComplexLine(main, sheet.complexScope(), new Set(sheet.scope().consts.keys()))
   // Un vettore (u + v, A v): la sua freccia; un punto o un vettore scritto con le coordinate.
   const tuple = tupleOf(main)
   const figure = linearValue(namedFigure(main)?.value ?? main, sheet.linearScope())
@@ -1883,6 +1893,7 @@ export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSp
     isConicLine(main) ||
     isFourierLine(main) ||
     isNumericalLine(main) ||
+    isTestLine(main) ||
     !!quadricEquation(main) ||
     main.k === 'dist' ||
     main.k === 'prob' ||

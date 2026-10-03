@@ -226,6 +226,28 @@ export const functions = [
   fn(r`\deg`, 'grado', 'grado di un polinomio, deg, degree', { w: 3 }),
   fn(r`\gcd`, 'massimo comune divisore', 'massimo comune divisore, mcd, gcd, m.c.d.', { w: 4 }),
   fn(r`\operatorname{mcm}`, 'minimo comune multiplo', 'minimo comune multiplo, mcm, m.c.m., lcm', { id: 'mcm', w: 3, f: [r`\operatorname{mcm}`, [r`\operatorname{lcm}`, 'lcm (inglese)']] }),
+  fn(r`\operatorname{ic}(#, #)`, 'intervallo di confidenza', 'intervallo di confidenza, ic, confidenza, stima intervallare, margine di errore, media, proporzione, t di student, z', {
+    id: 'confidence',
+    w: 2,
+    f: [
+      [r`\operatorname{ic}(#, #)`, 'dei dati, con il livello', r`\operatorname{ic}(x, 0{,}95)`],
+      [r`\operatorname{ic}(\bar{x} = #, s = #, n = #, #)`, 'dalle statistiche'],
+      [r`\operatorname{ic}(\hat{p} = #, n = #, #)`, 'di una proporzione'],
+      [r`\operatorname{icvarianza}(#, #)`, 'della varianza'],
+    ],
+  }),
+  fn(r`\operatorname{test}(#, #)`, "test d'ipotesi", "test d'ipotesi, test, ipotesi nulla, ipotesi alternativa, p-value, p value, significatività, regione di rifiuto, test t, test z, welch", {
+    id: 'htest',
+    w: 2,
+    f: [
+      [r`\operatorname{test}(#, \mu = #)`, 'sulla media (due code)', r`\operatorname{test}(x, \mu = 12)`],
+      [r`\operatorname{test}(\bar{x} = #, s = #, n = #, \mu > #)`, 'una coda, dalle statistiche'],
+      [r`\operatorname{test}(\hat{p} = #, n = #, p > #)`, 'su una proporzione'],
+      [r`\operatorname{test}(s^2 = #, n = #, \sigma^2 > #)`, 'sulla varianza (χ²)'],
+      [r`\operatorname{test}(#, #)`, 'due medie (Welch)'],
+      [r`\operatorname{chiquadro}(#, #)`, 'χ² di adattamento o di indipendenza'],
+    ],
+  }),
   fn(r`\operatorname{bisezione}(#, [#, #])`, 'metodo di bisezione', 'bisezione, metodo di bisezione, dicotomia, zeri di una funzione, calcolo numerico, teorema degli zeri', { id: 'bisection', w: 2, f: [[r`\operatorname{bisezione}(#, [#, #])`, 'con la tabella dei passi', r`\operatorname{bisezione}(x^3 - x - 2, [1, 2])`]] }),
   fn(r`\operatorname{newton}(#, #)`, 'metodo di Newton (tangenti)', 'newton, metodo di newton, metodo delle tangenti, newton raphson, zeri di una funzione, calcolo numerico', {
     id: 'newtonmethod',
