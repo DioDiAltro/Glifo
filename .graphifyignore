@@ -1,0 +1,11 @@
+# File che graphify non deve leggere: generati o pesanti.
+# node_modules/, dist/, coverage/ e .vite/ sono già nel .gitignore, che graphify rispetta.
+build/
+graphify-out/
+package-lock.json
+# Fotografie dell'app (PNG) per il README.
+docs/
+# Icone fatte da scripts/icons.mjs e testi delle licenze.
+public/
+# La skill che scrive `graphify install`.
+.claude/skills/graphify/

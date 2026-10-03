@@ -31,6 +31,11 @@ prossimi passi sono in «In programma» nella ROADMAP.
 - `GLIFO_NO_PWA=1 npx vite build`: build senza service worker (per la demo su claude.ai).
 - `node scripts/icons.mjs`: ridisegna `public/favicon.svg` e le icone PNG dell'app dal simbolo
   ∮ in `src/ui/logo.ts` (serve `CHROMIUM_PATH`). Va rifatto ogni volta che cambia il simbolo.
+- `graphify update .`: rifà il grafo del codice in `graphify-out/` (in locale, senza modelli AI).
+  Lo fanno da soli l'hook SessionStart (`.claude/hooks/session-start.sh`, che installa graphify
+  se manca) e, dopo ogni commit, gli hook git. Del grafo sono nel repository solo `graph.json`,
+  `GRAPH_REPORT.md` e `manifest.json` (`graphify-out/` è nel .gitignore: si aggiungono con
+  `git add -f`); se dopo un commit risultano modificati, vanno nel commit successivo.
 
 ## Dove sono le cose
 
@@ -203,6 +208,7 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
 
 ## Regole
 
+- Per capire il codice usa prima `graphify query`, `graphify explain` o `graphify path`. Apri i file solo nelle parti che servono, mai interi.
 - Ogni push sul branch predefinito esegue test e build e pubblica il sito
   (`.github/workflows/deploy.yml` → branch `gh-pages`).
 - Prima di un push: `npm test` e `npm run build`; se cambiano editor o interfaccia
@@ -230,3 +236,13 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
   carattere vero: per scriverlo così com'è usa Python con `chr(92)` o lo strumento Write.
 - Le prove nel browser si fanno con script Playwright (Chromium in `CHROMIUM_PATH`), anche per
   fotografare l'app e mostrare allo studente come viene.
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
