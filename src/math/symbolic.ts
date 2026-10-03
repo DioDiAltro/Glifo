@@ -1171,6 +1171,11 @@ export function expandCalculus(node: MathNode, scope: SymbolScope, decimal = fal
   return visit(node)
 }
 
+/** L'espressione con le lettere di una formula (le `variables` restano lettere anche se la nota le definisce). */
+export function exOf(node: MathNode, scope: SymbolScope, variables: Iterable<string> = []): Ex {
+  return new Converter(scope).scalarWith(node, variables)
+}
+
 /** Lo stesso nodo con i figli cambiati da `f`. */
 export function mapNode(n: MathNode, f: (c: MathNode) => MathNode): MathNode {
   switch (n.k) {
@@ -1402,7 +1407,8 @@ function factorOut(x: Extract<Ex, { t: 'add' }>): Ex {
   const rest = add(...x.terms.map((t) => mul(t, pow(factor, num(-1)))))
   const inner = rest.t === 'add' ? lead(ordered(rest)) : rest
   const parts = factor.t === 'mul' ? factor.factors : [factor]
-  const c = factor.t === 'mul' ? factor.c : ONE
+  // Il numero davanti è quello di tutti e due: cos x (sin x + ln x/2) − sin x cos x = (cos x ln x)/2.
+  const c = (factor.t === 'mul' ? factor.c : ONE).mul(inner.t === 'mul' ? inner.c : ONE)
   if (inner.t === 'num') return mul(factor, inner)
   return { t: 'mul', c, factors: sortFactors([...parts, ...(inner.t === 'mul' ? inner.factors : [inner])]) }
 }

@@ -11,10 +11,11 @@
  *     \operatorname{livelli}(f)                       le curve di livello di f(x, y)
  *     y' = x - y, \; y(0) = 1                         il campo di direzioni e la soluzione da (0, 1)
  *     y'' = -y, \; y(0) = 0, \; y'(0) = 1              la soluzione (di ordine più alto: solo lei)
+ *     x' = y, \; y' = -x, \; x(0) = 1, \; y(0) = 0      il ritratto di fase, con la traiettoria da (1, 0)
  *
  * Le curve, le superfici e i campi si definiscono come nella nota (vedi Sheet), anche lì.
  */
-import { compileOde, initialConditions, odeOf, odeSolution } from '../math/differential'
+import { compileOde, initialConditions, odeOf, odeSolution, systemOf, systemStarts } from '../math/differential'
 import { compile, MathError, scopeWith, type Scope, type VectorFunction } from '../math/evaluate'
 import { formatNumber } from '../math/format'
 import { nameLatex, toLatex } from '../math/latex'
@@ -89,7 +90,7 @@ export function calculusDims(main: MathNode, ctx: Pick<FieldContext, 'scope' | '
   }
   if (main.k === 'sint') return 3
   if (main.k === 'tuple' && fieldTuple(main)) return main.items.length
-  if ((main.k === 'fn' && main.name === 'levels') || odeOf(main)) return 2
+  if ((main.k === 'fn' && main.name === 'levels') || odeOf(main, (name) => ctx.scope.fns.has(name)) || systemOf(main, null)) return 2
   return 0
 }
 
@@ -234,7 +235,25 @@ export function calculusItems(l: Line, ctx: FieldContext, slot: number, space: b
     }
     return { items: [{ kind: 'contour', line, label: toLatex(main), slot, F }], colors: 1 }
   }
-  const ode = odeOf(main)
+  // Un sistema x' = f(x, y), y' = g(x, y): il ritratto di fase nel piano x, y.
+  const system = systemOf(main, l.cond, (name) => ctx.scope.fns.has(name))
+  if (system) {
+    if (space) throw new MathError('Il ritratto di fase si disegna nel piano')
+    const [a, b] = system.names
+    if (system.f.some((f) => namesIn(f).has(system.t))) throw new MathError(`Il ritratto di fase è dei sistemi autonomi: ${a}' e ${b}' senza ${system.t}`)
+    const inner = scopeWith(ctx.scope, [a, b])
+    const [f, g] = system.f.map((e) => compile(e, inner, { calc: true }))
+    const v: Record<string, number> = {}
+    const F = (x: number, y: number): [number, number] => {
+      v[a] = x
+      v[b] = y
+      return [f(v), g(v)]
+    }
+    const starts = systemStarts(system, (n) => compile(n, ctx.scope)({}))
+    const label = [toLatex(main), ...(l.cond ? [toLatex(l.cond)] : [])].join(', \\; ')
+    return { items: [{ kind: 'phase', line, label, slot, F, starts }], colors: 1 }
+  }
+  const ode = odeOf(main, (name) => ctx.scope.fns.has(name))
   if (ode) {
     if (space) throw new MathError('Le equazioni differenziali si disegnano nel piano')
     const F = compileOde(ode, ctx.scope)

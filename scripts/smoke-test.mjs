@@ -1469,6 +1469,18 @@ try {
     discussion.startsWith('k ≠ −1, k ≠ 1: x = 1/(k + 1)') && diagonal.startsWith('P = (−1  1 ; 1  1), D = (1  0 ; 0  3)'),
     `un sistema con un parametro si discute al variare di k, e una matrice si diagonalizza (${JSON.stringify({ discussion: discussion.slice(0, 50), diagonal: diagonal.slice(0, 50) })})`,
   )
+  // Le equazioni differenziali con la formula, e il ritratto di fase di un sistema nel pannello.
+  await gp.keyboard.press('End')
+  await gp.keyboard.type("\n\nL'oscillatore smorzato $y'' + 2y' + 5y = 0 \\Rightarrow")
+  const ode = await resultText('y = e^(−x)')
+  await gp.keyboard.press('End')
+  await gp.keyboard.type("\n\nIl pendolo $x' = y, \\; y' = -\\sin x")
+  await gp.waitForSelector('.formula-graph:not([hidden]) svg circle[r="4.5"]', { state: 'attached', timeout: 5000 })
+  const equilibria = await gp.locator('.formula-graph svg circle[r="4.5"]').count()
+  check(
+    ode === 'y = e^(−x)(c₁ cos(2x) + c₂ sin(2x))' && equilibria >= 1,
+    `un'equazione differenziale si risolve con la formula, e un sistema ha il ritratto di fase con i punti di equilibrio (${JSON.stringify({ ode, equilibria })})`,
+  )
   await gp.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)

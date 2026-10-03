@@ -59,7 +59,7 @@ import { expandCalculus, SYMBOLIC_FNS, type SymbolScope } from '../math/symbolic
 import { STUDY_GRAPH, studyItems } from './studyGraph'
 import { STATS_GRAPH, statisticsItems } from './statsGraph'
 import { distributionOf, randomScope } from '../math/probability'
-import { odeOf } from '../math/differential'
+import { odeOf, systemOf } from '../math/differential'
 import { calculusDims, calculusItems, vectorDefinition, type FieldContext } from './fields'
 import { gaussItem, isComplexLine, onlyComplex } from './gauss'
 
@@ -138,6 +138,11 @@ export type GraphItem =
    * soluzioni che passano per i punti `starts` (y(0) = 1).
    */
   | (ItemBase & { kind: 'slopes'; f: (x: number, y: number) => number; starts: [number, number][] })
+  /**
+   * Il ritratto di fase di un sistema autonomo x' = f(x, y), y' = g(x, y): le direzioni del moto, le
+   * traiettorie (da `starts`, o da punti scelti dal disegno) e i punti di equilibrio.
+   */
+  | (ItemBase & { kind: 'phase'; F: (x: number, y: number) => [number, number]; starts: [number, number][] })
   | (ItemBase & { kind: 'point3'; x: number; y: number; z: number; name: string | null })
   /**
    * Una zona del piano (y > x^2, un insieme, il dominio di un integrale doppio): dove M(x, y) ≥ 0;
@@ -1839,7 +1844,8 @@ export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSp
     main.k === 'prob' ||
     (main.k === 'fn' && STATS_GRAPH.has(main.name)) ||
     (main.k === 'fn' && (main.name === 'grad' || main.name === 'levels' || SYMBOLIC_FNS.has(main.name))) ||
-    !!odeOf(main)
+    !!odeOf(main, (name) => sheet.scope().fns.has(name)) ||
+    !!systemOf(main, null)
   if (!areaOf(main) && !multipleOf(main) && !setOf(main) && !zone && !complex && !vector && !calculus) {
     if (main.k !== 'rel' || main.ops.length !== 1 || main.ops[0] !== '=') return null
     const [lhs, rhs] = main.items

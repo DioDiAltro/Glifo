@@ -126,6 +126,11 @@ describe('i conti con le lettere', () => {
     expect(value(r`\frac{2x}{2}`)).toBe('x')
     expect(value(r`x + x + y - y`)).toBe('2x')
   })
+
+  it('il fattore comune fuori senza perdere il numero davanti a quello che resta', () => {
+    // cos x (sin x + ln x/2) − sin x cos x = (cos x ln x)/2, non cos x ln x.
+    expect(value(r`\left(\sin x + \frac{\ln x}{2}\right) \cos x - \sin x \cos x`)).toBe(r`\frac{\cos x\ln x}{2}`)
+  })
 })
 
 describe('le derivate parziali e gli operatori dei campi', () => {

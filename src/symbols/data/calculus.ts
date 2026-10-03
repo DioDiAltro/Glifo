@@ -118,6 +118,16 @@ export const calculus = [
       [`'`, 'solo apice', `f'`],
     ],
   }),
+  c(r`#' = # \Rightarrow`, "risolvere un'equazione differenziale", "equazione differenziale, risolvere un'equazione differenziale, integrale generale, soluzione generale, problema di cauchy, problema ai limiti, edo, ode, differential equation, sistema di equazioni differenziali, ritratto di fase", {
+    id: 'ode-solve',
+    w: 3,
+    f: [
+      [r`#' = # \Rightarrow`, 'del primo ordine', r`y' = x y \Rightarrow`],
+      [r`#'' + #' + # = # \Rightarrow`, 'del secondo ordine', r`y'' + 2y' + 5y = 0 \Rightarrow`],
+      [r`#' = #, \; #(#) = # \Rightarrow`, 'problema di Cauchy', r`y' = y, \; y(0) = 1 \Rightarrow`],
+      [r`#' = #, \; #' = # \Rightarrow`, 'sistema', r`x' = y, \; y' = -x \Rightarrow`],
+    ],
+  }),
   c(r`\, d#`, 'differenziale (dx)', 'differenziale, dx, dt, d x, dy, spazio prima del dx, misura', {
     id: 'dx',
     w: 7,

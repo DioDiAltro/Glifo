@@ -74,8 +74,13 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   (nodo `lim`, con i numeri: Richardson; le forme 0/0 prima con le derivate esatte, `zeroOverZero` in
   `symbolic.ts`) e le serie fino a ∞, con `recognize` per π²/6, e, ln 2; `solve.ts` le equazioni, le
   disequazioni e i sistemi di una formula che finisce con ⇒ (`solveRequest`); `differential.ts` le
-  equazioni differenziali di ogni ordine (`odeOf`, anche y'' + y = 0) con le condizioni iniziali anche in
-  formule dopo, risolte con Runge–Kutta (`odeSolution`); i polinomi di Taylor sono `\operatorname{taylor}`
+  equazioni differenziali di ogni ordine (`odeOf`, anche y'' + y = 0; `withPrimes` scrive dy/dx, ẋ e y'(x)
+  come y') con le condizioni iniziali anche in formule dopo, risolte con Runge–Kutta (`odeSolution`);
+  `odesolve.ts` le risolve con la formula dopo ⇒ (`differentialRequest`, `solveDifferential`, chiamato da
+  `solveAll` nel foglio prima delle equazioni): ogni soluzione è una famiglia con le costanti c, c₁, c₂
+  come lettere (lineare nelle costanti: gruppi e parte particolare, `Shape`), controllata con i numeri
+  (`satisfies`); la somiglianza con le esponenziali complesse (`Wave`, `similar`), i sistemi di due
+  equazioni per eliminazione, le condizioni come sistema nelle costanti (`cauchy`); i polinomi di Taylor sono `\operatorname{taylor}`
   in `symbolic.ts`; `primitive.ts` le primitive (nodo `prim`, `\int f \, dx` senza estremi; ognuna
   controllata derivandola con i numeri, `verified`), con i polinomi di `polynomial.ts` (fratti semplici);
   `definite.ts` gli integrali definiti con la primitiva, esatti o impropri, controllati con i numeri;
@@ -128,7 +133,8 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   blocco passano dal foglio (`sheet.define`), come nella nota. Lì anche le curve di livello
   (`\operatorname{livelli}(f)`, `kind: 'contour'`) e le equazioni differenziali: del primo ordine il campo di
   direzioni (`kind: 'slopes'`, livelli e soluzioni in `ode.ts`), di ordine più alto la soluzione come
-  funzione. Un polinomio di Taylor da solo porta nel blocco anche la riga della sua funzione (se nessuna
+  funzione; un sistema di due equazioni il ritratto di fase (`kind: 'phase'`, `systemOf` in
+  `differential.ts`, traiettorie e punti di equilibrio in `ode.ts`). Un polinomio di Taylor da solo porta nel blocco anche la riga della sua funzione (se nessuna
   la disegna già, `curveKeys`). Lo studio di funzione (`\operatorname{studio}(f)` e le sue parti) è in
   `studyGraph.ts`: la funzione, gli asintoti con `dashed` (tratteggiati in `svg.ts` e nella legenda) e i
   punti M, m, F. La probabilità e i dati sono in `statsGraph.ts`: le distribuzioni come barre (`kind: 'bars'`) o

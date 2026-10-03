@@ -260,7 +260,22 @@ chi sta provando Glifo.*
   con Runge–Kutta): dopo, `$y(2) =$` dà 1,270670…, e y si usa come le altre funzioni (derivate,
   integrali, grafici). Anche di ordine più alto, con le condizioni su y', y'' nello stesso punto
   (`y'' + 2y' + 5y = 0, \; y(0) = 1, \; y'(0) = 0`), scritte in qualsiasi modo se la derivata più alta è al
-  primo grado; con x come funzione la variabile è il tempo t (`x'' = -x`).
+  primo grado; con x come funzione la variabile è il tempo t (`x'' = -x`). Le derivate si scrivono anche
+  `\frac{dy}{dx}`, `\dot{x}`, `\ddot{x}` o `y'(x)`.
+- **Equazioni differenziali con la formula**: con `\Rightarrow` in fondo, l'integrale generale come a
+  lezione. Lineari a coefficienti costanti con le radici del polinomio caratteristico
+  (`y'' + 2y' + 5y = 0 \Rightarrow` dà y = e^{−x}(c₁ cos 2x + c₂ sin 2x)) e la soluzione particolare con il
+  **metodo di somiglianza**, anche in risonanza (`y'' + y = \sin x` dà … − (x cos x)/2), o con la
+  **variazione delle costanti** (`y'' + y = \tan x`); anche con i parametri (`y'' + \omega^2 y = 0`,
+  `m x'' + k x = 0`). Lineari del primo ordine con il fattore integrante (`y' + \frac{y}{x} = x^2`), a
+  **variabili separabili** (`y' = y(1 - y)` dà y = 1/(1 + c e^{−x}), e la soluzione costante y = 0 che la
+  formula non dà; `y' = \frac{x}{y}` dà y = ±√(x² + c); se y non si ricava, la forma implicita), di
+  **Bernoulli**, di **Eulero** (`x^2 y'' + x y' - y = 0`) e senza la y (`x y'' + y' = 0`). Con le
+  condizioni dopo l'equazione è il **problema di Cauchy** (`y'' + y = 0, \; y(0) = 1, \; y'(0) = 0 \Rightarrow`
+  dà y = cos x), con le condizioni in due punti il **problema ai limiti** (una soluzione, nessuna o infinite:
+  `y(0) = 0, \; y(\pi) = 0` dà y = c sin x). I **sistemi** lineari di due equazioni
+  (`x' = y, \; y' = -x \Rightarrow`, anche in `\begin{cases}`, con il termine noto e le condizioni). Ogni
+  soluzione si controlla con i numeri prima di mostrarla.
 - **Integrali doppi e tripli**, con il dominio sotto: disuguaglianze (`\iint_{x^2 + y^2 \le 1} (x^2 + y^2) \, dA =`,
   `\iiint_{x^2 + y^2 \le 1, 0 \le z \le 2} dV =`), rettangoli (`\iint_{[0, 1] \times [0, 2]} x y \, dx \, dy =`,
   `[0, 1]^3`) o il nome di un insieme scritto prima (`$D = \{(x, y) : 0 \le y \le x \le 1\}$` e poi
@@ -341,7 +356,9 @@ chi sta provando Glifo.*
 - Un'**equazione differenziale** del primo ordine disegna il **campo di direzioni** (un trattino con la
   pendenza in ogni punto) e, con le condizioni iniziali (`y' = x - y, \; y(0) = 1, \; y(0) = -2`), le
   soluzioni che partono da lì; una di ordine più alto (`y'' = -y, \; y(0) = 0, \; y'(0) = 1`) la soluzione,
-  una per ogni gruppo di condizioni. Un **polinomio di Taylor** da solo (`\operatorname{taylor}(\sin x, 0, 5)`)
+  una per ogni gruppo di condizioni. Un **sistema** (`x' = y, \; y' = -\sin x`, anche in `\begin{cases}`)
+  disegna il **ritratto di fase**: la direzione del moto in ogni punto, le traiettorie con il verso (dai
+  punti iniziali, `x(0) = 1, \; y(0) = 0`, o da punti scelti da Glifo) e i punti di equilibrio. Un **polinomio di Taylor** da solo (`\operatorname{taylor}(\sin x, 0, 5)`)
   si disegna insieme alla funzione da cui viene, per confrontarli (se un'altra riga non la disegna già); una
   **primitiva** (`\int \cos x \, dx`) si disegna con c = 0.
 - Le figure della **geometria** si disegnano come si scrivono: punti con il nome (`A = (0, 0)`,
@@ -393,6 +410,8 @@ chi sta provando Glifo.*
 ![Studio di funzione: nella nota dominio, simmetria, segno, limiti, asintoti, derivate, massimi, minimi e flessi; nel grafico la funzione con gli asintoti tratteggiati e i punti M, m, F](docs/studio.png)
 
 ![Probabilità e statistica: binomiale, Poisson e normale con le probabilità esatte, il valore atteso e la varianza, i dati con media, mediana, varianza e quartili; nei grafici le barre della binomiale con l'evento colorato e l'area sotto la normale](docs/probabilita.png)
+
+![Equazioni differenziali: l'integrale generale di un oscillatore smorzato, la somiglianza in risonanza, la logistica con la soluzione costante, un problema di Cauchy, uno ai limiti con infinite soluzioni e un sistema; nel pannello il ritratto di fase del pendolo con la traiettoria e i punti di equilibrio](docs/equazioni-differenziali.png)
 
 **Schemi stile draw.io**
 - Il pulsante con i due riquadri nella barra apre un editor a tutto schermo: forme a sinistra
@@ -609,6 +628,7 @@ src/
     limits.ts             i limiti (Richardson, da una parte e dall'altra) e le serie (somme accelerate), e i valori riconosciuti (π²/6, e, ln 2)
     solve.ts              le equazioni, le disequazioni e i sistemi risolti dopo ⇒
     differential.ts       le equazioni differenziali di ogni ordine, risolte con Runge–Kutta dalle condizioni iniziali
+    odesolve.ts           le equazioni differenziali e i sistemi risolti con la formula (dopo ⇒), con le condizioni
     exact.ts, format.ts   i conti esatti con le frazioni; i risultati scritti all'italiana
     sheet.ts              il «foglio» della nota: definizioni dall'alto in basso e risultati dopo «=»
     latex.ts              un'espressione riscritta in LaTeX (le legende dei grafici)
@@ -617,7 +637,7 @@ src/
     regions.ts            le zone e i solidi: disuguaglianze, insiemi, domini degli integrali doppi e tripli, volumi sotto le superfici
     gauss.ts              il piano di Gauss: numeri complessi, radici, equazioni e zone in z
     fields.ts             i campi di vettori (le frecce), le curve con il verso, le superfici, gli integrali di linea e di superficie, le curve di livello e le equazioni differenziali
-    ode.ts                i livelli delle curve di livello e le soluzioni nel campo di direzioni
+    ode.ts                i livelli delle curve di livello, le soluzioni nel campo di direzioni, le traiettorie del ritratto di fase
     studyGraph.ts         lo studio di funzione nel grafico: asintoti tratteggiati, massimi, minimi e flessi
     statsGraph.ts         le distribuzioni (barre e densità), le aree delle probabilità, istogrammi, barre, regressione
     plot.ts               dove calcolare le curve (salti, asintoti) e le aree, la finestra, le tacche

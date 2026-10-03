@@ -4,7 +4,7 @@
  */
 import { withWorkLimit } from '../math/evaluate'
 import { lineAcross, regionEdges, sampleArea, sampleFunction, sampleImplicit, sampleParametric, sampleRegion, ticks, type Polyline, type Viewport } from './plot'
-import { contourLevels, solutionCurves } from './ode'
+import { contourLevels, equilibria, phaseTrajectory, solutionCurves } from './ode'
 import { GRAPH_WORK, type GraphItem, type GraphSpec } from './spec'
 
 export interface Palette {
@@ -104,6 +104,48 @@ function slopeField(item: Extract<GraphItem, { kind: 'slopes' }>, vp: Viewport, 
   }
   const solutions = item.starts.flatMap(([x0, y0]) => solutionCurves(item.f, x0, y0, vp)).map((curve) => curve.flatMap(([x, y]) => [sx(x), sy(y)]))
   return { segments, solutions }
+}
+
+/**
+ * Le direzioni del moto di un sistema x' = f, y' = g: una freccia corta, tutte lunghe uguali, in ogni
+ * punto di una griglia (nei punti di equilibrio niente).
+ */
+function phaseArrows(F: (x: number, y: number) => [number, number], vp: Viewport, sx: (x: number) => number, sy: (y: number) => number): { shafts: string; tips: string } {
+  const { width: W, height: H } = vp
+  const step = Math.max(26, Math.min(40, Math.min(W, H) / 12))
+  const cols = Math.max(1, Math.floor(W / step))
+  const rows = Math.max(1, Math.floor(H / step))
+  const ox = (W - (cols - 1) * step) / 2
+  const oy = (H - (rows - 1) * step) / 2
+  const kx = sx(1) - sx(0)
+  const ky = sy(1) - sy(0)
+  let shafts = ''
+  let tips = ''
+  for (let j = 0; j < rows; j++) {
+    for (let i = 0; i < cols; i++) {
+      const px = ox + i * step
+      const py = oy + j * step
+      const [fx, fy] = F(vp.x0 + (px / W) * (vp.x1 - vp.x0), vp.y1 - (py / H) * (vp.y1 - vp.y0))
+      const vx = fx * kx
+      const vy = fy * ky
+      const m = Math.hypot(vx, vy)
+      if (!Number.isFinite(m) || m < 1e-12) continue
+      const [ux, uy] = [vx / m, vy / m]
+      const half = 0.3 * step
+      const [ax, ay, bx, by] = [px - ux * half, py - uy * half, px + ux * half, py + uy * half]
+      shafts += `M${f1(ax)} ${f1(ay)}L${f1(bx - ux * 3)} ${f1(by - uy * 3)}`
+      const [cx, cy] = [bx - ux * 5, by - uy * 5]
+      tips += `M${f1(bx)} ${f1(by)}L${f1(cx - uy * 2.4)} ${f1(cy + ux * 2.4)}L${f1(cx + uy * 2.4)} ${f1(cy - ux * 2.4)}Z`
+    }
+  }
+  return { shafts, tips }
+}
+
+/** Da dove partono le traiettorie quando la riga non ha condizioni: punti sparsi nel riquadro, non simmetrici. */
+function phaseSeeds(vp: Viewport): [number, number][] {
+  const out: [number, number][] = []
+  for (const fy of [0.22, 0.69]) for (const fx of [0.12, 0.33, 0.58, 0.81]) out.push([vp.x0 + fx * (vp.x1 - vp.x0), vp.y0 + fy * (vp.y1 - vp.y0)])
+  return out
 }
 
 /** La punta che dice il verso di una curva con il nome, a metà del suo intervallo. */
@@ -347,6 +389,29 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
       if (solutions.length) curves.push(`<path d="${solutions.map(path).join('')}" stroke="${color}" stroke-width="2.5" data-item="${i}"/>`)
       drawn.push(...solutions)
       for (const [x0, y0] of item.starts) startDots.push(`<circle cx="${f1(sx(x0))}" cy="${f1(sy(y0))}" r="4" fill="${color}" stroke="${palette.halo}" stroke-width="2" paint-order="stroke"/>`)
+    } else if (item.kind === 'phase') {
+      const { shafts, tips } = phaseArrows(item.F, vp, sx, sy)
+      if (shafts) curves.push(`<path d="${shafts}" stroke="${color}" stroke-width="1.2" stroke-opacity="0.5" data-item="${i}"/>`)
+      if (tips) curves.push(`<path d="${tips}" fill="${color}" fill-opacity="0.5" stroke="none"/>`)
+      // Le traiettorie dai punti iniziali (più spesse), o da punti scelti qui; il verso con una punta.
+      const own = item.starts.length > 0
+      const parts = (own ? item.starts : phaseSeeds(vp)).map(([x0, y0]) => phaseTrajectory(item.F, x0, y0, vp).map((curve) => curve.flatMap(([x, y]) => [sx(x), sy(y)])))
+      const all = parts.flat().filter((p) => p.length >= 4)
+      if (all.length) curves.push(`<path d="${all.map(path).join('')}" stroke="${color}" stroke-width="${own ? 2.5 : 1.6}" data-item="${i}"/>`)
+      drawn.push(...all)
+      for (const [forward] of parts) {
+        const k = Math.floor(forward.length / 6) * 2
+        if (k < 2 || k + 3 >= forward.length) continue
+        const [ax, ay, bx, by] = [forward[k - 2], forward[k - 1], forward[k + 2], forward[k + 3]]
+        const len = Math.hypot(bx - ax, by - ay)
+        if (!(len > 1e-9)) continue
+        const [ux, uy] = [(bx - ax) / len, (by - ay) / len]
+        const [cx, cy] = [forward[k], forward[k + 1]]
+        heads.push(`<path d="${arrow(cx - ux * 8, cy - uy * 8, cx + ux * 7, cy + uy * 7)}" fill="${color}"/>`)
+      }
+      for (const [x0, y0] of item.starts) startDots.push(`<circle cx="${f1(sx(x0))}" cy="${f1(sy(y0))}" r="4" fill="${color}" stroke="${palette.halo}" stroke-width="2" paint-order="stroke"/>`)
+      // I punti di equilibrio: pallini vuoti.
+      for (const [x, y] of equilibria(item.F, vp)) startDots.push(`<circle cx="${f1(sx(x))}" cy="${f1(sy(y))}" r="4.5" fill="${palette.halo}" stroke="${color}" stroke-width="2"/>`)
     }
     else if (item.kind === 'vertical') lines = [[sx(item.x), -2, sx(item.x), H + 2]]
     else if (item.kind === 'vector') {

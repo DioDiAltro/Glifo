@@ -4,7 +4,8 @@
  * risolvono con i numeri (Runge–Kutta del quarto ordine) dalle condizioni iniziali y(x₀), y'(x₀), …
  */
 import { compile, MathError, scopeWith, type Scope } from './evaluate'
-import { namesIn, type MathNode } from './parse'
+import { children, namesIn, type MathNode } from './parse'
+import { mapNode } from './symbolic'
 
 export interface Ode {
   /** La funzione cercata (y) e la variabile (x, o t se c'è solo la t o se la funzione è x). */
@@ -20,8 +21,56 @@ export interface Ode {
 /** y con k apici: y, y', y''. */
 export const primed = (y: string, k: number): string => y + "'".repeat(k)
 
-/** L'equazione differenziale della riga (y'' = -y, y' + y = x); null se è altro. */
-export function odeOf(main: MathNode): Ode | null {
+/** Il punto sopra (ẋ) e i due punti (ẍ): le derivate rispetto al tempo. */
+const DOT = String.fromCharCode(0x307)
+const DDOT = String.fromCharCode(0x308)
+
+/**
+ * Le derivate scritte in un altro modo (\frac{dy}{dx}, \frac{d^2y}{dx^2}, ẋ, ẍ) come nomi con gli apici
+ * (y', y''), e la variabile se si capisce da come sono scritte (dy/dt: t; ẋ: t). Le funzioni della nota
+ * (`isDefined`) restano derivate. Con `applied` anche y'(x) e y(x) diventano y' e y.
+ */
+export function withPrimes(node: MathNode, isDefined: (name: string) => boolean = () => false, applied = false): { node: MathNode; x: string | null } {
+  const letters = new Set<string>()
+  let x: string | null = null
+  const letter = (name: string) => /^[A-Za-z]$/.test(name) && !isDefined(name)
+  const visit = (n: MathNode): void => {
+    if (n.k === 'name') {
+      const m = /^([A-Za-z])('+)$/.exec(n.name)
+      if (m && letter(m[1])) letters.add(m[1])
+      if (n.name.length === 2 && (n.name[1] === DOT || n.name[1] === DDOT) && letter(n.name[0])) {
+        letters.add(n.name[0])
+        x ??= 't'
+      }
+    } else if (n.k === 'diff' && !n.partial && n.body.k === 'name' && letter(n.body.name) && n.vars.every((v) => v === n.vars[0])) {
+      letters.add(n.body.name)
+      x ??= n.vars[0]
+    } else if (applied && n.k === 'apply' && n.primes > 0 && letter(n.name)) letters.add(n.name)
+    children(n).forEach(visit)
+  }
+  visit(node)
+  if (!letters.size) return { node, x }
+  // y'(x) + y(x) = 0: la variabile è quella tra parentesi.
+  const args = (n: MathNode): void => {
+    if (n.k === 'apply' && letters.has(n.name) && n.args.length === 1 && n.args[0].k === 'name' && !letters.has(n.args[0].name)) x ??= n.args[0].name
+    children(n).forEach(args)
+  }
+  if (applied && !x) args(node)
+  const rewrite = (n: MathNode): MathNode => {
+    if (n.k === 'name' && n.name.length === 2 && letters.has(n.name[0])) {
+      if (n.name[1] === DOT) return { k: 'name', name: primed(n.name[0], 1) }
+      if (n.name[1] === DDOT) return { k: 'name', name: primed(n.name[0], 2) }
+    }
+    if (n.k === 'diff' && !n.partial && n.body.k === 'name' && letters.has(n.body.name) && n.vars.every((v) => v === n.vars[0])) return { k: 'name', name: primed(n.body.name, n.vars.length) }
+    if (applied && x && n.k === 'apply' && letters.has(n.name) && n.args.length === 1 && n.args[0].k === 'name' && n.args[0].name === x) return { k: 'name', name: primed(n.name, n.primes) }
+    return mapNode(n, rewrite)
+  }
+  return { node: rewrite(node), x }
+}
+
+/** L'equazione differenziale della riga (y'' = -y, y' + y = x, \frac{dy}{dx} = x y); null se è altro. */
+export function odeOf(written: MathNode, isDefined?: (name: string) => boolean): Ode | null {
+  const { node: main, x: variable } = withPrimes(written, isDefined)
   if (main.k !== 'rel' || main.ops.length !== 1 || main.ops[0] !== '=') return null
   const [lhs, rhs] = main.items
   // A' = (1, 2) è un punto, non un'equazione.
@@ -39,11 +88,63 @@ export function odeOf(main: MathNode): Ode | null {
   }
   if (!y) return null
   // x'' = -x: la variabile è il tempo t.
-  const x = y === 'x' || (names.has('t') && !names.has('x')) ? 't' : 'x'
+  const x = variable ?? (y === 'x' || (names.has('t') && !names.has('x')) ? 't' : 'x')
   if (x === y) return null
   const top = primed(y, order)
   if (lhs.k === 'name' && lhs.name === top && !namesIn(rhs).has(top)) return { y, x, order, f: rhs, explicit: true }
   return { y, x, order, f: { k: 'bin', op: '-', a: lhs, b: rhs }, explicit: false }
+}
+
+/** Un sistema di due equazioni del primo ordine (x' = y, y' = −x), con le condizioni (x(0) = 1, y(0) = 0). */
+export interface OdeSystem {
+  /** Le due funzioni cercate (x e y: gli assi del piano delle fasi) e la variabile (t). */
+  names: [string, string]
+  t: string
+  /** Le derivate: x' = f[0], y' = f[1]. */
+  f: [MathNode, MathNode]
+  conds: MathNode[]
+}
+
+/**
+ * Il sistema di una riga (x' = y, \; y' = -x, anche in \begin{cases}) con le sue condizioni; null se è
+ * altro. Con x e y, la x va sull'asse orizzontale.
+ */
+export function systemOf(main: MathNode, cond: MathNode | null, isDefined?: (name: string) => boolean): OdeSystem | null {
+  const all = [main, ...(cond ? (cond.k === 'and' ? cond.items : [cond]) : [])]
+    .flatMap((n) => (n.k === 'cases' && n.rows.every((r) => !r.cond) ? n.rows.map((r) => r.value) : [n]))
+    .map((n) => withPrimes(n, isDefined).node)
+  const eqs: { u: string; f: MathNode }[] = []
+  const conds: MathNode[] = []
+  for (const n of all) {
+    if (n.k !== 'rel' || n.ops.length !== 1 || n.ops[0] !== '=') return null
+    const [lhs, rhs] = n.items
+    const m = lhs.k === 'name' ? /^([A-Za-z])'$/.exec(lhs.name) : null
+    if (m && ![...namesIn(rhs)].some((name) => name.includes("'"))) eqs.push({ u: m[1], f: rhs })
+    else if (lhs.k === 'apply' && lhs.args.length === 1 && !lhs.primes) conds.push(n)
+    else return null
+  }
+  if (eqs.length !== 2 || eqs[0].u === eqs[1].u) return null
+  if (eqs[0].u === 'y' && eqs[1].u === 'x') eqs.reverse()
+  const names: [string, string] = [eqs[0].u, eqs[1].u]
+  if (conds.some((c) => !names.includes(((c as Extract<MathNode, { k: 'rel' }>).items[0] as Extract<MathNode, { k: 'apply' }>).name))) return null
+  return { names, t: names.includes('t') ? 's' : 't', f: [eqs[0].f, eqs[1].f], conds }
+}
+
+/** I punti di partenza delle traiettorie: x(0) = 1, y(0) = 0 (anche più coppie una dopo l'altra). */
+export function systemStarts(system: OdeSystem, value: (n: MathNode) => number): [number, number][] {
+  const out: [number, number][] = []
+  let current: (number | undefined)[] = [undefined, undefined]
+  for (const c of system.conds as Extract<MathNode, { k: 'rel' }>[]) {
+    const i = system.names.indexOf((c.items[0] as Extract<MathNode, { k: 'apply' }>).name)
+    if (current[i] !== undefined) current = [undefined, undefined]
+    current[i] = value(c.items[1])
+    if (current.every((v) => v !== undefined)) {
+      if (current.every((v) => Number.isFinite(v))) out.push(current as [number, number])
+      current = [undefined, undefined]
+    }
+  }
+  if (current.some((v) => v !== undefined)) throw new MathError(`Per ogni traiettoria servono tutte e due le condizioni, come ${system.names[0]}(0) = 1, \\; ${system.names[1]}(0) = 0`)
+  return out
 }
 
 /** La derivata più alta in funzione di x e di Y = (y, y', …, y^{(n−1)}). */

@@ -22,6 +22,7 @@ import { bound, compile, EMPTY_SCOPE, isCounter, MathError, scopeWith, withWorkL
 import { limit, recognize, seriesSum, type LimitValue } from './limits'
 import { solve } from './solve'
 import { compileOde, odeOf, odeSolution, primed, type Ode, type OdeFunction } from './differential'
+import { differentialRequest, solveDifferential } from './odesolve'
 import {
   EXACT,
   FLOAT,
@@ -349,6 +350,15 @@ export class Sheet {
     const nodes = splitPieces(src).map(parseCached)
     if (!nodes.length || nodes.some((n) => !n)) return null
     const style = styleOf(nodes[0]!)
+    // Un'equazione differenziale (y'' + y = 0), anche con le condizioni o un sistema: con la formula.
+    const ode = differentialRequest(nodes as MathNode[], (name) => this.fns.has(name) || this.vfns.has(name) || this.consts.has(name))
+    if (ode) {
+      try {
+        return withWorkLimit(WORK, () => solveDifferential(ode, this.symbolScope(), style.decimal))
+      } catch {
+        return null
+      }
+    }
     try {
       return withWorkLimit(WORK, () =>
         solve(
@@ -383,7 +393,7 @@ export class Sheet {
     if (this.lastFunction && this.attachDomain(node, src)) return
     if (this.lastOde && this.attachInitial(node, src)) return
     // y' = x - y, y'' + y = 0: un'equazione differenziale; con le condizioni iniziali y diventa una funzione.
-    const ode = odeOf(node)
+    const ode = odeOf(node, (name) => this.fns.has(name) || this.vfns.has(name))
     if (ode) {
       const own = [ode.x, ...Array.from({ length: ode.order + 1 }, (_, k) => primed(ode.y, k))]
       const definition: Definition = { name: ode.y, params: [ode.x], source: src.trim(), value: ode.f, uses: namesIn(ode.f, new Set(), new Set(own)) }

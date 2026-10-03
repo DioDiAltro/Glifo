@@ -47,9 +47,15 @@ Probabilità e statistica, Matematica discreta, Calcolo numerico. Chiesto dallo 
     la dipendenza lineare, somma, intersezione, complemento ortogonale, equazioni cartesiane e proiezione
     sui sottospazi, le forme quadratiche (matrice e segnatura), le applicazioni lineari (matrice, nucleo,
     immagine). Restano: l'inversa con un parametro, i cambi di base e la matrice rispetto a basi date.
-12. **Equazioni differenziali con la formula:** l'integrale generale (a variabili separabili, lineari
-    del primo ordine, lineari a coefficienti costanti con il metodo di somiglianza) e il problema di
-    Cauchy; i sistemi (x' = y, y' = −x) con il ritratto di fase; i problemi ai limiti.
+12. **Equazioni differenziali con la formula**, fatto: con ⇒ l'integrale generale (lineari a
+    coefficienti costanti con il polinomio caratteristico, la somiglianza anche in risonanza e la
+    variazione delle costanti; anche con i parametri, y'' + ω²y = 0; lineari del primo ordine con il
+    fattore integrante; a variabili separabili, con le soluzioni costanti e la forma implicita se y non si
+    ricava; Bernoulli; Eulero; senza la y), il problema di Cauchy e i problemi ai limiti (una, nessuna o
+    infinite soluzioni), i sistemi lineari di due equazioni; nei grafici il ritratto di fase dei sistemi
+    (direzioni, traiettorie con il verso, punti di equilibrio). Le derivate anche come dy/dx, ẋ, y'(x).
+    Restano: le omogenee y' = f(y/x) e le esatte, i sistemi di tre equazioni, la soluzione esatta al posto
+    di Runge–Kutta quando y si definisce con le condizioni (senza ⇒).
 13. **Analisi 2 in più:** i punti critici e la loro natura (con l'hessiana), massimi e minimi
     vincolati (moltiplicatori di Lagrange) e assoluti, i limiti in più variabili, Taylor in più
     variabili.
