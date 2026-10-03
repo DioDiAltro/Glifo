@@ -133,6 +133,8 @@ const FUNCTION_NAMES: Record<string, string> = {
   critici: 'critical', stazionari: 'critical', lagrange: 'lagrange', vincolati: 'lagrange',
   // Le coniche e le quadriche dall'equazione.
   conica: 'conic', quadrica: 'quadric',
+  // La serie di Fourier, la trasformata di Laplace e l'antitrasformata.
+  fourier: 'fourier', laplace: 'laplace', antilaplace: 'ilaplace',
   // L'aritmetica e i polinomi: fattori primi e scomposizione, divisori, primi, resto, divisione, Ruffini,
   // l'inverso modulo n, le basi, la funzione di Eulero, le equazioni diofantee, Bézout ed Euclide; gli
   // insiemi (quanti elementi, l'insieme delle parti).
@@ -595,6 +597,11 @@ function readCommand(src: string, i: number, out: Tok[], depth: () => number, ad
       push('name', '𝒫')
       return end
     }
+    if ((name === 'mathcal' || name === 'mathscr') && text === 'L') {
+      // \mathcal{L}\{f\}: la trasformata di Laplace.
+      push('fn', 'laplace')
+      return end
+    }
     if (!text) return end
     // In \text{…} «e» e «o» sono parole («x > 0 \text{ e } x < 2»); in \mathrm{e} è il numero e.
     const isText = /^(text|textrm|textit|textbf|mbox)$/.test(name)
@@ -687,7 +694,7 @@ const SHOW: Record<string, string> = { '\\{': '\\{', '\\}': '\\}', floor: '⌊',
 
 /** Le funzioni trigonometriche e iperboliche: per loro `^{-1}` è la funzione inversa. */
 const INVERSE: Record<string, string> = {
-  sin: 'arcsin', cos: 'arccos', tan: 'arctan', cot: 'arccot', sinh: 'arsinh', cosh: 'arcosh', tanh: 'artanh',
+  sin: 'arcsin', cos: 'arccos', tan: 'arctan', cot: 'arccot', sinh: 'arsinh', cosh: 'arcosh', tanh: 'artanh', laplace: 'ilaplace',
 }
 
 function describe(t: Tok | undefined): string {
@@ -1395,9 +1402,16 @@ class Parser {
       if (args.length > 2) args = [args[0], { k: 'and', items: args.slice(1) }]
       return { k: 'fn', name, args, ...(pow && { pow }) }
     }
-    if (this.is('open', '(') || (this.is('open', '\\{') && (name === 'max' || name === 'min' || name === 'gcd' || name === 'lcm'))) {
+    const transform = name === 'laplace' || name === 'ilaplace'
+    if (this.is('open', '(') || (this.is('open', '\\{') && (name === 'max' || name === 'min' || name === 'gcd' || name === 'lcm' || transform)) || (transform && this.is('open', '['))) {
       const group = this.group(true)
       args = group.k === 'tuple' ? group.items : [group]
+      // \mathcal{L}\{f\}(s), \mathcal{L}^{-1}\{F\}(t): la variabile dopo, che non moltiplica.
+      if (transform && this.is('open', '(') && this.peek(1)?.k === 'name' && this.is('close', ')', 2)) {
+        this.next()
+        args.push({ k: 'name', name: this.next().v })
+        this.next()
+      }
     } else {
       if (!this.peek() || !this.startsArgument()) throw this.error(`Manca l'argomento di ${name}`)
       args = [this.implicitArgument(true)]

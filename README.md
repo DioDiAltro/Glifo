@@ -243,6 +243,19 @@ chi sta provando Glifo.*
   Con il termine in xy la forma canonica negli assi ruotati (con l'angolo). `\operatorname{quadrica}(…) =`
   dà ellissoide (e sfera, con centro e raggio), iperboloide a una o a due falde, paraboloide ellittico o
   iperbolico, cono, cilindri, con la forma canonica.
+- **Serie di potenze**: con una lettera libera, `\sum_{n=1}^{\infty} \frac{x^n}{n} =` dà il raggio di
+  convergenza (criterio del rapporto o della radice, anche con n! e nⁿ: R = 1/e) e l'insieme di convergenza
+  con gli estremi provati uno per uno (R = 1; converge per x ∈ [−1, 1)).
+- **Serie di Fourier**: `\operatorname{fourier}(x^2) =` dà a₀, aₙ, bₙ esatti (con n come lettera:
+  4(−1)ⁿ/n²), dice se la funzione è pari o dispari e scrive la serie; su [−π, π] o su un intervallo
+  (`\operatorname{fourier}(f, [-1, 1])`, o con il periodo), anche per le funzioni a tratti e con |x|; i
+  coefficienti dove la formula non vale a parte (x sin x: a₁). Nel grafico
+  `\operatorname{fourier}(f, [-\pi, \pi], N)` disegna la funzione ripetuta e la somma con N termini (con
+  `N = 5` nel blocco, lo slider).
+- **Trasformata di Laplace**: `\mathcal{L}\{t e^{-t}\} =` (1/(s + 1)²) con la tabella (potenze, esponenziali,
+  seni e coseni anche moltiplicati, sinh e cosh, con le lettere come e^{at}), e l'antitrasformata
+  `\mathcal{L}^{-1}\{\frac{s + 3}{s^2 + 2s + 5}\} =` con i fratti semplici; tutte e due controllate con
+  l'integrale fatto con i numeri.
 - **Aritmetica**: `\operatorname{fattori}(360) =` (2³ · 3² · 5), `\operatorname{divisori}(12) =`,
   `\operatorname{primo}(97) =` (anche grandi), il resto `17 \bmod 5 =` (anche `3^{1000} \bmod 7` e
   `3^{-1} \bmod 7`), `\operatorname{divisione}(17, 5) =` (17 = 5 · 3 + 2), l'algoritmo di Euclide passo per
@@ -462,6 +475,8 @@ chi sta provando Glifo.*
 ![Analisi 2: un limite in due variabili che non esiste (con i due cammini) e uno che esiste, i punti critici con la loro natura, Taylor in due variabili, gli estremi vincolati con Lagrange e assoluti su un disco e su un triangolo; nel pannello le curve di livello con il punto di sella e il minimo](docs/analisi2.png)
 
 ![Coniche e quadriche: un'ellisse, un'iperbole e una parabola con la forma canonica e gli elementi, un iperboloide; nel grafico l'iperbole con i fuochi e gli asintoti tratteggiati e, nel pannello, la parabola con il vertice, il fuoco e la direttrice](docs/coniche.png)
+
+![Serie, Fourier e Laplace: il raggio e l'insieme di convergenza di due serie di potenze, la serie di Fourier di x sin x con a₁ a parte, una trasformata e un'antitrasformata di Laplace; nel grafico la somma di Fourier con 7 termini dell'onda a dente di sega, con lo slider per N, e nel pannello quella di x sin x](docs/fourier.png)
 
 ![Aritmetica, polinomi, logica e insiemi: i fattori primi, una potenza modulo 7 e un inverso, un sistema di congruenze, un'equazione diofantea, due scomposizioni, la tabella di Ruffini, le operazioni tra insiemi e l'insieme delle parti, la tavola di verità del modus ponens](docs/aritmetica.png)
 
@@ -686,6 +701,9 @@ src/
     arithmetic.ts         l'aritmetica (fattori primi, congruenze, basi, diofantee) e i polinomi (scomporre, Ruffini)
     finite.ts             gli insiemi scritti elemento per elemento: operazioni, parti, quanti elementi, P(A) con Ω
     logic.ts              la logica delle proposizioni: tavole di verità, tautologie, forme normali
+    powerseries.ts        le serie di potenze: il raggio e l'insieme di convergenza
+    fourier.ts            la serie di Fourier: i coefficienti con le lettere e la somma parziale
+    laplace.ts            la trasformata di Laplace con la tabella e l'antitrasformata con i fratti semplici
     differential.ts       le equazioni differenziali di ogni ordine, risolte con Runge–Kutta dalle condizioni iniziali
     odesolve.ts           le equazioni differenziali e i sistemi risolti con la formula (dopo ⇒), con le condizioni
     exact.ts, format.ts   i conti esatti con le frazioni; i risultati scritti all'italiana

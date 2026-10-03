@@ -17,6 +17,7 @@ export const bigops = [
       [r`\sum_{#}`, 'con pedice'],
       [r`\sum_{#=#}^{#}`, 'da … a …'],
       [r`\sum_{n=0}^{\infty}`, 'serie da 0 a ∞'],
+      [r`\sum_{n=0}^{\infty} # (x - #)^n`, 'serie di potenze (raggio e convergenza)', r`\sum_{n=1}^{\infty} \frac{x^n}{n}`],
       [r`\sum\limits_{#}^{#}`, 'estremi sopra e sotto (in linea)'],
     ],
   }),
@@ -158,7 +159,12 @@ export const calculus = [
     w: 5,
     f: [[r`O(#)`, 'O grande', r`O(n^2)`], [r`\mathcal{O}(#)`, 'O calligrafica', r`\mathcal{O}(n \log n)`], [r`o(#)`, 'o piccolo', r`o(x)`]],
   }),
-  c(r`\mathcal{L}\{#\}`, 'trasformata di Laplace', 'trasformata di laplace, laplace, l calligrafica', { id: 'laplace', w: 2, f: [[r`\mathcal{L}\{#\}`, 'trasformata', r`\mathcal{L}\{f(t)\}`], [r`\mathcal{L}^{-1}\{#\}`, 'antitrasformata']] }),
+  c(r`\mathcal{L}\{#\}`, 'trasformata di Laplace', 'trasformata di laplace, laplace, l calligrafica, antitrasformata, antitrasformata di laplace, fratti semplici', { id: 'laplace', w: 3, f: [[r`\mathcal{L}\{#\}`, 'trasformata', r`\mathcal{L}\{t e^{-t}\}`], [r`\mathcal{L}^{-1}\{#\}`, 'antitrasformata', r`\mathcal{L}^{-1}\{\frac{1}{s^2 + 1}\}`]] }),
+  c(r`\operatorname{fourier}(#)`, 'serie di Fourier', 'serie di fourier, coefficienti di fourier, fourier, sviluppo in serie di fourier, armoniche, onda quadra, funzione periodica', {
+    id: 'fourierseries',
+    w: 2,
+    f: [[r`\operatorname{fourier}(#)`, 'su [−π, π]', r`\operatorname{fourier}(x^2)`], [r`\operatorname{fourier}(#, [#, #])`, 'su un intervallo', r`\operatorname{fourier}(x, [-1, 1])`], [r`\operatorname{fourier}(#, [#, #], #)`, 'nel grafico: la somma con N termini']],
+  }),
   c(r`\mathcal{F}\{#\}`, 'trasformata di Fourier', 'trasformata di fourier, fourier, f calligrafica', { id: 'fourier', w: 2, f: [[r`\mathcal{F}\{#\}`, 'trasformata', r`\mathcal{F}\{f(t)\}`], [r`\hat{#}(#)`, 'con cappello', r`\hat{f}(\xi)`]] }),
 ]
 

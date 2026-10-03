@@ -78,8 +78,13 @@ Probabilità e statistica, Matematica discreta, Calcolo numerico. Chiesto dallo 
     con gli elementi (∪, ∩, differenza anche simmetrica, prodotto cartesiano, parti, complementare,
     cardinalità, la probabilità classica con Ω). Restano: il raccoglimento parziale (ax + ay + bx + by),
     i diagrammi di Venn, le relazioni (riflessiva, simmetrica, transitiva) e le funzioni tra insiemi finiti.
-16. **Serie di potenze, Fourier e Laplace:** raggio e insieme di convergenza, la serie di Fourier
-    (i coefficienti, e nel grafico le somme parziali), la trasformata di Laplace e l'antitrasformata.
+16. **Serie di potenze, Fourier e Laplace**, fatto: il raggio e l'insieme di convergenza delle serie di
+    potenze (con gli estremi); la serie di Fourier con i coefficienti esatti (anche a tratti, con |x|, su
+    un intervallo qualsiasi, con i coefficienti a parte dove la formula non vale) e, nel grafico, la somma
+    parziale con lo slider; la trasformata di Laplace con la tabella e l'antitrasformata delle funzioni
+    razionali con i fratti semplici. Corrette anche le serie a segni alterni con i termini che vanno piano
+    a zero (Σ(−1)ⁿ/√n). Restano: la somma delle serie di potenze (−ln(1 − x)), la trasformata di Fourier,
+    la Heaviside e la delta nella trasformata di Laplace, le equazioni differenziali risolte con Laplace.
 17. **Calcolo numerico:** bisezione, Newton e punto fisso con la tabella dei passi, interpolazione,
     minimi quadrati, trapezi e Simpson, LU, norme e condizionamento, Jacobi e Gauss–Seidel, Eulero.
 18. **Statistica inferenziale:** gli intervalli di confidenza (della media con σ nota e no, di una

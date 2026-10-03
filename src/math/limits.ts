@@ -176,7 +176,9 @@ export function seriesSum(term: (n: number) => number, start: number): LimitValu
   const tail = head.slice(32)
   const signs = tail.map(Math.sign)
   const alternatingSigns = signs.every((s, i) => i === 0 || s === -signs[i - 1]) && signs.every((s) => s !== 0)
-  if (far.some((t) => Number.isFinite(t) && Math.abs(t) > 1e-3 * big) || !far.some(Number.isFinite)) {
+  // I termini che vanno a zero piano (1/√n, 1/ln n) calano comunque da un ordine di grandezza all'altro.
+  const shrinking = far.every(Number.isFinite) && Math.abs(far[2]) < 0.95 * Math.abs(far[1]) && Math.abs(far[1]) < 0.95 * Math.abs(far[0])
+  if ((far.some((t) => Number.isFinite(t) && Math.abs(t) > 1e-3 * big) && !shrinking) || !far.some(Number.isFinite)) {
     // I termini non vanno a zero: con un segno solo all'infinito, se no non converge.
     const sign = Math.sign(far.find(Number.isFinite) ?? tail[tail.length - 1])
     if (!alternatingSigns && sign && far.every((t) => !Number.isFinite(t) || Math.sign(t) === sign)) return { k: 'infinity', sign: sign > 0 ? 1 : -1 }

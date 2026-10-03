@@ -158,6 +158,9 @@ const COMPLEX_FUNCTIONS: Record<string, string> = {
   bezout: '\\operatorname{bezout}',
   euclid: '\\operatorname{euclide}',
   lcm: '\\operatorname{mcm}',
+  fourier: '\\operatorname{fourier}',
+  laplace: '\\mathcal{L}',
+  ilaplace: '\\mathcal{L}^{-1}',
 }
 
 /** Le funzioni della statistica: sempre con le parentesi. */

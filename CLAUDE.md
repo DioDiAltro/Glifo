@@ -87,7 +87,13 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   `exact.ts`); `finite.ts` gli insiemi scritti elemento per elemento (`finiteValue`, nel foglio prima di
   tutto; quelli che vengono dalle operazioni restano nella nota con `finiteSetOf`; ∅, 𝒫, ∁ e … sono nomi);
   `logic.ts` la logica (`logicShown`, sul testo prima della lettura: le tavole di verità, le forme
-  normali); `solve.ts` le equazioni, le
+  normali); `powerseries.ts` le serie di potenze (nel foglio da `showLimit`, quando il termine ha una
+  lettera libera: il raggio con i logaritmi dei coefficienti, gli estremi con `seriesSum`); `fourier.ts` la
+  serie di Fourier (`fourierProblem` legge funzione, intervallo e tratti; i coefficienti con n come lettera,
+  i prodotti di seni e coseni fatti somme con `linearTrig`, poi sin(kπn) = 0 e cos(kπn) = (−1)^{kn};
+  `partialSum` per i grafici, `src/graph/fourierGraph.ts`); `laplace.ts` la trasformata con la tabella e
+  l'antitrasformata con i fratti semplici (`\mathcal{L}` è il nodo `fn` laplace, con ^{-1} ilaplace),
+  controllate con l'integrale fatto con i numeri; `solve.ts` le equazioni, le
   disequazioni e i sistemi di una formula che finisce con ⇒ (`solveRequest`); `differential.ts` le
   equazioni differenziali di ogni ordine (`odeOf`, anche y'' + y = 0; `withPrimes` scrive dy/dx, ẋ e y'(x)
   come y') con le condizioni iniziali anche in formule dopo, risolte con Runge–Kutta (`odeSolution`);

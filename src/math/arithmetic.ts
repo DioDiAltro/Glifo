@@ -346,6 +346,20 @@ function polynomialOf(node: MathNode, scope: SymbolScope): { v: string; p: Poly 
   return { v: letters[0], p: trim(frac.N.map((c) => c.div(frac.D[0]))) }
 }
 
+/**
+ * Un polinomio in una lettera scritto scomposto, se si può (s³ + 4s = s(s² + 4)), senza note: per i
+ * denominatori. `single` dice se è un fattore solo (allora nel testo non servono parentesi attorno).
+ */
+export function factoredPolynomial(p: Poly, v: string): { tex: string; text: string; single: boolean } {
+  const q = trim(p)
+  const out = q.length > 1 ? factorShown(expand(polyEx(q, v)), [v], false) : null
+  const plain = polyShown(q, v)
+  const shown = out ?? plain
+  // Un fattore solo: un monomio (s³), o una potenza di una parentesi ((s + 1)²).
+  const single = /^[^ ()]+$/.test(shown.text) || /^\([^()]*\)[⁰¹²³⁴⁵⁶⁷⁸⁹]*$/.test(shown.text)
+  return { ...shown, single }
+}
+
 function polyShown(p: Poly, v: string): { tex: string; text: string } {
   const n = toNode(tidy(polyEx(p.length ? p : [ZERO], v)))
   return { tex: toLatex(n), text: plainText(n) }
@@ -509,7 +523,7 @@ function termPowers(t: Ex): { c: Rational; powers: Record<string, number> } | nu
  * La scomposizione in fattori: prima il raccoglimento (il mcd dei coefficienti e le lettere comuni), poi
  * quello che resta, se è in una lettera (2x² − 2 = 2(x − 1)(x + 1)) o omogeneo in due (a² − b²).
  */
-function factorShown(e: Ex, letters: string[]): FormattedResult | null {
+function factorShown(e: Ex, letters: string[], note = true): FormattedResult | null {
   const terms = (e.t === 'add' ? e.terms : [e]).map(termPowers)
   if (!terms.length || terms.some((t) => !t)) return null
   // Il raccoglimento totale: il mcd dei coefficienti (con il segno del primo termine) e le lettere comuni.
@@ -548,7 +562,7 @@ function factorShown(e: Ex, letters: string[]): FormattedResult | null {
   const k = numShown(c)
   const constant = c.cmp(ONE) === 0 ? { tex: '', text: '' } : c.cmp(R(-1)) === 0 ? { tex: '-', text: '−' } : { tex: k.tex, text: c.isInteger ? k.text : `(${k.text})` }
   // In una lettera, di secondo o terzo grado senza radici frazioni: non si scompone (con le frazioni).
-  const irreducible = alone && letters.length === 1 && parts[0].deg >= 2 && parts[0].deg <= 3
+  const irreducible = note && alone && letters.length === 1 && parts[0].deg >= 2 && parts[0].deg <= 3
   return {
     tex: `${constant.tex}${shown.map((f) => f.tex).join('')}${irreducible ? '\\quad (\\text{irriducibile in } \\mathbb{Q})' : ''}`,
     text: `${constant.text}${shown.map((f) => f.text).join('')}${irreducible ? ' (irriducibile in ℚ)' : ''}`,

@@ -1509,6 +1509,21 @@ try {
     factored === '(a − b)(a + b)' && truth.startsWith('tautologia') && table > 20,
     `un polinomio si scompone e una formula della logica ha la tavola di verità (${JSON.stringify({ factored, truth: truth.slice(0, 30), table })})`,
   )
+  // Una serie di potenze, la trasformata di Laplace e la serie di Fourier con la somma nel pannello.
+  await gp.keyboard.press('End')
+  await gp.keyboard.type('\n\nLa serie $\\sum_{n=1}^{\\infty} \\frac{x^n}{n} =')
+  const power = await resultText('R = 1')
+  await gp.keyboard.press('End')
+  await gp.keyboard.type('\n\nLaplace $\\mathcal{L}\\{t e^{-t}\\} =')
+  const laplace = await resultText('1/(s')
+  await gp.keyboard.press('End')
+  await gp.keyboard.type('\n\nFourier $\\operatorname{fourier}(x^2) =')
+  const fourier = await resultText('a₀')
+  await gp.waitForSelector('.formula-graph:not([hidden]) svg path', { state: 'attached', timeout: 5000 })
+  check(
+    power.startsWith('R = 1; converge per x ∈ [−1, 1)') && laplace === '1/(s + 1)²' && fourier.startsWith('a₀ = (2π²)/3; aₙ = (4(−1)^(n))/n²'),
+    `una serie di potenze ha il raggio, Laplace la trasformata e Fourier i coefficienti con il grafico (${JSON.stringify({ power: power.slice(0, 30), laplace, fourier: fourier.slice(0, 30) })})`,
+  )
   await gp.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)

@@ -25,6 +25,9 @@ import { compileOde, odeOf, odeSolution, primed, type Ode, type OdeFunction } fr
 import { differentialRequest, solveDifferential } from './odesolve'
 import { criticalShown, extremaShown, optimumOf, severalLimitShown, severalOf } from './several'
 import { conicOf, quadricOf } from './conics'
+import { powerSeriesOf, powerSeriesShown } from './powerseries'
+import { fourierProblem, fourierShown } from './fourier'
+import { inverseLaplaceShown, laplaceShown } from './laplace'
 import { arithmeticShown, solveCongruences } from './arithmetic'
 import { finiteSetOf, finiteValue, type FiniteContext } from './finite'
 import { logicShown } from './logic'
@@ -836,6 +839,32 @@ export class Sheet {
       const totient = item.k === 'apply' && item.name === 'φ' && item.args.length === 1 && !item.primes && !this.fns.has('φ') ? item.args : null
       const arithmetic = this.showArithmetic(totient ? { k: 'fn', name: 'totient', args: totient } : item)
       if (arithmetic) return arithmetic
+      // La trasformata di Laplace e l'antitrasformata.
+      if (item.k === 'fn' && (item.name === 'laplace' || item.name === 'ilaplace') && item.args.length >= 1 && item.args.length <= 2 && !item.pow) {
+        const args = item.args
+        const inverse = item.name === 'ilaplace'
+        try {
+          const shown = withWorkLimit(WORK, () => (inverse ? inverseLaplaceShown(args, this.symbolScope()) : laplaceShown(args, this.symbolScope())))
+          if (shown) return shown
+        } catch {
+          // Non è nella tabella.
+        }
+        continue
+      }
+      // La serie di Fourier: i coefficienti con le lettere e la serie.
+      if (item.k === 'fn' && item.name === 'fourier' && item.args.length >= 1 && item.args.length <= 2 && !item.pow) {
+        const args = item.args
+        try {
+          const shown = withWorkLimit(WORK, () => {
+            const problem = fourierProblem(args, this.symbolScope(), this.scope())
+            return problem && fourierShown(problem)
+          })
+          if (shown) return shown
+        } catch {
+          // Non è una funzione di cui si fa la serie.
+        }
+        continue
+      }
       // Le coniche e le quadriche: il tipo, la forma canonica, gli elementi.
       if (item.k === 'fn' && (item.name === 'conic' || item.name === 'quadric') && item.args.length === 1) {
         const [equation] = item.args
@@ -901,6 +930,11 @@ export class Sheet {
     return null
   }
 
+  /** Se la nota definisce il nome (un numero, una funzione, un vettore, una variabile aleatoria). */
+  private isDefined(name: string): boolean {
+    return this.consts.has(name) || this.complexConsts.has(name) || this.linearValues.has(name) || this.fns.has(name) || this.vfns.has(name) || this.randomVars.has(name)
+  }
+
   private showArithmetic(item: MathNode): FormattedResult | null {
     try {
       return withWorkLimit(WORK, () => arithmeticShown(item, this.symbolScope()))
@@ -943,6 +977,7 @@ export class Sheet {
     }
     let value: LimitValue
     let exact: Rational | null = null
+    let power: FormattedResult | null = null
     try {
       value = withWorkLimit(WORK, () => {
         const scope = this.scope()
@@ -963,14 +998,21 @@ export class Sheet {
           return found
         }
         const big = item as Extract<MathNode, { k: 'big' }>
-        const body = compile(this.prepare(big.body), scopeWith(scope, [big.v]), { calc: true })
         const start = bound(big.from, scope)({})
+        // Con una lettera libera (x): una serie di potenze, con il raggio e l'insieme di convergenza.
+        const powers = powerSeriesOf(big, Math.ceil(start - 1e-9), this.symbolScope(), (name) => this.isDefined(name))
+        if (powers) {
+          power = powerSeriesShown(powers, style)
+          return { k: 'none' }
+        }
+        const body = compile(this.prepare(big.body), scopeWith(scope, [big.v]), { calc: true })
         const v: Record<string, number> = {}
         return seriesSum((n) => ((v[big.v] = n), body(v)), Math.ceil(start - 1e-9))
       })
     } catch {
       return null
     }
+    if (power) return { shown: power, value: null }
     const shown = limitText(value, style, exact)
     const result: Value | null = value.k === 'value' ? { float: value.v, exact } : null
     return shown ? { shown, value: result } : null
