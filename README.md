@@ -247,7 +247,8 @@ chi sta provando Glifo.*
   convergenza (criterio del rapporto o della radice, anche con n! e nⁿ: R = 1/e) e l'insieme di convergenza
   con gli estremi provati uno per uno (R = 1; converge per x ∈ [−1, 1)).
 - **Serie di Fourier**: `\operatorname{fourier}(x^2) =` dà a₀, aₙ, bₙ esatti (con n come lettera:
-  4(−1)ⁿ/n²), dice se la funzione è pari o dispari e scrive la serie; su [−π, π] o su un intervallo
+  4(−1)ⁿ/n²), dice se la funzione è pari o dispari (tolta la costante a₀/2; su intervalli come [0, 2π] lo dice
+  del prolungamento periodico) e scrive la serie; su [−π, π] o su un intervallo
   (`\operatorname{fourier}(f, [-1, 1])`, o con il periodo), anche per le funzioni a tratti e con |x|; i
   coefficienti dove la formula non vale a parte (x sin x: a₁). Nel grafico
   `\operatorname{fourier}(f, [-\pi, \pi], N)` disegna la funzione ripetuta e la somma con N termini (con

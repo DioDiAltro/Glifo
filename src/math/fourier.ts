@@ -442,7 +442,19 @@ export function fourierShown(p: FourierProblem): FormattedResult | null {
   }
   const aSpecial = A.specials.map((s) => s.k)
   const bSpecial = B.specials.map((s) => s.k)
-  const parity = (c: Ex, specials: { c: Ex }[], what: string) => (isZero(c) && specials.every((s) => isZero(s.c)) ? ` (la funzione è ${what})` : '')
+  const half = tidy(mul(num(new Rational(1n, 2n)), a0))
+  // bₙ = 0: il prolungamento periodico è pari; aₙ = 0: è dispari se anche a₀ = 0, se no lo è tolto a₀/2
+  // (x + 1 meno 1). Su un intervallo simmetrico, [−L, L], vale per la funzione; su [0, 2π] no.
+  const who = isZero(tidy(add(p.lo, p.hi))) ? 'la funzione' : 'il prolungamento periodico'
+  const parity = (c: Ex, specials: { c: Ex }[], what: 'pari' | 'dispari') => {
+    if (!isZero(c) || !specials.every((s) => isZero(s.c))) return { tex: '', text: '' }
+    const words = `${who} è ${what}`
+    if (what === 'pari' || isZero(half)) return { tex: `\\text{(${words})}`, text: ` (${words})` }
+    const k = shown(half)
+    return { tex: `\\text{(${who} meno }${k.tex}\\text{ è dispari)}`, text: ` (${who} meno ${k.text} è dispari)` }
+  }
+  const odd = parity(A.c, A.specials, 'dispari')
+  const even = parity(B.c, B.specials, 'pari')
   const texParts = [
     `a_0 = ${shown(a0).tex}`,
     ...A.specials.map((s) => `a_{${s.k}} = ${shown(s.c).tex}`),
@@ -450,12 +462,15 @@ export function fourierShown(p: FourierProblem): FormattedResult | null {
     ...B.specials.map((s) => `b_{${s.k}} = ${shown(s.c).tex}`),
     `b_n = ${shown(B.c).tex}${except(bSpecial).tex}`,
   ]
+  // Nella formula disegnata pari e dispari vanno su una riga loro, sotto la serie: accanto ai
+  // coefficienti la riga sarebbe troppo lunga.
+  const remarks = [odd, even].filter((r) => r.tex).map((r) => ` \\\\ ${r.tex}`).join('')
   const textParts = [
     `a₀ = ${shown(a0).text}`,
     ...A.specials.map((s) => `a${SUB[s.k]} = ${shown(s.c).text}`),
-    `aₙ = ${shown(A.c).text}${except(aSpecial).text}${parity(A.c, A.specials, 'dispari')}`,
+    `aₙ = ${shown(A.c).text}${except(aSpecial).text}${odd.text}`,
     ...B.specials.map((s) => `b${SUB[s.k]} = ${shown(s.c).text}`),
-    `bₙ = ${shown(B.c).text}${except(bSpecial).text}${parity(B.c, B.specials, 'pari')}`,
+    `bₙ = ${shown(B.c).text}${except(bSpecial).text}${even.text}`,
   ]
   // La serie: a₀/2, i termini a parte, Σ (aₙ cos(nωx) + bₙ sin(nωx)), senza i termini nulli.
   const wrap = (e: Ex) => {
@@ -463,11 +478,18 @@ export function fourierShown(p: FourierProblem): FormattedResult | null {
     return e.t === 'add' ? { tex: `\\left(${s.tex}\\right)`, text: `(${s.text})` } : s
   }
   const term = (c: Ex, which: 'cos' | 'sin', k: Ex) => {
-    const w = wrap(c)
     const t = arg(k)
-    return { tex: `${w.tex} \\${which}\\left(${t.tex}\\right)`, text: `${w.text} ${which}(${t.text})` }
+    const f = { tex: `\\${which}\\left(${t.tex}\\right)`, text: `${which}(${t.text})` }
+    // Con il coefficiente 1 o −1: «sin(x)», «−cos(2x)».
+    if (c.t === 'num' && c.v.d === 1n && (c.v.n === 1n || c.v.n === -1n)) return c.v.n > 0n ? f : { tex: `-${f.tex}`, text: `−${f.text}` }
+    const w = wrap(c)
+    return { tex: `${w.tex} ${f.tex}`, text: `${w.text} ${f.text}` }
   }
-  const half = tidy(mul(num(new Rational(1n, 2n)), a0))
+  // I termini con il meno davanti: «1 − 1/2 cos(x)», non «1 + −1/2 cos(x)».
+  const joined = (parts: { tex: string; text: string }[], key: 'tex' | 'text') => {
+    const minus = key === 'tex' ? '-' : '−'
+    return parts.map((t, i) => (i === 0 ? t[key] : t[key].startsWith(minus) ? ` ${minus} ${t[key].slice(minus.length)}` : ` + ${t[key]}`)).join('')
+  }
   const skipped = [...new Set([...aSpecial, ...bSpecial])].sort((x, y) => x - y)
   const head = [
     ...(isZero(half) ? [] : [shown(half)]),
@@ -478,24 +500,24 @@ export function fourierShown(p: FourierProblem): FormattedResult | null {
     }),
   ]
   const inside = [...(isZero(A.c) ? [] : [term(A.c, 'cos', sym('n'))]), ...(isZero(B.c) ? [] : [term(B.c, 'sin', sym('n'))])]
+  // Con un termine solo il meno va davanti alla somma: «π − Σ 2/n sin(nx)», non «π + Σ −2/n sin(nx)».
+  const negative = inside.length === 1 && inside[0].tex.startsWith('-') && inside[0].text.startsWith('−')
+  const body = negative ? [{ tex: inside[0].tex.slice(1), text: inside[0].text.slice(1) }] : inside
   const fromStart = skipped.every((k, i) => k === i + 1)
   const lower = fromStart
     ? { tex: `n=${skipped.length + 1}`, text: `n≥${skipped.length + 1}` }
     : { tex: `\\substack{n=1 \\\\ n \\ne ${skipped.join(', ')}}`, text: `n≥1, n≠${skipped.join(', ')}` }
-  const sigma = inside.length
+  const sigma = body.length
     ? {
-        tex: `\\sum_{${lower.tex}}^{\\infty} ${inside.length > 1 ? `\\left(${inside.map((t) => t.tex).join(' + ')}\\right)` : inside[0].tex}`,
-        text: `Σ_{${lower.text}} ${inside.length > 1 ? `(${inside.map((t) => t.text).join(' + ')})` : inside[0].text}`,
+        tex: `${negative ? '-' : ''}\\sum_{${lower.tex}}^{\\infty} ${body.length > 1 ? `\\left(${joined(body, 'tex')}\\right)` : body[0].tex}`,
+        text: `${negative ? '−' : ''}Σ_{${lower.text}} ${body.length > 1 ? `(${joined(body, 'text')})` : body[0].text}`,
       }
     : null
   const all = [...head, ...(sigma ? [sigma] : [])]
-  // I termini con il meno davanti: «1 − 1/2 cos(x)», non «1 + −1/2 cos(x)».
-  const joined = (key: 'tex' | 'text', minus: string) =>
-    all.map((t, i) => (i === 0 ? t[key] : t[key].startsWith(minus) ? ` ${minus} ${t[key].slice(minus.length)}` : ` + ${t[key]}`)).join('') || '0'
-  const series = { tex: joined('tex', '-'), text: joined('text', '−') }
+  const series = { tex: joined(all, 'tex') || '0', text: joined(all, 'text') || '0' }
   const label = { tex: toLatex(p.label), text: plainText(p.label) }
   return {
-    tex: `\\begin{array}{l} ${texParts.join(',\\quad ')} \\\\ ${label.tex} \\sim ${series.tex} \\end{array}`,
+    tex: `\\begin{array}{l} ${texParts.join(',\\quad ')} \\\\ ${label.tex} \\sim ${series.tex}${remarks} \\end{array}`,
     text: `${textParts.join('; ')}; ${label.text} ~ ${series.text}`,
     rich: true,
   }

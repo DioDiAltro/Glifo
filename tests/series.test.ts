@@ -67,6 +67,20 @@ describe('la serie di Fourier', () => {
     expect(text(r`\operatorname{fourier}(x, 2) =`)).toBe('a₀ = 0; aₙ = 0 (la funzione è dispari); bₙ = (2(−1)^(n + 1))/(πn); x ~ Σ_{n≥1} (2(−1)^(n + 1))/(πn) sin(πnx)')
   })
 
+  it('pari o dispari solo se lo è davvero: tolta la costante a₀/2, e su [0, 2π] il prolungamento periodico', () => {
+    // Prima diceva «la funzione è dispari» anche per x + 1 e per x su [0, 2π].
+    expect(text(r`\operatorname{fourier}(x + 1) =`)).toBe('a₀ = 2; aₙ = 0 (la funzione meno 1 è dispari); bₙ = (2(−1)^(n + 1))/n; x + 1 ~ 1 + Σ_{n≥1} (2(−1)^(n + 1))/n sin(nx)')
+    expect(text(r`\operatorname{fourier}(x, [0, 2\pi]) =`)).toBe('a₀ = 2π; aₙ = 0 (il prolungamento periodico meno π è dispari); bₙ = −2/n; x ~ π − Σ_{n≥1} 2/n sin(nx)')
+    expect(text(r`\operatorname{fourier}((x - \pi)^2, [0, 2\pi]) =`)).toBe('a₀ = (2π²)/3; aₙ = 4/n²; bₙ = 0 (il prolungamento periodico è pari); (x − π)² ~ π²/3 + Σ_{n≥1} 4/n² cos(nx)')
+    // L'etichetta si vede anche nella formula disegnata con KaTeX, su una riga sua sotto la serie.
+    expect(new Sheet().add(r`\operatorname{fourier}(x^2) =`)?.tex).toMatch(/b_n = 0 \\\\ .* \\\\ \\text\{\(la funzione è pari\)\} \\end\{array\}$/)
+  })
+
+  it('nella serie i segni meno al loro posto e niente coefficienti 1', () => {
+    expect(text(r`\operatorname{fourier}(x^2, [0, 2\pi]) =`)).toBe('a₀ = (8π²)/3; aₙ = 4/n²; bₙ = −(4π)/n; x² ~ (4π²)/3 + Σ_{n≥1} (4/n² cos(nx) − (4π)/n sin(nx))')
+    expect(text(r`\operatorname{fourier}(\sin x, [0, 2\pi]) =`)).toBe('a₀ = 0; aₙ = 0 (il prolungamento periodico è dispari); b₁ = 1; bₙ = 0 (n ≥ 2); sin(x) ~ sin(x)')
+  })
+
   it('nel grafico la funzione ripetuta e la somma parziale, con lo slider intero per N', () => {
     const spec = parseGraph(`N = 5\n${r`\operatorname{fourier}(x, [-\pi, \pi], N)`}`)
     expect(kinds(spec.items)).toEqual(['function tratteggiata', 'function'])
