@@ -1172,7 +1172,7 @@ export function expandCalculus(node: MathNode, scope: SymbolScope, decimal = fal
 }
 
 /** Lo stesso nodo con i figli cambiati da `f`. */
-function mapNode(n: MathNode, f: (c: MathNode) => MathNode): MathNode {
+export function mapNode(n: MathNode, f: (c: MathNode) => MathNode): MathNode {
   switch (n.k) {
     case 'num':
     case 'name':

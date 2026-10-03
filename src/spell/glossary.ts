@@ -15,6 +15,9 @@ const ANALISI_ALGEBRA = `
   lipschitziano lipschitziana lipschitziani lipschitziane hölderiano hölderiana hölderiani hölderiane
   olomorfo olomorfa olomorfi olomorfe olomorfia meromorfo meromorfa meromorfi meromorfe
   autospazio autospazi autofunzione autofunzioni ortogonalizzazione ortonormalizzazione
+  autovalore autovalori autovettore autovettori ortonormale ortonormali ortonormalizzare
+  diagonalizzare diagonalizza diagonalizzata diagonalizzate diagonalizzati diagonalizzando
+  semidefinito semidefinita semidefiniti semidefinite ipergeometrica ipergeometriche
   sottomatrice sottomatrici sottosuccessione sottosuccessioni sottocampo sottocampi sottoanello sottoanelli
   epimorfismo epimorfismi monomorfismo monomorfismi diffeomorfismo diffeomorfismi omeomorfismo omeomorfismi
   jacobiano jacobiana jacobiani jacobiane hessiano hessiana hessiani hessiane laplaciano laplaciana laplaciani laplaciane

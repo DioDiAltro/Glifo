@@ -21,7 +21,7 @@ export type MathNode =
   | { k: 'name'; name: string }
   | { k: 'neg'; a: MathNode }
   /** `cross`: scritto con \times (o ×): tra due vettori è il prodotto vettoriale, tra due intervalli un rettangolo. */
-  | { k: 'bin'; op: '+' | '-' | '*' | '/' | '^'; a: MathNode; b: MathNode; implicit?: boolean; frac?: boolean; cross?: boolean }
+  | { k: 'bin'; op: '+' | '-' | '*' | '/' | '^'; a: MathNode; b: MathNode; implicit?: boolean; frac?: boolean; cross?: boolean; cap?: boolean }
   /**
    * Una funzione nota: `\sin x`, `\log_2 x` (base), `\sqrt[3]{x}` (indice in `base`), `\sin^2 x` (pow).
    * Gradiente, divergenza, rotore e laplaciano scritti con \nabla hanno `nabla`.
@@ -145,6 +145,12 @@ const FUNCTION_NAMES: Record<string, string> = {
   istogramma: 'histogram', histogram: 'histogram', barre: 'barchart', dispersione: 'scatter', scatter: 'scatter',
   // La probabilità: \Pr(X \le 3) come P(X \le 3).
   Pr: 'prob', pr: 'prob',
+  // L'algebra lineare: diagonalizzare, Gram–Schmidt, la segnatura, la dipendenza lineare, la matrice di
+  // un'applicazione lineare o di una forma quadratica.
+  diagonalizza: 'diagonalize', diagonalize: 'diagonalize', gramschmidt: 'gramschmidt', gs: 'gramschmidt',
+  ortonormalizza: 'gramschmidt', segnatura: 'signature', signature: 'signature', indipendenti: 'independent',
+  independent: 'independent', matrice: 'matrixof', equazioni: 'equations', equations: 'equations',
+  proiezione: 'projection', projection: 'projection', proj: 'projection',
 }
 
 /**
@@ -240,6 +246,8 @@ interface Tok {
   colon?: boolean
   /** Solo \times e ×. */
   cross?: boolean
+  /** Solo \cap e ∩: l'intersezione (di due sottospazi, di due rette). */
+  cap?: boolean
   /** Prima c'è uno spazio scritto (\, \; \:): chiude l'argomento di una funzione. */
   spaced?: boolean
 }
@@ -340,6 +348,7 @@ export function tokenize(src: string): Tok[] {
       case '+': one('op', '+'); break
       case '-': case '−': case '–': one('op', '-'); break
       case '×': push('op', '*', i, i + 1, { cross: true }); i++; break
+      case '∩': push('op', '*', i, i + 1, { cap: true }); i++; break
       case '*': case '·': case '⋅': case '∙': one('op', '*'); break
       case ':':
         // a := 3 è una definizione, come a = 3; da solo «:» è la divisione (6 : 3).
@@ -468,6 +477,10 @@ function readCommand(src: string, i: number, out: Tok[], depth: () => number, ad
     out.push({ k: 'op', v: '*', pos: i, end, cross: true })
     return end
   }
+  if (name === 'cap') {
+    out.push({ k: 'op', v: '*', pos: i, end, cap: true })
+    return end
+  }
   if (name === 'colon') {
     out.push({ k: 'op', v: '/', pos: i, end, colon: true })
     return end
@@ -564,6 +577,11 @@ function readCommand(src: string, i: number, out: Tok[], depth: () => number, ad
   if (name === 'top' || name === 'intercal') {
     // A^\top: la trasposta.
     push('name', 'T')
+    return end
+  }
+  if (name === 'perp' || name === 'bot') {
+    // U^\perp: il complemento ortogonale.
+    push('name', '⊥')
     return end
   }
   if (name === 'langle' || name === 'rangle') {
@@ -944,7 +962,7 @@ class Parser {
         const sign = this.next()
         const op = sign.v as '*' | '/'
         if (!this.peek()) throw this.error(`Manca qualcosa dopo ${op === '*' ? '·' : '/'}`)
-        left = { k: 'bin', op, a: left, b: this.unary(), ...(sign.cross && { cross: true }) }
+        left = { k: 'bin', op, a: left, b: this.unary(), ...(sign.cross && { cross: true }), ...(sign.cap && { cap: true }) }
       } else if (this.startsFactor()) {
         if (left.k === 'num' && this.is('num')) throw this.error('Due numeri di seguito: manca un\'operazione?')
         left = { k: 'bin', op: '*', a: left, b: this.power(), implicit: true }

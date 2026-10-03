@@ -41,9 +41,12 @@ Probabilità e statistica, Matematica discreta, Calcolo numerico. Chiesto dallo 
     barre delle discrete, le densità con l'area della probabilità, istogrammi, diagrammi a barre e di
     dispersione con la retta. Restano: le variabili insieme (X + Y, la normale bivariata) e il box plot;
     gli intervalli di confidenza e i test sono la voce 18.
-11. **Algebra lineare in più:** `A x = b`, i sistemi con un parametro (al variare di k, con
-    Rouché–Capelli), diagonalizzare (P e D), Gram–Schmidt, somma e intersezione di sottospazi, le
-    forme quadratiche (segnatura), le applicazioni lineari (matrice, nucleo, immagine).
+11. **Algebra lineare in più**, fatto: `A x = b \Rightarrow` (Rouché–Capelli, con le soluzioni infinite
+    scritte con i parametri), i sistemi con un parametro discussi al variare del parametro (anche con la
+    matrice: rango, determinante), diagonalizzare (P e D, P ortogonale per le simmetriche), Gram–Schmidt,
+    la dipendenza lineare, somma, intersezione, complemento ortogonale, equazioni cartesiane e proiezione
+    sui sottospazi, le forme quadratiche (matrice e segnatura), le applicazioni lineari (matrice, nucleo,
+    immagine). Restano: l'inversa con un parametro, i cambi di base e la matrice rispetto a basi date.
 12. **Equazioni differenziali con la formula:** l'integrale generale (a variabili separabili, lineari
     del primo ordine, lineari a coefficienti costanti con il metodo di somiglianza) e il problema di
     Cauchy; i sistemi (x' = y, y' = −x) con il ritratto di fase; i problemi ai limiti.

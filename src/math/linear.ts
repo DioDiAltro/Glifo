@@ -174,7 +174,7 @@ interface Ctx<T> {
 
 const dims = <T>(m: Mat<T>) => [m.length, m[0]?.length ?? 0] as const
 
-function isVector<T>(v: Lin<T>): v is Extract<Lin<T>, { k: 'matrix' }> {
+export function isVector<T>(v: Lin<T>): v is Extract<Lin<T>, { k: 'matrix' }> {
   return v.k === 'matrix' && v.m[0]?.length === 1
 }
 
@@ -391,7 +391,7 @@ function norm<T>(F: Field<T>, v: Mat<T>): T {
 }
 
 /** Una base di un insieme di vettori (le colonne indipendenti). */
-function basisOf<T>(F: Field<T>, vectors: Mat<T>[]): Mat<T>[] {
+export function basisOf<T>(F: Field<T>, vectors: Mat<T>[]): Mat<T>[] {
   if (!vectors.length) return []
   const n = vectors[0].length
   if (vectors.some((v) => v.length !== n)) throw new MathError('I vettori hanno un numero diverso di componenti')
@@ -489,6 +489,8 @@ function evaluate<T>(ctx: Ctx<T>, node: MathNode): Lin<T> {
       const b = ev(node.b)
       switch (node.op) {
         case '+':
+          // La somma di due sottospazi: lo span di tutti i vettori.
+          if (a.k === 'span' && b.k === 'span') return { k: 'span', basis: basisOf(F, [...a.basis, ...b.basis]) }
           return elementwise(F, a, b, F.add, 'somma')
         case '-':
           return elementwise(F, a, b, F.sub, 'sottrae')
@@ -496,6 +498,7 @@ function evaluate<T>(ctx: Ctx<T>, node: MathNode): Lin<T> {
           if (b.k !== 'scalar') throw new MathError('Non si divide per una matrice: moltiplica per l\'inversa, A^{-1}')
           return scale(F, b.v, a, true)
         case '*': {
+          if (node.cap) return intersection(F, a, b)
           if (a.k === 'scalar') return scale(F, a.v, b)
           if (b.k === 'scalar') return scale(F, b.v, a)
           if (a.k === 'span' || b.k === 'span') throw new MathError('Con i sottospazi non si fanno i conti')
@@ -542,6 +545,13 @@ function evaluate<T>(ctx: Ctx<T>, node: MathNode): Lin<T> {
 function powerOf<T>(ctx: Ctx<T>, node: Extract<MathNode, { k: 'bin' }>): Lin<T> {
   const { F } = ctx
   const base = evaluate(ctx, node.a)
+  // U^⊥: il complemento ortogonale (di un sottospazio o di un vettore): il nucleo della matrice con i vettori in riga.
+  if (node.b.k === 'name' && node.b.name === '⊥') {
+    const basis = base.k === 'span' ? base.basis : isVector(base) ? [base.m] : null
+    if (!basis) throw new MathError('Il complemento ortogonale è di un sottospazio o di un vettore')
+    if (!basis.length) throw new MathError('Del sottospazio nullo il complemento è tutto lo spazio')
+    return { k: 'span', basis: kernel(F, basis.map((b) => b.map((r) => r[0]))) }
+  }
   // A^T: la trasposta (se T non è un numero definito).
   if (node.b.k === 'name' && node.b.name === 'T' && !valueOf(ctx, 'T')) {
     if (base.k !== 'matrix') throw new MathError('La trasposta è di una matrice o di un vettore')
@@ -665,6 +675,23 @@ function functionOf<T>(ctx: Ctx<T>, node: Extract<MathNode, { k: 'fn' }>): Lin<T
     case 'sqrt':
       out = { k: 'scalar', v: F.sqrt(scalarOf(one(), 'La radice')) }
       break
+    case 'projection': {
+      // La proiezione ortogonale di v su U: Σ (v·uᵢ)/(uᵢ·uᵢ) uᵢ, con una base ortogonale di U (Gram–Schmidt).
+      const [v, U] = args
+      if (args.length !== 2 || !isVector(v)) throw new MathError('Si scrive \\operatorname{proiezione}(v, U), con U un sottospazio (o un vettore)')
+      const basis = U.k === 'span' ? U.basis : isVector(U) ? [U.m] : null
+      if (!basis) throw new MathError('Si proietta su un sottospazio (\\operatorname{span}(…)) o su un vettore')
+      const orthogonal: Mat<T>[] = []
+      for (const b of basis) {
+        let u = b
+        for (const w of orthogonal) u = minus(F, u, times(F, F.div(dot(F, b, w), dot(F, w, w)), w))
+        if (!u.every((r) => F.isZero(r[0], 1e-12))) orthogonal.push(u)
+      }
+      let p: Mat<T> = v.m.map(() => [F.zero()])
+      for (const u of orthogonal) p = plus(F, p, times(F, F.div(dot(F, v.m, u), dot(F, u, u)), u))
+      out = { k: 'matrix', m: p, tuple: true }
+      break
+    }
     case 'eig':
     case 'eigvec':
       throw new MathError('Gli autovalori si chiedono da soli: \\operatorname{autovalori}(A) =')
@@ -932,6 +959,18 @@ function geometryOf<T>(ctx: Ctx<T>, name: string, args: MathNode[]): Lin<T> | nu
 
 /** Dove si incontrano due figure: due rette, una retta e un piano, due piani, una retta e una circonferenza. */
 function intersection<T>(F: Field<T>, a: Lin<T>, b: Lin<T>): Lin<T> {
+  // Due sottospazi: i vettori di U che sono anche in W (Σ aᵢuᵢ = Σ bⱼwⱼ, dal nucleo di [U | −W]).
+  if (a.k === 'span' && b.k === 'span') {
+    if (!a.basis.length || !b.basis.length) return { k: 'span', basis: [] }
+    const n = a.basis[0].length
+    const m: Mat<T> = Array.from({ length: n }, (_, i) => [...a.basis.map((u) => u[i][0]), ...b.basis.map((w) => F.neg(w[i][0]))])
+    const vectors = kernel(F, m).map((c) => {
+      const v: Mat<T> = Array.from({ length: n }, () => [F.zero()])
+      a.basis.forEach((u, j) => u.forEach((row, i) => (v[i][0] = F.add(v[i][0], F.mul(c[j][0], row[0])))))
+      return v
+    })
+    return { k: 'span', basis: basisOf(F, vectors) }
+  }
   if (a.k === 'line' && b.k === 'line') {
     // p + s u = q + t w: un sistema in s e t (con le prime due coordinate che non sono parallele).
     const n = a.p.length
@@ -1000,7 +1039,7 @@ function intersection<T>(F: Field<T>, a: Lin<T>, b: Lin<T>): Lin<T> {
     const t2 = F.div(F.add(F.neg(B), root), F.mul(F.int(2), A))
     return { k: 'points', list: [plus(F, line.p, times(F, t1, line.dir)), plus(F, line.p, times(F, t2, line.dir))] }
   }
-  throw new MathError('Le intersezioni si fanno tra rette, piani e circonferenze')
+  throw new MathError('Le intersezioni si fanno tra sottospazi, rette, piani e circonferenze')
 }
 
 // ——— Autovalori e polinomio caratteristico ———
@@ -1075,6 +1114,19 @@ export interface Eigenvalue {
   im: number
   /** Quante volte è radice del polinomio caratteristico. */
   multiplicity: number
+}
+
+/** Il polinomio caratteristico det(A − λI) con le frazioni (dal grado 0), o null se A non è esatta. */
+export function characteristicPolynomial(scope: LinearScope, A: LinearValue): Rational[] | null {
+  const m = A.exact?.k === 'matrix' ? A.exact.m : null
+  if (!m || m.length !== m[0].length) return null
+  const lambda = 'λ\u0000'
+  const node: MathNode = {
+    k: 'fn',
+    name: 'det',
+    args: [{ k: 'bin', op: '-', a: { k: 'name', name: '\u0000A' }, b: { k: 'bin', op: '*', a: { k: 'name', name: lambda }, b: { k: 'name', name: 'I' } } }],
+  }
+  return polynomialIn(node, lambda, { ...scope, values: new Map([...scope.values, ['\u0000A', A]]) }, m.length + 2)
 }
 
 /** Gli autovalori di una matrice quadrata, dal polinomio caratteristico. */

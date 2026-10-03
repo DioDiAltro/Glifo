@@ -27,6 +27,7 @@ function letters(s: string): string {
 }
 
 export function nameLatex(name: string): string {
+  if (name === '⊥') return '\\perp'
   const [base, ...sub] = name.split('_')
   let head = letters(base)
   const accent = ACCENT_COMMANDS[base.slice(-1)]
@@ -130,6 +131,13 @@ const COMPLEX_FUNCTIONS: Record<string, string> = {
   histogram: '\\operatorname{istogramma}',
   barchart: '\\operatorname{barre}',
   scatter: '\\operatorname{dispersione}',
+  diagonalize: '\\operatorname{diagonalizza}',
+  gramschmidt: '\\operatorname{gramschmidt}',
+  signature: '\\operatorname{segnatura}',
+  independent: '\\operatorname{indipendenti}',
+  matrixof: '\\operatorname{matrice}',
+  equations: '\\operatorname{equazioni}',
+  projection: '\\operatorname{proiezione}',
 }
 
 /** Le funzioni della statistica: sempre con le parentesi. */
@@ -195,6 +203,7 @@ export function toLatex(node: MathNode): string {
           const a = wrap(node.a, 1.9)
           const b = wrap(node.b, 2)
           if (node.cross) return `${a} \\times ${b}`
+          if (node.cap) return `${a} \\cap ${b}`
           const dot = !node.implicit || startsWithDigit(node.b) || (node.a.k === 'post' && node.a.op === '!')
           return dot ? `${a} \\cdot ${b}` : `${a}${/^[A-Za-z]/.test(b) && /\\[A-Za-z]+$/.test(a) ? ' ' : ''}${b}`
         }

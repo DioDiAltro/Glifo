@@ -9,7 +9,8 @@ import { compile, MathError, scopeWith, type Scope } from './evaluate'
 import { Rational } from './exact'
 import { formatNumber, formatRational, type FormatOptions, type FormattedResult } from './format'
 import { nameLatex } from './latex'
-import { EXACT, FLOAT, polynomialIn, rref, splitRoot, surdText, type LinearScope } from './linear'
+import { FLOAT, polynomialIn, rref, splitRoot, surdText, type LinearScope } from './linear'
+import { isStandardUnknown, linearSystem, matrixEquation, parametricRows, parametricSystem } from './linsys'
 import { numericRoots, rationalRoots } from './polynomial'
 import { recognize } from './limits'
 import { namesIn, type MathNode, type RelOp } from './parse'
@@ -61,6 +62,11 @@ function unknownsOf(relations: Relation[], scope: SolveScope): string[] {
  * virgole); null se non è una richiesta che si sa risolvere.
  */
 export function solve(nodes: MathNode[], scope: SolveScope, options: FormatOptions): FormattedResult | null {
+  // A x = b con la matrice: Rouché–Capelli.
+  if (nodes.length === 1) {
+    const shown = matrixEquation(nodes[0], scope, options)
+    if (shown) return shown
+  }
   const relations: Relation[] = []
   for (const n of nodes) {
     const r = relationsOf(n)
@@ -71,6 +77,19 @@ export function solve(nodes: MathNode[], scope: SolveScope, options: FormatOptio
   const unknowns = unknownsOf(relations, scope)
   if (!unknowns.length) return null
   const equations = relations.every((r) => r.op === '=')
+  // Un sistema lineare con un parametro (x + k y = 1, k x + y = 1): la discussione al variare di k.
+  const standard = unknowns.filter(isStandardUnknown)
+  const params = unknowns.filter((u) => !isStandardUnknown(u))
+  if (equations && standard.length && params.length === 1) {
+    const rows = parametricRows(
+      relations.map((r) => r.F),
+      standard,
+      params[0],
+      scope.linear,
+    )
+    const shown = rows && parametricSystem(rows, standard, params[0], options)
+    if (shown) return shown
+  }
   if (unknowns.length === 1) {
     const x = unknowns[0]
     if (relations.length === 1 && equations) return equation(relations[0].F, x, scope, options)
@@ -443,35 +462,6 @@ function system(relations: Relation[], unknowns: string[], scope: SolveScope, op
   if (rows.length === relations.length) return linearSystem(rows, unknowns, options)
   if (relations.length !== unknowns.length) return null
   return newtonSystem(relations, unknowns, scope, options)
-}
-
-function linearSystem(rows: Rational[][], unknowns: string[], options: FormatOptions): FormattedResult {
-  const { r, pivots } = rref(EXACT, rows)
-  const n = unknowns.length
-  // Una riga 0 = c (c ≠ 0): impossibile.
-  if (r.some((row) => row.slice(0, n).every((c) => c.sign === 0) && row[n].sign !== 0)) return { tex: '\\nexists\\ \\text{(impossibile)}', text: 'nessuna soluzione (impossibile)' }
-  const parts: FormattedResult[] = []
-  const free = unknowns.filter((_, j) => !pivots.includes(j))
-  pivots.forEach((col, i) => {
-    // x = c − a y − b z (le variabili libere restano).
-    const terms: { tex: string; text: string; neg: boolean }[] = []
-    const c = r[i][n]
-    if (c.sign !== 0 || free.length === 0) terms.push({ ...formatRational(c.abs(), options), neg: c.sign < 0 })
-    unknowns.forEach((u, j) => {
-      if (pivots.includes(j)) return
-      const a = r[i][j].neg()
-      if (a.sign === 0) return
-      const abs = a.abs()
-      const coef = abs.n === 1n && abs.d === 1n ? { tex: '', text: '' } : formatRational(abs, options)
-      terms.push({ tex: `${coef.tex}${nameLatex(u)}`, text: `${coef.text}${u}`, neg: a.sign < 0 })
-    })
-    const tex = terms.map((t, k) => (k === 0 ? `${t.neg ? '-' : ''}${t.tex}` : ` ${t.neg ? '-' : '+'} ${t.tex}`)).join('') || '0'
-    const text = terms.map((t, k) => (k === 0 ? `${t.neg ? '−' : ''}${t.text}` : ` ${t.neg ? '−' : '+'} ${t.text}`)).join('') || '0'
-    parts.push({ tex: `${nameLatex(unknowns[col])} = ${tex}`, text: `${unknowns[col]} = ${text}` })
-  })
-  const shown = { tex: parts.map((p) => p.tex).join(',\\ '), text: parts.map((p) => p.text).join(', ') }
-  if (!free.length) return shown
-  return { tex: `${shown.tex} \\quad \\text{(${free.join(', ')} qualsiasi)}`, text: `${shown.text} (${free.join(', ')} qualsiasi: infinite soluzioni)` }
 }
 
 /** Un sistema non lineare: Newton da tanti punti di partenza; le soluzioni diverse trovate. */

@@ -1452,6 +1452,23 @@ try {
     probability === '5/16 = 0,3125' && barGroups === 2 && quartiles === 'Q₁ = 3,5; Q₂ = 6; Q₃ = 7',
     `la probabilità è esatta, con le barre nel pannello, e i dati hanno i quartili (${JSON.stringify({ probability, barGroups, quartiles })})`,
   )
+  // L'algebra lineare: un sistema con un parametro discusso al variare di k, e una matrice diagonalizzata.
+  const resultText = (prefix) =>
+    gp
+      .waitForFunction((p) => [...document.querySelectorAll('.cm-calc-result')].map((e) => (e.getAttribute('aria-label') ?? e.textContent ?? '').replace(/Tab$/, '')).find((t) => t.startsWith(p)), prefix, { timeout: 8000 })
+      .then((h) => h.jsonValue())
+  // In una nota nuova: in quella di prima x è il vettore dei dati.
+  await gp.locator('.notes-head button[aria-label="Nuova nota"]').click()
+  await gp.keyboard.press('Control+a')
+  await gp.keyboard.type('# Algebra lineare\n\nIl sistema $x + k y = 1, \\; k x + y = 1 \\Rightarrow')
+  const discussion = await resultText('k ≠')
+  await gp.keyboard.press('End')
+  await gp.keyboard.type('\n\nLa matrice $M = \\begin{pmatrix} 2 & 1 \\\\ 1 & 2 \\end{pmatrix}$ e $\\operatorname{diagonalizza}(M) =')
+  const diagonal = await resultText('P =')
+  check(
+    discussion.startsWith('k ≠ −1, k ≠ 1: x = 1/(k + 1)') && diagonal.startsWith('P = (−1  1 ; 1  1), D = (1  0 ; 0  3)'),
+    `un sistema con un parametro si discute al variare di k, e una matrice si diagonalizza (${JSON.stringify({ discussion: discussion.slice(0, 50), diagonal: diagonal.slice(0, 50) })})`,
+  )
   await gp.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)

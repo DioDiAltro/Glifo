@@ -87,7 +87,13 @@ installabile come app, pubblicato su GitHub Pages: non c'è un server.
   quantili, e i valori esatti come `ExpSum`: frazione + Σ coef·e^{−rate}), `probability.ts` gli eventi di P(…)
   (nodo `prob`) come intervalli e E[…] (nodo `expect`), passati ai conti con `Scope.random` (e
   `ExactScope.random`); `statistics.ts` la statistica dei dati sui vettori (con `Field`, esatta o con la
-  virgola, da `linear.ts`), `statsShown.ts` come si scrivono i risultati (3/8 = 0,375; tabelle; retta),
+  virgola, da `linear.ts`), `statsShown.ts` come si scrivono i risultati (3/8 = 0,375; tabelle; retta);
+  `linsys.ts` i sistemi lineari (A x = b con Rouché–Capelli, `matrixEquation`; con un parametro,
+  `parametricSystem`: i valori speciali sono le radici del MCD dei minori, `polyDeterminant` con Bareiss;
+  le incognite sono x, y, z, w, t e il parametro l'altra lettera), `spaces.ts` diagonalizzare, Gram–Schmidt,
+  segnatura (Cartesio sul polinomio caratteristico), dipendenza, equazioni dei sottospazi, rango con un
+  parametro; le matrici con un parametro della nota restano scritte (`symbolicNodes` nel foglio) e si
+  mettono al posto del nome (`inline`); `U \cap W` è un prodotto con `cap`, `U^\perp` un esponente `⊥`,
   `sheet.ts` è il
   «foglio» della nota: le formule dall'alto in basso, `$a = 2$` e `$f(x) = …$` definiscono, una formula
   che finisce con `=` ha il risultato (nell'editor `src/editor/calcResults.ts`, Tab lo scrive;

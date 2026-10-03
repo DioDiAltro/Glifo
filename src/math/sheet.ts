@@ -33,6 +33,9 @@ import {
   formatPolynomial,
   polynomialIn,
   type Eigenvalue,
+  characteristicPolynomial,
+  image,
+  kernel,
   type Field,
   type Lin,
   type LinearScope,
@@ -40,11 +43,14 @@ import {
   type Mat,
   dataOf,
 } from './linear'
-import { evaluateExact, ExactUnavailable, type ExactFunction, type ExactScope, type Rational } from './exact'
+import { evaluateExact, ExactUnavailable, Rational, type ExactFunction, type ExactScope } from './exact'
 import { expSumValue, type Distribution } from './distributions'
 import { distributionOf, randomScope } from './probability'
 import { correlation, DATA_FUNCTIONS, regression } from './statistics'
 import { decimalShown, fractionShown, frequencyTable, modesShown, probabilityShown, quartilesShown, regressionShown, summaryRows } from './statsShown'
+import { cartesianEquations, diagonalize, gramSchmidtShown, independence, parametricRank, signature } from './spaces'
+import { mapNode } from './symbolic'
+import { trim as trimPoly, type Poly } from './polynomial'
 import { formatNumber, formatRational, type FormattedResult } from './format'
 import { toLatex } from './latex'
 import { children, namesIn, parseMath, type MathNode } from './parse'
@@ -86,6 +92,9 @@ export function calculationRequest(tex: string): string | null {
 
 /** Lo studio di funzione e le sue parti: \operatorname{studio}, \operatorname{dominio}, \operatorname{asintoti}… */
 const STUDY = new Set(['study', 'domain', 'asymptotes', 'extrema', 'flexes', 'zeros'])
+
+/** Le funzioni dell'algebra lineare che si mostrano a modo loro. */
+const SPACES = new Set(['diagonalize', 'gramschmidt', 'signature', 'independent', 'matrixof', 'equations'])
 
 /** Le funzioni della statistica dei dati che si mostrano a modo loro (le mode, i quartili, la tabella…). */
 const STATISTICS = new Set([...DATA_FUNCTIONS, 'cov', 'corr', 'quartiles', 'regression', 'summary', 'frequencies'])
@@ -240,6 +249,8 @@ export class Sheet {
   private vfns = new Map<string, VectorFunction>()
   /** Le variabili aleatorie ($X \sim B(10, 0{,}3)$). */
   private randomVars = new Map<string, Distribution>()
+  /** Le matrici e i vettori con una lettera che la nota non definisce ($A = \begin{pmatrix} 1 & k \\ … \end{pmatrix}$): si scrivono al loro posto. */
+  private symbolicNodes = new Map<string, MathNode>()
   private randomCache: ReturnType<typeof randomScope> | null = null
   /** L'ultima funzione definita: una condizione subito dopo ($t \in [0, 2\pi]$) dice dove variano i suoi parametri. */
   private lastFunction: Definition | null = null
@@ -341,7 +352,7 @@ export class Sheet {
     try {
       return withWorkLimit(WORK, () =>
         solve(
-          nodes.map((n) => this.prepare(n!)),
+          nodes.map((n) => this.prepare(this.inline(n!))),
           {
             real: this.scope(),
             linear: this.linearScope(),
@@ -472,6 +483,7 @@ export class Sheet {
   /** Dimentica quello che il nome voleva dire prima (una nuova definizione lo cambia). */
   private forget(name: string): void {
     this.symbols = null
+    this.symbolicNodes.delete(name)
     this.randomVars.delete(name)
     this.randomCache = null
     this.bodies.delete(name)
@@ -542,7 +554,11 @@ export class Sheet {
         if (Number.isFinite(linear.float.v)) result = { float: linear.float.v, exact: linear.exact?.k === 'scalar' ? linear.exact.v : null }
       } else if (linear) result = { linear }
     }
-    if (!result) return
+    if (!result) {
+      // Una matrice o un vettore con un parametro (k): si tiene com'è scritto, per i conti al variare di k.
+      if (value.k === 'matrix' || value.k === 'tuple') this.symbolicNodes.set(name, value)
+      return
+    }
     if ('linear' in result) {
       // Matrici, vettori e figure (rette, circonferenze…): per le formule dopo.
       if (result.linear.float.k !== 'scalar' && result.linear.float.k !== 'identity') this.linearValues.set(name, result.linear)
@@ -741,6 +757,13 @@ export class Sheet {
   }
 
   /** Il risultato di «… =»: dell'ultima parte che si sa calcolare (in a = 3 + 4 = anche a diventa 7). */
+  /** La formula con le matrici con un parametro scritte al posto del loro nome. */
+  private inline(node: MathNode): MathNode {
+    if (!this.symbolicNodes.size) return node
+    const visit = (n: MathNode): MathNode => (n.k === 'name' && this.symbolicNodes.has(n.name) ? this.symbolicNodes.get(n.name)! : mapNode(n, visit))
+    return visit(node)
+  }
+
   private calculate(src: string): FormattedResult | null {
     const node = parseCached(src)
     let items: (MathNode | null)[]
@@ -751,6 +774,7 @@ export class Sheet {
     for (let i = items.length - 1; i >= (target ? 1 : 0); i--) {
       let item = items[i]
       if (!item) continue
+      item = this.inline(item)
       const style = styleOf(item)
       // Un limite o una serie: il valore (riconosciuto, se si può), l'infinito o «non esiste».
       const limitShown = this.showLimit(item, style)
@@ -764,6 +788,9 @@ export class Sheet {
         if (shown) return shown
         continue
       }
+      // L'algebra lineare: diagonalizzare, Gram–Schmidt, la segnatura, il rango con un parametro…
+      const spaces = this.showSpaces(item, style)
+      if (spaces) return spaces
       // La probabilità, il valore atteso, la varianza di una variabile aleatoria; la statistica dei dati.
       const chance = this.showRandom(item, style) ?? this.showStatistics(item, style)
       if (chance) {
@@ -859,6 +886,136 @@ export class Sheet {
     } catch {
       return null
     }
+  }
+
+  /**
+   * L'algebra lineare che si mostra a modo suo: diagonalizzare (P e D), Gram–Schmidt, la segnatura di una
+   * forma quadratica, la dipendenza lineare, la matrice di un'applicazione lineare (e il suo nucleo e la sua
+   * immagine), il rango di una matrice con un parametro.
+   */
+  private showSpaces(item: MathNode, style: ReturnType<typeof styleOf>): FormattedResult | null {
+    if (item.k !== 'fn' || item.pow) return null
+    const [arg] = item.args
+    try {
+      return withWorkLimit(WORK, () => {
+        if (item.name === 'rank' && item.args.length === 1) return this.parametricRank(arg, style)
+        // \ker f, \operatorname{Im} f con f un'applicazione lineare: della sua matrice.
+        if ((item.name === 'ker' || item.name === 'im') && item.args.length === 1 && arg.k === 'name' && this.bodies.get(arg.name)?.params.length) {
+          const m = this.mapMatrix(arg.name)
+          return formatLinear(EXACT, { k: 'span', basis: item.name === 'ker' ? kernel(EXACT, m) : image(EXACT, m) }, style)
+        }
+        if (!SPACES.has(item.name)) return null
+        switch (item.name) {
+          case 'diagonalize': {
+            const A = this.evaluateLinear(arg)
+            return A ? diagonalize(this.linearScope(), A, style) : null
+          }
+          case 'gramschmidt':
+          case 'independent': {
+            const vectors = this.exactVectors(item.args)
+            if (!vectors) return null
+            if (item.name === 'gramschmidt') return gramSchmidtShown(vectors, style)
+            const names = item.args.length === vectors.length ? item.args.map((a, i) => (a.k === 'name' ? a.name : `v_${i + 1}`)) : vectors.map((_, i) => `v_${i + 1}`)
+            return independence(vectors, names, style)
+          }
+          case 'signature': {
+            const A = arg.k === 'name' && this.bodies.get(arg.name)?.params.length ? this.formMatrix(arg.name) : null
+            const value = A ? { exact: { k: 'matrix' as const, m: A, tuple: false }, float: { k: 'matrix' as const, m: A.map((r) => r.map((c) => c.toNumber())), tuple: false } } : this.evaluateLinear(arg)
+            if (!value || value.exact?.k !== 'matrix') return null
+            const m = value.exact.m
+            if (!m.every((row, i) => row.every((x, j) => x.cmp(m[j][i]) === 0))) throw new MathError('La segnatura è delle matrici simmetriche')
+            const poly = characteristicPolynomial(this.linearScope(), value)
+            return poly ? signature(poly) : null
+          }
+          case 'equations': {
+            // Le equazioni cartesiane di un sottospazio (U = \operatorname{span}(…), o \ker A, U^\perp…).
+            const value = this.evaluateLinear(arg)?.exact
+            if (!value) return null
+            const basis = value.k === 'span' ? value.basis : value.k === 'matrix' && value.m[0].length === 1 ? [value.m] : null
+            if (!basis) throw new MathError('Le equazioni sono di un sottospazio: \\operatorname{equazioni}(U)')
+            const n = basis[0]?.length ?? 0
+            if (!n) return null
+            return cartesianEquations(basis.map((b) => b.map((r) => r[0])), n, style)
+          }
+          case 'matrixof': {
+            if (arg.k !== 'name' || !this.bodies.get(arg.name)?.params.length) return null
+            const body = this.bodies.get(arg.name)!.body
+            const m = body.k === 'tuple' || body.k === 'matrix' ? this.mapMatrix(arg.name) : this.formMatrix(arg.name)
+            return formatLinear(EXACT, { k: 'matrix', m, tuple: false }, style)
+          }
+        }
+        return null
+      })
+    } catch {
+      return null
+    }
+  }
+
+  /** I vettori: scritti uno per uno, le colonne di una matrice, o una base di uno span. */
+  private exactVectors(args: MathNode[]): Rational[][] | null {
+    const values = args.map((a) => this.evaluateLinear(a)?.exact)
+    if (values.some((v) => !v)) return null
+    if (values.length === 1) {
+      const v = values[0]!
+      if (v.k === 'span') return v.basis.map((b) => b.map((r) => r[0]))
+      if (v.k === 'matrix' && v.m[0].length > 1) return v.m[0].map((_, j) => v.m.map((r) => r[j]))
+    }
+    if (!values.every((v) => v!.k === 'matrix' && v!.m[0].length === 1)) return null
+    return values.map((v) => (v as Extract<Lin<Rational>, { k: 'matrix' }>).m.map((r) => r[0]))
+  }
+
+  /** I valori esatti della funzione `name` (le componenti, se è un vettore) nel punto `point`. */
+  private functionAt(name: string, point: Rational[]): Rational[] {
+    const { params, body } = this.bodies.get(name)!
+    const locals = new Map(params.map((p, i) => [p, point[i]]))
+    const parts = body.k === 'tuple' ? body.items : body.k === 'matrix' ? body.rows.map((r) => r[0]) : [body]
+    return parts.map((c) => evaluateExact(c, this.exactScope(), locals))
+  }
+
+  /** La matrice di un'applicazione lineare f(x, y) = (…): in colonna le immagini dei vettori della base. */
+  private mapMatrix(name: string): Mat<Rational> {
+    const n = this.bodies.get(name)!.params.length
+    const unit = (j: number, c = 1) => Array.from({ length: n }, (_, i) => Rational.int(i === j ? c : 0))
+    const zero = this.functionAt(name, Array.from({ length: n }, () => Rational.int(0)))
+    if (zero.some((c) => c.sign !== 0)) throw new MathError(`${name} non è lineare: ${name}(0) non è 0`)
+    const columns = Array.from({ length: n }, (_, j) => this.functionAt(name, unit(j)))
+    columns.forEach((col, j) => {
+      const twice = this.functionAt(name, unit(j, 2))
+      if (twice.some((c, i) => c.cmp(col[i].mul(Rational.int(2))) !== 0)) throw new MathError(`${name} non è lineare`)
+    })
+    return columns[0].map((_, i) => columns.map((col) => col[i]))
+  }
+
+  /** La matrice (simmetrica) di una forma quadratica q(x, y) = x^2 + 4xy + y^2. */
+  private formMatrix(name: string): Mat<Rational> {
+    const n = this.bodies.get(name)!.params.length
+    const q = (point: number[]) => this.functionAt(name, point.map((c) => Rational.int(c)))[0]
+    const e = (i: number, c = 1) => Array.from({ length: n }, (_, k) => (k === i ? c : 0))
+    const half = new Rational(1n, 2n)
+    for (let i = 0; i < n; i++) if (q(e(i, 2)).cmp(q(e(i)).mul(Rational.int(4))) !== 0) throw new MathError(`${name} non è una forma quadratica`)
+    return Array.from({ length: n }, (_, i) =>
+      Array.from({ length: n }, (_, j) => (i === j ? q(e(i)) : q(e(i).map((c, k) => (k === j ? 1 : c))).sub(q(e(i))).sub(q(e(j))).mul(half))),
+    )
+  }
+
+  /** Il rango di una matrice con un parametro (una lettera che la nota non definisce). */
+  private parametricRank(arg: MathNode, style: ReturnType<typeof styleOf>): FormattedResult | null {
+    if (arg.k !== 'matrix') return null
+    const free = [...namesIn(arg)].filter((n) => !this.consts.has(n) && !this.linearValues.has(n) && !['π', 'e'].includes(n))
+    if (free.length !== 1) return null
+    const k = free[0]
+    const scope = this.linearScope()
+    const M: Poly[][] = []
+    for (const row of arg.rows) {
+      const cells: Poly[] = []
+      for (const c of row) {
+        const p = polynomialIn(c, k, scope, 8)
+        if (!p) return null
+        cells.push(trimPoly(p))
+      }
+      M.push(cells)
+    }
+    return parametricRank(M, k, style)
   }
 
   /** P(X \le 3), E[X], \operatorname{Var}(X), \operatorname{quantile}(X, 0{,}95): esatti, se si può. */

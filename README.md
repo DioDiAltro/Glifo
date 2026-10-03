@@ -147,6 +147,21 @@ chi sta provando Glifo.*
   (`u \times v`), norma (`\|v\|`), **autovalori** e **autovettori** (`\operatorname{autovalori}(A) =`,
   `\operatorname{autovettori}(A) =`, anche complessi e con la molteplicità) e il polinomio caratteristico
   (`\det(A - \lambda I) =`). I risultati con le matrici si vedono disegnati anche nell'editor.
+- **Sistemi lineari e algebra lineare**: `A x = b \Rightarrow` con la matrice (Rouché–Capelli: `x = (−4, 9/2)`,
+  infinite soluzioni con i parametri, `x = (1, 0, 0) + t(−2, 1, 0) + s(−3, 0, 1)`, o nessuna, con i ranghi di A e
+  di (A|b)); i **sistemi con un parametro** discussi al variare del parametro
+  (`\begin{cases} x + k y = 1 \\ k x + y = 1 \end{cases} \Rightarrow` dà la soluzione per k ≠ ±1 e i casi
+  k = 1 e k = −1; le incognite sono x, y, z, w, t, il parametro l'altra lettera), anche con la matrice
+  (`$A = \begin{pmatrix} 1 & k \\ 2 & 4 \end{pmatrix}$`, poi `\operatorname{rank}(A) =` dà «2 per k ≠ 2; 1 per
+  k = 2», `\det A =`, `A x = b \Rightarrow`). `\operatorname{diagonalizza}(A) =` dà P e D (con A simmetrica
+  anche P ortogonale, con le radici esatte), o perché non si può (autovalori complessi, o la molteplicità
+  geometrica più piccola dell'algebrica). `\operatorname{gramschmidt}(u, v, w) =` dà i vettori ortogonali e
+  quelli ortonormali; `\operatorname{indipendenti}(u, v, w) =` dice se lo sono (o la relazione: 2u − v = 0).
+  I **sottospazi**: `U + W`, `U \cap W`, `U^\perp`, `\dim(U \cap W)`, `\operatorname{equazioni}(U) =` (le
+  equazioni cartesiane: x + y − z = 0), `\operatorname{proiezione}(v, U) =`. Le **forme quadratiche**
+  (`$q(x, y) = x^2 + 4xy + y^2$`): `\operatorname{matrice}(q) =` e `\operatorname{segnatura}(q) =` (definita,
+  semidefinita o indefinita, con n₊, n₋, n₀; anche di una matrice simmetrica). Le **applicazioni lineari**
+  (`$f(x, y, z) = (x + y, y - z)$`): `\operatorname{matrice}(f) =`, `\ker f =`, `\operatorname{Im} f =`.
 - **Geometria**, con i punti scritti prima (`$A = (0, 0)$`, `$B = (4, 0)$`, anche con tre coordinate):
   lunghezze (`\overline{AB} =`, `d(A, B) =`, con le radici esatte: √2 ≈ 1,414213…), il vettore da A a B
   (`\overrightarrow{AB}`, `\vec{AB}`), punto medio e baricentro (`\operatorname{medio}(A, B)`,
@@ -365,6 +380,8 @@ chi sta provando Glifo.*
 
 ![Matrici e vettori: inversa, autovalori, autovettori e polinomio caratteristico, e i vettori come frecce](docs/matrici.png)
 
+![Algebra lineare: un sistema con un parametro discusso al variare di k, A x = b con infinite soluzioni, la diagonalizzazione con P ortogonale, Gram–Schmidt, la segnatura di una forma quadratica e i sottospazi](docs/algebra-lineare.png)
+
 ![Geometria: lunghezze, area, angoli, rette e circonferenze nella nota, e il triangolo con l'angolo e la mediana nel grafico](docs/geometria.png)
 
 ![Derivate e campi: la derivata di un quoziente, gradiente, derivata mista, lavoro e rotore nella nota; il campo con le frecce e la curva con il verso nel grafico](docs/campi.png)
@@ -576,6 +593,8 @@ src/
     domain.ts             i domini degli integrali doppi e tripli (margine, condizioni, strati) e come si integrano
     complex.ts            i numeri complessi: conti (anche esatti), radici, forme a + bi e ρe^{iθ}, equazioni
     linear.ts             vettori e matrici: conti esatti o con la virgola, determinante, inversa, rango, nucleo, autovalori; la geometria (segmenti, rette, circonferenze, piani, angoli, intersezioni)
+    linsys.ts             i sistemi lineari: A x = b con Rouché–Capelli, e quelli con un parametro discussi al variare del parametro
+    spaces.ts             diagonalizzare, Gram–Schmidt, la segnatura, la dipendenza lineare, le equazioni dei sottospazi, il rango con un parametro
     symbolic.ts           i conti con le lettere: derivate (anche parziali), gradiente, divergenza, rotore, hessiana, polinomi di Taylor, i limiti 0/0, con le semplificazioni
     primitive.ts          le primitive: integrali immediati, sostituzione, per parti, fratti semplici, seno e coseno, radici (ognuna controllata derivandola)
     polynomial.ts         i polinomi con le frazioni: divisione, MCD, radici razionali, scomposizione, fratti semplici
