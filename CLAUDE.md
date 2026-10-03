@@ -33,10 +33,15 @@ prossimi passi sono in «In programma» nella ROADMAP.
   ∮ in `src/ui/logo.ts` (serve `CHROMIUM_PATH`). Va rifatto ogni volta che cambia il simbolo.
 - `graphify update .`: rifà il grafo del codice in `graphify-out/` (in locale, senza modelli AI).
   Lo fanno da soli l'hook SessionStart (`.claude/hooks/session-start.sh`, che installa graphify
-  con il lettore dell'SQL, `graphifyy[sql]`, per le migrazioni) e, dopo ogni commit, gli hook git. Del grafo sono nel repository solo `graph.json` e
-  `GRAPH_REPORT.md` (`graphify-out/` è nel .gitignore: si aggiungono con `git add -f`); se dopo un
-  commit risultano modificati, vanno nel commit successivo. `manifest.json` resta solo in locale:
-  segna le date dei file, che sono diverse in ogni copia del repository.
+  con il lettore dell'SQL, `graphifyy[sql]`, per le migrazioni) e, dopo ogni commit, gli hook git.
+  Del grafo sono nel repository solo `graph.json` e `GRAPH_REPORT.md` (`graphify-out/` è nel
+  .gitignore: si aggiungono con `git add -f`); se dopo un commit risultano modificati, vanno nel
+  commit successivo. `manifest.json` resta solo in locale: segna le date dei file, che sono
+  diverse in ogni copia del repository.
+- `node scripts/grafo-html.mjs`: rifà `graphify-out/graph.html`, la pagina interattiva del grafo
+  (pallini e collegamenti, con i nomi dei gruppi presi da `graph.json`). Solo se lo studente chiede
+  di vedere il grafo, non proporlo: poi mandagli la pagina come file da aprire (SendUserFile con
+  `display: 'render'`), senza pubblicarla.
 
 ## Dove sono le cose
 
