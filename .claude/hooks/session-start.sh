@@ -18,15 +18,15 @@ case ":$PATH:" in
     ;;
 esac
 
-if ! command -v graphify >/dev/null 2>&1; then
-  # La stessa versione della skill in .claude/skills/graphify, che `graphify install` aggiorna.
-  versione=$(tr -d '[:space:]' < .claude/skills/graphify/.graphify_version 2>/dev/null)
-  pacchetto="graphifyy${versione:+==$versione}"
-  if command -v uv >/dev/null 2>&1; then
-    uv tool install "$pacchetto" >&2
-  elif command -v pipx >/dev/null 2>&1; then
-    pipx install "$pacchetto" >&2
-  fi
+# La stessa versione della skill in .claude/skills/graphify (che `graphify install` aggiorna), con il
+# lettore dell'SQL per le migrazioni di Supabase. Con uv si lancia sempre: se graphify è già
+# installato così non fa niente, se manca l'SQL o la versione è un'altra lo sistema.
+versione=$(tr -d '[:space:]' < .claude/skills/graphify/.graphify_version 2>/dev/null)
+pacchetto="graphifyy[sql]${versione:+==$versione}"
+if command -v uv >/dev/null 2>&1; then
+  uv tool install "$pacchetto" >&2
+elif ! command -v graphify >/dev/null 2>&1 && command -v pipx >/dev/null 2>&1; then
+  pipx install "$pacchetto" >&2
 fi
 
 if ! command -v graphify >/dev/null 2>&1; then
