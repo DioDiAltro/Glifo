@@ -16,6 +16,9 @@ Probabilità e statistica, Matematica discreta, Calcolo numerico. Chiesto dallo 
 2026: Glifo servirà a prendere appunti agli studenti di qualsiasi corso. Ogni tappa si pubblica appena
 è pronta.
 
+**Stato:** tutte le tappe, dalla 8 alla 18, sono fatte e online (3 ottobre 2026). Quello che si può
+aggiungere è scritto in «Restano» in fondo a ogni tappa.
+
 **Piano:**
 
 8. **Primitive e integrali esatti**, fatto: `\int x e^x \, dx =` dà (x − 1)eˣ + c (integrali immediati,
