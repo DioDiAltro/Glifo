@@ -30,29 +30,60 @@ export function statusText(status: SyncStatus): string {
 
 const messageOf = (err: unknown) => (err instanceof Error && err.message ? err.message : 'Qualcosa è andato storto: riprova.')
 
-/** Il pulsante dell'account nella barra in alto: «Accedi», oppure lo stato della sincronizzazione. */
+/** Lo stato della sincronizzazione in poche parole, sotto l'indirizzo. */
+export function shortStatus(status: SyncStatus): string {
+  switch (status.kind) {
+    case 'syncing':
+      return 'Sincronizzo…'
+    case 'idle':
+      return status.at ? 'Sincronizzato' : 'In attesa'
+    case 'offline':
+      return 'Senza connessione'
+    case 'auth':
+      return 'Accesso scaduto'
+    case 'quota':
+      return 'Spazio esaurito'
+    case 'error':
+      return 'Sincronizzazione non riuscita'
+  }
+}
+
+/**
+ * L'account in fondo alla barra laterale, come nell'app di Claude: il cerchio con l'iniziale,
+ * l'indirizzo e lo stato della sincronizzazione; senza account, «Accedi».
+ */
 export class AccountButton {
   readonly el: HTMLButtonElement
 
   constructor(onClick: () => void) {
-    this.el = h('button', { class: 'icon-button account-button', attrs: { type: 'button' }, on: { click: onClick } })
+    this.el = h('button', { class: 'account-button', attrs: { type: 'button' }, on: { click: onClick } })
     this.show(null)
   }
 
   show(account: { email: string; status: SyncStatus } | null): void {
     if (!account) {
-      this.el.className = 'icon-button account-button is-guest'
+      this.el.className = 'account-button is-guest'
       this.el.title = 'Accedi per ritrovare gli appunti su ogni dispositivo'
       this.el.setAttribute('aria-label', 'Accedi all\'account')
-      this.el.replaceChildren(icon(ICONS.user), h('span', { class: 'account-label' }, 'Accedi'))
+      this.el.replaceChildren(
+        h('span', { class: 'account-avatar' }, icon(ICONS.user, 16)),
+        h('span', { class: 'account-text' }, h('span', { class: 'account-name' }, 'Accedi'), h('span', { class: 'account-sub' }, 'Gli appunti su ogni dispositivo')),
+      )
       return
     }
-    const { kind } = account.status
-    const trouble = kind === 'offline' || kind === 'auth' || kind === 'quota' || kind === 'error'
-    this.el.className = `icon-button account-button is-${kind}`
+    this.el.className = `account-button is-${account.status.kind}`
     this.el.title = `${account.email}: ${statusText(account.status)}`
     this.el.setAttribute('aria-label', `Account: ${statusText(account.status)}`)
-    this.el.replaceChildren(icon(trouble ? ICONS.cloudOff : ICONS.cloud), h('span', { class: 'account-dot', attrs: { 'aria-hidden': 'true' } }))
+    this.el.replaceChildren(
+      h(
+        'span',
+        { class: 'account-avatar' },
+        // Pallino dello stato: verde se è tutto sincronizzato, grigio senza rete, rosso se c'è un problema.
+        (Array.from(account.email.trim())[0] ?? '?').toUpperCase(),
+        h('span', { class: 'account-dot', attrs: { 'aria-hidden': 'true' } }),
+      ),
+      h('span', { class: 'account-text' }, h('span', { class: 'account-name' }, account.email), h('span', { class: 'account-sub' }, shortStatus(account.status))),
+    )
   }
 }
 

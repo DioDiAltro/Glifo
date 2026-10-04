@@ -19,7 +19,10 @@ export interface NotesPanelDeps {
   onSaveFile(): void
 }
 
-/** Elenco degli appunti salvati nel browser, divisi per cartelle. */
+/**
+ * Elenco degli appunti salvati nel browser, divisi per cartelle. È il centro della barra laterale:
+ * main.ts ci mette sopra il marchio e i pulsanti della nota, sotto l'account.
+ */
 export class NotesPanel {
   readonly el: HTMLElement
   private readonly list: HTMLElement
@@ -37,7 +40,7 @@ export class NotesPanel {
     this.list = h('ul', { class: 'notes-list', attrs: { role: 'list' } })
     this.el = h(
       'aside',
-      { class: 'notes-panel', attrs: { id: 'notes-panel', 'aria-label': 'I tuoi appunti' } },
+      { class: 'notes-panel', attrs: { id: 'notes-panel', 'aria-label': 'Barra laterale' } },
       h(
         'div',
         { class: 'notes-head' },

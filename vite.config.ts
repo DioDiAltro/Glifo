@@ -3,14 +3,17 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 declare const process: { env: Record<string, string | undefined> }
 
-// GLIFO_NO_PWA=1 crea una build senza service worker (utile per
-// pubblicare una demo dentro un'altra pagina, dove i service worker non sono ammessi).
-const withPwa = !process.env.VITEST && !process.env.GLIFO_NO_PWA
+// GLIFO_NO_PWA=1 crea la build per claude.ai (la demo e le prove della grafica, vedi CLAUDE.md):
+// senza service worker, che dentro un'altra pagina non sono ammessi, e senza account, così gli
+// appunti veri non si toccano.
+const forClaude = Boolean(process.env.GLIFO_NO_PWA)
+const withPwa = !process.env.VITEST && !forClaude
 
 export default defineConfig({
   // Percorsi relativi: il sito funziona anche da una sottocartella
   // (es. GitHub Pages su /glifo/) o aprendo la build da un altro host.
   base: './',
+  define: { __GLIFO_DEMO__: JSON.stringify(forClaude) },
   build: {
     target: 'es2022',
     chunkSizeWarningLimit: 1500,

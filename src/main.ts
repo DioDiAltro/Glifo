@@ -68,6 +68,9 @@ import { toast } from './ui/toast'
 import { leaveNotice, takeNotice } from './ui/notice'
 import { createToolbar } from './ui/toolbar'
 
+/** La build per claude.ai (`GLIFO_NO_PWA=1`, vedi vite.config.ts): l'account è spento. */
+declare const __GLIFO_DEMO__: boolean
+
 // Il progetto si chiamava Matherdown: recupera gli appunti salvati con il vecchio nome.
 migrateKeyPrefix('matherdown.', 'glifo.')
 
@@ -146,6 +149,10 @@ const viewSwitch = h(
 )
 
 const accountButton = new AccountButton(() => openAccount())
+// Nella build per claude.ai e dentro claude.ai (la demo e le prove della grafica, vedi CLAUDE.md)
+// l'account resta spento: così gli appunti veri non si toccano. Per lo stesso motivo lì non si condivide.
+const accountOff = __GLIFO_DEMO__ || inClaudeViewer()
+accountButton.el.hidden = accountOff
 
 const themeButton = h('button', {
   class: 'icon-button theme-toggle',
@@ -154,45 +161,49 @@ const themeButton = h('button', {
   on: { click: () => toggleTheme() },
 })
 
-const topbar = h(
-  'header',
-  { class: 'topbar' },
+/** Apre o chiude la barra laterale: il pulsante c'è dentro la barra e, quando è chiusa, sopra il testo. */
+const sidebarToggle = (label: string, className: string) =>
   h(
     'button',
     {
-      class: 'icon-button',
-      title: 'Mostra/nascondi gli appunti',
-      attrs: { type: 'button', 'aria-label': 'Mostra o nascondi l\'elenco degli appunti' },
+      class: `icon-button ${className}`,
+      title: label,
+      attrs: { type: 'button', 'aria-label': label, 'aria-controls': 'notes-panel' },
       on: { click: () => setPanels({ notesOpen: !settings.notesOpen }) },
     },
     icon(ICONS.sidebar),
-  ),
+  )
+
+// Non c'è più una barra in alto. In cima alla barra laterale: il marchio, la nota aperta e i
+// suoi pulsanti; in fondo l'account e le impostazioni, come nell'app di Claude.
+const sidebarTop = h(
+  'div',
+  { class: 'side-top' },
   h(
     'div',
-    { class: 'brand' },
-    h('span', { class: 'brand-mark', attrs: { 'aria-hidden': 'true' }, html: logoMark() }),
-    h('span', { class: 'brand-name' }, 'Glifo'),
+    { class: 'side-brand-row' },
+    h(
+      'div',
+      { class: 'brand' },
+      h('span', { class: 'brand-mark', attrs: { 'aria-hidden': 'true' }, html: logoMark() }),
+      h('span', { class: 'brand-name' }, 'Glifo'),
+    ),
+    sidebarToggle('Chiudi la barra laterale', 'side-close'),
   ),
   h('div', { class: 'doc-info' }, titleEl, statusEl),
-  h('div', { class: 'topbar-spacer' }),
-  viewSwitch,
   h(
     'div',
-    { class: 'topbar-actions' },
+    { class: 'side-actions' },
     h(
       'button',
       {
-        class: 'icon-button share-button',
+        class: 'btn btn-small share-button',
         title: 'Condividi la nota con un link',
-        attrs: { type: 'button', 'aria-label': 'Condividi' },
+        attrs: { type: 'button', 'aria-label': 'Condividi', hidden: accountOff },
         on: { click: () => openShare() },
       },
-      icon(ICONS.share),
-    ),
-    h(
-      'button',
-      { class: 'icon-button', title: 'Nuova nota', attrs: { type: 'button', 'aria-label': 'Nuova nota' }, on: { click: () => createNote() } },
-      icon(ICONS.plus),
+      icon(ICONS.share, 15),
+      h('span', {}, 'Condividi'),
     ),
     h(
       'button',
@@ -211,16 +222,33 @@ const topbar = h(
       { class: 'icon-button', title: 'Come si usa', attrs: { type: 'button', 'aria-label': 'Guida' }, on: { click: () => openHelpDialog() } },
       icon(ICONS.help),
     ),
-    accountButton.el,
-    h(
-      'button',
-      { class: 'icon-button', title: 'Impostazioni', attrs: { type: 'button', 'aria-label': 'Impostazioni' }, on: { click: () => openSettings() } },
-      icon(ICONS.settings),
-    ),
+  ),
+)
+
+const sidebarBottom = h(
+  'div',
+  { class: 'side-profile' },
+  accountButton.el,
+  h(
+    'button',
+    { class: 'icon-button', title: 'Impostazioni', attrs: { type: 'button', 'aria-label': 'Impostazioni' }, on: { click: () => openSettings() } },
+    icon(ICONS.settings),
+  ),
+)
+
+// Volanti sopra il testo: a sinistra la barra laterale (quando è chiusa) e i simboli, al centro
+// le viste.
+const floatBar = h(
+  'div',
+  { class: 'float-bar' },
+  h(
+    'div',
+    { class: 'float-left' },
+    sidebarToggle('Apri la barra laterale', 'float-button side-open'),
     h(
       'button',
       {
-        class: 'icon-button symbols-toggle',
+        class: 'icon-button float-button symbols-toggle',
         title: 'Mostra/nascondi i simboli',
         attrs: { type: 'button', 'aria-label': 'Mostra o nascondi il pannello dei simboli' },
         on: { click: () => setPanels({ symbolsOpen: !settings.symbolsOpen }) },
@@ -229,6 +257,7 @@ const topbar = h(
       h('span', { class: 'symbols-toggle-label' }, 'Simboli'),
     ),
   ),
+  viewSwitch,
 )
 
 const editorHost = h('div', { class: 'editor-host' })
@@ -335,19 +364,21 @@ const resizer = new PaneResizer(
   loadPaneSizes(),
   (changes) => savePaneSizes(changes),
 )
+notesPanel.el.prepend(sidebarTop)
+notesPanel.el.append(sidebarBottom)
+// Testo e anteprima, con sopra i pulsanti volanti.
+const content = h('div', { class: 'content' }, floatBar, editorPane, resizer.splitHandle, preview.el)
 const workspace = h(
   'main',
   { class: 'workspace' },
   notesPanel.el,
   resizer.notesHandle,
-  editorPane,
-  resizer.splitHandle,
-  preview.el,
+  content,
   resizer.symbolsHandle,
   sidePanel.el,
   backdrop,
 )
-const app = h('div', { class: 'app' }, topbar, workspace)
+const app = h('div', { class: 'app' }, workspace)
 document.getElementById('app')!.replaceWith(app)
 
 preview.update(active.content, true)

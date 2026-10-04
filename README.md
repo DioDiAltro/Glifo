@@ -52,10 +52,10 @@ Cose da sapere:
 ### Account
 
 Con l'account ritrovi gli stessi appunti, con cartelle, impostazioni e dizionario personale,
-su computer, tablet e telefono. Si entra dal pulsante **Accedi** in alto, senza password:
-con **Continua con Google** oppure con un'email. Il link nell'email va aperto nel browser in
-cui si usa Glifo; se si aprirebbe altrove (per esempio nell'app di Gmail), si copia e si
-incolla nella finestra di Glifo. *Per ora è in prova: possono entrare solo gli indirizzi di
+su computer, tablet e telefono. Si entra da **Accedi**, in fondo alla barra laterale, senza
+password: con **Continua con Google** oppure con un'email. Il link nell'email va aperto nel
+browser in cui si usa Glifo; se si aprirebbe altrove (per esempio nell'app di Gmail), si copia
+e si incolla nella finestra di Glifo. *Per ora è in prova: possono entrare solo gli indirizzi di
 chi sta provando Glifo.*
 
 - **Sincronizzazione automatica:** all'avvio, quando torni su Glifo, quando torna la rete e
@@ -79,7 +79,7 @@ chi sta provando Glifo.*
 
 #### Condividere una nota con un link
 
-Il pulsante **Condividi** in alto (le tre palline unite) apre una finestra come quelle di
+Il pulsante **Condividi**, in cima alla barra laterale, apre una finestra come quelle di
 Google. In «Accesso con il link» scegli **Chiunque abbia il link**: arriva il link, da copiare
 con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve il link no.
 
@@ -572,6 +572,10 @@ con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve il link no.
   file gli schemi sono immagini.
 - Anteprima affiancata con scorrimento sincronizzato; doppio clic sull'anteprima porta alla riga.
 - Stampa / PDF dell'anteprima, backup di tutti gli appunti.
+- Niente barra in alto, come nell'app di Claude: a sinistra la **barra laterale**, con in cima la
+  nota aperta e i suoi pulsanti (Condividi, stampa, tema, guida), poi gli appunti e in fondo
+  l'account e le impostazioni; sopra il testo, volanti, il pulsante dei **Simboli** e le viste
+  (Editor, Diviso, Anteprima).
 - Sezioni in tonalità diverse (la cornice è più scura del foglio su cui si scrive) e **da
   allargare o stringere**: trascina il bordo dell'elenco degli appunti, del pannello dei
   simboli o quello tra testo e anteprima (o usa le frecce, quando il bordo ha il fuoco); con un

@@ -28,7 +28,8 @@ prossimi passi sono in «In programma» nella ROADMAP.
   `npm run build`): il flusso principale e poi l'account, con un Supabase finto
   (`scripts/fake-supabase.mjs`). Serve Chromium: indica il percorso con `CHROMIUM_PATH`
   (nelle sessioni cloud `/opt/pw-browsers/chromium`).
-- `GLIFO_NO_PWA=1 npx vite build`: build senza service worker (per la demo su claude.ai).
+- `GLIFO_NO_PWA=1 npx vite build`: la build per claude.ai (la demo e le prove della grafica):
+  senza service worker e con l'account spento.
 - `node scripts/icons.mjs`: ridisegna `public/favicon.svg` e le icone PNG dell'app dal simbolo
   ∮ in `src/ui/logo.ts` (serve `CHROMIUM_PATH`). Va rifatto ogni volta che cambia il simbolo.
 - `graphify update .`: rifà il grafo del codice in `graphify-out/` (in locale, senza modelli AI).
@@ -58,9 +59,13 @@ prossimi passi sono in «In programma» nella ROADMAP.
   può essere di un'altra persona (link condiviso, la copia salvata da lì, un .md): `renderMarkdown`
   toglie script, moduli, pulsanti e stili (`FORBIDDEN_TAGS`; con `untrusted` le caselle non si
   cliccano) e `.markdown-body` ha `contain: paint`, così niente esce dal riquadro della nota.
-- `src/ui/`: interfaccia (`resize.ts`: i bordi da trascinare tra le sezioni). `src/store/`: note,
-  cartelle (`folders.ts`), impostazioni e misure delle sezioni (`layout.ts`, solo su quel
-  dispositivo) nel browser (chiavi `glifo.*`).
+- `src/ui/`: interfaccia (`resize.ts`: i bordi da trascinare tra le sezioni). Non c'è una barra in
+  alto: la barra laterale è l'elenco degli appunti (`notesPanel.ts`) con sopra la nota aperta e i
+  suoi pulsanti e sotto l'account e le impostazioni (`sidebarTop` e `sidebarBottom` in `main.ts`);
+  i pulsanti volanti (simboli, viste) sono in `.float-bar`, dentro `.content` con testo e
+  anteprima, e nell'anteprima la loro fascia è il bordo in alto (`syncTo` ne tiene conto).
+  `src/store/`: note, cartelle (`folders.ts`), impostazioni e misure delle sezioni (`layout.ts`,
+  solo su quel dispositivo) nel browser (chiavi `glifo.*`).
   Glifo può essere aperto in più schede: ogni modifica parte da quello salvato, non dalla copia
   in memoria, e `main.ts` ascolta l'evento `storage` per aggiornare le altre schede.
 - `src/schema/`: schemi stile draw.io con maxGraph (caricato solo quando serve). Nella nota sono

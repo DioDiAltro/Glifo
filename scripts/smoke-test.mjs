@@ -316,7 +316,7 @@ try {
   const cursors = [await cursorOf('.resize-notes'), await cursorOf('.resize-split'), await cursorOf('.resize-symbols')]
   await layout.mouse.down()
   await layout.mouse.move(edgeBox.x + 40, edgeBox.y + 100)
-  cursors.push(await cursorOf('.cm-content'), await cursorOf('.topbar'))
+  cursors.push(await cursorOf('.cm-content'), await cursorOf('.side-top'))
   await layout.mouse.move(edgeBox.x + edgeBox.width / 2, edgeBox.y + 100)
   await layout.mouse.up()
   check(cursors.every((cursor) => cursor === 'ew-resize'), `sui bordi la freccia è quella a destra e sinistra (${cursors})`)
@@ -1537,6 +1537,77 @@ try {
   await gp.waitForSelector('.formula-graph:not([hidden]) svg path[data-area]', { state: 'attached', timeout: 5000 })
   check(test.includes('non si rifiuta H₀'), `un test d'ipotesi ha il p-value e la decisione, con la regione di rifiuto nel pannello (${JSON.stringify(test.slice(0, 50))})`)
   await gp.close()
+
+  // Niente barra in alto: il marchio, la nota aperta e i suoi pulsanti in cima alla barra
+  // laterale, l'account e le impostazioni in fondo; sopra il testo, volanti, i simboli e le viste
+  const side = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+  side.on('pageerror', (e) => errors.push(e.message))
+  await side.goto(url)
+  await side.waitForSelector('.cm-editor')
+  await side.waitForTimeout(500)
+  const sideLayout = await side.evaluate(() => {
+    const box = (s) => document.querySelector(s).getBoundingClientRect()
+    const panel = document.querySelector('.notes-panel')
+    const pill = box('.float-bar .view-switch')
+    const content = box('.content')
+    return {
+      topbar: !!document.querySelector('.topbar'),
+      top: !!panel.querySelector('.side-top .doc-title') && !!panel.querySelector('.side-top .share-button'),
+      bottom: !!panel.querySelector('.side-profile .account-button') && !!panel.querySelector('.side-profile button[aria-label="Impostazioni"]'),
+      profileAtBottom: Math.abs(box('.side-profile').bottom - box('.notes-panel').bottom) < 1,
+      symbols: !!document.querySelector('.float-bar .symbols-toggle'),
+      centered: Math.abs(pill.left + pill.width / 2 - (content.left + content.width / 2)) < 2,
+      previewBelow: box('.preview-pane h1').top >= box('.float-bar').bottom,
+    }
+  })
+  check(
+    !sideLayout.topbar && sideLayout.top && sideLayout.bottom && sideLayout.profileAtBottom,
+    `la barra in alto non c'è: nota e pulsanti in cima alla barra laterale, account e impostazioni in fondo (${JSON.stringify(sideLayout)})`,
+  )
+  check(sideLayout.symbols && sideLayout.centered && sideLayout.previewBelow, 'sopra il testo i simboli volanti e le viste al centro, e l\'anteprima comincia sotto')
+  await side.locator('.side-close').click()
+  const closedSide = await side.evaluate(() => ({ open: document.querySelector('.app').classList.contains('notes-open'), button: !!document.querySelector('.side-open')?.offsetParent }))
+  await side.locator('.side-open').click()
+  check(
+    !closedSide.open && closedSide.button && (await side.locator('.side-top').isVisible()),
+    'chiusa la barra laterale, il pulsante volante la riapre',
+  )
+  await side.close()
+  // Sul telefono la barra laterale si apre sopra il testo, e niente esce dallo schermo
+  const phoneSide = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+  phoneSide.on('pageerror', (e) => errors.push(e.message))
+  await phoneSide.goto(url)
+  await phoneSide.waitForSelector('.cm-editor')
+  const phoneLayout = await phoneSide.evaluate(() => {
+    const pill = document.querySelector('.float-bar .view-switch').getBoundingClientRect()
+    return { wide: document.documentElement.scrollWidth, content: Math.round(document.querySelector('.content').getBoundingClientRect().width), pill: Math.round(pill.left + pill.width / 2) }
+  })
+  check(
+    phoneLayout.wide <= 390 && phoneLayout.content === 390 && Math.abs(phoneLayout.pill - 195) <= 1,
+    `sul telefono il testo è largo quanto lo schermo e le viste stanno al centro (${JSON.stringify(phoneLayout)})`,
+  )
+  await phoneSide.locator('.side-open').tap()
+  await phoneSide.waitForTimeout(300)
+  const drawer = await phoneSide.evaluate(() => {
+    const r = document.querySelector('.side-profile').getBoundingClientRect()
+    return r.bottom <= innerHeight + 1 && r.top > 0 && !!document.elementFromPoint(r.left + 20, r.top + r.height / 2)?.closest('.account-button')
+  })
+  check(drawer, 'sul telefono la barra laterale si apre sopra il testo, con l\'account in fondo')
+  await phoneSide.close()
+  // Dentro claude.ai (la demo e le prove della grafica) l'account e la condivisione sono spenti
+  const viewer = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+  await viewer.addInitScript(() => {
+    window.claude = { use: () => new Promise(() => {}) }
+  })
+  await viewer.goto(url)
+  await viewer.waitForSelector('.cm-editor')
+  check(
+    !(await viewer.locator('.account-button').isVisible()) &&
+      !(await viewer.locator('.share-button').isVisible()) &&
+      (await viewer.locator('.side-profile button[aria-label="Impostazioni"]').isVisible()),
+    'dentro claude.ai l\'account e la condivisione sono spenti, le impostazioni no',
+  )
+  await viewer.close()
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)
 } finally {

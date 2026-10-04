@@ -1,6 +1,6 @@
 /**
  * Il simbolo di Glifo: ∮, l'integrale su un percorso chiuso, a tratto pieno come le icone
- * dell'interfaccia. Da qui vengono il marchio nella barra in alto e le icone dell'app in
+ * dell'interfaccia. Da qui vengono il marchio in cima alla barra laterale e le icone dell'app in
  * `public/`, che si ridisegnano con `node scripts/icons.mjs`.
  */
 
@@ -14,7 +14,7 @@ function glyph(color: string, scale: number): string {
   return `<g fill="none" stroke="${color}" stroke-width="5.5" stroke-linecap="round" transform="translate(32 32) scale(${scale}) translate(-32 -32)">${GLYPH}</g>`
 }
 
-/** Il marchio nella barra in alto: il simbolo del colore del testo, sullo sfondo dato dal CSS. */
+/** Il marchio in cima alla barra laterale: il simbolo del colore del testo, sullo sfondo dato dal CSS. */
 export function logoMark(): string {
   return `<svg viewBox="0 0 64 64" width="28" height="28" aria-hidden="true">${glyph('currentColor', 0.92)}</svg>`
 }

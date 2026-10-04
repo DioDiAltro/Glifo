@@ -95,7 +95,8 @@ export class Preview {
     }
     const a = this.anchors[i]
     const b = this.anchors[i + 1]
-    const base = this.el.getBoundingClientRect().top - this.el.scrollTop
+    // Dall'inizio della parte che scorre: sopra c'è il bordo con i pulsanti volanti (clientTop).
+    const base = this.el.getBoundingClientRect().top + this.el.clientTop - this.el.scrollTop
     const topA = a.el.getBoundingClientRect().top - base
     const topB = b ? b.el.getBoundingClientRect().top - base : this.el.scrollHeight
     const lineB = b ? b.line : this.totalLines
