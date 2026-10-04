@@ -1,7 +1,7 @@
 # Graph Report - matherdown  (2026-10-04)
 
 ## Corpus Check
-- 219 files · ~404,879 words
+- 219 files · ~405,184 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 5 file(s) not represented in the graph (top: (none) 4, .css 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `13718e30`
+- Built from commit: `16a98ce2`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -82,7 +82,7 @@
 - inference.ts
 - schema/preview.ts
 - markers.ts
-- .openSql
+- formatNumber
 - tutorial.mjs
 - sql.ts
 - Benvenuto in Glifo
@@ -105,8 +105,8 @@
 - toNode
 - supabase-stub.sql
 - account-test.mjs
+- .openSql
 - End
-- formatNumber
 - icons.mjs
 - graph/file.ts
 - devDependencies
@@ -130,10 +130,10 @@
   README.md → src/math/numerical.ts
 - `Dove sono le cose` --references--> `Converter`  [INFERRED]
   CLAUDE.md → src/math/symbolic.ts
+- `Dove sono le cose` --references--> `GaussRational`  [INFERRED]
+  CLAUDE.md → src/math/complex.ts
 - `Dove sono le cose` --references--> `NumericContext`  [INFERRED]
   CLAUDE.md → src/math/numerical.ts
-- `Dove sono le cose` --references--> `expSum`  [INFERRED]
-  CLAUDE.md → src/math/distributions.ts
 
 ## Import Cycles
 - 3-file cycle: `src/math/complex.ts -> src/math/evaluate.ts -> src/math/limits.ts -> src/math/complex.ts`
@@ -407,9 +407,9 @@ Nodes (12): Look, Theme, draw(), drawCached(), drawn, errorHtml(), fill(), hydra
 Cohesion: 0.11
 Nodes (36): Item, ListStyle, bullet(), bulletGroup(), childMarker(), column(), firstMarker(), label() (+28 more)
 
-### Community 66 - ".openSql"
-Cohesion: 0.47
-Nodes (4): loadDialect(), downloadBlob(), downloadText(), fileNameFor()
+### Community 66 - "formatNumber"
+Cohesion: 0.14
+Nodes (22): decimalSeparator(), Digits, formatNumber(), FormatOptions, fromNumber(), fromRational(), SUPERSCRIPT, writeDigits() (+14 more)
 
 ### Community 67 - "tutorial.mjs"
 Cohesion: 0.20
@@ -487,9 +487,9 @@ Nodes (46): EMPTY_SCOPE, absOf(), atIntegers(), boundsOf(), close(), definite(),
 Cohesion: 0.20
 Nodes (4): device(), login(), newContext, waitFor()
 
-### Community 98 - "formatNumber"
-Cohesion: 0.14
-Nodes (22): decimalSeparator(), Digits, formatNumber(), FormatOptions, fromNumber(), fromRational(), SUPERSCRIPT, writeDigits() (+14 more)
+### Community 97 - ".openSql"
+Cohesion: 0.47
+Nodes (4): loadDialect(), downloadBlob(), downloadText(), fileNameFor()
 
 ### Community 102 - "graph/file.ts"
 Cohesion: 0.33
@@ -508,11 +508,11 @@ Nodes (17): devDependencies, @electric-sql/pglite, jsdom, playwright-core, @type
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `vitest` connect `vitest` to `sync.ts`, `spec.ts`, `num`, `schema/editor.ts`, `settings.ts`, `svg.ts`, `linsys.ts`, `editor/lists.ts`, `graph/space.ts`, `FoldersStore`, `h`, `assistant.ts`, `spell.test.ts`, `sheet.ts`, `distributions.ts`, `markdown.ts`, `MathNode`, `graphNote.test.ts`, `namesIn`, `resize.ts`, `NotesStore`, `parseSchema`, `supabase.ts`, `parse.ts`, `editor/editor.ts`, `openShareDialog`, `toLatex`, `search.ts`, `page.ts`, `markers.ts`, `sql.ts`, `toolbar.ts`, `sidePanel.ts`?**
-  _High betweenness centrality (0.121) - this node is a cross-community bridge._
+  _High betweenness centrality (0.137) - this node is a cross-community bridge._
 - **Why does `Dove sono le cose` connect `spec.ts` to `solve.ts`, `Parser`, `main.ts`, `odesolve.ts`, `arithmetic.ts`, `num`, `schema/editor.ts`, `symbolic.ts`, `svg.ts`, `linsys.ts`, `graph/space.ts`, `MathError`, `Rational`, `conics.ts`, `several.ts`, `linear.ts`, `h`, `sheet.ts`, `markdown.ts`, `logic.ts`, `MathNode`, `namesIn`, `gauss.ts`, `scopeWith`, `study.ts`, `supabase.ts`, `complex.ts`, `toLatex`, `finite.ts`, `graph.ts`, `inference.ts`, `schema/preview.ts`, `limits.ts`, `toNode`?**
-  _High betweenness centrality (0.082) - this node is a cross-community bridge._
+  _High betweenness centrality (0.089) - this node is a cross-community bridge._
 - **Why does `MathError` connect `MathError` to `solve.ts`, `odesolve.ts`, `spec.ts`, `num`, `symbolic.ts`, `linsys.ts`, `compile`, `linear.ts`, `sheet.ts`, `distributions.ts`, `MathNode`, `namesIn`, `gauss.ts`, `statsShown.ts`, `scopeWith`, `probability.ts`, `complex.ts`, `toLatex`, `Field`, `inference.ts`, `statsGraph.ts`, `.int`, `toNode`?**
-  _High betweenness centrality (0.034) - this node is a cross-community bridge._
+  _High betweenness centrality (0.049) - this node is a cross-community bridge._
 - **What connects `Deciso`, `Com'è andata la discussione`, `La proposta dello studente (4 ottobre 2026)` to the rest of the system?**
   _515 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Parser` be split into smaller, more focused modules?**
