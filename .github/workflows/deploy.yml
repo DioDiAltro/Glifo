@@ -9,8 +9,10 @@ on:
 permissions:
   contents: write
 
+# Un gruppo per ramo: una pubblicazione nuova ferma quella vecchia dello stesso ramo, ma un push
+# su un altro ramo (per esempio «prova», che non va online) non ferma quella del principale.
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
