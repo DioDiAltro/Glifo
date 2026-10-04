@@ -27,4 +27,20 @@ describe('temi', () => {
     // Ogni colore del tema scuro esiste anche nel chiaro.
     for (const t of dark) expect(light, t).toContain(t)
   })
+
+  it('i menu a tendina hanno la freccia di Glifo, non il riquadro chiaro del sistema', () => {
+    // Le regole senza altre graffe dentro (anche quelle dentro @media): selettori e dichiarazioni,
+    // senza i commenti.
+    const plain = css.replace(/\/\*[\s\S]*?\*\//g, '')
+    const rules = [...plain.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({ selectors: m[1].trim(), body: m[2] }))
+    const own = rules.filter((r) => r.selectors === 'select')
+    expect(own.some((r) => /appearance:\s*none/.test(r.body) && /background-image:\s*var\(--select-arrow\)/.test(r.body))).toBe(true)
+    for (const theme of [':root {', ":root:not([data-theme='light']) {", ":root[data-theme='dark'] {"]) {
+      expect(tokens(theme), theme).toContain('--select-arrow')
+    }
+    // La scorciatoia `background:` su un menu a tendina toglierebbe la freccia.
+    const onSelect = rules.filter((r) => r.selectors.split(',').some((s) => /(^|[\s>+~])select(?![\w-])/.test(s.trim())))
+    expect(onSelect.length).toBeGreaterThan(2)
+    for (const r of onSelect) expect(r.body, r.selectors).not.toMatch(/(^|[;\s])background\s*:/)
+  })
 })
