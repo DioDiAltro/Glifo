@@ -230,6 +230,14 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
 - Per capire il codice usa prima `graphify query`, `graphify explain` o `graphify path`. Apri i file solo nelle parti che servono, mai interi.
 - Ogni push sul branch predefinito esegue test e build e pubblica il sito
   (`.github/workflows/deploy.yml` → branch `gh-pages`).
+- Le modifiche che lo studente vuole provare prima che vadano online (per esempio la grafica)
+  si fanno sul ramo `prova`: lo studente ha detto di mandarlo su GitHub (4 ottobre 2026), e non
+  va online perché il sito si pubblica solo dal ramo principale. Gliele fai vedere con le foto
+  e, quando serve provarle, con Glifo del ramo `prova` su una pagina privata di claude.ai
+  (Artifact, build con `GLIFO_NO_PWA=1`), con l'account spento così i suoi appunti veri non si
+  toccano. Quando dice «va bene», `prova` si unisce al ramo principale e si pubblica con i soliti
+  controlli. Quello che chiede di fare subito va sul ramo principale, e poi anche in `prova`
+  (merge del ramo principale in `prova`).
 - Prima di un push: `npm test` e `npm run build`; se cambiano editor o interfaccia
   anche `npm run test:e2e`. Aggiungi un test per ogni bug corretto.
 - L'app deve continuare a funzionare senza connessione.
