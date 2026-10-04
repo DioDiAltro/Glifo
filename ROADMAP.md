@@ -225,12 +225,10 @@ delle tabelle per più database. Tutto è descritto nel README. Se serviranno:
 
 ### Abbonamento e funzioni a pagamento (da capire)
 
-- Cosa far pagare e quanto: per esempio la trascrizione e l'AI senza la propria chiave API
-  (i costi dell'AI li pagherebbe Glifo).
-- Come incassare: Stripe, oppure un servizio che vende al posto tuo e gestisce l'IVA
-  europea (*merchant of record*, es. Paddle). Tasse e partita IVA da capire con un
-  commercialista.
-- Serve l'account: il database terrà il piano di ognuno (gratis o abbonato).
+Se ne parla dal 4 ottobre 2026 in [ABBONAMENTI.md](ABBONAMENTI.md): la proposta dello studente
+(Classico gratis, Super, Quantistico), cosa far pagare piano per piano e perché, i prezzi, i costi
+dell'AI e della trascrizione, cosa serve prima di incassare (partita IVA, *merchant of record*,
+hosting, regole). Niente è ancora deciso.
 
 ### Trascrizione delle lezioni in appunti
 

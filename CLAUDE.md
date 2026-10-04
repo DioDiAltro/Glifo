@@ -19,6 +19,9 @@ prossimi passi sono in «In programma» nella ROADMAP.
 - Le funzioni da aggiungere sono in [ROADMAP.md](ROADMAP.md): quando si chiede
   «cosa facciamo adesso?» si parte da lì. Aggiornalo quando una voce è fatta o se ne
   aggiunge una.
+- I piani di abbonamento (idee non ancora decise: cosa far pagare, prezzi, cosa serve prima di
+  incassare) sono in [ABBONAMENTI.md](ABBONAMENTI.md): quando se ne parla si riparte da lì e ci si
+  scrive quello che si dice e si decide.
 
 ## Comandi
 
