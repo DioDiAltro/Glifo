@@ -19,18 +19,22 @@ possano mostrare, più che coprire ogni argomento dei corsi.
 ### Controllare e mostrare quello che si scrive
 
 **Cosa:** con lo scopo chiarito (vedi sopra), prima delle voci «Restano» della matematica dei corsi
-vengono tre cose, in quest'ordine (decise con lo studente il 3 ottobre 2026):
+vengono queste cose, in quest'ordine (decise con lo studente il 3 ottobre 2026):
 
 1. **Controllare le uguaglianze che si scrivono.** Se scrivo io il risultato, per esempio
    `\int_0^1 x^2 \, dx = \frac{1}{3}`, Glifo dice se è giusto (✓) o sbagliato (✗, con il valore
-   giusto). Oggi non succede niente.
-2. **I calcoli con le lettere**, partendo dagli integrali definiti: il volume della sfera scritto come
-   sul quaderno, `\int_{-R}^{R} \pi (R^2 - x^2) \, dx =` o l'integrale in coordinate sferiche, deve dare
-   4/3 πR³. Oggi non dà nessun risultato: funziona solo con un numero (con r = 2 l'integrale triplo dà
-   33,51…, come 4/3 πr³).
-3. **I grafici da mostrare**: scaricare un grafico o copiarlo come immagine (SVG e PNG, come già gli
+   giusto). Oggi non succede niente. Con le lettere il valore giusto c'è già (vedi sotto): così si
+   potrà controllare anche `\int_{-R}^{R} \pi (R^2 - x^2) \, dx = \frac{4}{3} \pi R^3`.
+2. **I grafici da mostrare**: scaricare un grafico o copiarlo come immagine (SVG e PNG, come già gli
    schemi), con il titolo e i nomi degli assi scelti da chi scrive. Oggi un grafico finisce solo nel
    file .md e nella stampa.
+
+Fatti il 4 ottobre 2026 (lo studente li ha chiesti prima degli altri due): **i calcoli con le lettere,
+partendo dagli integrali definiti**. Il volume della sfera scritto come sul quaderno
+(`\int_{-R}^{R} \pi (R^2 - x^2) \, dx =`, o in coordinate sferiche, cilindriche e cartesiane) dà 4πR³/3;
+gli integrali uno dentro l'altro e dentro un'espressione sono esatti, anche impropri; le lettere sono
+numeri positivi e ogni risultato si controlla con i numeri. Le idee che restano sono in «Calcoli e
+grafici: idee in più».
 
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
@@ -256,6 +260,11 @@ il valore nella legenda). Tutto è descritto nel README. Quello che serve per i 
 - nelle aree degli integrali, le parti sotto l'asse x di un altro aspetto (oggi hanno lo stesso
   colore: nell'integrale contano con il meno);
 - segnare da soli zeri, massimi, minimi e intersezioni (con un clic sulla curva);
+- le definizioni con le lettere: `V = \int_{-R}^{R} \pi (R^2 - x^2) \, dx` e poi `\frac{V}{R^3} =` (oggi
+  una definizione tiene solo i numeri, e il risultato con le lettere si vede solo dopo `=`);
+- gli integrali su un dominio con le lettere (`\iiint_{x^2 + y^2 + z^2 \le R^2} dV`: oggi solo con R
+  definito, con i numeri) e quelli che dipendono da com'è la lettera (`\int_1^{\infty} \frac{dx}{x^p}`
+  converge solo per p > 1: oggi nessun risultato);
 - i calcoli anche fuori dalle formule (`12 * 3 =` nel testo) e con le unità di misura (`3 m/s`);
 - un'impostazione per spegnere i risultati dopo `=`, se a qualcuno danno fastidio.
 

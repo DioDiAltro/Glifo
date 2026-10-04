@@ -232,14 +232,22 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
   immediati, per sostituzione (`\int x e^{x^2} \, dx`, `\int \frac{\ln x}{x} \, dx`, anche `\int \sin(\ln x) \, dx`),
   per parti (`x^2 \cos x`, `\ln x`, `\arctan x`, `e^x \sin x`), le funzioni razionali con i fratti semplici
   (`\frac{1}{x^2 - 1}` dà ½ ln|(x − 1)/(x + 1)|), le potenze di seno e coseno (`\sin^4 x`), le radici
-  (`\sqrt{1 - x^2}`, `x \sqrt{x + 1}`), anche con il dx nella frazione (`\int \frac{dx}{1 + x^2}`). Ogni
+  (`\sqrt{1 - x^2}`, `x \sqrt{x + 1}`), anche con il dx nella frazione (`\int \frac{dx}{1 + x^2}`) e con le
+  lettere nei coefficienti, che sono numeri positivi (`\int \frac{dx}{x^2 + a^2}` dà arctan(x/a)/a,
+  `\int \sqrt{R^2 - x^2} \, dx` dà x√(R² − x²)/2 + (R²/2) arcsin(x/R)). Ogni
   primitiva si controlla derivandola; quelle che non si scrivono con le funzioni elementari (`e^{-x^2}`,
   `\frac{\sin x}{x}`) non hanno risultato. La costante è c (k se la c c'è già); con un nome
   (`F(x) = \int x e^x \, dx`) la primitiva si usa dopo, anche nei grafici.
 - **Integrali definiti esatti**: con la primitiva il valore esatto (`\int_0^1 \frac{dx}{1 + x^2} =` dà
   π/4 ≈ 0,785398…, `\int_0^1 \arctan x \, dx` dà π/4 − ln(2)/2), anche **impropri** (`\int_1^{\infty} \frac{dx}{x^2} =`
-  dà 1, `\int_0^1 \frac{dx}{x}` dà +∞: diverge); con una lettera negli estremi la funzione integrale
-  (`\int_0^x t^2 \, dt =` dà x³/3). Se la primitiva non si trova resta il valore con i numeri.
+  dà 1, `\int_0^1 \frac{dx}{x}` dà +∞: diverge). Anche **con le lettere**, che sono numeri positivi (un
+  raggio, un'altezza): il volume della sfera scritto come sul quaderno (`\int_{-R}^{R} \pi (R^2 - x^2) \, dx =`
+  dà 4πR³/3), l'area del cerchio (`\int_{-R}^{R} 2 \sqrt{R^2 - x^2} \, dx` dà πR²), gli impropri
+  (`\int_0^{\infty} t \lambda e^{-\lambda t} \, dt` dà 1/λ), il valor medio (`\frac{1}{b - a} \int_a^b x^2 \, dx`
+  dà (a² + ab + b²)/3) e la funzione integrale (`\int_0^x t^2 \, dt =` dà x³/3); anche dentro un'espressione
+  (`2 \int_0^R …`, `\int_0^1 x \, dx + \int_0^1 x^2 \, dx` dà 5/6). Ogni risultato con le lettere si controlla
+  con i numeri, con tre scelte di valori: se non torna non c'è (`\int_{-a}^{a} \frac{dx}{x^2}` diverge, e
+  `\int_1^{\infty} \frac{dx}{x^p}` dipende da p). Se la primitiva non si trova resta il valore con i numeri.
 - **Studio di funzione**: `\operatorname{studio}(f) =` (con f definita prima, o la funzione stessa:
   `\operatorname{studio}(x e^{-x}) =`) fa lo studio come a lezione, una parte per riga: dominio, simmetria
   (pari o dispari), periodo, intersezioni con gli assi, segno, limiti agli estremi del dominio, asintoti
@@ -377,10 +385,12 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
 - **Integrali doppi e tripli**, con il dominio sotto: disuguaglianze (`\iint_{x^2 + y^2 \le 1} (x^2 + y^2) \, dA =`,
   `\iiint_{x^2 + y^2 \le 1, 0 \le z \le 2} dV =`), rettangoli (`\iint_{[0, 1] \times [0, 2]} x y \, dx \, dy =`,
   `[0, 1]^3`) o il nome di un insieme scritto prima (`$D = \{(x, y) : 0 \le y \le x \le 1\}$` e poi
-  `\iint_D x y \, dA =`); oppure uno dentro l'altro con gli estremi (`\int_0^1 \int_0^x x y \, dy \, dx =`),
-  anche in coordinate polari (`\int_0^{2\pi} \int_0^1 r \, dr \, d\theta`) e sferiche. I differenziali sono
-  `dx \, dy`, `dA`, `dV` o `d(x, y)`. Il risultato ha qualche cifra in meno degli integrali semplici
-  (sono quelle sicure).
+  `\iint_D x y \, dA =`); oppure uno dentro l'altro con gli estremi (`\int_0^1 \int_0^x x y \, dy \, dx =` dà
+  1/8), anche in coordinate polari (`\int_0^{2\pi} \int_0^1 r \, dr \, d\theta` dà π) e sferiche: questi sono
+  esatti con le primitive, anche con le lettere (`\int_0^{2\pi} \int_0^{\pi} \int_0^R \rho^2 \sin\varphi \, d\rho \, d\varphi \, d\theta =`
+  dà 4πR³/3, e così in coordinate cilindriche e cartesiane). I differenziali sono `dx \, dy`, `dA`, `dV` o
+  `d(x, y)`. Con il dominio sotto, o se le primitive non si trovano, il risultato è con i numeri e ha qualche
+  cifra in meno degli integrali semplici (sono quelle sicure).
 - Il pulsante con gli **assi** nella barra mette nella nota un **grafico**: con il cursore su una
   funzione (`$f(x) = …$`) disegna quella, su un integrale (`$\int_0^2 x^2 \, dx =$`) la sua area (e
   così le curve di livello, i polinomi di Taylor, le primitive, gli studi di funzione, le distribuzioni e le

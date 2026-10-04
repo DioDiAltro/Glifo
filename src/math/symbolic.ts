@@ -5,8 +5,9 @@
  * frazione per un prodotto di potenze (`Ex`); poi torna un'espressione (`MathNode`) da scrivere in
  * LaTeX o da calcolare con i numeri.
  */
-import { compile, EMPTY_SCOPE, fnLabel, MathError, UndefinedName } from './evaluate'
+import { compile, EMPTY_SCOPE, fnLabel, MathError, scopeWith, UndefinedName } from './evaluate'
 import { ExactUnavailable, Rational } from './exact'
+import { limit } from './limits'
 import { children, namesIn, productPower, type MathNode } from './parse'
 import { asFraction, polyEx, primitive } from './primitive'
 import { squareFree as squareFreeFactors } from './polynomial'
@@ -489,6 +490,91 @@ export function subst(x: Ex, name: string, value: Ex): Ex {
   }
 }
 
+// ——— Le lettere positive ———
+
+/** È positiva, se le lettere `positive` lo sono? π, 2R², R + h, e^{−x}, √R. */
+function isPositive(x: Ex, positive: ReadonlySet<string>): boolean {
+  switch (x.t) {
+    case 'num':
+      return x.v.sign > 0
+    case 'sym':
+      return positive.has(x.name) || x.name === 'π' || x.name === 'e'
+    case 'mul':
+      return x.c.sign > 0 && x.factors.every((f) => isPositive(f, positive))
+    case 'pow':
+      return isPositive(x.base, positive)
+    case 'add':
+      return x.terms.every((t) => isPositive(t, positive))
+    case 'fn':
+      return x.name === 'cosh'
+    default:
+      return false
+  }
+}
+
+/** L'esponente della lettera `p` tra i fattori di un termine: 3R²h → 2 per R; 0 se non c'è. */
+function exponentOf(t: Ex, p: string): Rational {
+  const of = (f: Ex): Rational | null => (f.t === 'sym' && f.name === p ? ONE : f.t === 'pow' && f.base.t === 'sym' && f.base.name === p && f.exp.t === 'num' ? f.exp.v : null)
+  for (const f of t.t === 'mul' ? t.factors : [t]) {
+    const k = of(f)
+    if (k) return k
+  }
+  return ZERO
+}
+
+/** Le potenze delle lettere positive che tutti i termini hanno: R² − R²t² → R². */
+function commonPositive(x: Extract<Ex, { t: 'add' }>, positive: ReadonlySet<string>): Ex | null {
+  const parts: Ex[] = []
+  for (const p of positive) {
+    const least = x.terms.map((t) => exponentOf(t, p)).reduce((a, b) => (b.cmp(a) < 0 ? b : a))
+    if (least.sign > 0) parts.push(pow(sym(p), num(least)))
+  }
+  return parts.length ? mul(...parts) : null
+}
+
+/** b^e con le radici che si sciolgono perché la base è positiva: (R²)^{3/2} = R³, √(4R²h) = 2R√h. */
+function positivePow(b: Ex, e: Ex, positive: ReadonlySet<string>): Ex {
+  if (e.t !== 'num' || e.v.isInteger) return pow(b, e)
+  if (b.t === 'pow' && isPositive(b.base, positive)) return pow(b.base, mul(b.exp, e))
+  if (b.t === 'mul') {
+    const out = b.factors.filter((f) => isPositive(f, positive))
+    if (!out.length) return pow(b, e)
+    const inside = mul(num(b.c.sign > 0 ? ONE : b.c), ...b.factors.filter((f) => !out.includes(f)))
+    return mul(pow(num(b.c.sign > 0 ? b.c : ONE), e), ...out.map((f) => positivePow(f, e, positive)), pow(inside, e))
+  }
+  if (b.t === 'add') {
+    const common = commonPositive(b, positive)
+    if (common) return mul(positivePow(common, e, positive), pow(add(...b.terms.map((t) => mul(t, pow(common, num(-1))))), e))
+  }
+  return pow(b, e)
+}
+
+/**
+ * L'espressione semplificata sapendo che le lettere `positive` sono numeri positivi (un raggio,
+ * un'altezza): √(R²) = R, (R²)^{3/2} = R³, √(4R²) = 2R, √(R² − R²t²) = R√(1 − t²), |R| = R.
+ */
+export function assumePositive(x: Ex, positive: ReadonlySet<string>): Ex {
+  if (!positive.size) return x
+  const visit = (e: Ex): Ex => {
+    switch (e.t) {
+      case 'add':
+        return add(...e.terms.map(visit))
+      case 'mul':
+        return mul(num(e.c), ...e.factors.map(visit))
+      case 'pow':
+        return positivePow(visit(e.base), visit(e.exp), positive)
+      case 'fn': {
+        const args = e.args.map(visit)
+        if (e.name === 'abs' && isPositive(args[0], positive)) return args[0]
+        return fn(e.name, args, e.base && visit(e.base))
+      }
+      default:
+        return e
+    }
+  }
+  return visit(x)
+}
+
 // ——— Le derivate ———
 
 /** La derivata di `x` rispetto a `v`. */
@@ -632,8 +718,26 @@ class Converter {
   private inlined = 0
   /** Le lettere che qui sono variabili (quelle delle derivate, le coordinate), anche se la nota le definisce come numeri. */
   private variables = new Set<string>()
+  /** Se c'è, gli integrali definiti si fanno con le primitive, con queste lettere numeri positivi. */
+  definite: ReadonlySet<string> | null = null
 
   constructor(private readonly scope: SymbolScope) {}
+
+  /**
+   * ∫_a^b con la primitiva: F(b) − F(a), anche con le lettere e con gli estremi che usano le variabili
+   * degli integrali di fuori (\int_0^1 \int_0^x … \, dy \, dx). A un estremo infinito il limite di F.
+   */
+  private definiteIntegral(node: Extract<MathNode, { k: 'int' }>, locals: ReadonlyMap<string, Ex>, inner: ReadonlyMap<string, Ex>): Ex {
+    const positive = this.definite!
+    const body = this.withVariables([node.v], () => this.scalar(node.body, inner))
+    const F = primitive(assumePositive(body, positive), node.v, positive)
+    if (!F) throw new MathError('Non so trovare la primitiva di questa funzione')
+    const at = (bound: MathNode): Ex => {
+      const side = infiniteSide(bound)
+      return side ? limitAtInfinity(F, node.v, side) : subst(F, node.v, this.scalar(bound, locals))
+    }
+    return assumePositive(flatSums(sub(at(node.to), at(node.from))), positive)
+  }
 
   /** Un'espressione dove `variables` restano lettere (i parametri di una curva), anche se la nota li definisce. */
   scalarWith(node: MathNode, variables: Iterable<string>): Ex {
@@ -709,9 +813,10 @@ class Converter {
       case 'apply': {
         const f = this.scope.fns.get(node.name)
         if (!f || locals.has(node.name) || this.variables.has(node.name)) {
-          // a(x + 1) con a un numero, x(x + 1) con x la variabile: un prodotto.
+          // a(x + 1) con a un numero, x(x + 1) con x la variabile, \pi (R^2 - x^2): un prodotto.
           if (node.primes) throw new MathError(`${node.name} non è una funzione definita`)
-          if ((this.scope.consts.has(node.name) || locals.has(node.name) || this.variables.has(node.name)) && node.args.length === 1) return mul(s({ k: 'name', name: node.name }), s(node.args[0]))
+          const number = this.scope.consts.has(node.name) || locals.has(node.name) || this.variables.has(node.name) || node.name === 'π' || node.name === 'e'
+          if (number && node.args.length === 1) return mul(s({ k: 'name', name: node.name }), s(node.args[0]))
           throw new UndefinedName(node.name)
         }
         if (f.params.length !== node.args.length) throw new MathError(`${node.name} vuole ${f.params.length === 1 ? 'un valore' : `${f.params.length} valori`}`)
@@ -744,7 +849,8 @@ class Converter {
       case 'int': {
         const inner = new Map(locals)
         inner.delete(node.v)
-        return { t: 'int', v: node.v, from: s(node.from), to: s(node.to), body: this.scalar(node.body, inner) }
+        if (this.definite) return this.definiteIntegral(node, locals, inner)
+        return { t: 'int', v: node.v, from: s(node.from), to: s(node.to), body: this.withVariables([node.v], () => this.scalar(node.body, inner)) }
       }
       case 'prim': {
         // \int f(x) \, dx: una primitiva (senza la costante).
@@ -1145,12 +1251,134 @@ export function zeroOverZero(body: MathNode, v: string, to: MathNode, scope: Sym
  * controlla chi chiama, con i numeri.
  */
 export function definiteParts(node: Extract<MathNode, { k: 'int' }>, scope: SymbolScope): { F: Ex; a: Ex | null; b: Ex | null } | null {
-  const infinite = (n: MathNode) => n.k === 'infty' || (n.k === 'neg' && n.a.k === 'infty') || (n.k === 'bin' && n.op === '+' && n.b.k === 'infty')
   try {
     const c = new Converter(scope)
     const F = primitive(c.scalarWith(node.body, [node.v]), node.v)
     if (!F) return null
-    return { F, a: infinite(node.from) ? null : c.scalar(node.from), b: infinite(node.to) ? null : c.scalar(node.to) }
+    return { F, a: infiniteSide(node.from) ? null : c.scalar(node.from), b: infiniteSide(node.to) ? null : c.scalar(node.to) }
+  } catch {
+    return null
+  }
+}
+
+/** 1 o −1 se l'estremo di un integrale è +∞ o −∞, se no 0. */
+function infiniteSide(n: MathNode): 1 | -1 | 0 {
+  if (n.k === 'infty' || (n.k === 'bin' && n.op === '+' && n.b.k === 'infty')) return 1
+  return n.k === 'neg' && n.a.k === 'infty' ? -1 : 0
+}
+
+/** Un numero riconosciuto esatto: 0, una frazione p/q o (p/q)π con q piccolo. */
+function simpleExact(x: number): Ex | null {
+  if (Math.abs(x) < 1e-9) return num(0)
+  for (const [unit, value] of [[num(1), 1], [sym('π'), Math.PI]] as const) {
+    for (let q = 1; q <= 12; q++) {
+      const p = Math.round((x / value) * q)
+      if (p && Math.abs(x - (p * value) / q) <= 1e-8 * Math.max(1, Math.abs(x))) return mul(num(R(p, q)), unit)
+    }
+  }
+  return null
+}
+
+/**
+ * Il limite di F per v → ±∞, con i numeri: un numero riconosciuto esatto (0 per e^{−λt}, π/2 per
+ * arctan x) per una potenza di ogni lettera (π/(2a) per arctan(x/a)/a). Gli esponenti si trovano
+ * raddoppiando una lettera alla volta; poi si controlla con altri valori. Se no, un errore.
+ */
+function limitAtInfinity(F: Ex, v: string, side: 1 | -1): Ex {
+  const letters = symbols(F).filter((n) => n !== v && n !== 'π' && n !== 'e')
+  const f = compile(toNode(F), scopeWith(EMPTY_SCOPE, [v, ...letters]))
+  const at = (values: number[]): number => {
+    const vars: Record<string, number> = {}
+    letters.forEach((n, i) => (vars[n] = values[i]))
+    const value = limit((x) => ((vars[v] = x), f(vars)), side * Infinity, 0)
+    if (value.k !== 'value') throw new MathError('L\'integrale improprio non si sa fare con le lettere')
+    return value.v
+  }
+  const unknown = () => new MathError('Il limite all\'estremo non si riconosce')
+  const base = letters.map((_, i) => 1.3 + 0.37 * i)
+  const L = at(base)
+  let result: Ex
+  if (Math.abs(L) < 1e-9) result = num(0)
+  else {
+    let c = L
+    const powers: Ex[] = []
+    letters.forEach((n, i) => {
+      const doubled = base.map((x, j) => (j === i ? 2 * x : x))
+      const k = Math.log2(at(doubled) / L)
+      const halves = Math.round(2 * k)
+      if (!Number.isFinite(k) || Math.abs(k - halves / 2) > 1e-6) throw unknown()
+      c /= base[i] ** (halves / 2)
+      powers.push(pow(sym(n), num(R(halves, 2))))
+    })
+    const exact = simpleExact(c)
+    if (!exact) throw unknown()
+    result = mul(exact, ...powers)
+  }
+  if (letters.length) {
+    const other = letters.map((_, i) => 0.71 + 0.53 * i)
+    const vars: Record<string, number> = {}
+    letters.forEach((n, i) => (vars[n] = other[i]))
+    const expected = compile(toNode(result), scopeWith(EMPTY_SCOPE, letters))(vars)
+    const found = at(other)
+    if (!(Math.abs(found - expected) <= 1e-7 * Math.max(1, Math.abs(found)))) throw unknown()
+  }
+  return result
+}
+
+/** Le somme dentro le somme sciolte, con il numero davanti: R² − x² − (R² − x²) = 0, anche nelle radici. */
+function flatSums(x: Ex): Ex {
+  switch (x.t) {
+    case 'add':
+      return add(
+        ...x.terms.flatMap((t) => {
+          const f = flatSums(t)
+          return f.t === 'mul' && f.factors.length === 1 && f.factors[0].t === 'add' ? f.factors[0].terms.map((u) => mul(num(f.c), u)) : [f]
+        }),
+      )
+    case 'mul':
+      return mul(num(x.c), ...x.factors.map(flatSums))
+    case 'pow':
+      return pow(flatSums(x.base), flatSums(x.exp))
+    case 'fn':
+      return fn(x.name, x.args.map(flatSums), x.base && flatSums(x.base))
+    default:
+      return x
+  }
+}
+
+/** Resta qualcosa che con le lettere non si è fatto (un integrale, una somma, una parte com'è)? */
+function unevaluated(x: Ex): boolean {
+  switch (x.t) {
+    case 'int':
+    case 'sum':
+    case 'node':
+    case 'cases':
+      return true
+    case 'add':
+      return x.terms.some(unevaluated)
+    case 'mul':
+      return x.factors.some(unevaluated)
+    case 'pow':
+      return unevaluated(x.base) || unevaluated(x.exp)
+    case 'fn':
+      return x.args.some(unevaluated) || (!!x.base && unevaluated(x.base))
+    default:
+      return false
+  }
+}
+
+/**
+ * La formula con gli integrali definiti fatti con le primitive: uno dentro l'altro, dentro
+ * un'espressione (2 \int_0^R …) e con le lettere `positive`, che sono numeri positivi (un raggio,
+ * un'altezza). Null se un integrale non si sa fare. Che il risultato sia giusto (la primitiva
+ * continua tra gli estremi) lo controlla chi chiama, con i numeri.
+ */
+export function definiteValue(node: MathNode, scope: SymbolScope, positive: ReadonlySet<string>): Ex | null {
+  try {
+    const c = new Converter(scope)
+    c.definite = positive
+    const value = c.scalar(node)
+    return unevaluated(value) ? null : assumePositive(value, positive)
   } catch {
     return null
   }
@@ -1423,6 +1651,70 @@ export function tidy(x: Ex): Ex {
     return { ...together, factors: together.factors.map((f) => (f.t === 'add' ? lead(ordered(f)) : f)) }
   }
   return together
+}
+
+/**
+ * Una frazione con le lettere semplificata quando il denominatore, di primo grado in una lettera,
+ * divide il numeratore (con Ruffini e i coefficienti con le lettere): (b²/2 − a²/2)/(b − a) = (a + b)/2.
+ */
+export function cancelLinear(x: Ex): Ex {
+  if (x.t !== 'mul') return x
+  const D = x.factors.find((f) => f.t === 'pow' && f.base.t === 'add' && isNum(f.exp, -1)) as Extract<Ex, { t: 'pow' }> | undefined
+  const N = x.factors.find((f) => f.t === 'add')
+  if (!D || !N) return x
+  for (const p of symbols(D.base).filter((n) => n !== 'π' && n !== 'e')) {
+    try {
+      const q = divideLinear(N, D.base, p)
+      if (q) return tidy(mul(num(x.c), q, ...x.factors.filter((f) => f !== D && f !== N)))
+    } catch {
+      // Con questa lettera non si fa.
+    }
+  }
+  return x
+}
+
+/** N/D se D = αp + β divide N, un polinomio in p (con le lettere nei coefficienti); se no null. */
+function divideLinear(N: Ex, D: Ex, p: string): Ex | null {
+  const alpha = derive(D, p)
+  if (dependsOn(alpha, p) || isNum(alpha, 0)) return null
+  const beta = subst(D, p, num(0))
+  if (!isNum(expand(sub(D, add(mul(alpha, sym(p)), beta))), 0)) return null
+  // I coefficienti di N dalle derivate in 0: c_k = N^{(k)}(0)/k!.
+  const c: Ex[] = []
+  let d = N
+  let factorial = 1n
+  for (let k = 0; ; k++) {
+    if (k > 12) return null
+    if (k) factorial *= BigInt(k)
+    c.push(mul(subst(d, p, num(0)), num(new Rational(1n, factorial))))
+    if (!dependsOn(d, p)) break
+    d = derive(d, p)
+  }
+  const n = c.length - 1
+  if (n < 1 || !isNum(expand(sub(N, add(...c.map((ck, k) => mul(ck, pow(sym(p), num(k))))))), 0)) return null
+  // Ruffini con la radice r = −β/α: il resto deve essere 0.
+  const r = mul(neg(beta), pow(alpha, num(-1)))
+  const q: Ex[] = new Array(n)
+  q[n - 1] = c[n]
+  for (let k = n - 1; k >= 1; k--) q[k - 1] = expand(add(c[k], mul(r, q[k])))
+  if (!isNum(expand(add(c[0], mul(r, q[0]))), 0)) return null
+  return mul(numericContent(expand(add(...q.map((qk, k) => mul(qk, pow(sym(p), num(k))))))), pow(alpha, num(-1)))
+}
+
+/** Il numero che hanno tutti i termini, fuori: a/2 + b/2 = (a + b)/2, 2a + 4b = 2(a + 2b). */
+function numericContent(x: Ex): Ex {
+  if (x.t !== 'add') return x
+  const gcd = (a: bigint, b: bigint): bigint => (b ? gcd(b, a % b) : a < 0n ? -a : a)
+  let n = 0n
+  let d = 1n
+  for (const t of x.terms) {
+    const c = t.t === 'mul' ? t.c : t.t === 'num' ? t.v : ONE
+    n = gcd(n, c.n)
+    d = (d * c.d) / gcd(d, c.d)
+  }
+  const g = new Rational(n || 1n, d)
+  if (g.n === 1n && g.d === 1n) return x
+  return { t: 'mul', c: g, factors: [add(...x.terms.map((t) => mul(t, num(new Rational(g.d, g.n)))))] }
 }
 
 /** Prima un termine con il più, se c'è: 1 − x², non −x² + 1. */

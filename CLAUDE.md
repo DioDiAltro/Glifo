@@ -111,7 +111,11 @@ prossimi passi sono in «In programma» nella ROADMAP.
   risultati con le matrici hanno `rich` e l'editor li disegna con KaTeX; `symbolic.ts` i conti con le
   lettere: derivate (`f'(x)`, nodi `diff` da `\frac{d}{dx}` e `\partial`), gradiente, divergenza, rotore,
   hessiana e jacobiana, con le semplificazioni (`tidy`: frazioni unite, polinomi in ordine, fattori
-  raccolti); il foglio li usa con `expandCalculus` e, se restano lettere, mostra la formula;
+  raccolti); il foglio li usa con `expandCalculus` e, se restano lettere, mostra la formula; gli integrali
+  definiti con le lettere, uno dentro l'altro o dentro un'espressione li fa `definiteValue` (il `Converter`
+  con `definite`: le lettere sono numeri positivi, `assumePositive` scioglie √(R²) = R; agli estremi infiniti
+  `limitAtInfinity`; `cancelLinear` semplifica (b³ − a³)/(b − a)) e il foglio li mostra con `showDefinite`
+  solo se tornano con i numeri (`checked`, tre scelte di valori per le lettere);
   `calculus.ts` gli integrali di linea e di superficie (nodi `lint` e `sint`) sulle curve, superfici e
   campi definiti (`Scope.vfns`, con l'intervallo dopo la virgola: t \in [0, 2\pi]); `limits.ts` i limiti
   (nodo `lim`, con i numeri: Richardson; le forme 0/0 prima con le derivate esatte, `zeroOverZero` in
@@ -151,7 +155,8 @@ prossimi passi sono in «In programma» nella ROADMAP.
   (`satisfies`); la somiglianza con le esponenziali complesse (`Wave`, `similar`), i sistemi di due
   equazioni per eliminazione, le condizioni come sistema nelle costanti (`cauchy`); i polinomi di Taylor sono `\operatorname{taylor}`
   in `symbolic.ts`; `primitive.ts` le primitive (nodo `prim`, `\int f \, dx` senza estremi; ognuna
-  controllata derivandola con i numeri, `verified`), con i polinomi di `polynomial.ts` (fratti semplici);
+  controllata derivandola con i numeri, `verified`), con i polinomi di `polynomial.ts` (fratti semplici) e,
+  con le lettere nei coefficienti, `quadraticRootLetters` e `rationalLetters` (√(R² − x²), 1/(x² + a²));
   `definite.ts` gli integrali definiti con la primitiva, esatti o impropri, controllati con i numeri;
   `study.ts` lo studio di funzione, `\operatorname{studio}(f) =`: dominio a pezzi, segno, limiti,
   asintoti, derivate, massimi, minimi e flessi trovati con i numeri e riconosciuti esatti, le periodiche

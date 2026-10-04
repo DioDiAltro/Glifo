@@ -119,6 +119,12 @@ describe('le primitive', () => {
     expect(Date.now() - start).toBeLessThan(2000)
   })
 
+  it('con le lettere nei coefficienti (numeri positivi): le radici e le frazioni di secondo grado', () => {
+    expect(tex(r`\int \sqrt{R^2 - x^2} \, dx =`)).toBe(r`\frac{x\sqrt{R^{2} - x^{2}}}{2} + \frac{R^{2}\arcsin\left(\frac{x}{R}\right)}{2} + c`)
+    expect(tex(r`\int \frac{1}{\sqrt{R^2 - x^2}} \, dx =`)).toBe(r`\arcsin\left(\frac{x}{R}\right) + c`)
+    expect(tex(r`\int \frac{1}{x^2 + a^2} \, dx =`)).toBe(r`\frac{\arctan\left(\frac{x}{a}\right)}{a} + c`)
+  })
+
   it('si definisce e si usa dopo; la costante cambia nome se la c c\'è già', () => {
     expect(text(r`F(x) = \int x e^x \, dx`, 'F(1) =')).toBe('0')
     expect(text(r`F(x) = \int x e^x \, dx`, "F'(x) =")).toBe('xe^(x)')
@@ -157,8 +163,36 @@ describe('gli integrali definiti', () => {
 
   it('con le lettere: la funzione integrale e i parametri', () => {
     expect(text(r`\int_0^x t^2 \, dt =`)).toBe('x³/3')
-    expect(text(r`\int_1^x \frac{1}{t} \, dt =`)).toBe('ln|x|')
+    // Le lettere sono numeri positivi (da 1 a x l'integrale c'è solo per x > 0).
+    expect(text(r`\int_1^x \frac{1}{t} \, dt =`)).toBe('ln(x)')
     expect(text(r`\int_0^1 a x \, dx =`)).toBe('a/2')
+    expect(text(r`f(x) = a x^2`, r`\int_0^1 f(x) \, dx =`)).toBe('a/3')
+    expect(text(r`\int_0^{L} \sin\left(\frac{\pi x}{L}\right) \, dx =`)).toBe('(2L)/π')
+  })
+
+  it('con le lettere: il volume della sfera e del cono, l\'area del cerchio', () => {
+    expect(tex(r`\int_{-R}^{R} \pi (R^2 - x^2) \, dx =`)).toBe(r`\frac{4\pi R^{3}}{3}`)
+    expect(tex(r`2 \int_0^R \pi (R^2 - x^2) \, dx =`)).toBe(r`\frac{4\pi R^{3}}{3}`)
+    expect(text(r`\int_0^h \pi \left(\frac{r x}{h}\right)^2 \, dx =`)).toBe('(πhr²)/3')
+    // √(R²) = R: il raggio è positivo.
+    expect(text(r`\int_{-R}^{R} 2 \sqrt{R^2 - x^2} \, dx =`)).toBe('πR²')
+    // Con il numero al posto della lettera, il valore esatto.
+    expect(text('R = 2', r`\int_{-R}^{R} \pi (R^2 - x^2) \, dx =`)).toBe('(32π)/3 ≈ 33,510321…')
+  })
+
+  it('con le lettere: gli impropri e il valor medio', () => {
+    expect(text(r`\int_0^{\infty} \lambda e^{-\lambda t} \, dt =`)).toBe('1')
+    expect(text(r`\int_0^{\infty} t \lambda e^{-\lambda t} \, dt =`)).toBe('1/λ')
+    expect(text(r`\int_R^{\infty} \frac{G M m}{r^2} \, dr =`)).toBe('(GmM)/R')
+    expect(text(r`\int_0^{\infty} \frac{1}{x^2 + a^2} \, dx =`)).toBe('π/(2a)')
+    expect(tex(r`\frac{1}{b - a} \int_a^b x^2 \, dx =`)).toBe(r`\frac{a^{2} + ab + b^{2}}{3}`)
+    // Converge solo per p > 1: dipende dalla lettera, niente risultato.
+    expect(text(r`\int_1^{\infty} \frac{1}{x^p} \, dx =`)).toBeNull()
+  })
+
+  it('dentro un\'espressione, con i numeri: il valore esatto', () => {
+    expect(text(r`\int_0^1 x \, dx + \int_0^1 x^2 \, dx =`)).toBe('5/6')
+    expect(text(r`\frac{1}{\pi} \int_0^{\pi} \sin x \, dx =`)).toBe('2/π ≈ 0,636619…')
   })
 
   it('il valore si usa dopo, esatto', () => {
@@ -167,6 +201,19 @@ describe('gli integrali definiti', () => {
 })
 
 describe('le correzioni', () => {
+  it('\\pi (R^2 - x^2) è π per (R² − x²) anche con le lettere, come con i numeri', () => {
+    expect(text(r`\int_0^R \pi (R^2 - x^2) \, dx =`)).toBe('(2πR³)/3')
+  })
+
+  it('con le lettere un integrale che diverge non ha risultato: F(a) − F(−a) = −2/a sarebbe sbagliato', () => {
+    expect(text(r`\int_{-a}^{a} \frac{1}{x^2} \, dx =`)).toBeNull()
+  })
+
+  it('la variabile di un integrale resta variabile anche se la nota la definisce come numero', () => {
+    expect(text('t = 5', r`F(x) = \int_0^x t^2 \, dt`, "F'(x) =")).toBe('x²')
+    expect(text('t = 5', r`\frac{d}{dx} \int_0^x t^2 \, dt =`)).toBe('x²')
+  })
+
   it('a(x + 1)^2 con a un numero è a · (x + 1)², non (a(x + 1))²', () => {
     expect(text('a = 3', 'x = 1', 'a(x+1)^2 =')).toBe('12')
     // Anche con la virgola (a non è una frazione): 4√2, non 8.

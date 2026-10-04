@@ -67,7 +67,7 @@ import { toLatex } from './latex'
 import { children, namesIn, parseMath, type MathNode } from './parse'
 import { definiteIntegral } from './definite'
 import { study, studyPart, studyRows, studyTable } from './study'
-import { definiteParts, derive, exOf, expandCalculus, functionOf, isVectorBody, needsSymbols, partialDerivative, plainText, sub, subst, symbolicValue, symbols, tidy, toNode, zeroOverZero, type Ex, type SymbolScope } from './symbolic'
+import { cancelLinear, definiteParts, definiteValue, derive, exOf, expandCalculus, functionOf, isVectorBody, needsSymbols, partialDerivative, plainText, symbolicValue, symbols, tidy, toNode, zeroOverZero, type Ex, type SymbolScope } from './symbolic'
 
 export interface Definition {
   name: string
@@ -115,6 +115,8 @@ const STATISTICS = new Set([...DATA_FUNCTIONS, 'cov', 'corr', 'quartiles', 'regr
 
 /** I passi di somme e integrali per ogni risultato: abbastanza per i conti veri, non per bloccare la pagina. */
 const WORK = 2e6
+/** I valori delle lettere per controllare un risultato con le lettere: positivi, in tre modi diversi. */
+const CHECK_VALUES: ((i: number, n: number) => number)[] = [(i) => 1.3 + 0.37 * i, (i, n) => 2.2 + 0.37 * (n - 1 - i), (i) => 0.71 + 0.83 * i]
 
 const parsed = new Map<string, MathNode | null>()
 
@@ -931,8 +933,9 @@ export class Sheet {
         if (target && !target.params && chance.value) this.record(target, item, `${target.name} = ${src.slice(src.indexOf('=') + 1)}`, chance.value)
         return chance.shown
       }
-      // Un integrale definito con la primitiva: il valore esatto, gli impropri, la funzione integrale.
-      const integral = this.showIntegral(item, style)
+      // Un integrale definito con la primitiva: il valore esatto, gli impropri, la funzione integrale;
+      // uno dentro l'altro, dentro un'espressione e con le lettere (il volume della sfera, 4πR³/3).
+      const integral = this.showIntegral(item, style) ?? this.showDefinite(item, style)
       if (integral) {
         if (target && !target.params && integral.value) this.record(target, item, `${target.name} = ${src.slice(src.indexOf('=') + 1)}`, integral.value)
         return integral.shown
@@ -1409,13 +1412,8 @@ export class Sheet {
         const { F, a, b } = parts
         const v = item.v
         const letters = (e: Ex | null) => (e ? this.freeNames(toNode(e)) : [])
-        // Con le lettere: F(b) − F(a) come formula.
-        if ([...letters(F).filter((n) => n !== v), ...letters(a), ...letters(b)].length) {
-          if (!a || !b) return null
-          const node = toNode(sub(subst(F, v, b), subst(F, v, a)), style.decimal)
-          const tex = toLatex(node)
-          return tex ? { shown: { tex, text: plainText(node), rich: true }, value: null } : null
-        }
+        // Con le lettere lo fa showDefinite, che controlla il risultato con i numeri.
+        if ([...letters(F).filter((n) => n !== v), ...letters(a), ...letters(b)].length) return null
         const scope = this.scope()
         const A = bound(item.from, scope)({})
         const B = bound(item.to, scope)({})
@@ -1447,6 +1445,93 @@ export class Sheet {
     } catch {
       return null
     }
+  }
+
+  /**
+   * Gli integrali definiti con le primitive dove non basta showIntegral: uno dentro l'altro (\int_0^{2\pi}
+   * \int_0^{\pi} \int_0^R \rho^2 \sin\varphi \, d\rho \, d\varphi \, d\theta = 4πR³/3), dentro
+   * un'espressione (2 \int_0^R …) e con le lettere, che sono numeri positivi (un raggio, un'altezza):
+   * \int_{-R}^{R} \pi (R^2 - x^2) \, dx = 4πR³/3. Il risultato si controlla con i numeri (`checked`).
+   */
+  private showDefinite(item: MathNode, style: ReturnType<typeof styleOf>): { shown: FormattedResult; value: Value | null } | null {
+    let integrals = 0
+    walk(item, (n) => {
+      if (n.k === 'int') integrals++
+    })
+    if (!integrals) return null
+    try {
+      return withWorkLimit(WORK, () => {
+        // Le lettere della formula, poi anche quelle delle funzioni della nota che usa (f(x) = a x^2).
+        let letters = this.freeNames(item)
+        let value = definiteValue(item, this.symbolScope(), new Set(letters))
+        const more = value ? this.freeNames(toNode(value)).filter((n) => !letters.includes(n)) : []
+        if (more.length) {
+          letters = [...letters, ...more]
+          value = definiteValue(item, this.symbolScope(), new Set(letters))
+        }
+        // Un integrale solo con i numeri lo fa showIntegral (con gli impropri e i salti della primitiva).
+        if (!value || (!letters.length && item.k === 'int' && item.body.k !== 'int')) return null
+        const float = this.checked(item, value, letters)
+        if (float === null) return null
+        if (letters.length) {
+          // La forma più corta: (a + b)/2, non (b²/2 − a²/2)/(b − a).
+          const best = [value, tidy(value), cancelLinear(value)].map((x) => toNode(x, style.decimal)).map((n) => ({ n, tex: toLatex(n) })).reduce((a, b) => (b.tex && (!a.tex || b.tex.length < a.tex.length) ? b : a))
+          return best.tex ? { shown: { tex: best.tex, text: plainText(best.n), rich: true }, value: null } : null
+        }
+        if (value.t === 'num') return { shown: formatRational(value.v, style), value: { float, exact: value.v } }
+        if (!style.decimal && !symbols(value).some((n) => n !== 'π' && n !== 'e')) {
+          const node = toNode(value)
+          const tex = toLatex(node)
+          const digits = formatNumber(float, { ...style, decimal: true })
+          if (tex && digits && tex.length < 160) return { shown: { tex: `${tex} \\approx ${digits.tex}`, text: `${plainText(node)} ≈ ${digits.text}`, rich: true }, value: { float, exact: null } }
+        }
+        const shown = (style.decimal ? null : recognize(float, style)) ?? formatNumber(float, { ...style, decimal: true, digits: 9 })
+        return shown ? { shown, value: { float, exact: null } } : null
+      })
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Il valore trovato con le primitive torna con l'integrale fatto con i numeri? Con le lettere, per tre
+   * scelte di valori positivi: dove l'integrale con i numeri non c'è (diverge) non deve esserci nemmeno
+   * il valore trovato. Il valore con i numeri (con le lettere, quello della prima scelta), o null.
+   */
+  private checked(item: MathNode, value: Ex, letters: string[]): number | null {
+    const scope = scopeWith(this.scope(), letters)
+    let found: (vars: Record<string, number>) => number
+    let numeric: (vars: Record<string, number>) => number
+    try {
+      found = compile(toNode(value), scope)
+      // Con le funzioni della nota che hanno lettere (f(x) = a x^2), la formula con le funzioni scritte dentro.
+      try {
+        numeric = compile(item, scope, { calc: true })
+      } catch {
+        numeric = compile(toNode(exOf(item, this.symbolScope())), scope, { calc: true })
+      }
+    } catch {
+      return null
+    }
+    const close = (a: number, b: number) => Math.abs(a - b) <= 1e-6 * Math.max(1, Math.abs(a), Math.abs(b))
+    const n = letters.length
+    let first: number | null = null
+    for (const sample of n ? CHECK_VALUES : [() => 0]) {
+      const vars: Record<string, number> = {}
+      letters.forEach((name, i) => (vars[name] = sample(i, n)))
+      let a = NaN
+      let b = NaN
+      try {
+        a = found(vars)
+        b = withWorkLimit(WORK, () => numeric(vars))
+      } catch {
+        // Uno dei due non si calcola: lo dice il confronto qui sotto.
+      }
+      if (!Number.isFinite(a) && !Number.isFinite(b)) continue
+      if (!Number.isFinite(a) || !Number.isFinite(b) || !close(a, b)) return null
+      first ??= a
+    }
+    return first
   }
 
   /** Il valore esatto della funzione nel punto, se c'è e torna con il limite trovato con i numeri. */

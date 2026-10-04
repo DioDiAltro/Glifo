@@ -7,7 +7,7 @@
 import { compile, EMPTY_SCOPE, scopeWith } from './evaluate'
 import { Rational } from './exact'
 import { degree, padd, partialFractions, pdivmod, pgcd, pmul, ppow, pscale, trim, type PartialFraction, type Poly } from './polynomial'
-import { add, dependsOn, derive, expand, fn, key, mul, neg, num, pow, sub, subst, sym, symbols, toNode, type Ex } from './symbolic'
+import { add, assumePositive, dependsOn, derive, expand, fn, key, mul, neg, num, pow, sub, subst, sym, symbols, toNode, type Ex } from './symbolic'
 
 const R = (n: number | bigint, d: number | bigint = 1) => new Rational(BigInt(n), BigInt(d))
 const ONE = R(1)
@@ -26,13 +26,20 @@ const square = (e: Ex) => pow(e, num(2))
 let budget = 0
 /** Le primitive già cercate in questa ricerca (anche quelle che non si trovano). */
 let seen = new Map<string, Ex | null>()
+/** Le lettere che sono numeri positivi (un raggio): √(R² − x²) ha la primitiva con arcsin(x/R). */
+let positive: ReadonlySet<string> = new Set()
 
-/** Una primitiva di `f` rispetto a `v` (senza la costante), controllata derivandola; null se non si sa trovare. */
-export function primitive(f: Ex, v: string): Ex | null {
+/**
+ * Una primitiva di `f` rispetto a `v` (senza la costante), controllata derivandola; null se non si sa
+ * trovare. Le lettere `positiveLetters` sono numeri positivi (se non si dice: tutte tranne `v`).
+ */
+export function primitive(f: Ex, v: string, positiveLetters?: ReadonlySet<string>): Ex | null {
   const saved = budget
   const savedSeen = seen
+  const savedPositive = positive
   budget = 1500
   seen = new Map()
+  positive = positiveLetters ?? new Set(symbols(f).filter((n) => n !== v && n !== 'π' && n !== 'e'))
   try {
     const found = integrate(f, v, 0)
     if (!found) return null
@@ -45,6 +52,7 @@ export function primitive(f: Ex, v: string): Ex | null {
   } finally {
     budget = saved
     seen = savedSeen
+    positive = savedPositive
   }
 }
 
@@ -80,8 +88,18 @@ function search(f: Ex, v: string, depth: number): Ex | null {
     radicals(f, v, depth) ??
     exponentials(f, v, depth) ??
     hyperbolic(f, v, depth) ??
-    weierstrass(f, v)
+    weierstrass(f, v) ??
+    safely(() => quadraticRootLetters(f, v) ?? rationalLetters(f, v))
   )
+}
+
+/** Una strada che non deve fermare la ricerca: se qualcosa non si sa fare, null. */
+function safely(run: () => Ex | null): Ex | null {
+  try {
+    return run()
+  } catch {
+    return null
+  }
 }
 
 // ——— Gli strumenti ———
@@ -917,6 +935,127 @@ function quadraticRoot(f: Ex, v: string): Ex | null {
   return mul(num(c), add(half(mul(w, sq)), extra))
 }
 
+// ——— Con le lettere nei coefficienti ———
+
+/** a v² + b v + c, se `e` lo è (a ≠ 0; a, b e c senza v, anche con le lettere). */
+function quadraticIn(e: Ex, v: string): { a: Ex; b: Ex; c: Ex } | null {
+  if (isConst(e, v)) return null
+  let d1: Ex
+  let d2: Ex
+  try {
+    d1 = derive(e, v)
+    d2 = derive(d1, v)
+  } catch {
+    return null
+  }
+  if (!isConst(d2, v) || isZero(d2)) return null
+  const a = half(d2)
+  const b = subst(d1, v, num(0))
+  const c = subst(e, v, num(0))
+  return isZero(expand(sub(e, add(mul(a, square(sym(v))), mul(b, sym(v)), c)))) ? { a, b, c } : null
+}
+
+/**
+ * Il segno di un'espressione senza la variabile: dai numeri, con le lettere positive (e le altre, come
+ * le variabili degli integrali di fuori, anche negative). Null se cambia.
+ */
+function signOf(e: Ex): 1 | -1 | null {
+  const letters = symbols(e).filter((n) => n !== 'π' && n !== 'e')
+  let f: (vars: Record<string, number>) => number
+  try {
+    f = compile(toNode(e), scopeWith(EMPTY_SCOPE, letters))
+  } catch {
+    return null
+  }
+  let sign = 0
+  for (const [start, other] of [[1.3, 0.37], [0.71, -0.53], [2.9, -1.7]]) {
+    const vars: Record<string, number> = {}
+    letters.forEach((n, i) => (vars[n] = positive.has(n) ? start + 0.37 * i : other + 0.29 * i))
+    const value = f(vars)
+    if (!Number.isFinite(value) || Math.abs(value) < 1e-12) return null
+    const s = value > 0 ? 1 : -1
+    if (sign && s !== sign) return null
+    sign = s
+  }
+  return sign as 1 | -1
+}
+
+/**
+ * Le radici di secondo grado con le lettere: √(R² − x²) = (x√(R² − x²))/2 + (R²/2) arcsin(x/R),
+ * 1/√(R² − x²) = arcsin(x/R), √(x² + a²); anche con le variabili di fuori (√(R² − x² − y²) in y).
+ */
+function quadraticRootLetters(f: Ex, v: string): Ex | null {
+  const factors = f.t === 'mul' ? f.factors : [f]
+  const roots = factors.filter((x) => x.t === 'pow' && x.exp.t === 'num' && x.exp.v.d === 2n && Math.abs(Number(x.exp.v.n)) === 1)
+  if (roots.length !== 1) return null
+  const root = roots[0] as Extract<Ex, { t: 'pow' }>
+  const Q = quadraticIn(root.base, v)
+  if (!Q || !symbols(root.base).some((n) => n !== v && n !== 'π' && n !== 'e')) return null
+  // Fuori dalla radice p v + q.
+  const rest = factors.filter((x) => x !== root)
+  let p = num(0)
+  let q = num(f.t === 'mul' ? f.c : ONE)
+  if (rest.length) {
+    const lin = linear(mul(q, ...rest), v)
+    if (!lin) return null
+    ;({ a: p, b: q } = lin)
+  }
+  const { a, b, c } = Q
+  const sa = signOf(a)
+  if (!sa) return null
+  const sq = sqrt(root.base)
+  // a(v + h)² + δ, con w = v + h.
+  const h = mul(b, inv(mul(num(2), a)))
+  const delta = sub(c, mul(b, b, inv(mul(num(4), a))))
+  const w = add(sym(v), h)
+  const ra = sqrt(sa < 0 ? neg(a) : a)
+  const logOf = (inside: Ex) => (signOf(delta) === 1 ? ln(inside) : lnAbs(inside))
+  let F: Ex
+  if (root.exp.t === 'num' && root.exp.v.sign < 0) {
+    // (p v + q)/√Q = (p/(2a)) Q'/√Q + (q − p b/(2a))/√Q.
+    const r = expand(sub(q, mul(p, b, inv(mul(num(2), a)))))
+    const inverse = sa < 0 ? mul(inv(ra), fn('arcsin', [mul(w, inv(sqrt(mul(delta, inv(neg(a))))))])) : mul(inv(ra), logOf(add(mul(ra, w), sq)))
+    F = add(mul(p, inv(a), sq), isZero(r) ? num(0) : mul(r, inverse))
+  } else {
+    if (!isZero(p)) return null
+    const s = mul(delta, inv(sa < 0 ? neg(a) : a))
+    const extra = sa < 0 ? mul(half(s), ra, fn('arcsin', [mul(w, inv(sqrt(s)))])) : mul(half(s), ra, logOf(add(mul(ra, w), sq)))
+    F = mul(q, add(half(mul(w, sq)), extra))
+  }
+  return assumePositive(F, positive)
+}
+
+/** ∫ (p v + q)/(a v² + b v + c) con le lettere: 1/(x² + a²) = arctan(x/a)/a. */
+function rationalLetters(f: Ex, v: string): Ex | null {
+  const factors = f.t === 'mul' ? f.factors : [f]
+  const below = factors.filter((x) => x.t === 'pow' && x.exp.t === 'num' && x.exp.v.n === -1n && x.exp.v.d === 1n && dependsOn(x.base, v))
+  if (below.length !== 1) return null
+  const Qx = (below[0] as Extract<Ex, { t: 'pow' }>).base
+  const Q = quadraticIn(Qx, v)
+  if (!Q || !symbols(Qx).some((n) => n !== v && n !== 'π' && n !== 'e')) return null
+  const rest = factors.filter((x) => x !== below[0])
+  let p = num(0)
+  let q = num(f.t === 'mul' ? f.c : ONE)
+  if (rest.length) {
+    const lin = linear(mul(q, ...rest), v)
+    if (!lin) return null
+    ;({ a: p, b: q } = lin)
+  }
+  const { a, b, c } = Q
+  const disc = sub(mul(b, b), mul(num(4), a, c))
+  const sd = signOf(disc)
+  if (!sd) return null
+  // p v + q = (p/(2a))(2a v + b) + (q − p b/(2a)).
+  const out: Ex[] = [mul(p, inv(mul(num(2), a)), sd < 0 && signOf(a) === 1 ? ln(Qx) : lnAbs(Qx))]
+  const r = expand(sub(q, mul(p, b, inv(mul(num(2), a)))))
+  if (!isZero(r)) {
+    const u = add(mul(num(2), a, sym(v)), b)
+    const s = sqrt(sd < 0 ? neg(disc) : disc)
+    out.push(sd < 0 ? mul(r, num(2), inv(s), fn('arctan', [mul(u, inv(s))])) : mul(r, inv(s), lnAbs(mul(sub(u, s), inv(add(u, s))))))
+  }
+  return assumePositive(add(...out), positive)
+}
+
 /**
  * Prodotti di potenze di sinh e cosh (anche tanh) dello stesso a x + b, come per seno e coseno:
  * cosh² − sinh² = 1, cosh² = (1 + cosh 2u)/2. Se no, come esponenziali.
@@ -1086,17 +1225,22 @@ function verified(F: Ex, f: Ex, v: string): boolean {
   } catch {
     return false
   }
-  const point: Record<string, number> = {}
-  others.forEach((n, i) => (point[n] = 1.3 + 0.37 * i))
-  let good = 0
-  for (const x of SAMPLES) {
-    point[v] = x
-    const p = a(point)
-    const q = b(point)
-    if (!Number.isFinite(p) && !Number.isFinite(q)) continue
-    if (!Number.isFinite(p) || !Number.isFinite(q)) return false
-    if (Math.abs(p - q) > 1e-7 * Math.max(1, Math.abs(q))) return false
-    good++
+  // Le altre lettere crescenti e, se così la funzione quasi non esiste, decrescenti: √(R² − x² − y²) in y
+  // esiste solo se R è più grande di x.
+  for (const order of others.length > 1 ? [1, -1] : [1]) {
+    const point: Record<string, number> = {}
+    others.forEach((n, i) => (point[n] = 1.3 + 0.37 * (order > 0 ? i : others.length - 1 - i)))
+    let good = 0
+    for (const x of SAMPLES) {
+      point[v] = x
+      const p = a(point)
+      const q = b(point)
+      if (!Number.isFinite(p) && !Number.isFinite(q)) continue
+      if (!Number.isFinite(p) || !Number.isFinite(q)) return false
+      if (Math.abs(p - q) > 1e-7 * Math.max(1, Math.abs(q))) return false
+      good++
+    }
+    if (good >= 2) return true
   }
-  return good >= 2
+  return false
 }

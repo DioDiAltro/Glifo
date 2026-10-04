@@ -93,10 +93,24 @@ describe('gli integrali doppi e tripli: i valori nella nota', () => {
     expect(result(r`\iiint_{x^2 + y^2 \le 1, 0 \le z \le 2} 1 \, dV =`)).toBe('6,283185…')
   })
 
-  it('uno dentro l\'altro, anche in coordinate polari e sferiche', () => {
-    expect(result(r`\int_0^1 \int_0^x x y \, dy \, dx =`)).toBe('0,125')
-    expect(result(r`\int_0^{2\pi} \int_0^1 r \, dr \, d\theta =`)).toBe('3,141592…')
-    expect(result(r`\int_0^{2\pi} \int_0^{\pi} \int_0^1 \rho^2 \sin\varphi \, d\rho \, d\varphi \, d\theta =`)).toBe('4,188790…')
+  it('uno dentro l\'altro, anche in coordinate polari e sferiche: esatti, con le primitive', () => {
+    expect(result(r`\int_0^1 \int_0^x x y \, dy \, dx =`)).toBe('1/8')
+    expect(result(r`\int_0^{2\pi} \int_0^1 r \, dr \, d\theta =`)).toBe('π ≈ 3,141592…')
+    expect(result(r`\int_0^{2\pi} \int_0^{\pi} \int_0^1 \rho^2 \sin\varphi \, d\rho \, d\varphi \, d\theta =`)).toBe('(4π)/3 ≈ 4,188790…')
+    expect(result(r`\int_0^{\infty} \int_0^{\infty} e^{-x - y} \, dy \, dx =`)).toBe('1')
+    // Senza primitiva, con i numeri.
+    expect(result(r`\int_0^1 \int_0^1 e^{-x^2 y^2} \, dy \, dx =`)).toBe('0,905940…')
+  })
+
+  it('uno dentro l\'altro con le lettere: la sfera in coordinate sferiche, cilindriche e cartesiane', () => {
+    const sphere = '(4πR³)/3'
+    expect(result(r`\int_0^{2\pi} \int_0^{\pi} \int_0^R \rho^2 \sin\varphi \, d\rho \, d\varphi \, d\theta =`)).toBe(sphere)
+    expect(result(r`\int_0^{2\pi} \int_0^R \int_{-\sqrt{R^2 - r^2}}^{\sqrt{R^2 - r^2}} r \, dz \, dr \, d\theta =`)).toBe(sphere)
+    expect(result(r`\int_{-R}^{R} \int_{-\sqrt{R^2 - x^2}}^{\sqrt{R^2 - x^2}} \int_{-\sqrt{R^2 - x^2 - y^2}}^{\sqrt{R^2 - x^2 - y^2}} dz \, dy \, dx =`)).toBe(sphere)
+    expect(result('R = 2', r`\int_0^{2\pi} \int_0^{\pi} \int_0^R \rho^2 \sin\varphi \, d\rho \, d\varphi \, d\theta =`)).toBe('(32π)/3 ≈ 33,510321…')
+    expect(result(r`\int_0^{2\pi} \int_0^R r \, dr \, d\theta =`)).toBe('πR²')
+    expect(result(r`\int_0^{2\pi} \int_0^{\pi} R^2 \sin\varphi \, d\varphi \, d\theta =`)).toBe('4πR²')
+    expect(result(r`\int_0^a \int_0^b x y \, dy \, dx =`)).toBe('(a²b²)/4')
   })
 
   it('con un nome il valore si usa dopo', () => {
