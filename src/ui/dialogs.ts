@@ -346,7 +346,7 @@ export function promptDialog(opts: {
   })
 }
 
-export function openHelpDialog(): void {
+export function openHelpDialog(): HTMLDialogElement {
   const row = (keys: string[], text: string) =>
     h(
       'tr',
@@ -935,5 +935,7 @@ export function openHelpDialog(): void {
       ').',
     ),
   ]
-  dialogShell('Come si usa', body, 'dialog-help').showModal()
+  const dialog = dialogShell('Come si usa', body, 'dialog-help')
+  dialog.showModal()
+  return dialog
 }

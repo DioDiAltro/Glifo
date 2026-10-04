@@ -67,7 +67,7 @@ import { SidePanel } from './ui/sidePanel'
 import { toast } from './ui/toast'
 import { leaveNotice, takeNotice } from './ui/notice'
 import { createToolbar } from './ui/toolbar'
-import { openTutorial, tutorialSeen } from './ui/tutorial'
+import { openTutorial, showTutorialHint, tutorialSeen } from './ui/tutorial'
 
 /** La build per claude.ai (`GLIFO_NO_PWA=1`, vedi vite.config.ts): l'account è spento. */
 declare const __GLIFO_DEMO__: boolean
@@ -151,46 +151,31 @@ const viewSwitch = h(
 
 const accountButton = new AccountButton(() => openAccount())
 // Nella build per claude.ai e dentro claude.ai (la demo e le prove della grafica, vedi CLAUDE.md)
-// l'account resta spento: così gli appunti veri non si toccano. Per lo stesso motivo lì non si condivide.
+// l'account è spento, così gli appunti veri non si toccano: Accedi e Condividi si vedono come sul
+// sito, ma la finestra di accesso spiega che lì non si entra.
 const accountOff = __GLIFO_DEMO__ || inClaudeViewer()
-accountButton.el.hidden = accountOff
+const ACCOUNT_OFF = 'In questa copia di Glifo dentro claude.ai l\'accesso è spento, così gli appunti veri non si toccano: sul sito di Glifo funziona.'
 
-const themeButton = h('button', {
-  class: 'icon-button theme-toggle',
-  title: 'Tema chiaro/scuro',
-  attrs: { type: 'button', 'aria-label': 'Cambia tema' },
-  on: { click: () => toggleTheme() },
-})
-
-/** Apre o chiude la barra laterale: il pulsante c'è dentro la barra e, quando è chiusa, sopra il testo. */
+/**
+ * Apre o chiude la barra laterale: è il logo, come nella barra laterale di Gemini, e sta nello
+ * stesso punto da aperta (in cima alla barra) e da chiusa (sopra il testo).
+ */
 const sidebarToggle = (label: string, className: string) =>
-  h(
-    'button',
-    {
-      class: `icon-button ${className}`,
-      title: label,
-      attrs: { type: 'button', 'aria-label': label, 'aria-controls': 'notes-panel' },
-      on: { click: () => setPanels({ notesOpen: !settings.notesOpen }) },
-    },
-    icon(ICONS.sidebar),
-  )
+  h('button', {
+    class: `logo-toggle ${className}`,
+    title: label,
+    attrs: { type: 'button', 'aria-label': label, 'aria-controls': 'notes-panel' },
+    on: { click: () => setPanels({ notesOpen: !settings.notesOpen }) },
+    html: logoMark(),
+  })
+const sideOpen = sidebarToggle('Apri la barra laterale', 'side-open')
 
-// Non c'è più una barra in alto. In cima alla barra laterale: il marchio, la nota aperta e i
-// suoi pulsanti; in fondo l'account e le impostazioni, come nell'app di Claude.
+// Non c'è più una barra in alto. In cima alla barra laterale: il logo, la nota aperta e i suoi
+// pulsanti; in fondo l'account e le impostazioni, come nell'app di Claude.
 const sidebarTop = h(
   'div',
   { class: 'side-top' },
-  h(
-    'div',
-    { class: 'side-brand-row' },
-    h(
-      'div',
-      { class: 'brand' },
-      h('span', { class: 'brand-mark', attrs: { 'aria-hidden': 'true' }, html: logoMark() }),
-      h('span', { class: 'brand-name' }, 'Glifo'),
-    ),
-    sidebarToggle('Chiudi la barra laterale', 'side-close'),
-  ),
+  h('div', { class: 'side-brand-row' }, sidebarToggle('Chiudi la barra laterale', 'side-close'), h('span', { class: 'brand-name' }, 'Glifo')),
   h('div', { class: 'doc-info' }, titleEl, statusEl),
   h(
     'div',
@@ -200,7 +185,7 @@ const sidebarTop = h(
       {
         class: 'btn btn-small share-button',
         title: 'Condividi la nota con un link',
-        attrs: { type: 'button', 'aria-label': 'Condividi', hidden: accountOff },
+        attrs: { type: 'button', 'aria-label': 'Condividi' },
         on: { click: () => openShare() },
       },
       icon(ICONS.share, 15),
@@ -217,20 +202,20 @@ const sidebarTop = h(
       },
       icon(ICONS.print),
     ),
-    themeButton,
   ),
 )
 
-// In fondo, come nell'app di Claude: l'account, poi «Come si usa» e le impostazioni.
+// In fondo, come nell'app di Claude: l'account, poi «Come si usa» e le impostazioni (anche il tema).
+const helpButton = h(
+  'button',
+  { class: 'icon-button side-help', title: 'Come si usa', attrs: { type: 'button', 'aria-label': 'Come si usa' }, on: { click: () => openGuide() } },
+  icon(ICONS.help),
+)
 const sidebarBottom = h(
   'div',
   { class: 'side-profile' },
   accountButton.el,
-  h(
-    'button',
-    { class: 'icon-button side-help', title: 'Come si usa', attrs: { type: 'button', 'aria-label': 'Come si usa' }, on: { click: () => openGuide() } },
-    icon(ICONS.help),
-  ),
+  helpButton,
   h(
     'button',
     { class: 'icon-button', title: 'Impostazioni', attrs: { type: 'button', 'aria-label': 'Impostazioni' }, on: { click: () => openSettings() } },
@@ -355,7 +340,7 @@ const floatRight = h(
 const floatBar = h(
   'div',
   { class: 'float-bar' },
-  h('div', { class: 'float-left' }, sidebarToggle('Apri la barra laterale', 'float-button side-open'), floatTools),
+  h('div', { class: 'float-left' }, sideOpen, floatTools),
   viewSwitch,
   floatRight,
 )
@@ -432,14 +417,9 @@ function applyTheme(): void {
   const root = document.documentElement
   if (settings.theme === 'auto') delete root.dataset.theme
   else root.dataset.theme = settings.theme
-  themeButton.replaceChildren(icon(isDark() ? ICONS.sun : ICONS.moon))
   root.style.setProperty('--editor-font-size', `${settings.fontSize}px`)
   // Gli schemi hanno i colori del tema: si ridisegnano.
   preview.setTheme(isDark() ? 'dark' : 'light')
-}
-
-function toggleTheme(): void {
-  updateSettings({ theme: isDark() ? 'light' : 'dark' })
 }
 
 /** `fromAccount`: arrivate dall'account, quindi non vanno rimandate. */
@@ -484,9 +464,17 @@ function focusSymbolSearch(): void {
   sidePanel.focusSearch()
 }
 
-/** «Come si usa»: il tutorial, e da lì la guida con tutte le scorciatoie. */
-function openGuide(): void {
-  openTutorial({ dark: isDark(), onShortcuts: () => openHelpDialog() })
+/**
+ * «Come si usa»: il tutorial, e da lì la guida con tutte le scorciatoie. `first`: si è aperto da
+ * solo, la prima volta. Chiuso quello, o la guida, un fumetto dice dove si rivede.
+ */
+function openGuide(first = false): void {
+  const pointToGuide = () => showTutorialHint({ help: helpButton, toggle: sideOpen })
+  openTutorial({
+    dark: isDark(),
+    onShortcuts: () => openHelpDialog().addEventListener('close', pointToGuide),
+    onClose: first ? pointToGuide : undefined,
+  })
 }
 
 function openSettings(): void {
@@ -513,7 +501,7 @@ setView(settings.view, false)
 // La prima volta il tutorial (se nel frattempo non si è aperta un'altra finestra).
 if (!tutorialSeen()) {
   window.setTimeout(() => {
-    if (!document.querySelector('dialog[open]')) openGuide()
+    if (!document.querySelector('dialog[open]')) openGuide(true)
   }, 400)
 }
 
@@ -1042,6 +1030,12 @@ function dropStarter(): void {
 }
 
 function openAccount(): void {
+  if (accountOff) {
+    // La finestra si vede com'è sul sito, ma non si entra.
+    const off = () => Promise.reject(new Error(ACCOUNT_OFF))
+    openLoginDialog({ sendCode: off, verifyCode: off, withGoogle: off, onSignedIn: () => {} })
+    return
+  }
   if (!account || !sync) {
     openLoginDialog({ sendCode, verifyCode, withGoogle: startGoogleSignIn, onSignedIn: (user) => completeSignIn(user) })
     return

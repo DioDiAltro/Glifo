@@ -28,6 +28,12 @@ browser.newContext = async (options) => {
 }
 /** Una pagina come alla prima apertura di Glifo, con il tutorial. */
 const firstVisit = async (options) => (await plainContext(options)).newPage()
+/** Il tema si cambia nelle impostazioni (in fondo alla barra laterale). */
+async function chooseTheme(page, label) {
+  await page.locator('.side-profile button[aria-label="Impostazioni"]').click()
+  await page.locator('dialog .segmented label', { hasText: label }).click()
+  await page.keyboard.press('Escape')
+}
 let failures = 0
 const check = (ok, msg) => {
   console.log(`${ok ? '✓' : '✗'} ${msg}`)
@@ -415,7 +421,7 @@ try {
     }
     const apple = await pixels(document.querySelector('link[rel="apple-touch-icon"]').href, 180)
     icons.push({ src: 'apple-touch-icon', ok: apple.width === 180 })
-    return { name: manifest.name, shortName: manifest.short_name, icons, mark: !!document.querySelector('.brand-mark svg circle') }
+    return { name: manifest.name, shortName: manifest.short_name, icons, mark: !!document.querySelector('.side-top .logo-toggle svg circle') }
   })
   check(installed.name === 'Glifo' && installed.shortName === 'Glifo', `l'app installata si chiama «Glifo» (${installed.name})`)
   check(
@@ -546,7 +552,7 @@ try {
   check(!(await savedNote()).includes('Quinta') && (await savedNote()).includes('"text":"Tesi"'), 'Ctrl+Z nel testo annulla l\'ultima modifica dello schema')
   // Con il tema scuro lo schema si ridisegna con i suoi colori
   const lightFill = await sp.locator('.preview-pane .schema-block svg').innerHTML()
-  await sp.locator('button[aria-label="Cambia tema"]').click()
+  await chooseTheme(sp, 'Scuro')
   await sp.waitForFunction((before) => {
     const svg = document.querySelector('.preview-pane .schema-block svg')
     return svg && svg.innerHTML !== before && svg.innerHTML.includes('#1b1f2b')
@@ -1553,7 +1559,7 @@ try {
   check(test.includes('non si rifiuta H₀'), `un test d'ipotesi ha il p-value e la decisione, con la regione di rifiuto nel pannello (${JSON.stringify(test.slice(0, 50))})`)
   await gp.close()
 
-  // Niente barra in alto: il marchio, la nota aperta e i suoi pulsanti in cima alla barra
+  // Niente barra in alto: il logo, la nota aperta e i suoi pulsanti in cima alla barra
   // laterale, l'account e le impostazioni in fondo; sopra il testo, volanti, i simboli e le viste
   const side = await browser.newPage({ viewport: { width: 1440, height: 900 } })
   side.on('pageerror', (e) => errors.push(e.message))
@@ -1591,11 +1597,15 @@ try {
       top: !!panel.querySelector('.side-top .doc-title') && !!panel.querySelector('.side-top .share-button'),
       bottom: ['Come si usa', 'Impostazioni'].every((l) => panel.querySelector(`.side-profile button[aria-label="${l}"]`)) && !!panel.querySelector('.side-profile .account-button'),
       profileAtBottom: Math.abs(box('.side-profile').bottom - box('.notes-panel').bottom) < 1,
+      // Il tema si cambia solo nelle impostazioni
+      noTheme: !document.querySelector('button[aria-label="Cambia tema"], .theme-toggle'),
+      // Sotto «Accedi» la scritta si legge tutta
+      subFits: [...panel.querySelectorAll('.account-name, .account-sub')].every((el) => el.scrollWidth <= el.clientWidth),
     }
   })
   check(
-    !sideLayout.topbar && sideLayout.top && sideLayout.bottom && sideLayout.profileAtBottom,
-    `la barra in alto non c'è: nota e pulsanti in cima alla barra laterale; in fondo account, «Come si usa» e impostazioni (${JSON.stringify(sideLayout)})`,
+    !sideLayout.topbar && sideLayout.top && sideLayout.bottom && sideLayout.profileAtBottom && sideLayout.noTheme && sideLayout.subFits,
+    `la barra in alto non c'è: nota e pulsanti in cima alla barra laterale; in fondo account, «Come si usa» e impostazioni; niente pulsante del tema (${JSON.stringify(sideLayout)})`,
   )
   const withPanels = await rowLayout()
   await side.locator('.symbols-toggle').click()
@@ -1607,12 +1617,29 @@ try {
       withoutSymbols.fit === 'wide',
     `sopra il testo una riga sola: le viste al centro, i simboli a destra, niente si sovrappone e l'anteprima comincia sotto (${JSON.stringify({ withPanels, withoutSymbols })})`,
   )
+  // Il logo apre e chiude la barra laterale, e sta nello stesso punto da aperta e da chiusa
+  // (con il puntatore lontano: sopra il logo il colore cambia)
+  const logoAt = async (selector) => {
+    await side.mouse.move(700, 500)
+    await side.waitForTimeout(250)
+    return side.evaluate((s) => {
+      const el = document.querySelector(s)
+      const r = el.getBoundingClientRect()
+      return { x: r.left, y: r.top, w: r.width, logo: !!el.querySelector('svg circle'), bg: getComputedStyle(el).backgroundColor }
+    }, selector)
+  }
+  const openLogo = await logoAt('.side-close')
   await side.locator('.side-close').click()
   const closedSide = await side.evaluate(() => ({ open: document.querySelector('.app').classList.contains('notes-open'), button: !!document.querySelector('.side-open')?.offsetParent }))
+  const closedLogo = await logoAt('.side-open')
   await side.locator('.side-open').click()
   check(
     !closedSide.open && closedSide.button && (await side.locator('.side-top').isVisible()),
-    'chiusa la barra laterale, il pulsante volante la riapre',
+    'chiusa la barra laterale, il logo sopra il testo la riapre',
+  )
+  check(
+    openLogo.logo && closedLogo.logo && openLogo.bg === closedLogo.bg && Math.abs(openLogo.x - closedLogo.x) < 1 && Math.abs(openLogo.y - closedLogo.y) < 1 && openLogo.w === 34,
+    `il pulsante della barra laterale è il logo, nello stesso punto da aperta e da chiusa (${JSON.stringify({ openLogo, closedLogo })})`,
   )
   await side.close()
   // Sul telefono la barra laterale si apre sopra il testo, e niente esce dallo schermo
@@ -1683,10 +1710,42 @@ try {
   await tutorial.locator('.tutorial-next').click()
   await first.waitForTimeout(200)
   const closed = !(await tutorial.count())
+  // Chiuso il tutorial della prima volta, un fumetto punta al «?» che lo riapre
+  const hint = first.locator('.tutorial-hint.is-visible')
+  await hint.waitFor({ timeout: 3000 })
+  const pointing = await first.evaluate(() => {
+    const bubble = document.querySelector('.tutorial-hint')
+    const b = bubble.getBoundingClientRect()
+    const help = document.querySelector('.side-help')
+    const r = help.getBoundingClientRect()
+    const tip = b.left + parseFloat(bubble.style.getPropertyValue('--arrow-x'))
+    return {
+      text: bubble.textContent,
+      side: bubble.dataset.side,
+      above: b.bottom <= r.top,
+      tip: Math.abs(tip - (r.left + r.width / 2)) < 2,
+      lit: help.classList.contains('is-pointed'),
+      inside: b.left >= 0 && b.right <= innerWidth,
+    }
+  })
+  check(
+    pointing.text.includes('rivedere il tutorial') && pointing.side === 'above' && pointing.above && pointing.tip && pointing.lit && pointing.inside,
+    `chiuso il tutorial, un fumetto punta al «?» in fondo alla barra laterale, che si illumina (${JSON.stringify(pointing)})`,
+  )
+  await first.locator('.cm-content').click()
+  await first.waitForTimeout(400)
+  check(
+    !(await first.locator('.tutorial-hint').count()) && !(await first.locator('.side-help.is-pointed').count()),
+    'con un clic altrove il fumetto se ne va',
+  )
   await first.reload()
   await first.waitForSelector('.cm-editor')
   await first.waitForTimeout(900)
   check(closed && !(await first.locator('dialog.dialog-tutorial').count()), '«Inizia» chiude il tutorial, che poi non si apre più da solo')
+  await first.locator('.side-help').click()
+  await tutorial.locator('.tutorial-close').click()
+  await first.waitForTimeout(500)
+  check(!(await first.locator('.tutorial-hint').count()), 'aperto da «Come si usa» e chiuso con la x, il tutorial non lascia il fumetto (si sa già dov\'è)')
   await first.locator('.side-help').click()
   const again = await tutorialPage()
   await tutorial.locator('.tutorial-shortcuts').click()
@@ -1694,7 +1753,34 @@ try {
     again.step === '1 di 5' && (await first.locator('dialog table.shortcuts').isVisible()),
     '«Come si usa» riapre il tutorial, e da lì si arriva a tutte le scorciatoie',
   )
+  // Chiusa la guida con la x, il fumetto dice dove si rivede il tutorial; poi se ne va da solo
+  await first.locator('dialog.dialog-help .dialog-head button[aria-label="Chiudi"]').click()
+  await hint.waitFor({ timeout: 3000 })
+  const shownAt = Date.now()
+  await first.locator('.tutorial-hint').waitFor({ state: 'detached', timeout: 15000 })
+  const lasted = Date.now() - shownAt
+  check(lasted > 6000 && lasted < 11000, `chiuse le scorciatoie, il fumetto c'è e se ne va da solo dopo qualche secondo (${lasted} ms)`)
   await first.context().close()
+  // Sul telefono la barra laterale è chiusa: il fumetto punta al logo che la apre
+  const firstPhone = await firstVisit({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+  firstPhone.on('pageerror', (e) => errors.push(e.message))
+  await firstPhone.goto(url)
+  await firstPhone.locator('dialog.dialog-tutorial .tutorial-close').tap()
+  await firstPhone.locator('.tutorial-hint.is-visible').waitFor({ timeout: 3000 })
+  const phoneHint = await firstPhone.evaluate(() => {
+    const bubble = document.querySelector('.tutorial-hint')
+    const b = bubble.getBoundingClientRect()
+    const r = document.querySelector('.side-open').getBoundingClientRect()
+    return { text: bubble.textContent, below: b.top >= r.bottom, inside: b.left >= 0 && b.right <= innerWidth, lit: document.querySelector('.side-open').classList.contains('is-pointed') }
+  })
+  check(
+    phoneHint.text.includes('con il logo') && phoneHint.below && phoneHint.inside && phoneHint.lit,
+    `sul telefono, a barra chiusa, il fumetto punta al logo che la apre (${JSON.stringify(phoneHint)})`,
+  )
+  await firstPhone.locator('.tutorial-hint-close').tap()
+  await firstPhone.waitForTimeout(400)
+  check(!(await firstPhone.locator('.tutorial-hint').count()), 'la x chiude il fumetto')
+  await firstPhone.context().close()
   // Nel tema scuro i video sono quelli scuri
   const firstDark = await firstVisit({ viewport: { width: 1280, height: 800 }, colorScheme: 'dark' })
   await firstDark.goto(url)
@@ -1702,18 +1788,38 @@ try {
   const darkVideo = await firstDark.locator('dialog.dialog-tutorial video').getAttribute('src')
   check(darkVideo.endsWith('scrivere-scuro.webm'), `nel tema scuro il tutorial mostra i video scuri (${darkVideo})`)
   await firstDark.context().close()
-  // Dentro claude.ai (la demo e le prove della grafica) l'account e la condivisione sono spenti
+  // Dentro claude.ai (la demo e le prove della grafica) Accedi e Condividi si vedono come sul
+  // sito, ma l'accesso è spento: la finestra lo dice e non va da nessuna parte
   const viewer = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+  viewer.on('pageerror', (e) => errors.push(e.message))
+  const viewerRequests = []
+  viewer.on('request', (r) => viewerRequests.push(r.url()))
   await viewer.addInitScript(() => {
     window.claude = { use: () => new Promise(() => {}) }
   })
   await viewer.goto(url)
   await viewer.waitForSelector('.cm-editor')
+  const viewerButtons =
+    (await viewer.locator('.account-button').isVisible()) &&
+    (await viewer.locator('.share-button').isVisible()) &&
+    (await viewer.locator('.side-profile button[aria-label="Impostazioni"]').isVisible())
+  await viewer.locator('.share-button').click()
+  await viewer.locator('dialog.dialog-share .btn-primary', { hasText: 'Accedi' }).click()
+  const login = viewer.locator('dialog.dialog-login')
+  await login.locator('.login-google').click()
+  await login.locator('.prompt-error:not([hidden])').waitFor({ timeout: 3000 })
+  const offMessage = await login.locator('.prompt-error').textContent()
+  await login.locator('input[type="email"]').fill('prova@example.com')
+  await login.locator('button[type="submit"]').click()
+  await viewer.waitForTimeout(300)
+  const stillEmail = (await login.locator('input[type="email"]').count()) === 1
   check(
-    !(await viewer.locator('.account-button').isVisible()) &&
-      !(await viewer.locator('.share-button').isVisible()) &&
-      (await viewer.locator('.side-profile button[aria-label="Impostazioni"]').isVisible()),
-    'dentro claude.ai l\'account e la condivisione sono spenti, le impostazioni no',
+    viewerButtons &&
+      offMessage.includes('accesso è spento') &&
+      stillEmail &&
+      !viewerRequests.some((u) => /supabase|google/.test(u)) &&
+      viewer.url().startsWith(url),
+    `dentro claude.ai Accedi e Condividi si vedono, ma l'accesso è spento e la finestra lo dice (${JSON.stringify({ viewerButtons, offMessage, stillEmail })})`,
   )
   await viewer.close()
 

@@ -39,7 +39,7 @@ export const TUTORIAL_PAGES: readonly TutorialPage[] = [
   {
     id: 'barra',
     title: 'Viste, appunti e account',
-    text: 'In alto al centro scegli Editor, Diviso o Anteprima. Nella barra a sinistra ci sono gli appunti, le cartelle e «Condividi»; in fondo l\'account, per ritrovare tutto su ogni dispositivo, «Come si usa» e le impostazioni.',
+    text: 'In alto al centro scegli Editor, Diviso o Anteprima. Il logo in alto a sinistra apre la barra laterale, con gli appunti, le cartelle e «Condividi»; in fondo ci sono l\'account, per ritrovare tutto su ogni dispositivo, «Come si usa» e le impostazioni.',
   },
 ]
 
@@ -75,13 +75,16 @@ function richText(text: string): (string | HTMLElement)[] {
 export interface TutorialOptions {
   /** Il tema dell'app, per i video. */
   dark: boolean
-  /** «Tutte le scorciatoie»: la guida completa. */
+  /** «Tutte le scorciatoie»: la guida completa (il tutorial si chiude). */
   onShortcuts(): void
+  /** Il tutorial si è chiuso con la x, Esc o «Inizia» (non per andare alle scorciatoie). */
+  onClose?(): void
 }
 
 export function openTutorial(opts: TutorialOptions): HTMLDialogElement {
   const pages = TUTORIAL_PAGES
   let index = 0
+  let toShortcuts = false
   const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
   const video = h('video', {
@@ -126,6 +129,7 @@ export function openTutorial(opts: TutorialOptions): HTMLDialogElement {
           attrs: { type: 'button' },
           on: {
             click: () => {
+              toShortcuts = true
               dialog.close()
               opts.onShortcuts()
             },
@@ -176,9 +180,110 @@ export function openTutorial(opts: TutorialOptions): HTMLDialogElement {
     markSeen()
     video.pause()
     dialog.remove()
+    if (!toShortcuts) opts.onClose?.()
   })
   document.body.append(dialog)
   dialog.showModal()
   show(0)
   return dialog
+}
+
+/** Quanto resta il fumetto dopo il tutorial, se non ci si passa sopra. */
+export const HINT_MS = 8000
+
+let closeHint: (() => void) | null = null
+
+/**
+ * Chiuso il tutorial (quello della prima volta, o lasciato per le scorciatoie), un fumetto dice
+ * dove si rivede: punta al «?» in fondo alla barra laterale o, se la barra è chiusa, al logo che la
+ * apre, e quel pulsante si illumina. Si toglie da solo dopo qualche secondo (non mentre ci si passa
+ * sopra), con la x, con Esc o con un clic altrove.
+ */
+export function showTutorialHint(anchors: { help: HTMLElement; toggle: HTMLElement }): void {
+  closeHint?.()
+  const shown = (el: HTMLElement) => el.getClientRects().length > 0
+  const anchor = shown(anchors.help) ? anchors.help : shown(anchors.toggle) ? anchors.toggle : null
+  const mark = () =>
+    h('span', { class: 'tutorial-hint-mark', attrs: { role: 'img', 'aria-label': '«Come si usa»' } }, icon(ICONS.help, 15))
+  const message = h('p', { class: 'tutorial-hint-text' })
+  const bubble = h(
+    'div',
+    { class: 'tutorial-hint', attrs: { role: 'status' } },
+    message,
+    h(
+      'button',
+      {
+        class: 'icon-button tutorial-hint-close',
+        title: 'Chiudi',
+        attrs: { type: 'button', 'aria-label': 'Chiudi l\'avviso' },
+        on: { click: () => close() },
+      },
+      icon(ICONS.x, 16),
+    ),
+  )
+  let timer = 0
+  const wait = () => {
+    clearTimeout(timer)
+    timer = window.setTimeout(close, HINT_MS)
+  }
+  const stay = () => clearTimeout(timer)
+  const outside = (ev: PointerEvent) => {
+    if (!bubble.contains(ev.target as Node)) close()
+  }
+  const onKey = (ev: KeyboardEvent) => {
+    if (ev.key === 'Escape') close()
+  }
+
+  function close(): void {
+    clearTimeout(timer)
+    document.removeEventListener('pointerdown', outside, true)
+    document.removeEventListener('keydown', onKey, true)
+    window.removeEventListener('resize', close)
+    anchor?.classList.remove('is-pointed')
+    bubble.classList.remove('is-visible')
+    window.setTimeout(() => bubble.remove(), 200)
+    if (closeHint === close) closeHint = null
+  }
+
+  /** Il fumetto sopra il «?» (che è in fondo) o sotto il logo (che è in cima), con la punta verso il pulsante. */
+  function place(): void {
+    const width = bubble.offsetWidth
+    const height = bubble.offsetHeight
+    if (!anchor) {
+      bubble.style.left = `${(innerWidth - width) / 2}px`
+      bubble.style.top = `${innerHeight - height - 24}px`
+      return
+    }
+    const r = anchor.getBoundingClientRect()
+    const center = r.left + r.width / 2
+    const left = Math.max(8, Math.min(innerWidth - width - 8, center - width / 2))
+    bubble.style.left = `${left}px`
+    bubble.style.setProperty('--arrow-x', `${Math.max(16, Math.min(width - 16, center - left))}px`)
+    const above = r.top > innerHeight / 2
+    bubble.dataset.side = above ? 'above' : 'below'
+    bubble.style.top = `${above ? r.top - height - 12 : r.bottom + 12}px`
+  }
+
+  closeHint = close
+  bubble.addEventListener('pointerenter', stay)
+  bubble.addEventListener('pointerleave', wait)
+  bubble.addEventListener('focusin', stay)
+  bubble.addEventListener('focusout', wait)
+  // Vuoto all'inizio: chi usa un lettore di schermo sente il testo quando arriva.
+  document.body.append(bubble)
+  requestAnimationFrame(() => {
+    if (closeHint !== close) return
+    message.append(
+      ...(anchor === anchors.toggle
+        ? ['Per rivedere il tutorial apri la barra laterale con il logo e premi ', mark(), ' in fondo.']
+        : ['Per rivedere il tutorial premi ', mark(), ' in fondo alla barra laterale.']),
+    )
+    place()
+    anchor?.classList.add('is-pointed')
+    bubble.classList.add('is-visible')
+    document.addEventListener('pointerdown', outside, true)
+    document.addEventListener('keydown', onKey, true)
+    window.addEventListener('resize', close)
+    wait()
+  })
 }

@@ -236,21 +236,57 @@ kbd {
   height: 100%;
 }
 
-/* ——— Barra laterale: in cima il marchio, la nota aperta e i suoi pulsanti ——— */
+/* ——— Barra laterale: in cima il logo, la nota aperta e i suoi pulsanti ——— */
 
 .side-top {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 10px 8px 12px 14px;
+  /* Il logo sta dove sta a barra chiusa (.float-bar): a 10px dal bordo, in mezzo ai 48px della riga. */
+  padding: 7px 8px 12px 10px;
   border-bottom: 1px solid var(--border);
 }
 
 .side-brand-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
+}
+
+.side-brand-row .brand-name {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+
+/* Il logo apre e chiude la barra laterale, come in Gemini: il quadrato indaco dell'icona dell'app
+   (src/ui/logo.ts), nello stesso punto da aperta e da chiusa. */
+.logo-toggle {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--on-accent);
+  cursor: pointer;
+  transition: background-color 0.15s, transform 0.1s;
+}
+
+.logo-toggle:hover {
+  background: var(--accent-hover);
+}
+
+.logo-toggle:active {
+  transform: scale(0.94);
+}
+
+.logo-toggle svg {
+  width: 100%;
+  height: 100%;
 }
 
 .brand {
@@ -279,7 +315,7 @@ kbd {
   flex-direction: column;
   gap: 1px;
   min-width: 0;
-  padding-right: 6px;
+  padding: 0 6px 0 4px;
 }
 
 .doc-title {
@@ -441,13 +477,14 @@ kbd {
   background: var(--surface-2);
 }
 
-/* Si apre la barra laterale da qui solo quando è chiusa (aperta, il pulsante è dentro). */
+/* Si apre la barra laterale da qui solo quando è chiusa (aperta, il logo è dentro). */
 .side-open {
   display: none;
+  box-shadow: 0 2px 8px rgba(20, 24, 40, 0.16);
 }
 
 .app:not(.notes-open) .side-open {
-  display: inline-flex;
+  display: inline-grid;
 }
 
 .symbols-toggle {
@@ -3739,6 +3776,104 @@ kbd {
   display: none;
 }
 
+/* ——— Il fumetto dopo il tutorial (src/ui/tutorial.ts): dove lo si rivede ——— */
+
+.tutorial-hint {
+  position: fixed;
+  z-index: 90;
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  width: max-content;
+  max-width: min(290px, calc(100vw - 16px));
+  padding: 6px 4px 6px 14px;
+  border-radius: 12px;
+  background: var(--heading);
+  color: var(--surface);
+  box-shadow: var(--shadow);
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.tutorial-hint[data-side='below'] {
+  transform: translateY(-4px);
+}
+
+.tutorial-hint.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* La punta verso il pulsante. */
+.tutorial-hint[data-side]::after {
+  content: '';
+  position: absolute;
+  left: calc(var(--arrow-x) - 6px);
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  background: inherit;
+  transform: rotate(45deg);
+}
+
+.tutorial-hint[data-side='above']::after {
+  bottom: -5px;
+}
+
+.tutorial-hint[data-side='below']::after {
+  top: -5px;
+}
+
+.tutorial-hint-text {
+  margin: 0;
+  padding: 4px 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.tutorial-hint-mark {
+  display: inline-grid;
+  place-items: center;
+  vertical-align: -3px;
+}
+
+.tutorial-hint-close {
+  flex: none;
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  color: inherit;
+  opacity: 0.75;
+}
+
+.tutorial-hint-close:hover {
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  opacity: 1;
+}
+
+/* Il pulsante a cui punta il fumetto si illumina. */
+.is-pointed {
+  box-shadow: 0 0 0 2px var(--accent);
+  animation: pointed 1.6s ease-out infinite;
+}
+
+@keyframes pointed {
+  0% {
+    box-shadow: 0 0 0 2px var(--accent), 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+
+  100% {
+    box-shadow: 0 0 0 2px var(--accent), 0 0 0 11px color-mix(in srgb, var(--accent) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-pointed {
+    animation: none;
+  }
+}
+
 /* ——— Schermi medi: l'elenco degli appunti diventa un cassetto ——— */
 
 @media (max-width: 1250px) {
@@ -3851,6 +3986,7 @@ kbd {
   .editor-pane,
   .resize-handle,
   .backdrop,
+  .tutorial-hint,
   .toasts {
     display: none !important;
   }

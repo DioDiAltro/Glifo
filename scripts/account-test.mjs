@@ -161,7 +161,10 @@ try {
   check(await waitFor(tel.page, () => document.querySelectorAll('.note-item').length === 2), 'la copia arriva anche sul telefono')
 
   // ——— Le impostazioni vanno con l'account ———
-  await pc.page.locator('button[aria-label="Cambia tema"]').click()
+  // Il tema si cambia nelle impostazioni
+  await pc.page.locator('.side-profile button[aria-label="Impostazioni"]').click()
+  await pc.page.locator('dialog .segmented label', { hasText: 'Scuro' }).click()
+  await pc.page.keyboard.press('Escape')
   const theme = await pc.page.evaluate(() => document.documentElement.dataset.theme)
   check(
     await waitFor(

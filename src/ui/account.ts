@@ -67,7 +67,7 @@ export class AccountButton {
       this.el.setAttribute('aria-label', 'Accedi all\'account')
       this.el.replaceChildren(
         h('span', { class: 'account-avatar' }, icon(ICONS.user, 16)),
-        h('span', { class: 'account-text' }, h('span', { class: 'account-name' }, 'Accedi'), h('span', { class: 'account-sub' }, 'Per sincronizzare')),
+        h('span', { class: 'account-text' }, h('span', { class: 'account-name' }, 'Accedi'), h('span', { class: 'account-sub' }, 'Senza account')),
       )
       return
     }

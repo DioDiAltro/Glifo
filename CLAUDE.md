@@ -29,7 +29,8 @@ prossimi passi sono in «In programma» nella ROADMAP.
   (`scripts/fake-supabase.mjs`). Serve Chromium: indica il percorso con `CHROMIUM_PATH`
   (nelle sessioni cloud `/opt/pw-browsers/chromium`).
 - `GLIFO_NO_PWA=1 npx vite build`: la build per claude.ai (la demo e le prove della grafica):
-  senza service worker e con l'account spento.
+  senza service worker e con l'account spento (Accedi e Condividi si vedono, ma la finestra di
+  accesso dice che lì non si entra).
 - `node scripts/tutorial.mjs`: registra dall'app vera (esegui prima `npm run build`) i video del
   tutorial, nel tema chiaro e in quello scuro, in `public/tutorial/` (serve `CHROMIUM_PATH`; usa
   l'ffmpeg di Playwright). Va rifatto quando cambia l'interfaccia che i video mostrano; con un
@@ -64,13 +65,17 @@ prossimi passi sono in «In programma» nella ROADMAP.
   toglie script, moduli, pulsanti e stili (`FORBIDDEN_TAGS`; con `untrusted` le caselle non si
   cliccano) e `.markdown-body` ha `contain: paint`, così niente esce dal riquadro della nota.
 - `src/ui/`: interfaccia (`resize.ts`: i bordi da trascinare tra le sezioni). Non c'è una barra in
-  alto: la barra laterale è l'elenco degli appunti (`notesPanel.ts`) con sopra la nota aperta e i
-  suoi pulsanti e sotto l'account e le impostazioni (`sidebarTop` e `sidebarBottom` in `main.ts`);
+  alto: la barra laterale è l'elenco degli appunti (`notesPanel.ts`) con sopra il logo, la nota
+  aperta e i suoi pulsanti e sotto l'account, «Come si usa» e le impostazioni (`sidebarTop` e
+  `sidebarBottom` in `main.ts`; il tema si cambia solo nelle impostazioni). Il logo apre e chiude la
+  barra (`sidebarToggle`, come in Gemini) e sta nello stesso punto da aperta e da chiusa;
   i pulsanti volanti (simboli, viste) sono in `.float-bar`, dentro `.content` con testo e
   anteprima, e nell'anteprima la loro fascia è il bordo in alto (`syncTo` ne tiene conto). Nella
   riga ci sono anche i due gruppi della barra di formattazione (`toolbar.ts`); `fitBar` decide se le
   viste stanno al centro o, se il posto non basta, a destra. Il tutorial è in `tutorial.ts` (si apre
-  la prima volta e da «Come si usa»; le prove nel browser lo segnano come visto, tranne la sua).
+  la prima volta e da «Come si usa»; le prove nel browser lo segnano come visto, tranne la sua);
+  chiuso quello della prima volta, o lasciato per le scorciatoie, `showTutorialHint` mostra un
+  fumetto che punta al «?» (o al logo, se la barra è chiusa) e se ne va da solo dopo 8 secondi.
   `src/store/`: note, cartelle (`folders.ts`), impostazioni e misure delle sezioni (`layout.ts`,
   solo su quel dispositivo) nel browser (chiavi `glifo.*`).
   Glifo può essere aperto in più schede: ogni modifica parte da quello salvato, non dalla copia
