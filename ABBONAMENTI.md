@@ -17,8 +17,11 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
 - **Il piano di mezzo si chiama Relativistico**, non più Super (4 ottobre 2026): *Classico →
   Relativistico → Quantistico* segue la storia della fisica (Newton, Einstein, i quanti) e, come ha
   detto lo studente, fa più effetto.
-- **Una piccola filigrana come pubblicità nel piano gratuito**, purché non sia in mezzo agli appunti
-  (4 ottobre 2026). Dove va: vedi «Classico».
+- **Una piccola filigrana come pubblicità nel piano gratuito**, purché non sia in mezzo agli appunti;
+  **nei piani a pagamento non c'è** (4 ottobre 2026). Dove va: vedi «Classico».
+- **Le spiegazioni** (4 ottobre 2026): compaiono nel pannello della formula e decide chi scrive se
+  inserirle nella nota; il tono (come il professore o più semplice) si sceglie nelle impostazioni.
+  Vedi «Le spiegazioni, come funzionano».
 
 ## Com'è andata la discussione
 
@@ -35,6 +38,10 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
 5. **La filigrana e le spiegazioni** (4 ottobre 2026). Lo studente vuole la filigrana, piccola e
    fuori dagli appunti (vedi «Deciso»), e chiede di capire meglio come funzionerebbero le
    spiegazioni con il motore di Glifo: vedi «Le spiegazioni, come funzionano».
+6. **Le risposte** (4 ottobre 2026). Niente filigrana nei piani a pagamento; le spiegazioni le
+   inserisce nella nota chi vuole; il tono si sceglie nelle impostazioni (vedi «Deciso»). Lo
+   studente chiede di spiegare meglio la domanda su da quale argomento partire: la spiegazione è
+   in «Le spiegazioni, come funzionano», in fondo.
 
 ## La proposta dello studente (4 ottobre 2026)
 
@@ -132,8 +139,7 @@ Dove va, come proposta:
 - la pagina del link condiviso fa già pubblicità (il logo, «Apri Glifo» e una riga che spiega cos'è
   Glifo): lì non serve altro.
 
-Nei piani a pagamento la proposta è che non ci sia: in Quantistico di sicuro, perché in una tesi non
-può stare.
+Nei piani a pagamento non c'è (deciso il 4 ottobre 2026).
 
 ### Relativistico: per studiare
 
@@ -150,6 +156,7 @@ fa al posto tuo.**
 | **La lavagna** | Dipende dall'idea dello studente, ancora da raccontare: se usa un server o l'AI costa, e sta qui; se gira tutta nel browser si può comunque tenere qui come vantaggio |
 | **Un gruppo di studio**: una cartella condivisa con pochi compagni (per esempio fino a 5), anche se loro hanno Classico | Chi è invitato entra gratis: ogni abbonato porta compagni su Glifo |
 | **Più spazio** (servirà con immagini e allegati) e la **cronologia delle versioni** di 30 giorni | Lo spazio costa |
+| **Senza la filigrana** sulle immagini e sui PDF | Chi paga non fa pubblicità a Glifo |
 | Idea in più: **foto → appunti** (la foto della lavagna o del quaderno diventa testo con le formule, come Mathpix); conta come una domanda | Costa 1-2 centesimi a foto |
 
 Fuori, in Quantistico: le soluzioni complete (Relativistico è per imparare), gli strumenti per la tesi, il
@@ -170,6 +177,7 @@ con tetti più alti, più gli strumenti per consegnare e per lavorare con altri.
 | **Lavorare con altri**: cartelle condivise senza limiti, i permessi (chi legge, chi commenta, chi scrive), il relatore e i coautori invitati gratis, scrivere insieme senza conflitti | Serve un server in tempo reale, che costa; e il relatore che entra gratis scopre Glifo |
 | **Il controllo della grammatica** (LanguageTool), oltre all'ortografia | Costa (il testo va a un server, nostro o loro: solo se lo si chiede, e scritto nell'informativa) e serve soprattutto a chi scrive testi lunghi da consegnare |
 | **La cronologia delle versioni senza limiti** | La tesi è il documento che non si può perdere |
+| **Senza la filigrana** sulle immagini e sui PDF | In una tesi o in un articolo non può stare |
 
 Più avanti: un piano per **università e dipartimenti**, che comprano Glifo per i loro studenti e
 ricercatori (come fa Overleaf).
@@ -206,9 +214,10 @@ la formula, una frase che dice cosa si è fatto e il segno ✓ di Glifo:
 3. si sostituiscono gli estremi: (R³ − R³/3) − (−R³ + R³/3) = 2R³/3 + 2R³/3 = 4R³/3 ✓
 4. quindi il volume è π · 4R³/3 = 4πR³/3, lo stesso risultato di Glifo ✓
 
-Ogni passaggio ha un «Perché?» per chiedere di più (è una domanda all'AI, e conta nel tetto). Con
-«Inserisci nella nota» i passaggi vanno negli appunti, se si vogliono tenere; se no restano nel
-pannello e la nota non cambia.
+Ogni passaggio ha un «Perché?» per chiedere di più (è una domanda all'AI, e conta nel tetto). Decide
+chi scrive se tenerli: con «Inserisci nella nota» i passaggi vanno negli appunti, se no restano nel
+pannello e la nota non cambia. Il tono si sceglie nelle impostazioni: come lo spiegherebbe il
+professore o più semplice (deciso il 4 ottobre 2026).
 
 ### Cosa succede dietro
 
@@ -275,14 +284,31 @@ In breve: **il testo lo scrive l'AI, i conti li firma Glifo.**
    un'uguaglianza, controllare una primitiva, derivare, risolvere), descritte all'AI.
 3. Il giro parte dal browser, dove c'è il motore; le richieste all'AI passano dal server di Glifo, che
    tiene la chiave, conta le domande e lascia passare solo spiegazioni, non domande qualsiasi.
-4. Un primo argomento per provare tutto: gli integrali, con l'esempio della sfera.
+4. Un primo argomento per provare tutto (vedi sotto).
 
-Da decidere (anche in «Da approfondire»):
+Deciso il 4 ottobre 2026: le spiegazioni si vedono nel pannello della formula e chi scrive decide se
+inserirle nella nota; il tono si sceglie nelle impostazioni.
 
-- dove si vedono: nel pannello della formula con «Inserisci nella nota» (proposta) o subito nella
-  nota;
-- da quali argomenti partire (proposta: integrali e derivate, poi limiti e algebra lineare);
-- il tono: come il professore o più semplice (si potrebbe scegliere nelle impostazioni).
+Da decidere: **da quale argomento partire.** Le spiegazioni non si costruiscono per tutta la
+matematica in un colpo solo: per ogni argomento servono
+
+- i controlli giusti del motore: un integrale si controlla derivando la primitiva, un limite
+  calcolandolo con i numeri, un sistema rimettendo la soluzione nelle equazioni, un'inversa
+  moltiplicandola per la matrice di partenza;
+- i passaggi tipici: quelli che il motore può scrivere da solo e quelli in cui l'AI sceglie la
+  strada;
+- una serie di esercizi veri per provarle, così si è sicuri che siano giuste e chiare prima di darle
+  agli altri.
+
+Quindi si sceglie un primo argomento, lo si fa funzionare bene dall'inizio alla fine (pulsante,
+pannello, AI, controlli, «Inserisci nella nota», costi) e poi si allarga, un argomento alla volta.
+
+Proposta: gli **integrali**. Il motore li controlla già bene (deriva le primitive, verifica con i
+numeri anche quelli con le lettere), c'è l'esempio della sfera, è dove gli studenti si bloccano di
+più (per parti, per sostituzione, fratti semplici) e Analisi 1 la fanno quasi tutti al primo anno.
+Dopo: le derivate (quasi tutte con il solo motore), i limiti (limiti notevoli, de l'Hôpital),
+l'algebra lineare (Gauss, determinanti). Un altro criterio, forse migliore: partire da quello che lo
+studente sta studiando, per provarle sui suoi esercizi veri.
 
 ## Quanto costano a Glifo le cose a pagamento
 
@@ -399,11 +425,10 @@ ricerca, i piani per università e dipartimenti.
 ## Da approfondire
 
 - **La lavagna**: com'è l'idea dello studente? Decide in che piano va e quanto costa a Glifo.
-- **Le spiegazioni**: dove si vedono, da quali argomenti partire e con che tono (le proposte sono
-  in «Le spiegazioni, come funzionano»).
+- **Le spiegazioni**: da quale argomento partire (vedi «Le spiegazioni, come funzionano», in
+  fondo).
 - **L'SQL**: in Relativistico, come nella proposta, o resta gratis?
 - **L'assaggio** nel gratuito: 7 giorni di Relativistico o poche domande al mese?
-- **La filigrana nei piani a pagamento**: si toglie? (Proposta: sì; in Quantistico di sicuro.)
 - **I prezzi e i tetti**: da verificare con gli studenti e con l'uso vero.
 
 ## Fonti (controllate il 4 ottobre 2026)
