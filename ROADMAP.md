@@ -170,7 +170,8 @@ Perché non gli altri:
      (migrazione «note condivise», 33 controlli in `supabase/tests/condivisione.test.sql`).
      Le note arrivano anche da altre persone: l'anteprima non mostra moduli, pulsanti e stili
      scritti nelle note, e niente esce dal riquadro della nota;
-   - si decide dopo il link (lo studente: «facciamo prima il link, poi ne parliamo»):
+   - si decide più avanti (lo studente: «facciamo prima il link, poi ne parliamo»; fatto il
+     link, il 4 ottobre 2026 ha chiesto di tenerlo per dopo e di sistemare prima la grafica):
      - profili (il nome che vedono gli altri) e membri di ogni cartella;
      - mandare una copia di una nota a un'altra persona, che la trova tra i «Ricevuti»;
      - cartelle condivise con persone scelte, con i permessi come nei servizi di Google (lo

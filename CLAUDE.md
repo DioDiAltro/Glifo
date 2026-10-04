@@ -220,6 +220,10 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
   l'informativa (`privacy.html`). Poi, aggiornata l'informativa, premere «Publish app» nella
   Google Auth Platform (Audience) per aprire a tutti l'accesso con Google. I passi sono in
   «Come si riprende», al passo 4 di ROADMAP.md.
+- Riparlare della condivisione: le cartelle condivise con persone scelte e i loro permessi (come
+  nella finestra «Condividi» di NotebookLM) e lo scrivere insieme senza conflitti. Il 4 ottobre
+  2026, fatto il link, lo studente ha chiesto di tenerlo per dopo e di sistemare prima la
+  grafica: le idee sono al passo 5 di ROADMAP.md.
 
 ## Regole
 
