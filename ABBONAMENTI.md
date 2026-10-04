@@ -1,14 +1,38 @@
 # Abbonamenti
 
-Le idee per far pagare Glifo. **Niente è ancora deciso**: è la discussione con lo studente iniziata
-il 4 ottobre 2026, da approfondire un pezzo alla volta. Quando si decide qualcosa lo si scrive qui,
-con la data; quando si comincia a costruirlo diventa una voce della [ROADMAP](ROADMAP.md).
+Le idee per far pagare Glifo, dalla discussione con lo studente iniziata il 4 ottobre 2026, da
+approfondire un pezzo alla volta. Quello che è deciso sta in «Deciso», con la data; il resto sono
+idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](ROADMAP.md).
+
+## Deciso
+
+- **Calcoli e grafici restano nel piano gratuito** (4 ottobre 2026). Lo studente non voleva
+  davvero toglierli: sa che sono lo scopo di Glifo, e per questo ne ha parlato con delicatezza, per
+  sentire un parere prima di decidere.
+- **Il ragionamento su cosa far pagare** (4 ottobre 2026): allo studente piace come sono stati
+  scelti cosa far pagare, perché e in quale piano, cioè i cinque criteri di «Come si decide cosa far
+  pagare» e la divisione dei piani per chi li usa (Super per studiare, Quantistico per la tesi e la
+  ricerca). È la base da cui si continua; prezzi, tetti e le domande di «Da approfondire» restano
+  da decidere.
+
+## Com'è andata la discussione
+
+1. **La proposta** (4 ottobre 2026). Lo studente propone i tre piani e chiede un parere, senza
+   scrivere codice. Claude risponde: il gratuito tiene calcoli e grafici, i prezzi vanno
+   dimezzati, prima di incassare servono alcune cose, e il sogno dell'AI si raggiunge senza data
+   center (le sezioni qui sotto).
+2. **Cosa far pagare** (4 ottobre 2026). Lo studente chiede di salvare tutto in un file e di
+   spiegare, piano per piano, cosa far pagare e perché: nascono questo file, i criteri e «Piano per
+   piano».
+3. **I grafici** (4 ottobre 2026). Lo studente precisa che i grafici non voleva toglierli e che il
+   ragionamento gli piace: vedi «Deciso». Restano le domande di «Da approfondire».
 
 ## La proposta dello studente (4 ottobre 2026)
 
 - **Classico**, gratis: senza le funzioni avanzate che stiamo sviluppando, cioè i grafici, gli
   schemi trasformati in codice e in SQL (oggi si scarica solo l'SQL; quella parte migliorerà), le
-  spiegazioni (ancora da fare, e da capire) e altro.
+  spiegazioni (ancora da fare, e da capire) e altro. I grafici erano nell'elenco, ma lo studente
+  non voleva davvero toglierli: vedi «Deciso».
 - **Super**: 10 € al mese (120 € l'anno) oppure 96 € l'anno (8 € al mese). Non tutte le funzioni,
   solo alcune: la lavagna (ancora da sviluppare e da capire: lo studente ha un'idea particolare),
   le spiegazioni, forse altro. Funzioni utili, ma che non semplificano troppo la vita.
@@ -19,8 +43,9 @@ con la data; quando si comincia a costruirlo diventa una voce della [ROADMAP](RO
 
 ## Il parere di Claude, in breve
 
-- Tre piani vanno bene, ma il gratuito deve tenere **calcoli e grafici**: sono lo scopo di Glifo
-  (controllare e mostrare quello che si scrive) e quello che fa passaparola.
+- Tre piani vanno bene, e il gratuito tiene **calcoli e grafici**: sono lo scopo di Glifo
+  (controllare e mostrare quello che si scrive) e quello che fa passaparola. Lo studente è
+  d'accordo: vedi «Deciso».
 - Si fa pagare **quello che costa a Glifo** (AI, trascrizione, spazio, il server per lavorare
   insieme) e **quello che serve a chi ha una scadenza** (un esame, la tesi, un articolo), non
   «quanto ti semplifica la vita».
@@ -82,9 +107,9 @@ mandato un link.
 Fuori: spiegazioni, tutor e trascrizione (costano a ogni uso), l'SQL e il codice dagli schemi, la
 lavagna, le cartelle condivise, gli strumenti per la tesi.
 
-**Dove il parere di Claude è diverso dalla proposta: i grafici.** Sono la cosa che fa più effetto, e
-proprio per questo devono stare nella vetrina. Se devono portare abbonati, a pagamento va la parte
-«da pubblicazione» (figure numerate con didascalia, pronte per la tesi), in Quantistico. Le immagini
+**I grafici restano qui** (deciso il 4 ottobre 2026: lo studente non voleva toglierli). Sono la cosa
+che fa più effetto, e proprio per questo stanno nella vetrina. L'idea è far pagare solo la parte
+«da pubblicazione» (figure numerate con didascalia, pronte per la tesi), in Quantistico; le immagini
 semplici di un grafico (in programma) restano gratis, come già quelle degli schemi.
 
 ### Super: per studiare
