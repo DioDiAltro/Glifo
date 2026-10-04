@@ -1,7 +1,7 @@
 # Graph Report - matherdown  (2026-10-04)
 
 ## Corpus Check
-- 219 files · ~403,759 words
+- 219 files · ~403,785 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 5 file(s) not represented in the graph (top: (none) 4, .css 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `fa1ba04a`
+- Built from commit: `04b81178`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -134,10 +134,10 @@
   CLAUDE.md → src/math/symbolic.ts
 - `Dove sono le cose` --references--> `NumericContext`  [INFERRED]
   CLAUDE.md → src/math/numerical.ts
+- `Dove sono le cose` --references--> `expSum`  [INFERRED]
+  CLAUDE.md → src/math/distributions.ts
 - `Dove sono le cose` --references--> `InferenceContext`  [INFERRED]
   CLAUDE.md → src/math/inference.ts
-- `Dove sono le cose` --references--> `ConicElements`  [INFERRED]
-  CLAUDE.md → src/math/conics.ts
 
 ## Import Cycles
 - 3-file cycle: `src/math/complex.ts -> src/math/evaluate.ts -> src/math/limits.ts -> src/math/complex.ts`
@@ -505,7 +505,7 @@ Nodes (29): vitest, graphImage(), graphImagesFor(), OPEN, staticGraphSvg(), form
 
 ### Community 103 - "Piano per piano"
 Cohesion: 0.33
-Nodes (6): Classico, gratis: per scrivere e controllare, Mai a pagamento, in nessun piano, Piano per piano, Quando l'abbonamento finisce, Quantistico: per la tesi e la ricerca, Super: per studiare
+Nodes (6): Classico, gratis: per scrivere e controllare, Mai a pagamento, in nessun piano, Piano per piano, Quando l'abbonamento finisce, Quantistico: per la tesi e la ricerca, Relativistico: per studiare
 
 ### Community 106 - "scripts"
 Cohesion: 0.25
@@ -524,11 +524,11 @@ Nodes (11): Accesso con Google, Cambiare il database, Cosa c'è, Eliminare l'acc
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `vitest` connect `vitest` to `linsys.ts`, `sync.ts`, `primitive.ts`, `schema/editor.ts`, `svg.ts`, `editor/lists.ts`, `graph/space.ts`, `FoldersStore`, `h`, `assistant.ts`, `spell.test.ts`, `sheet.ts`, `distributions.ts`, `markdown.ts`, `graphNote.test.ts`, `resize.ts`, `scopeWith`, `NotesStore`, `model.ts`, `supabase.ts`, `parse.ts`, `editor/editor.ts`, `search.ts`, `insert.ts`, `page.ts`, `sql.ts`, `editor.test.ts`, `sidePanel.ts`?**
-  _High betweenness centrality (0.118) - this node is a cross-community bridge._
+  _High betweenness centrality (0.114) - this node is a cross-community bridge._
 - **Why does `Dove sono le cose` connect `Dove sono le cose` to `linsys.ts`, `Parser`, `main.ts`, `odesolve.ts`, `spec.ts`, `arithmetic.ts`, `primitive.ts`, `graph/preview.ts`, `schema/editor.ts`, `symbolic.ts`, `graph.ts`, `svg.ts`, `graph/space.ts`, `numerical.ts`, `Rational`, `several.ts`, `MathError`, `h`, `distributions.ts`, `markdown.ts`, `logic.ts`, `MathNode`, `graphNote.test.ts`, `gauss.ts`, `study.ts`, `supabase.ts`, `complex.ts`, `finite.ts`, `num`, `schema/preview.ts`, `powerseries.ts`, `numericalGraph.ts`, `Glifo – note per Claude`?**
-  _High betweenness centrality (0.074) - this node is a cross-community bridge._
+  _High betweenness centrality (0.073) - this node is a cross-community bridge._
 - **Why does `h()` connect `h` to `schema/preview.ts`, `main.ts`, `Schema`, `resize.ts`, `schema/editor.ts`, `graph.ts`, `toolbar.ts`, `SchemaEditor`, `openShareDialog`, `FoldersStore`, `sidePanel.ts`, `SidePanel`, `spell.test.ts`, `page.ts`?**
-  _High betweenness centrality (0.031) - this node is a cross-community bridge._
+  _High betweenness centrality (0.034) - this node is a cross-community bridge._
 - **What connects `Deciso`, `Com'è andata la discussione`, `La proposta dello studente (4 ottobre 2026)` to the rest of the system?**
   _509 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `linsys.ts` be split into smaller, more focused modules?**

@@ -32961,7 +32961,7 @@
       "node_kind": "heading",
       "norm_label": "classico, gratis: per scrivere e controllare",
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L91"
+      "source_location": "L96"
     },
     {
       "id": "abbonamenti_mai_a_pagamento_in_nessun_piano",
@@ -32973,7 +32973,7 @@
       "node_kind": "heading",
       "norm_label": "mai a pagamento, in nessun piano",
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L154"
+      "source_location": "L159"
     },
     {
       "id": "abbonamenti_piano_per_piano",
@@ -32985,7 +32985,7 @@
       "node_kind": "heading",
       "norm_label": "piano per piano",
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L89"
+      "source_location": "L94"
     },
     {
       "id": "abbonamenti_quando_l_abbonamento_finisce",
@@ -32997,7 +32997,7 @@
       "node_kind": "heading",
       "norm_label": "quando l'abbonamento finisce",
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L162"
+      "source_location": "L167"
     },
     {
       "id": "abbonamenti_quantistico_per_la_tesi_e_la_ricerca",
@@ -33009,19 +33009,19 @@
       "node_kind": "heading",
       "norm_label": "quantistico: per la tesi e la ricerca",
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L135"
+      "source_location": "L140"
     },
     {
-      "id": "abbonamenti_super_per_studiare",
-      "label": "Super: per studiare",
+      "id": "abbonamenti_relativistico_per_studiare",
+      "label": "Relativistico: per studiare",
       "_origin": "ast",
       "community": 103,
       "community_name": "Piano per piano",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "super: per studiare",
+      "norm_label": "relativistico: per studiare",
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L115"
+      "source_location": "L120"
     },
     {
       "id": "abbonamenti",
@@ -41049,7 +41049,7 @@
       "node_kind": "heading",
       "norm_label": "com'e andata la discussione",
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L18"
+      "source_location": "L21"
     },
     {
       "id": "abbonamenti_come_si_decide_cosa_far_pagare",
@@ -41061,7 +41061,7 @@
       "node_kind": "heading",
       "norm_label": "come si decide cosa far pagare",
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L61"
+      "source_location": "L66"
     },
     {
       "id": "abbonamenti_cosa_fare_in_ordine",
@@ -41073,7 +41073,7 @@
       "node_kind": "heading",
       "norm_label": "cosa fare, in ordine",
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L275"
+      "source_location": "L278"
     },
     {
       "id": "abbonamenti_da_approfondire",
@@ -41085,7 +41085,7 @@
       "node_kind": "heading",
       "norm_label": "da approfondire",
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L285"
+      "source_location": "L288"
     },
     {
       "id": "abbonamenti_deciso",
@@ -41109,7 +41109,7 @@
       "node_kind": "heading",
       "norm_label": "fonti (controllate il 4 ottobre 2026)",
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L296"
+      "source_location": "L298"
     },
     {
       "id": "abbonamenti_i_prezzi",
@@ -41121,7 +41121,7 @@
       "node_kind": "heading",
       "norm_label": "i prezzi",
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L189"
+      "source_location": "L194"
     },
     {
       "id": "abbonamenti_il_parere_di_claude_in_breve",
@@ -41133,7 +41133,7 @@
       "node_kind": "heading",
       "norm_label": "il parere di claude, in breve",
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L44"
+      "source_location": "L49"
     },
     {
       "id": "abbonamenti_il_sogno_l_ai_di_glifo_e_l_uso_globale",
@@ -41145,7 +41145,7 @@
       "node_kind": "heading",
       "norm_label": "il sogno: l'ai di glifo e l'uso globale",
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L258"
+      "source_location": "L261"
     },
     {
       "id": "abbonamenti_la_proposta_dello_studente_4_ottobre_2026",
@@ -41157,7 +41157,7 @@
       "node_kind": "heading",
       "norm_label": "la proposta dello studente (4 ottobre 2026)",
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L30"
+      "source_location": "L34"
     },
     {
       "id": "abbonamenti_note_tecniche",
@@ -41169,7 +41169,7 @@
       "node_kind": "heading",
       "norm_label": "note tecniche",
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L247"
+      "source_location": "L250"
     },
     {
       "id": "abbonamenti_prima_di_incassare_il_primo_euro",
@@ -41181,7 +41181,7 @@
       "node_kind": "heading",
       "norm_label": "prima di incassare il primo euro",
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L225"
+      "source_location": "L228"
     },
     {
       "id": "abbonamenti_quanto_costano_a_glifo_le_cose_a_pagamento",
@@ -41193,7 +41193,7 @@
       "node_kind": "heading",
       "norm_label": "quanto costano a glifo le cose a pagamento",
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L171"
+      "source_location": "L176"
     },
     {
       "id": "src_math_evaluate_empty_scope",
@@ -153438,18 +153438,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L171",
-      "weight": 1.0
-    },
-    {
-      "source": "abbonamenti_abbonamenti",
-      "target": "abbonamenti_com_\u00e8_andata_la_discussione",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "ABBONAMENTI.md",
-      "source_location": "L18",
+      "source_location": "L176",
       "weight": 1.0
     },
     {
@@ -153460,7 +153449,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L189",
+      "source_location": "L194",
+      "weight": 1.0
+    },
+    {
+      "source": "abbonamenti_abbonamenti",
+      "target": "abbonamenti_com_\u00e8_andata_la_discussione",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ABBONAMENTI.md",
+      "source_location": "L21",
       "weight": 1.0
     },
     {
@@ -153471,7 +153471,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L225",
+      "source_location": "L228",
       "weight": 1.0
     },
     {
@@ -153482,7 +153482,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L247",
+      "source_location": "L250",
       "weight": 1.0
     },
     {
@@ -153493,7 +153493,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L258",
+      "source_location": "L261",
       "weight": 1.0
     },
     {
@@ -153504,7 +153504,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L275",
+      "source_location": "L278",
       "weight": 1.0
     },
     {
@@ -153515,7 +153515,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L285",
+      "source_location": "L288",
       "weight": 1.0
     },
     {
@@ -153526,7 +153526,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L296",
+      "source_location": "L298",
       "weight": 1.0
     },
     {
@@ -153537,7 +153537,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L30",
+      "source_location": "L34",
       "weight": 1.0
     },
     {
@@ -153548,7 +153548,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L44",
+      "source_location": "L49",
       "weight": 1.0
     },
     {
@@ -153559,7 +153559,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L61",
+      "source_location": "L66",
       "weight": 1.0
     },
     {
@@ -153581,18 +153581,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L89",
+      "source_location": "L94",
       "weight": 1.0
     },
     {
       "source": "abbonamenti_piano_per_piano",
-      "target": "abbonamenti_super_per_studiare",
+      "target": "abbonamenti_relativistico_per_studiare",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L115",
+      "source_location": "L120",
       "weight": 1.0
     },
     {
@@ -153603,7 +153603,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L135",
+      "source_location": "L140",
       "weight": 1.0
     },
     {
@@ -153614,7 +153614,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L154",
+      "source_location": "L159",
       "weight": 1.0
     },
     {
@@ -153625,7 +153625,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L162",
+      "source_location": "L167",
       "weight": 1.0
     },
     {
@@ -153636,7 +153636,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ABBONAMENTI.md",
-      "source_location": "L91",
+      "source_location": "L96",
       "weight": 1.0
     },
     {
@@ -191627,5 +191627,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "fa1ba04a4e3e1a55b146b3dd810a50396041c4cd"
+  "built_at_commit": "04b811785c287888d84382dbec1c9e689b647b83"
 }
