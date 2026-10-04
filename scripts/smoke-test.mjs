@@ -422,12 +422,12 @@ try {
     }
     const apple = await pixels(document.querySelector('link[rel="apple-touch-icon"]').href, 180)
     icons.push({ src: 'apple-touch-icon', ok: apple.width === 180 })
-    return { name: manifest.name, shortName: manifest.short_name, icons, mark: !!document.querySelector('.side-top .logo-toggle svg circle') }
+    return { name: manifest.name, shortName: manifest.short_name, icons, mark: !!document.querySelector('.side-top .logo-toggle svg path') && !document.querySelector('.side-top .logo-toggle svg rect') }
   })
   check(installed.name === 'Glifo' && installed.shortName === 'Glifo', `l'app installata si chiama «Glifo» (${installed.name})`)
   check(
     installed.icons.every((icon) => icon.ok) && installed.mark,
-    `le icone e il marchio in alto sono il simbolo di adesso (${JSON.stringify(installed.icons)})`,
+    `le icone sono il simbolo di adesso, e nella barra laterale c'è solo il ∮ (${JSON.stringify(installed.icons)})`,
   )
   await layout.close()
 
@@ -1645,7 +1645,7 @@ try {
     return side.evaluate((s) => {
       const el = document.querySelector(s)
       const r = el.getBoundingClientRect()
-      return { x: r.left, y: r.top, w: r.width, logo: !!el.querySelector('svg circle'), bg: getComputedStyle(el).backgroundColor }
+      return { x: r.left, y: r.top, w: r.width, logo: !!el.querySelector('svg path'), bg: getComputedStyle(el).backgroundColor, color: getComputedStyle(el).color }
     }, selector)
   }
   const openLogo = await logoAt('.side-close')
@@ -1658,8 +1658,13 @@ try {
     'chiusa la barra laterale, il logo sopra il testo la riapre',
   )
   check(
-    openLogo.logo && closedLogo.logo && openLogo.bg === closedLogo.bg && Math.abs(openLogo.x - closedLogo.x) < 1 && Math.abs(openLogo.y - closedLogo.y) < 1 && openLogo.w === 34,
-    `il pulsante della barra laterale è il logo, nello stesso punto da aperta e da chiusa (${JSON.stringify({ openLogo, closedLogo })})`,
+    openLogo.logo &&
+      closedLogo.logo &&
+      [openLogo, closedLogo].every((l) => l.bg === 'rgba(0, 0, 0, 0)' && l.color === 'rgb(79, 70, 229)') &&
+      Math.abs(openLogo.x - closedLogo.x) < 1 &&
+      Math.abs(openLogo.y - closedLogo.y) < 1 &&
+      openLogo.w === 34,
+    `il pulsante della barra laterale è il logo, solo il ∮ indaco senza quadrato, nello stesso punto da aperta e da chiusa (${JSON.stringify({ openLogo, closedLogo })})`,
   )
   // «Condividi», in fondo: senza account spiega che serve l'account, e da lì si stampa (o si salva in PDF)
   await side.evaluate(() => {

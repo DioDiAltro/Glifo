@@ -252,8 +252,8 @@ kbd {
   letter-spacing: -0.01em;
 }
 
-/* Il logo apre e chiude la barra laterale, come in Gemini: il quadrato indaco dell'icona dell'app
-   (src/ui/logo.ts), nello stesso punto da aperta e da chiusa. */
+/* Il logo apre e chiude la barra laterale, come in Gemini: solo il ∮ (src/ui/logo.ts), del colore
+   del tema, nello stesso punto da aperta e da chiusa. */
 .logo-toggle {
   display: inline-grid;
   place-items: center;
@@ -263,14 +263,14 @@ kbd {
   padding: 0;
   border: 0;
   border-radius: 10px;
-  background: var(--accent);
-  color: var(--on-accent);
+  background: transparent;
+  color: var(--accent);
   cursor: pointer;
   transition: background-color 0.15s, transform 0.1s;
 }
 
 .logo-toggle:hover {
-  background: var(--accent-hover);
+  background: var(--accent-soft);
 }
 
 .logo-toggle:active {
@@ -292,15 +292,13 @@ kbd {
   white-space: nowrap;
 }
 
-/* Il simbolo ∮ (src/ui/logo.ts), come nell'icona dell'app. */
+/* Il simbolo ∮ (src/ui/logo.ts) da solo, del colore del tema, come il logo nella barra laterale. */
 .brand-mark {
   display: grid;
   place-items: center;
   width: 28px;
   height: 28px;
-  border-radius: 8px;
-  background: var(--accent);
-  color: var(--on-accent);
+  color: var(--accent);
 }
 
 /* In fondo alla barra laterale: l'account e le impostazioni. */
@@ -442,7 +440,6 @@ kbd {
 /* Si apre la barra laterale da qui solo quando è chiusa (aperta, il logo è dentro). */
 .side-open {
   display: none;
-  box-shadow: 0 2px 8px rgba(20, 24, 40, 0.16);
 }
 
 .app:not(.notes-open) .side-open {

@@ -7,8 +7,9 @@ describe('il simbolo di Glifo', () => {
     expect(favicon).toBe(logoIcon())
   })
 
-  it('nella barra in alto prende il colore del tema', () => {
-    expect(logoMark()).toContain('stroke="currentColor"')
-    expect(logoIcon()).toContain('stroke="#fff"')
+  it('nella barra laterale è solo il simbolo, del colore del tema; nell\'icona è bianco', () => {
+    expect(logoMark()).toContain('fill="currentColor"')
+    expect(logoMark()).not.toContain('<rect')
+    expect(logoIcon()).toContain('fill="#fff"')
   })
 })
