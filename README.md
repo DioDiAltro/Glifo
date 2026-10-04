@@ -79,10 +79,10 @@ chi sta provando Glifo.*
 
 #### Condividere una nota con un link
 
-Il pulsante **Condividi**, in fondo alla barra laterale accanto ad «Apri .md» e «Salva .md»,
-apre una finestra come quelle di Google (da lì si può anche stampare la nota o salvarla in PDF).
-In «Accesso con il link» scegli **Chiunque abbia il link**: arriva il link, da copiare con
-**Copia link** e mandare a chi vuoi. Serve l'account; chi riceve il link no.
+Il pulsante **Condividi** (l'icona in fondo alla barra laterale, accanto ad «Apri .md» e
+«Salva .md») apre una finestra come quelle di Google (da lì si può anche stampare la nota o
+salvarla in PDF). In «Accesso con il link» scegli **Chiunque abbia il link**: arriva il link,
+da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve il link no.
 
 - **È una fotografia,** come le conversazioni condivise di Gemini: chi apre il link vede la
   nota com'era quando l'hai condivisa, con formule, grafici e schemi, ma non può cambiarla.
@@ -575,7 +575,7 @@ In «Accesso con il link» scegli **Chiunque abbia il link**: arriva il link, da
 - Stampa / PDF dell'anteprima (da «Condividi»), backup di tutti gli appunti.
 - Niente barra in alto, come nell'app di Claude: a sinistra la **barra laterale**, che si apre e
   si chiude con il logo in alto a sinistra (come in Gemini); sotto il logo subito gli appunti, in
-  fondo una riga con «Apri .md», «Salva .md» e «Condividi», poi l'account, «Come si usa» e le
+  fondo una riga con «Apri .md», «Salva .md» e l'icona di «Condividi», poi l'account, «Come si usa» e le
   impostazioni (lì c'è anche il tema). Sopra il testo una riga sola: a sinistra i pulsanti per
   formattare, al centro le viste (Editor, Diviso, Anteprima), a destra quelli per inserire e i
   **Simboli**, vicino al loro pannello.

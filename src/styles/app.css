@@ -1354,12 +1354,19 @@ kbd {
   border-top: 1px solid var(--border);
 }
 
-/* «Apri .md», «Salva .md» e «Condividi» riempiono la riga, larghi uguali: niente spazi vuoti.
-   Solo se la barra è molto stretta vanno a capo (e riempiono anche la seconda riga). */
+/* «Apri .md» e «Salva .md» (icona e testo) riempiono la riga, larghi uguali; in fondo l'icona di
+   «Condividi», quadrata: niente spazi vuoti. Se la barra è molto stretta vanno a capo. */
 .notes-foot .btn {
   flex: 1 1 0;
-  padding: 0 6px;
+  gap: 5px;
+  padding: 0 8px;
   font-size: 12px;
+}
+
+.notes-foot .share-button {
+  flex: none;
+  width: 30px;
+  padding: 0;
 }
 
 /* ——— Pulsanti ——— */

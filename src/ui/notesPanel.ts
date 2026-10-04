@@ -25,7 +25,7 @@ export interface NotesPanelDeps {
  */
 export class NotesPanel {
   readonly el: HTMLElement
-  /** La riga in fondo all'elenco: «Apri .md», «Salva .md» (e da main.ts «Condividi»). */
+  /** La riga in fondo all'elenco: «Apri .md», «Salva .md» (e da main.ts l'icona di «Condividi»). */
   readonly foot: HTMLElement
   private readonly list: HTMLElement
   private readonly filterInput: HTMLInputElement
@@ -43,8 +43,8 @@ export class NotesPanel {
     this.foot = h(
       'div',
       { class: 'notes-foot' },
-      h('button', { class: 'btn btn-small', attrs: { type: 'button' }, title: 'Apri uno o più file .md dal computer', on: { click: () => deps.onOpenFiles() } }, 'Apri .md'),
-      h('button', { class: 'btn btn-small', attrs: { type: 'button' }, title: 'Salva la nota come file .md (Ctrl+S)', on: { click: () => deps.onSaveFile() } }, 'Salva .md'),
+      h('button', { class: 'btn btn-small', attrs: { type: 'button' }, title: 'Apri uno o più file .md dal computer', on: { click: () => deps.onOpenFiles() } }, icon(ICONS.open, 14), 'Apri .md'),
+      h('button', { class: 'btn btn-small', attrs: { type: 'button' }, title: 'Salva la nota come file .md (Ctrl+S)', on: { click: () => deps.onSaveFile() } }, icon(ICONS.download, 14), 'Salva .md'),
     )
     this.el = h(
       'aside',

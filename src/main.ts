@@ -176,11 +176,17 @@ const sideOpen = sidebarToggle('Apri la barra laterale', 'side-open')
 // Non c'è più una barra in alto. In cima alla barra laterale il logo e il nome, e subito sotto
 // gli appunti; in fondo i pulsanti della nota, l'account e le impostazioni, come nell'app di Claude.
 const sidebarTop = h('div', { class: 'side-top' }, sidebarToggle('Chiudi la barra laterale', 'side-close'), h('span', { class: 'brand-name' }, 'Glifo'))
-// Accanto ad «Apri .md» e «Salva .md», in fondo all'elenco; da lì anche la stampa e il PDF.
+// Accanto ad «Apri .md» e «Salva .md», in fondo all'elenco, solo con l'icona; da lì anche la
+// stampa e il PDF.
 const shareButton = h(
   'button',
-  { class: 'btn btn-small share-button', title: 'Condividi la nota con un link, o stampala', attrs: { type: 'button' }, on: { click: () => openShare() } },
-  'Condividi',
+  {
+    class: 'btn btn-small share-button',
+    title: 'Condividi la nota con un link, o stampala',
+    attrs: { type: 'button', 'aria-label': 'Condividi' },
+    on: { click: () => openShare() },
+  },
+  icon(ICONS.share, 15),
 )
 
 // In fondo, come nell'app di Claude: l'account, poi «Come si usa» e le impostazioni (anche il tema).

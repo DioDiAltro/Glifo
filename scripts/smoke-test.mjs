@@ -1598,16 +1598,20 @@ try {
       topbar: !!document.querySelector('.topbar'),
       // Sotto il logo subito gli appunti: niente titolo della nota
       top: !document.querySelector('.doc-title, .doc-info') && box('.notes-head').top - box('.side-top').bottom < 4,
-      // In fondo una riga sola, piena: «Apri .md», «Salva .md» e «Condividi» (a destra)
+      // In fondo una riga sola, piena: «Apri .md» e «Salva .md» con icona e testo, larghi uguali,
+      // e a destra l'icona di «Condividi»
       foot: (() => {
         const foot = box('.notes-foot')
         const buttons = [...panel.querySelectorAll('.notes-foot button')]
         const r = buttons.map((b) => b.getBoundingClientRect())
         return (
-          buttons.map((b) => b.textContent).join('|') === 'Apri .md|Salva .md|Condividi' &&
+          buttons.map((b) => b.textContent || b.getAttribute('aria-label')).join('|') === 'Apri .md|Salva .md|Condividi' &&
+          buttons.every((b) => b.querySelector('svg')) &&
           r.every((x) => Math.abs(x.top - r[0].top) < 1) &&
           Math.abs(r[0].left - (foot.left + 12)) < 1 &&
           Math.abs(r[2].right - (foot.right - 12)) < 1 &&
+          Math.abs(r[0].width - r[1].width) < 1 &&
+          r[2].width < 40 &&
           buttons.every((b) => b.scrollWidth <= b.clientWidth)
         )
       })(),
@@ -1621,7 +1625,7 @@ try {
   })
   check(
     !sideLayout.topbar && sideLayout.top && sideLayout.foot && sideLayout.bottom && sideLayout.profileAtBottom && sideLayout.noTheme && sideLayout.subFits,
-    `la barra in alto non c'è: sotto il logo subito gli appunti; in fondo una riga piena con «Apri .md», «Salva .md» e «Condividi», poi account, «Come si usa» e impostazioni; niente pulsante del tema (${JSON.stringify(sideLayout)})`,
+    `la barra in alto non c'è: sotto il logo subito gli appunti; in fondo una riga piena con «Apri .md», «Salva .md» e l'icona di «Condividi», poi account, «Come si usa» e impostazioni; niente pulsante del tema (${JSON.stringify(sideLayout)})`,
   )
   const withPanels = await rowLayout()
   await side.locator('.symbols-toggle').click()
