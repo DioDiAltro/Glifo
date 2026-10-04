@@ -573,9 +573,13 @@ con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve il link no.
 - Anteprima affiancata con scorrimento sincronizzato; doppio clic sull'anteprima porta alla riga.
 - Stampa / PDF dell'anteprima, backup di tutti gli appunti.
 - Niente barra in alto, come nell'app di Claude: a sinistra la **barra laterale**, con in cima la
-  nota aperta e i suoi pulsanti (Condividi, stampa, tema, guida), poi gli appunti e in fondo
-  l'account e le impostazioni; sopra il testo, volanti, il pulsante dei **Simboli** e le viste
-  (Editor, Diviso, Anteprima).
+  nota aperta e i suoi pulsanti (Condividi, stampa, tema), poi gli appunti e in fondo l'account,
+  «Come si usa» e le impostazioni. Sopra il testo una riga sola: a sinistra i pulsanti per
+  formattare, al centro le viste (Editor, Diviso, Anteprima), a destra quelli per inserire e i
+  **Simboli**, vicino al loro pannello.
+- **Tutorial** la prima volta che si entra: poche pagine, ognuna con un video e due righe, da
+  sfogliare con Indietro e Avanti; l'ultima ha «Inizia». Si riapre da «Come si usa», e da lì si
+  arriva a tutte le scorciatoie.
 - Sezioni in tonalità diverse (la cornice è più scura del foglio su cui si scrive) e **da
   allargare o stringere**: trascina il bordo dell'elenco degli appunti, del pannello dei
   simboli o quello tra testo e anteprima (o usa le frecce, quando il bordo ha il fuoco); con un

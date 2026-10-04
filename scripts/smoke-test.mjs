@@ -13,6 +13,21 @@ import { readFileSync } from 'node:fs'
 const server = await preview({ preview: { port: 4174, strictPort: true }, logLevel: 'error' })
 const url = server.resolvedUrls.local[0]
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined })
+// Il tutorial della prima apertura ha la sua prova (con `firstVisit`): nelle altre pagine è già
+// visto. Anche browser.newPage passa da browser.newContext.
+const tutorialSeen = () => {
+  try {
+    localStorage.setItem('glifo.tutorial.v1', 'visto')
+  } catch {}
+}
+const plainContext = browser.newContext.bind(browser)
+browser.newContext = async (options) => {
+  const context = await plainContext(options)
+  await context.addInitScript(tutorialSeen)
+  return context
+}
+/** Una pagina come alla prima apertura di Glifo, con il tutorial. */
+const firstVisit = async (options) => (await plainContext(options)).newPage()
 let failures = 0
 const check = (ok, msg) => {
   console.log(`${ok ? '✓' : '✗'} ${msg}`)
@@ -1545,26 +1560,53 @@ try {
   await side.goto(url)
   await side.waitForSelector('.cm-editor')
   await side.waitForTimeout(500)
+  // Una riga sola sopra il testo: formattazione a sinistra, viste al centro, inserimenti e
+  // simboli a destra, senza sovrapporsi
+  const rowLayout = () =>
+    side.evaluate(() => {
+      const box = (s) => document.querySelector(s).getBoundingClientRect()
+      const bar = box('.float-bar')
+      const pill = box('.float-bar .view-switch')
+      const content = box('.content')
+      const format = box('.editor-toolbar[aria-label="Formattazione"]')
+      const insert = box('.editor-toolbar[aria-label="Inserisci"]')
+      const symbols = box('.float-bar .symbols-toggle')
+      const row = [...document.querySelectorAll('.float-bar .tool, .float-bar .view-button, .float-bar .symbols-toggle')]
+        .map((el) => el.getBoundingClientRect())
+        .filter((r) => r.width > 0)
+      return {
+        fit: document.querySelector('.float-bar').dataset.fit,
+        oneRow: row.every((r) => r.top >= bar.top && r.bottom <= bar.bottom),
+        centered: Math.abs(pill.left + pill.width / 2 - (content.left + content.width / 2)) < 2,
+        apart: format.right <= pill.left && pill.right <= insert.left && insert.right <= symbols.left,
+        symbolsRight: Math.abs(symbols.right - (bar.right - 10)) < 2,
+        previewBelow: box('.preview-pane h1').top >= bar.bottom,
+      }
+    })
   const sideLayout = await side.evaluate(() => {
     const box = (s) => document.querySelector(s).getBoundingClientRect()
     const panel = document.querySelector('.notes-panel')
-    const pill = box('.float-bar .view-switch')
-    const content = box('.content')
     return {
       topbar: !!document.querySelector('.topbar'),
       top: !!panel.querySelector('.side-top .doc-title') && !!panel.querySelector('.side-top .share-button'),
-      bottom: !!panel.querySelector('.side-profile .account-button') && !!panel.querySelector('.side-profile button[aria-label="Impostazioni"]'),
+      bottom: ['Come si usa', 'Impostazioni'].every((l) => panel.querySelector(`.side-profile button[aria-label="${l}"]`)) && !!panel.querySelector('.side-profile .account-button'),
       profileAtBottom: Math.abs(box('.side-profile').bottom - box('.notes-panel').bottom) < 1,
-      symbols: !!document.querySelector('.float-bar .symbols-toggle'),
-      centered: Math.abs(pill.left + pill.width / 2 - (content.left + content.width / 2)) < 2,
-      previewBelow: box('.preview-pane h1').top >= box('.float-bar').bottom,
     }
   })
   check(
     !sideLayout.topbar && sideLayout.top && sideLayout.bottom && sideLayout.profileAtBottom,
-    `la barra in alto non c'è: nota e pulsanti in cima alla barra laterale, account e impostazioni in fondo (${JSON.stringify(sideLayout)})`,
+    `la barra in alto non c'è: nota e pulsanti in cima alla barra laterale; in fondo account, «Come si usa» e impostazioni (${JSON.stringify(sideLayout)})`,
   )
-  check(sideLayout.symbols && sideLayout.centered && sideLayout.previewBelow, 'sopra il testo i simboli volanti e le viste al centro, e l\'anteprima comincia sotto')
+  const withPanels = await rowLayout()
+  await side.locator('.symbols-toggle').click()
+  const withoutSymbols = await rowLayout()
+  await side.locator('.symbols-toggle').click()
+  check(
+    [withPanels, withoutSymbols].every((l) => l.oneRow && l.centered && l.apart && l.symbolsRight && l.previewBelow) &&
+      withPanels.fit === 'medium' &&
+      withoutSymbols.fit === 'wide',
+    `sopra il testo una riga sola: le viste al centro, i simboli a destra, niente si sovrappone e l'anteprima comincia sotto (${JSON.stringify({ withPanels, withoutSymbols })})`,
+  )
   await side.locator('.side-close').click()
   const closedSide = await side.evaluate(() => ({ open: document.querySelector('.app').classList.contains('notes-open'), button: !!document.querySelector('.side-open')?.offsetParent }))
   await side.locator('.side-open').click()
@@ -1579,12 +1621,21 @@ try {
   await phoneSide.goto(url)
   await phoneSide.waitForSelector('.cm-editor')
   const phoneLayout = await phoneSide.evaluate(() => {
-    const pill = document.querySelector('.float-bar .view-switch').getBoundingClientRect()
-    return { wide: document.documentElement.scrollWidth, content: Math.round(document.querySelector('.content').getBoundingClientRect().width), pill: Math.round(pill.left + pill.width / 2) }
+    const box = (s) => document.querySelector(s).getBoundingClientRect()
+    const tools = box('.float-tools')
+    const pill = box('.float-bar .view-switch')
+    const symbols = box('.float-bar .symbols-toggle')
+    return {
+      wide: document.documentElement.scrollWidth,
+      content: Math.round(box('.content').width),
+      fit: document.querySelector('.float-bar').dataset.fit,
+      apart: tools.right <= pill.left && pill.right <= symbols.left && symbols.right <= 390,
+      scrolls: document.querySelector('.float-tools').scrollWidth > tools.width,
+    }
   })
   check(
-    phoneLayout.wide <= 390 && phoneLayout.content === 390 && Math.abs(phoneLayout.pill - 195) <= 1,
-    `sul telefono il testo è largo quanto lo schermo e le viste stanno al centro (${JSON.stringify(phoneLayout)})`,
+    phoneLayout.wide <= 390 && phoneLayout.content === 390 && phoneLayout.fit === 'narrow' && phoneLayout.apart && phoneLayout.scrolls,
+    `sul telefono il testo è largo quanto lo schermo; nella riga in alto la barra scorre, le viste e i simboli stanno a destra (${JSON.stringify(phoneLayout)})`,
   )
   await phoneSide.locator('.side-open').tap()
   await phoneSide.waitForTimeout(300)
@@ -1594,6 +1645,63 @@ try {
   })
   check(drawer, 'sul telefono la barra laterale si apre sopra il testo, con l\'account in fondo')
   await phoneSide.close()
+  // La prima volta si apre il tutorial: pagine con un video e il testo, Indietro e Avanti, alla
+  // fine «Inizia»; poi non si apre più da solo, ma da «Come si usa»
+  const first = await firstVisit({ viewport: { width: 1280, height: 800 } })
+  first.on('pageerror', (e) => errors.push(e.message))
+  await first.goto(url)
+  const tutorial = first.locator('dialog.dialog-tutorial')
+  await tutorial.waitFor()
+  const tutorialPage = () =>
+    tutorial.evaluate((d) => ({
+      step: d.querySelector('.tutorial-step').textContent,
+      title: d.querySelector('.tutorial-title').textContent,
+      video: d.querySelector('video').getAttribute('src'),
+      back: !d.querySelector('.tutorial-foot .btn:not(.btn-primary)').hidden,
+      next: d.querySelector('.tutorial-next').textContent,
+    }))
+  const page1 = await tutorialPage()
+  await first.waitForFunction(() => document.querySelector('dialog.dialog-tutorial video')?.readyState >= 2, null, { timeout: 8000 }).catch(() => {})
+  const playing = await tutorial.evaluate((d) => {
+    const v = d.querySelector('video')
+    return !v.error && v.readyState >= 2 && v.muted && v.loop
+  })
+  check(
+    page1.step === '1 di 5' && !page1.back && page1.next === 'Avanti' && page1.video.endsWith('scrivere-chiaro.webm') && playing,
+    `la prima volta si apre il tutorial, con il video che si vede (${JSON.stringify(page1)}, ${playing})`,
+  )
+  for (let i = 0; i < 4; i++) await tutorial.locator('.tutorial-next').click()
+  const last = await tutorialPage()
+  await tutorial.locator('.tutorial-foot .btn:not(.btn-primary)').click()
+  const backOne = await tutorialPage()
+  await first.keyboard.press('ArrowRight')
+  const keyNext = await tutorialPage()
+  check(
+    last.step === '5 di 5' && last.next === 'Inizia' && last.back && backOne.step === '4 di 5' && keyNext.step === '5 di 5',
+    `Avanti e Indietro (anche con le frecce) sfogliano le pagine, e l'ultima ha «Inizia» (${JSON.stringify({ last, backOne, keyNext })})`,
+  )
+  await tutorial.locator('.tutorial-next').click()
+  await first.waitForTimeout(200)
+  const closed = !(await tutorial.count())
+  await first.reload()
+  await first.waitForSelector('.cm-editor')
+  await first.waitForTimeout(900)
+  check(closed && !(await first.locator('dialog.dialog-tutorial').count()), '«Inizia» chiude il tutorial, che poi non si apre più da solo')
+  await first.locator('.side-help').click()
+  const again = await tutorialPage()
+  await tutorial.locator('.tutorial-shortcuts').click()
+  check(
+    again.step === '1 di 5' && (await first.locator('dialog table.shortcuts').isVisible()),
+    '«Come si usa» riapre il tutorial, e da lì si arriva a tutte le scorciatoie',
+  )
+  await first.context().close()
+  // Nel tema scuro i video sono quelli scuri
+  const firstDark = await firstVisit({ viewport: { width: 1280, height: 800 }, colorScheme: 'dark' })
+  await firstDark.goto(url)
+  await firstDark.locator('dialog.dialog-tutorial').waitFor()
+  const darkVideo = await firstDark.locator('dialog.dialog-tutorial video').getAttribute('src')
+  check(darkVideo.endsWith('scrivere-scuro.webm'), `nel tema scuro il tutorial mostra i video scuri (${darkVideo})`)
+  await firstDark.context().close()
   // Dentro claude.ai (la demo e le prove della grafica) l'account e la condivisione sono spenti
   const viewer = await browser.newPage({ viewport: { width: 1440, height: 900 } })
   await viewer.addInitScript(() => {

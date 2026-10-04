@@ -125,10 +125,14 @@ export interface ToolbarActions {
   onGraph(): void
 }
 
-/** Barra dei pulsanti di formattazione sopra l'editor. */
-export function createToolbar(editor: MarkdownEditor, more: ToolbarActions): HTMLElement {
+/**
+ * I pulsanti sopra l'editor, in due gruppi: per formattare (titolo, grassetto, elenchi, citazione)
+ * e per inserire (codice, link, tabella, schema, grafico, formule). Stanno nella riga sopra il
+ * testo, ai due lati delle viste (vedi `fitBar` in main.ts).
+ */
+export function createToolbar(editor: MarkdownEditor, more: ToolbarActions): { format: HTMLElement; insert: HTMLElement } {
   const v = () => editor.view
-  const actions: Action[] = [
+  const format: Action[] = [
     { icon: 'heading', title: 'Titolo (## )', run: () => toggleLinePrefix(v(), '## ', /^#{1,6}\s+/) },
     { icon: 'bold', title: 'Grassetto (Ctrl+B)', run: () => wrapSelection(v(), '**', '**', 'grassetto') },
     { icon: 'italic', title: 'Corsivo (Ctrl+I)', run: () => wrapSelection(v(), '*', '*', 'corsivo') },
@@ -139,7 +143,8 @@ export function createToolbar(editor: MarkdownEditor, more: ToolbarActions): HTM
     { icon: 'tasks', title: 'Lista di cose da fare', run: () => applyListStyle(v(), listStyle('Cose da fare')) },
     listMenu(editor),
     { icon: 'quote', title: 'Citazione', run: () => toggleLinePrefix(v(), '> ', /^>\s?/) },
-    'sep',
+  ]
+  const insert: Action[] = [
     { icon: 'code', title: 'Codice', run: () => insertCode(editor) },
     { icon: 'link', title: 'Link', run: () => insertLink(editor) },
     {
@@ -153,10 +158,13 @@ export function createToolbar(editor: MarkdownEditor, more: ToolbarActions): HTM
     { text: '$x$', title: 'Formula in linea (Ctrl+M)', run: () => editor.insertInlineMath() },
     { text: '$$', title: 'Formula a blocco (Ctrl+Maiusc+M)', run: () => editor.insertBlockMath() },
   ]
+  return { format: toolbar('Formattazione', format), insert: toolbar('Inserisci', insert) }
+}
 
+function toolbar(label: string, actions: Action[]): HTMLElement {
   return h(
     'div',
-    { class: 'editor-toolbar', attrs: { role: 'toolbar', 'aria-label': 'Formattazione' } },
+    { class: 'editor-toolbar', attrs: { role: 'toolbar', 'aria-label': label } },
     actions.map((a) =>
       a instanceof HTMLElement
         ? a

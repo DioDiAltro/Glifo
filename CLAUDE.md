@@ -30,6 +30,10 @@ prossimi passi sono in «In programma» nella ROADMAP.
   (nelle sessioni cloud `/opt/pw-browsers/chromium`).
 - `GLIFO_NO_PWA=1 npx vite build`: la build per claude.ai (la demo e le prove della grafica):
   senza service worker e con l'account spento.
+- `node scripts/tutorial.mjs`: registra dall'app vera (esegui prima `npm run build`) i video del
+  tutorial, nel tema chiaro e in quello scuro, in `public/tutorial/` (serve `CHROMIUM_PATH`; usa
+  l'ffmpeg di Playwright). Va rifatto quando cambia l'interfaccia che i video mostrano; con un
+  nome (`formule`) rifà solo quella pagina.
 - `node scripts/icons.mjs`: ridisegna `public/favicon.svg` e le icone PNG dell'app dal simbolo
   ∮ in `src/ui/logo.ts` (serve `CHROMIUM_PATH`). Va rifatto ogni volta che cambia il simbolo.
 - `graphify update .`: rifà il grafo del codice in `graphify-out/` (in locale, senza modelli AI).
@@ -63,7 +67,10 @@ prossimi passi sono in «In programma» nella ROADMAP.
   alto: la barra laterale è l'elenco degli appunti (`notesPanel.ts`) con sopra la nota aperta e i
   suoi pulsanti e sotto l'account e le impostazioni (`sidebarTop` e `sidebarBottom` in `main.ts`);
   i pulsanti volanti (simboli, viste) sono in `.float-bar`, dentro `.content` con testo e
-  anteprima, e nell'anteprima la loro fascia è il bordo in alto (`syncTo` ne tiene conto).
+  anteprima, e nell'anteprima la loro fascia è il bordo in alto (`syncTo` ne tiene conto). Nella
+  riga ci sono anche i due gruppi della barra di formattazione (`toolbar.ts`); `fitBar` decide se le
+  viste stanno al centro o, se il posto non basta, a destra. Il tutorial è in `tutorial.ts` (si apre
+  la prima volta e da «Come si usa»; le prove nel browser lo segnano come visto, tranne la sua).
   `src/store/`: note, cartelle (`folders.ts`), impostazioni e misure delle sezioni (`layout.ts`,
   solo su quel dispositivo) nel browser (chiavi `glifo.*`).
   Glifo può essere aperto in più schede: ogni modifica parte da quello salvato, non dalla copia

@@ -314,8 +314,8 @@ kbd {
   border-top: 1px solid var(--border);
 }
 
-/* Le impostazioni stanno a destra anche quando l'account non c'è (dentro claude.ai). */
-.side-profile > .icon-button {
+/* «Come si usa» e le impostazioni stanno a destra anche quando l'account non c'è (dentro claude.ai). */
+.side-profile .side-help {
   margin-left: auto;
 }
 
@@ -355,31 +355,78 @@ kbd {
   min-width: 440px;
 }
 
+/* Una riga sola: a sinistra la formattazione, al centro le viste, a destra inserimenti e simboli
+   (data-fit lo mette `fitBar` in main.ts, secondo il posto che c'è). */
 .float-bar {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   z-index: 6;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: center;
+  column-gap: 8px;
   height: var(--float-h);
+  padding: 0 10px;
   /* Tra un pulsante e l'altro si arriva a quello che c'è sotto (per esempio il bordo da trascinare). */
   pointer-events: none;
 }
 
-.float-bar > *,
-.float-left > * {
+/* Stretto: tutti i pulsanti della barra a sinistra, le viste accanto ai simboli. */
+.float-bar[data-fit='narrow'] {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.float-bar[data-fit='medium'] .view-label,
+.float-bar[data-fit='narrow'] .view-label,
+.float-bar[data-fit='medium'] .symbols-toggle-label,
+.float-bar[data-fit='narrow'] .symbols-toggle-label {
+  display: none;
+}
+
+.float-bar .view-switch,
+.float-left > *,
+.float-right > * {
   pointer-events: auto;
 }
 
-.float-left {
-  position: absolute;
-  top: 7px;
-  left: 10px;
+.float-left,
+.float-right {
   display: flex;
+  align-items: center;
   gap: 6px;
+  min-width: 0;
+}
+
+.float-right {
+  justify-content: flex-end;
+}
+
+/* La barra di formattazione: se non c'è posto, scorre. */
+.float-tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.float-tools::-webkit-scrollbar {
+  display: none;
+}
+
+.float-right .editor-toolbar {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+/* Nell'anteprima non si scrive: niente barra di formattazione. */
+.app[data-view='preview'] .editor-toolbar {
+  display: none;
 }
 
 .float-button {
@@ -502,15 +549,12 @@ kbd {
   min-height: 0;
 }
 
+/* I pulsanti per formattare e per inserire, nella riga sopra il testo (.float-bar). */
 .editor-toolbar {
   display: flex;
+  flex: none;
   align-items: center;
   gap: 2px;
-  padding: 5px 10px;
-  border-bottom: 1px solid var(--border);
-  background: var(--pane-editor);
-  overflow-x: auto;
-  scrollbar-width: none;
 }
 
 .editor-toolbar::-webkit-scrollbar {
@@ -2325,6 +2369,142 @@ kbd {
 @media (prefers-reduced-motion: reduce) {
   .account-button.is-syncing .account-dot {
     animation: none;
+  }
+}
+
+/* ——— Tutorial (src/ui/tutorial.ts) ——— */
+
+.dialog-tutorial {
+  position: relative;
+  width: min(720px, calc(100vw - 32px));
+  overflow: hidden auto;
+}
+
+.tutorial-media {
+  aspect-ratio: 8 / 5;
+  background: var(--frame);
+  border-bottom: 1px solid var(--border);
+}
+
+.tutorial-media {
+  position: relative;
+}
+
+.tutorial-media video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tutorial-offline {
+  display: none;
+  position: absolute;
+  inset: 0;
+  place-items: center;
+  margin: 0;
+  color: var(--muted);
+}
+
+.tutorial-media.is-offline .tutorial-offline {
+  display: grid;
+}
+
+.tutorial-body {
+  padding: 18px 24px 0;
+}
+
+.tutorial-step {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tutorial-title {
+  margin: 4px 0 8px;
+  font-size: 20px;
+  text-wrap: balance;
+}
+
+/* Tre righe anche quando il testo è più corto: i pulsanti restano allo stesso posto. */
+.tutorial-text {
+  margin: 0;
+  line-height: 1.6;
+  min-height: calc(3 * 1.6em);
+}
+
+.tutorial-text code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+.tutorial-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 24px 20px;
+}
+
+.tutorial-dots {
+  display: flex;
+  gap: 6px;
+  margin-right: auto;
+}
+
+.tutorial-dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: var(--border-strong);
+  transition: width 0.2s, background-color 0.2s;
+}
+
+.tutorial-dot[aria-current='step'] {
+  width: 22px;
+  background: var(--accent);
+}
+
+.tutorial-shortcuts {
+  margin-right: 4px;
+}
+
+.tutorial-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: var(--surface);
+  box-shadow: 0 1px 4px rgba(20, 24, 40, 0.18);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-dot {
+    transition: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .tutorial-body {
+    padding: 14px 16px 0;
+  }
+
+  .tutorial-foot {
+    padding: 12px 16px 16px;
+  }
+
+  /* Sul telefono «Tutte le scorciatoie» va sotto, su una riga sua. */
+  .tutorial-shortcuts {
+    order: 1;
+    width: 100%;
+    margin: 4px 0 0;
   }
 }
 

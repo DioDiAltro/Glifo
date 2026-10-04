@@ -67,6 +67,7 @@ import { SidePanel } from './ui/sidePanel'
 import { toast } from './ui/toast'
 import { leaveNotice, takeNotice } from './ui/notice'
 import { createToolbar } from './ui/toolbar'
+import { openTutorial, tutorialSeen } from './ui/tutorial'
 
 /** La build per claude.ai (`GLIFO_NO_PWA=1`, vedi vite.config.ts): l'account è spento. */
 declare const __GLIFO_DEMO__: boolean
@@ -217,47 +218,24 @@ const sidebarTop = h(
       icon(ICONS.print),
     ),
     themeButton,
-    h(
-      'button',
-      { class: 'icon-button', title: 'Come si usa', attrs: { type: 'button', 'aria-label': 'Guida' }, on: { click: () => openHelpDialog() } },
-      icon(ICONS.help),
-    ),
   ),
 )
 
+// In fondo, come nell'app di Claude: l'account, poi «Come si usa» e le impostazioni.
 const sidebarBottom = h(
   'div',
   { class: 'side-profile' },
   accountButton.el,
   h(
     'button',
+    { class: 'icon-button side-help', title: 'Come si usa', attrs: { type: 'button', 'aria-label': 'Come si usa' }, on: { click: () => openGuide() } },
+    icon(ICONS.help),
+  ),
+  h(
+    'button',
     { class: 'icon-button', title: 'Impostazioni', attrs: { type: 'button', 'aria-label': 'Impostazioni' }, on: { click: () => openSettings() } },
     icon(ICONS.settings),
   ),
-)
-
-// Volanti sopra il testo: a sinistra la barra laterale (quando è chiusa) e i simboli, al centro
-// le viste.
-const floatBar = h(
-  'div',
-  { class: 'float-bar' },
-  h(
-    'div',
-    { class: 'float-left' },
-    sidebarToggle('Apri la barra laterale', 'float-button side-open'),
-    h(
-      'button',
-      {
-        class: 'icon-button float-button symbols-toggle',
-        title: 'Mostra/nascondi i simboli',
-        attrs: { type: 'button', 'aria-label': 'Mostra o nascondi il pannello dei simboli' },
-        on: { click: () => setPanels({ symbolsOpen: !settings.symbolsOpen }) },
-      },
-      icon(ICONS.panel),
-      h('span', { class: 'symbols-toggle-label' }, 'Simboli'),
-    ),
-  ),
-  viewSwitch,
 )
 
 const editorHost = h('div', { class: 'editor-host' })
@@ -351,11 +329,35 @@ const notesPanel = new NotesPanel({
   onSaveFile: () => void saveToFile(),
 })
 
-const editorPane = h(
-  'section',
-  { class: 'editor-pane', attrs: { id: 'editor-pane' } },
-  createToolbar(editor, { onSchema: () => void openSchema(null), onGraph: () => insertGraph() }),
-  editorHost,
+const editorPane = h('section', { class: 'editor-pane', attrs: { id: 'editor-pane' } }, editorHost)
+
+// Una riga sola sopra il testo, con i pulsanti volanti: a sinistra la barra laterale (quando è
+// chiusa) e la formattazione, al centro le viste, a destra gli inserimenti e i simboli, vicino al
+// loro pannello. Quanto ci sta lo decide `fitBar`.
+const tools = createToolbar(editor, { onSchema: () => void openSchema(null), onGraph: () => insertGraph() })
+const floatTools = h('div', { class: 'float-tools' }, tools.format)
+const floatRight = h(
+  'div',
+  { class: 'float-right' },
+  tools.insert,
+  h(
+    'button',
+    {
+      class: 'icon-button float-button symbols-toggle',
+      title: 'Mostra/nascondi i simboli',
+      attrs: { type: 'button', 'aria-label': 'Mostra o nascondi il pannello dei simboli' },
+      on: { click: () => setPanels({ symbolsOpen: !settings.symbolsOpen }) },
+    },
+    icon(ICONS.panel),
+    h('span', { class: 'symbols-toggle-label' }, 'Simboli'),
+  ),
+)
+const floatBar = h(
+  'div',
+  { class: 'float-bar' },
+  h('div', { class: 'float-left' }, sidebarToggle('Apri la barra laterale', 'float-button side-open'), floatTools),
+  viewSwitch,
+  floatRight,
 )
 const backdrop = h('div', { class: 'backdrop', on: { click: () => setPanels({ notesOpen: false, symbolsOpen: false }) } })
 // I bordi tra le sezioni: trascinandoli se ne cambiano le misure, ricordate su questo dispositivo.
@@ -368,6 +370,35 @@ notesPanel.el.prepend(sidebarTop)
 notesPanel.el.append(sidebarBottom)
 // Testo e anteprima, con sopra i pulsanti volanti.
 const content = h('div', { class: 'content' }, floatBar, editorPane, resizer.splitHandle, preview.el)
+
+/** Le misure fisse della riga sopra il testo, in pixel. */
+const BAR = {
+  /** I margini della riga e gli spazi tra le sue tre parti. */
+  gaps: 36,
+  /** Le viste con le scritte e solo con le icone. */
+  pill: { labels: 280, icons: 116 },
+  /** Il pulsante dei simboli con la scritta e solo con l'icona. */
+  symbols: { label: 100, icon: 40 },
+  /** Il pulsante per riaprire la barra laterale, con lo spazio accanto. */
+  sideOpen: 40,
+}
+
+/**
+ * Quanto posto c'è nella riga sopra il testo. Largo: le viste al centro, con le scritte. Medio:
+ * al centro, solo icone. Stretto: tutti i pulsanti della barra a sinistra (scorrono) e le viste a
+ * destra, accanto ai simboli. Le viste stanno al centro se ai loro lati ci stanno la
+ * formattazione (a sinistra) e gli inserimenti con i simboli (a destra).
+ */
+function fitBar(): void {
+  const room = content.clientWidth - BAR.gaps
+  const left = tools.format.scrollWidth + (settings.notesOpen ? 0 : BAR.sideOpen)
+  const fits = (pill: number, symbols: number) => 2 * Math.max(left, tools.insert.scrollWidth + 6 + symbols) + pill <= room
+  const fit = fits(BAR.pill.labels, BAR.symbols.label) ? 'wide' : fits(BAR.pill.icons, BAR.symbols.icon) ? 'medium' : 'narrow'
+  floatBar.dataset.fit = fit
+  if (fit === 'narrow' && tools.insert.parentElement !== floatTools) floatTools.append(tools.insert)
+  if (fit !== 'narrow' && tools.insert.parentElement !== floatRight) floatRight.prepend(tools.insert)
+}
+new ResizeObserver(() => fitBar()).observe(content)
 const workspace = h(
   'main',
   { class: 'workspace' },
@@ -430,6 +461,7 @@ function setView(mode: ViewMode, focus = true): void {
   updateSettings({ view: mode })
   app.dataset.view = mode
   for (const [m, b] of viewButtons) b.setAttribute('aria-checked', String(m === mode))
+  fitBar()
   if (mode !== 'editor') preview.update(editor.getDoc(), true)
   if (mode === 'preview') (document.activeElement as HTMLElement | null)?.blur()
   else if (focus) editor.focus()
@@ -444,11 +476,17 @@ function setPanels(next: Partial<Pick<Settings, 'notesOpen' | 'symbolsOpen'>>): 
   updateSettings(next)
   app.classList.toggle('notes-open', settings.notesOpen)
   app.classList.toggle('symbols-open', settings.symbolsOpen)
+  fitBar()
 }
 
 function focusSymbolSearch(): void {
   if (!settings.symbolsOpen) setPanels({ symbolsOpen: true })
   sidePanel.focusSearch()
+}
+
+/** «Come si usa»: il tutorial, e da lì la guida con tutte le scorciatoie. */
+function openGuide(): void {
+  openTutorial({ dark: isDark(), onShortcuts: () => openHelpDialog() })
 }
 
 function openSettings(): void {
@@ -472,6 +510,12 @@ if (narrow.matches) {
 }
 setPanels({})
 setView(settings.view, false)
+// La prima volta il tutorial (se nel frattempo non si è aperta un'altra finestra).
+if (!tutorialSeen()) {
+  window.setTimeout(() => {
+    if (!document.querySelector('dialog[open]')) openGuide()
+  }, 400)
+}
 
 // ——— Salvataggio ———
 
