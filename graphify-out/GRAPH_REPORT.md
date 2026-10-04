@@ -1,7 +1,7 @@
 # Graph Report - matherdown  (2026-10-04)
 
 ## Corpus Check
-- 218 files · ~395,074 words
+- 218 files · ~395,143 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 5 file(s) not represented in the graph (top: (none) 4, .css 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `7fa85742`
+- Built from commit: `726864c3`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -514,11 +514,11 @@ Nodes (3): result(), text(), verdict()
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `vitest` connect `vitest` to `main.ts`, `sync.ts`, `num`, `toLatex`, `svg.ts`, `graph/space.ts`, `compile`, `Rational`, `assistant.ts`, `spell.test.ts`, `sheet.ts`, `markdown.ts`, `editor/editor.ts`, `editor.test.ts`, `resize.ts`, `NotesStore`, `supabase.ts`, `distributions.ts`, `page.ts`, `graphNote.test.ts`, `search.ts`, `editor/lists.ts`, `insert.ts`, `MathNode`, `markers.ts`, `sql.ts`, `tutorial.ts`, `parseSchema`, `sidePanel.ts`, `schemaTools.test.ts`, `database.ts`, `numerical.test.ts`?**
-  _High betweenness centrality (0.100) - this node is a cross-community bridge._
+  _High betweenness centrality (0.131) - this node is a cross-community bridge._
 - **Why does `Dove sono le cose` connect `Dove sono le cose` to `solve.ts`, `parse.ts`, `main.ts`, `odesolve.ts`, `spec.ts`, `arithmetic.ts`, `num`, `schema/editor.ts`, `symbolic.ts`, `toLatex`, `svg.ts`, `linsys.ts`, `graph/space.ts`, `compile`, `numerical.ts`, `Rational`, `several.ts`, `MathError`, `compileComplex`, `markdown.ts`, `logic.ts`, `study.ts`, `supabase.ts`, `finite.ts`, `schema/preview.ts`, `MathNode`, `inference.ts`, `tutorial.ts`, `limits.ts`, `Glifo`, `severalGraph.ts`, `katex.ts`?**
-  _High betweenness centrality (0.064) - this node is a cross-community bridge._
+  _High betweenness centrality (0.066) - this node is a cross-community bridge._
 - **Why does `MathError` connect `MathError` to `solve.ts`, `odesolve.ts`, `spec.ts`, `num`, `symbolic.ts`, `toLatex`, `linsys.ts`, `compile`, `numerical.ts`, `sheet.ts`, `compileComplex`, `Dove sono le cose`, `statsShown.ts`, `probability.ts`, `complex.ts`, `distributions.ts`, `domain.ts`, `.int`, `MathNode`, `inference.ts`, `formatNumber`, `gauss.ts`, `severalGraph.ts`?**
-  _High betweenness centrality (0.028) - this node is a cross-community bridge._
+  _High betweenness centrality (0.036) - this node is a cross-community bridge._
 - **What connects `Comandi`, `Promemoria per lo studente`, `Regole` to the rest of the system?**
   _488 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `parse.ts` be split into smaller, more focused modules?**
