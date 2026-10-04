@@ -11,9 +11,12 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
   sentire un parere prima di decidere.
 - **Il ragionamento su cosa far pagare** (4 ottobre 2026): allo studente piace come sono stati
   scelti cosa far pagare, perché e in quale piano, cioè i cinque criteri di «Come si decide cosa far
-  pagare» e la divisione dei piani per chi li usa (Super per studiare, Quantistico per la tesi e la
+  pagare» e la divisione dei piani per chi li usa (Relativistico per studiare, Quantistico per la tesi e la
   ricerca). È la base da cui si continua; prezzi, tetti e le domande di «Da approfondire» restano
   da decidere.
+- **Il piano di mezzo si chiama Relativistico**, non più Super (4 ottobre 2026): *Classico →
+  Relativistico → Quantistico* segue la storia della fisica (Newton, Einstein, i quanti) e, come ha
+  detto lo studente, fa più effetto.
 
 ## Com'è andata la discussione
 
@@ -26,6 +29,7 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
    piano».
 3. **I grafici** (4 ottobre 2026). Lo studente precisa che i grafici non voleva toglierli e che il
    ragionamento gli piace: vedi «Deciso». Restano le domande di «Da approfondire».
+4. **Il nome** (4 ottobre 2026). Super diventa Relativistico: vedi «Deciso».
 
 ## La proposta dello studente (4 ottobre 2026)
 
@@ -33,9 +37,10 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
   schemi trasformati in codice e in SQL (oggi si scarica solo l'SQL; quella parte migliorerà), le
   spiegazioni (ancora da fare, e da capire) e altro. I grafici erano nell'elenco, ma lo studente
   non voleva davvero toglierli: vedi «Deciso».
-- **Super**: 10 € al mese (120 € l'anno) oppure 96 € l'anno (8 € al mese). Non tutte le funzioni,
-  solo alcune: la lavagna (ancora da sviluppare e da capire: lo studente ha un'idea particolare),
-  le spiegazioni, forse altro. Funzioni utili, ma che non semplificano troppo la vita.
+- **Super** (poi chiamato Relativistico: vedi «Deciso»): 10 € al mese (120 € l'anno) oppure 96 €
+  l'anno (8 € al mese). Non tutte le funzioni, solo alcune: la lavagna (ancora da sviluppare e da
+  capire: lo studente ha un'idea particolare), le spiegazioni, forse altro. Funzioni utili, ma che
+  non semplificano troppo la vita.
 - **Quantistico**: 20 € al mese (240 € l'anno) oppure 192 € l'anno (16 € al mese). Tutto
   sbloccato e l'aiuto completo.
 - **Il sogno**, lontano: se Glifo va bene, farlo diventare di uso globale, con i data center e
@@ -49,10 +54,10 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
 - Si fa pagare **quello che costa a Glifo** (AI, trascrizione, spazio, il server per lavorare
   insieme) e **quello che serve a chi ha una scadenza** (un esame, la tesi, un articolo), non
   «quanto ti semplifica la vita».
-- I piani si dividono **per chi li usa**: Super per studiare, Quantistico per la tesi e la ricerca.
+- I piani si dividono **per chi li usa**: Relativistico per studiare, Quantistico per la tesi e la ricerca.
 - Per uno studente italiano i prezzi sono alti: la proposta è di dimezzarli (4,99 € e 9,99 € al
   mese).
-- Lavagna e spiegazioni non ci sono ancora: si parte con Classico + Super (quando c'è almeno il
+- Lavagna e spiegazioni non ci sono ancora: si parte con Classico + Relativistico (quando c'è almeno il
   tutor), e Quantistico arriva quando ci sono le funzioni per riempirlo.
 - Prima di incassare servono un soggetto che vende (S&Z o una partita IVA), un servizio che incassa
   e paga l'IVA (*merchant of record*), un altro hosting (GitHub Pages non permette servizi a
@@ -98,11 +103,11 @@ mandato un link.
 | **Tutto lo scrivere**: editor, formule, pannello dei simboli, suggerimenti `\…`, controllo ortografico, elenchi, temi, cartelle, offline, app installabile, «Apri .md» e «Salva .md», stampa e PDF dalla stampa | È la base dello scopo («prima di tutto un posto dove si scrive»); Obsidian, Notion e gli altri lo danno gratis; gira nel browser e non costa niente |
 | **Tutti i calcoli**: i risultati dopo `=`, il controllo ✓/✗ (in programma), le soluzioni con ⇒, lo studio di funzione, le matrici, la probabilità, tutto il «foglio» | È il «controllare». I risultati sono gratis ovunque (Wolfram\|Alpha fa pagare i passaggi, non il risultato). Dividerli per argomento («Fourier è a pagamento») sarebbe arbitrario e romperebbe le note condivise, perché i risultati sono parte della nota. Non costano niente |
 | **Tutti i grafici**: 2D e 3D, slider, aree, zone, campi | È il «mostrare». Desmos e GeoGebra sono gratis; le note condivise e i file .md li devono mostrare comunque |
-| **Gli schemi**, con le immagini PNG e SVG (non l'SQL: vedi Super) | Disegnare è scrivere; le immagini ci sono già e toglierle farebbe arrabbiare |
+| **Gli schemi**, con le immagini PNG e SVG (non l'SQL: vedi Relativistico) | Disegnare è scrivere; le immagini ci sono già e toglierle farebbe arrabbiare |
 | **L'account e la sincronizzazione**, con uno spazio base | Chi studia usa telefono e computer: senza, il gratuito sarebbe a metà. Il limite va sullo spazio (che costa), non sul numero di dispositivi: Evernote limitò i dispositivi del suo piano gratuito e fu molto criticato |
 | **Condividere una nota con un link** | Ogni link è pubblicità: chi lo apre scopre Glifo |
 | **L'assistente AI con la propria chiave** | A Glifo non costa niente |
-| **Un assaggio** dei piani a pagamento: 7 giorni di Super, oppure poche domande al mese all'AI | Non si compra quello che non si è mai provato |
+| **Un assaggio** dei piani a pagamento: 7 giorni di Relativistico, oppure poche domande al mese all'AI | Non si compra quello che non si è mai provato |
 
 Fuori: spiegazioni, tutor e trascrizione (costano a ogni uso), l'SQL e il codice dagli schemi, la
 lavagna, le cartelle condivise, gli strumenti per la tesi.
@@ -112,7 +117,7 @@ che fa più effetto, e proprio per questo stanno nella vetrina. L'idea è far pa
 «da pubblicazione» (figure numerate con didascalia, pronte per la tesi), in Quantistico; le immagini
 semplici di un grafico (in programma) restano gratis, come già quelle degli schemi.
 
-### Super: per studiare
+### Relativistico: per studiare
 
 Proposta: **4,99 € al mese o 39 € l'anno.** Chi lo usa: chi prepara gli esami. Quando lo compra:
 prima di una sessione, bloccato su un esercizio. È l'idea dello studente: **ti aiuta a capire, non lo
@@ -129,19 +134,19 @@ fa al posto tuo.**
 | **Più spazio** (servirà con immagini e allegati) e la **cronologia delle versioni** di 30 giorni | Lo spazio costa |
 | Idea in più: **foto → appunti** (la foto della lavagna o del quaderno diventa testo con le formule, come Mathpix); conta come una domanda | Costa 1-2 centesimi a foto |
 
-Fuori, in Quantistico: le soluzioni complete (Super è per imparare), gli strumenti per la tesi, il
+Fuori, in Quantistico: le soluzioni complete (Relativistico è per imparare), gli strumenti per la tesi, il
 lavoro con altri senza limiti, la grammatica.
 
 ### Quantistico: per la tesi e la ricerca
 
 Proposta: **9,99 € al mese o 89 € l'anno**, e un «pass tesi» di 6 mesi (per esempio 49 €). Chi lo
 usa: laureandi, dottorandi, ricercatori, chi scrive per lavoro. Quando lo compra: all'inizio della
-tesi o di un articolo. Il «tutto sbloccato e aiuto completo» della proposta, letto così: tutto Super
+tesi o di un articolo. Il «tutto sbloccato e aiuto completo» della proposta, letto così: tutto Relativistico
 con tetti più alti, più gli strumenti per consegnare e per lavorare con altri.
 
 | Dentro | Perché è a pagamento |
 |---|---|
-| **Tutto Super, con tetti più alti** (per esempio 300 domande e 10 ore di trascrizione) e il modello AI migliore quando serve | Chi ci lavora ne usa di più; il prezzo doppio copre il costo |
+| **Tutto Relativistico, con tetti più alti** (per esempio 300 domande e 10 ore di trascrizione) e il modello AI migliore quando serve | Chi ci lavora ne usa di più; il prezzo doppio copre il costo |
 | **Le soluzioni complete su richiesta**: l'AI risolve e spiega tutto, Glifo controlla ogni passaggio | Per chi lavora sono uno strumento: il ricercatore deve fare il conto, non impararlo. Presentate così, e con i passaggi controllati, non diventano «paghi di più e ti fa i compiti» |
 | **Pubblicare** (la voce «Non solo appunti» della ROADMAP): PDF impaginato da tesi o da rivista (frontespizio, indice, pagine numerate), LaTeX per Overleaf e le riviste, bibliografia BibTeX, riferimenti numerati a equazioni e figure, figure con didascalia | Serve a chi consegna, che ha una scadenza e paga volentieri; ed è tanto lavoro da costruire. Stampare e salvare in PDF dalla stampa resta gratis |
 | **Lavorare con altri**: cartelle condivise senza limiti, i permessi (chi legge, chi commenta, chi scrive), il relatore e i coautori invitati gratis, scrivere insieme senza conflitti | Serve un server in tempo reale, che costa; e il relatore che entra gratis scopre Glifo |
@@ -181,7 +186,7 @@ per ora di audio, più l'AI che ne fa appunti con le formule.
 | Una foto trasformata in appunti | 1-2 centesimi |
 | Un'ora di lezione trascritta e fatta diventare appunti | 20-40 centesimi |
 
-Con i tetti di esempio, chi usa Super fino in fondo (100 domande e 3 ore) costa circa 3 € al mese,
+Con i tetti di esempio, chi usa Relativistico fino in fondo (100 domande e 3 ore) costa circa 3 € al mese,
 più o meno quanto ne resta a Glifo (3,40 €); chi usa tutto Quantistico (300 domande e 10 ore) costa
 9-11 €, più di quanto ne resta (7,25 €). Ma quasi nessuno arriva ai tetti: per questo si parte bassi,
 si misura l'uso vero e poi si alzano.
@@ -191,7 +196,7 @@ si misura l'uso vero e poi si alzano.
 Per confronto (ottobre 2026): ChatGPT Go costa 7,99 € al mese; Wolfram|Alpha Pro per studenti 5,25 €
 al mese con l'annuale; Overleaf per studenti circa 8 $ al mese con l'annuale; Obsidian Sync 4 $ al
 mese (con il 40% di sconto per gli studenti); Notion è gratis per gli studenti. Con la proposta dello
-studente Super a 10 € costerebbe più di ChatGPT Go, e Quantistico a 20 € quanto ChatGPT Plus: uno
+studente, Relativistico a 10 € costerebbe più di ChatGPT Go, e Quantistico a 20 € quanto ChatGPT Plus: uno
 studente li mette a confronto.
 
 Quanto resta a Glifo, tolti l'IVA del 22% e il servizio di pagamento (circa il 5% più 50 centesimi):
@@ -206,7 +211,7 @@ Quanto resta a Glifo, tolti l'IVA del 22% e il servizio di pagamento (circa il 5
 
 Proposta di partenza, da verificare con studenti veri:
 
-- **Super**: 4,99 € al mese o 39 € l'anno;
+- **Relativistico**: 4,99 € al mese o 39 € l'anno;
 - **Quantistico**: 9,99 € al mese o 89 € l'anno.
 
 Altre idee:
@@ -215,12 +220,10 @@ Altre idee:
 - un **prezzo fondatori** per i primi 100 abbonati, con lo sconto che resta per sempre: dice subito
   se qualcuno paga davvero;
 - il **pass tesi** di 6 mesi per i laureandi;
-- **pacchetti** di domande e di ore di trascrizione, per la sessione;
-- i nomi: «Super» rompe il tema della fisica; *Classico → Relativistico → Quantistico* segue la
-  storia (Newton, Einstein, i quanti).
+- **pacchetti** di domande e di ore di trascrizione, per la sessione.
 
 I costi fissi, con utenti che pagano: Supabase Pro (25 $ al mese: niente pausa, i backup) e il
-dominio (10-20 € l'anno). Li copre una decina di abbonati a Super.
+dominio (10-20 € l'anno). Li copre una decina di abbonati a Relativistico.
 
 ## Prima di incassare il primo euro
 
@@ -279,18 +282,17 @@ ricerca, i piani per università e dipartimenti.
 3. Far usare Glifo a 30-50 studenti veri (il corso dello studente) e chiedere cosa userebbero e
    quanto pagherebbero; magari una lista d'attesa a prezzo fondatori.
 4. Commercialista, *merchant of record*, Supabase Pro.
-5. Costruire il tutor, la prima funzione di Super, e lanciare Classico + Super; Quantistico quando
+5. Costruire il tutor, la prima funzione di Relativistico, e lanciare Classico + Relativistico; Quantistico quando
    arrivano gli strumenti per la tesi e il lavoro con altri.
 
 ## Da approfondire
 
 - **La lavagna**: com'è l'idea dello studente? Decide in che piano va e quanto costa a Glifo.
 - **Le spiegazioni**: dal motore di Glifo, dall'AI o tutte e due? Da quali argomenti partire?
-- **L'SQL**: in Super, come nella proposta, o resta gratis?
-- **L'assaggio** nel gratuito: 7 giorni di Super o poche domande al mese?
+- **L'SQL**: in Relativistico, come nella proposta, o resta gratis?
+- **L'assaggio** nel gratuito: 7 giorni di Relativistico o poche domande al mese?
 - **Il segno «Fatto con Glifo»** sulle immagini del piano gratuito: pubblicità gratis, ma dà
   fastidio (e spinge verso i piani a pagamento).
-- **I nomi**: Super o Relativistico?
 - **I prezzi e i tetti**: da verificare con gli studenti e con l'uso vero.
 
 ## Fonti (controllate il 4 ottobre 2026)

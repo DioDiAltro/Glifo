@@ -226,7 +226,7 @@ delle tabelle per più database. Tutto è descritto nel README. Se serviranno:
 ### Abbonamento e funzioni a pagamento (da capire)
 
 Se ne parla dal 4 ottobre 2026 in [ABBONAMENTI.md](ABBONAMENTI.md): la proposta dello studente
-(Classico gratis, Super, Quantistico), cosa far pagare piano per piano e perché, i prezzi, i costi
+(Classico gratis, Relativistico, Quantistico), cosa far pagare piano per piano e perché, i prezzi, i costi
 dell'AI e della trascrizione, cosa serve prima di incassare (partita IVA, *merchant of record*,
 hosting, regole). Niente è ancora deciso.
 
