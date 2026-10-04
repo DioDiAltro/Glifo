@@ -21,10 +21,12 @@ export interface NotesPanelDeps {
 
 /**
  * Elenco degli appunti salvati nel browser, divisi per cartelle. È il centro della barra laterale:
- * main.ts ci mette sopra il marchio e i pulsanti della nota, sotto l'account.
+ * main.ts ci mette sopra il logo, in `foot` il pulsante «Condividi» e sotto l'account.
  */
 export class NotesPanel {
   readonly el: HTMLElement
+  /** La riga in fondo all'elenco: «Apri .md», «Salva .md» (e da main.ts «Condividi»). */
+  readonly foot: HTMLElement
   private readonly list: HTMLElement
   private readonly filterInput: HTMLInputElement
   private activeId: string | null = null
@@ -38,6 +40,12 @@ export class NotesPanel {
       on: { input: () => this.refresh(this.activeId) },
     })
     this.list = h('ul', { class: 'notes-list', attrs: { role: 'list' } })
+    this.foot = h(
+      'div',
+      { class: 'notes-foot' },
+      h('button', { class: 'btn btn-small', attrs: { type: 'button' }, title: 'Apri uno o più file .md dal computer', on: { click: () => deps.onOpenFiles() } }, 'Apri .md'),
+      h('button', { class: 'btn btn-small', attrs: { type: 'button' }, title: 'Salva la nota come file .md (Ctrl+S)', on: { click: () => deps.onSaveFile() } }, 'Salva .md'),
+    )
     this.el = h(
       'aside',
       { class: 'notes-panel', attrs: { id: 'notes-panel', 'aria-label': 'Barra laterale' } },
@@ -67,12 +75,7 @@ export class NotesPanel {
       ),
       this.filterInput,
       this.list,
-      h(
-        'div',
-        { class: 'notes-foot' },
-        h('button', { class: 'btn btn-small', attrs: { type: 'button' }, title: 'Apri uno o più file .md dal computer', on: { click: () => deps.onOpenFiles() } }, icon(ICONS.open, 14), 'Apri .md'),
-        h('button', { class: 'btn btn-small', attrs: { type: 'button' }, title: 'Salva la nota come file .md (Ctrl+S)', on: { click: () => deps.onSaveFile() } }, icon(ICONS.download, 14), 'Salva .md'),
-      ),
+      this.foot,
     )
   }
 

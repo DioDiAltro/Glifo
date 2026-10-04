@@ -263,7 +263,8 @@ try {
       tabB,
       () =>
         document.querySelector('.cm-content').textContent.startsWith('Scritto nella scheda A') &&
-        document.querySelector('.doc-title').textContent === 'Scritto nella scheda A',
+        document.title === 'Scritto nella scheda A · Glifo' &&
+        document.querySelector('.note-item.is-active .note-title')?.textContent === 'Scritto nella scheda A',
     ),
     'la nota aperta anche in un\'altra scheda si aggiorna da sola, titolo compreso',
   )
@@ -291,7 +292,7 @@ try {
   await noteB.locator('.note-delete').click()
   await tabC.locator('dialog.dialog-confirm .btn-danger').click()
   check(
-    await waitFor(tabB, () => !document.querySelector('.doc-title').textContent.includes('Nota della scheda B')),
+    await waitFor(tabB, () => !document.title.includes('Nota della scheda B')),
     'se la nota aperta viene eliminata in un\'altra scheda, si passa a un\'altra nota',
   )
   check((await tabB.locator('.note-item').count()) === 1, 'e sparisce anche dall\'elenco')
@@ -327,7 +328,7 @@ try {
   }
   const start = await widths()
   check(
-    start.notes === 250 && start.symbols === 348 && Math.abs(start.editor - start.preview) <= 1,
+    start.notes === 270 && start.symbols === 348 && Math.abs(start.editor - start.preview) <= 1,
     `all'inizio le sezioni hanno le misure di partenza (${JSON.stringify(start)})`,
   )
   // La freccia è quella a destra e sinistra (↔), anche mentre si trascina sopra il resto della pagina
@@ -346,7 +347,7 @@ try {
   await dragEdge(splitEdge, -100)
   await dragEdge(symbolsEdge, -60)
   const dragged = await widths()
-  check(dragged.notes === 330 && dragged.symbols === 408, `trascinando i bordi si allargano l'elenco e i simboli (${JSON.stringify(dragged)})`)
+  check(dragged.notes === 350 && dragged.symbols === 408, `trascinando i bordi si allargano l'elenco e i simboli (${JSON.stringify(dragged)})`)
   check(dragged.preview - dragged.editor > 150, `e si sposta il bordo tra testo e anteprima (${JSON.stringify(dragged)})`)
   check(await layout.evaluate(() => !!document.activeElement?.closest('.cm-editor')), 'dopo aver trascinato si continua a scrivere nel testo')
   const savedSettings = await layout.evaluate(() => localStorage.getItem('glifo.settings.v1') ?? '')
@@ -358,7 +359,7 @@ try {
   // Dove i pannelli si aprono sopra il testo, i bordi non ci sono e i pannelli hanno la loro misura
   await layout.setViewportSize({ width: 1100, height: 800 })
   check(
-    !(await notesEdge.isVisible()) && (await splitEdge.isVisible()) && (await symbolsEdge.isVisible()) && (await widths()).notes === 250,
+    !(await notesEdge.isVisible()) && (await splitEdge.isVisible()) && (await symbolsEdge.isVisible()) && (await widths()).notes === 270,
     'sotto i 1250 pixel l\'elenco degli appunti si apre sopra il testo, senza bordo',
   )
   await layout.setViewportSize({ width: 800, height: 800 })
@@ -391,7 +392,7 @@ try {
   const notesBox = await notesEdge.boundingBox()
   await layout.mouse.dblclick(notesBox.x + notesBox.width / 2, notesBox.y + notesBox.height / 2)
   const saved = await layout.evaluate(() => JSON.parse(localStorage.getItem('glifo.layout.v1')))
-  check((await widths()).notes === 250 && saved.notesWidth === 250, `con un doppio clic sul bordo l'elenco torna largo 250 pixel (${JSON.stringify(saved)})`)
+  check((await widths()).notes === 270 && saved.notesWidth === 270, `con un doppio clic sul bordo l'elenco torna largo 270 pixel (${JSON.stringify(saved)})`)
 
   // L'app installata si chiama «Glifo», e le sue icone sono disegnate dal simbolo di adesso (∮)
   const installed = await layout.evaluate(async () => {
@@ -502,7 +503,7 @@ try {
       }
       return ''
     })
-  await sp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  await sp.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
   const block = /```schema\n([\s\S]*?)\n```/.exec(await savedNote())
   const savedSchema = block ? JSON.parse(block[1]) : { nodes: [], edges: [] }
   const tesi = savedSchema.nodes.find((n) => n.text === 'Tesi')
@@ -539,7 +540,7 @@ try {
   await sp.keyboard.type('Quinta')
   await sp.keyboard.press('Escape')
   await sp.keyboard.press('Control+s')
-  await sp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  await sp.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
   check((await savedNote()).includes('"text":"Quinta"') && (await schemaEditor.count()) === 1, 'Ctrl+S mette lo schema nella nota e l\'editor resta aperto')
   await sp.locator('dialog.schema-editor button', { hasText: 'Chiudi' }).click()
   await schemaEditor.waitFor({ state: 'detached' })
@@ -548,7 +549,7 @@ try {
   // Ctrl+Z nel testo riporta lo schema di prima
   await sp.locator('.cm-line').first().click()
   await sp.keyboard.press('Control+z')
-  await sp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  await sp.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
   check(!(await savedNote()).includes('Quinta') && (await savedNote()).includes('"text":"Tesi"'), 'Ctrl+Z nel testo annulla l\'ultima modifica dello schema')
   // Con il tema scuro lo schema si ridisegna con i suoi colori
   const lightFill = await sp.locator('.preview-pane .schema-block svg').innerHTML()
@@ -660,7 +661,7 @@ try {
       () =>
         [...Array(localStorage.length).keys()].filter((i) => localStorage.getItem(localStorage.key(i))?.startsWith('# Schemi')).length === 2 &&
         document.querySelectorAll('.cm-schema').length === 1 &&
-        document.querySelector('.doc-status')?.textContent === 'Salvato',
+        document.documentElement.dataset.save === 'salvato',
       null,
       { timeout: 5000 },
     )
@@ -693,7 +694,7 @@ try {
   const touchArrow = arrowsAfterTap ? await touch.locator('.schema-arrow-right').boundingBox() : null
   if (touchArrow) await touch.touchscreen.tap(touchArrow.x + touchArrow.width / 2, touchArrow.y + touchArrow.height / 2)
   await touch.locator('dialog.schema-editor .btn-primary', { hasText: 'Fatto' }).tap()
-  await touch.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  await touch.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
   const touchSchema = await touch.evaluate(() => {
     for (let i = 0; i < localStorage.length; i++) {
       const m = /```schema\n([\s\S]*?)\n```/.exec(localStorage.getItem(localStorage.key(i)) ?? '')
@@ -762,7 +763,7 @@ try {
   )
   await s2.keyboard.press('Escape')
   await s2.keyboard.press('Control+s')
-  await s2.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  await s2.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
   const s2schema = await s2.evaluate(() => {
     for (let i = 0; i < localStorage.length; i++) {
       const value = localStorage.getItem(localStorage.key(i)) ?? ''
@@ -939,7 +940,7 @@ try {
   await db.locator('.tool-menu-item', { hasText: 'Schema E-R' }).click()
   await db.locator('dialog.schema-editor .btn-primary', { hasText: 'Fatto' }).click()
   await dbEditor.waitFor({ state: 'detached' })
-  await db.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  await db.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
   const dbSchema = await db.evaluate(() => {
     for (let i = 0; i < localStorage.length; i++) {
       const value = localStorage.getItem(localStorage.key(i)) ?? ''
@@ -1050,7 +1051,7 @@ try {
   )
   await db.locator('dialog.schema-editor .btn-primary', { hasText: 'Fatto' }).click()
   await dbEditor.waitFor({ state: 'detached' })
-  await db.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  await db.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
   const studenteText = await db.evaluate(() => {
     for (let i = 0; i < localStorage.length; i++) {
       const value = localStorage.getItem(localStorage.key(i)) ?? ''
@@ -1070,7 +1071,7 @@ try {
   await db.keyboard.press('ArrowLeft')
   await db.locator('.editor-toolbar button[aria-label="Titolo (## )"]').click()
   await db.keyboard.type('Dopo lo schema')
-  await db.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  await db.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
   const besideText = await db.evaluate(() => {
     for (let i = 0; i < localStorage.length; i++) {
       const value = localStorage.getItem(localStorage.key(i)) ?? ''
@@ -1121,7 +1122,7 @@ try {
       }
       return ''
     })
-  await gp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  await gp.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
   const legend = await gp.locator('.preview-pane .graph-legend').innerText()
   check(
     (await graphNote()).includes('$f(4) = 13$\n\n```grafico\nf(x) = x^2 - a\n```\n') && legend.includes('f(x)'),
@@ -1195,7 +1196,7 @@ try {
   await gp.keyboard.type('\\sin x')
   await gp.waitForFunction(() => document.querySelectorAll('.preview-pane .graph-block svg.graph-svg').length === 2, null, { timeout: 5000 })
   const piTicks = await gp.locator('.preview-pane .graph-block').nth(1).locator('svg text', { hasText: 'π' }).count()
-  await gp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  await gp.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
   check(
     (await graphNote()).endsWith('```\n\n```grafico\ny = \\sin x\n```\n') && piTicks >= 2,
     `il pulsante «Grafico» prepara il blocco e \\sin x ha le tacche in π (${JSON.stringify({ piTicks, note: (await graphNote()).slice(-60) })})`,
@@ -1206,13 +1207,13 @@ try {
   await gp.keyboard.type('k(x - 1)')
   await gp.locator('.preview-pane .graph-add-slider').click({ timeout: 5000 })
   await gp.waitForFunction(() => document.querySelectorAll('.preview-pane .graph-block')[2]?.querySelector('.graph-slider'), null, { timeout: 5000 })
-  await gp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  await gp.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
   check(
     (await graphNote()).endsWith('```grafico\nk = 1\ny = k(x - 1)\n```\n') && !(await gp.locator('.preview-pane .graph-errors').count()),
     `«Aggiungi lo slider per k» scrive k = 1 nel blocco (${JSON.stringify((await graphNote()).slice(-40))})`,
   )
   // «Salva .md»: ogni grafico è un'immagine con il suo testo nascosto; «Apri .md» lo riporta
-  await gp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  await gp.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
   await gp.evaluate(() => {
     window.showSaveFilePicker = async () => ({
       name: 'grafici.md',
@@ -1261,7 +1262,7 @@ try {
   await gp.waitForSelector('.formula-graph:not([hidden]) svg path[data-area]', { timeout: 5000 })
   await gp.locator('.formula-graph-insert').click()
   await gp.waitForSelector('.preview-pane .graph-block .graph-swatch.is-area', { timeout: 5000 })
-  await gp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  await gp.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
   const areaLegend = await gp.locator('.preview-pane .graph-legend').innerText()
   const areaNote = await gp.evaluate(() =>
     [...Array(localStorage.length).keys()].map((i) => localStorage.getItem(localStorage.key(i)) ?? '').find((v) => v.startsWith('# Area')),
@@ -1279,7 +1280,7 @@ try {
   await gp.waitForSelector('.formula-graph:not([hidden]) svg.graph-3d', { timeout: 5000 })
   await gp.locator('.formula-graph-insert').click()
   await gp.waitForSelector('.preview-pane .graph-block.is-space svg.graph-3d', { timeout: 5000 })
-  await gp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  await gp.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
   const spaceNote = await gp.evaluate(() =>
     [...Array(localStorage.length).keys()].map((i) => localStorage.getItem(localStorage.key(i)) ?? '').find((v) => v.startsWith('# Superficie')),
   )
@@ -1309,7 +1310,7 @@ try {
   await gp.waitForSelector('.formula-graph:not([hidden]) svg.graph-3d', { timeout: 5000 })
   await gp.locator('.formula-graph-insert').click()
   await gp.waitForSelector('.preview-pane .graph-block.is-space .graph-swatch.is-surface', { timeout: 5000 })
-  await gp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  await gp.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
   const volumeLegend = await gp.locator('.preview-pane .graph-legend').innerText()
   const volumeNote = await gp.evaluate(() =>
     [...Array(localStorage.length).keys()].map((i) => localStorage.getItem(localStorage.key(i)) ?? '').find((v) => v.startsWith('# Volume')),
@@ -1342,7 +1343,7 @@ try {
   const caption = await gp.locator('.formula-graph-caption').innerText()
   await gp.locator('.formula-graph-insert').click()
   await gp.waitForSelector('.preview-pane .graph-block .graph-legend', { timeout: 5000 })
-  await gp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  await gp.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
   const complexNote = await gp.evaluate(() =>
     [...Array(localStorage.length).keys()].map((i) => localStorage.getItem(localStorage.key(i)) ?? '').find((v) => v.startsWith('# Complessi')),
   )
@@ -1373,7 +1374,7 @@ try {
   const vertexNames = await gp.locator('.formula-graph svg text').evaluateAll((els) => els.map((e) => e.textContent))
   await gp.locator('.formula-graph-insert').click()
   await gp.waitForSelector('.preview-pane .graph-block .graph-legend', { timeout: 5000 })
-  await gp.waitForFunction(() => document.querySelector('.doc-status')?.textContent === 'Salvato', null, { timeout: 5000 })
+  await gp.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
   const triangleLegend = await gp.locator('.preview-pane .graph-legend').innerText()
   const triangleNote = await gp.evaluate(() =>
     [...Array(localStorage.length).keys()].map((i) => localStorage.getItem(localStorage.key(i)) ?? '').find((v) => v.startsWith('# Geometria')),
@@ -1559,8 +1560,9 @@ try {
   check(test.includes('non si rifiuta H₀'), `un test d'ipotesi ha il p-value e la decisione, con la regione di rifiuto nel pannello (${JSON.stringify(test.slice(0, 50))})`)
   await gp.close()
 
-  // Niente barra in alto: il logo, la nota aperta e i suoi pulsanti in cima alla barra
-  // laterale, l'account e le impostazioni in fondo; sopra il testo, volanti, i simboli e le viste
+  // Niente barra in alto: in cima alla barra laterale il logo e subito gli appunti; in fondo
+  // «Apri .md», «Salva .md» e «Condividi», poi l'account e le impostazioni; sopra il testo,
+  // volanti, i simboli e le viste
   const side = await browser.newPage({ viewport: { width: 1440, height: 900 } })
   side.on('pageerror', (e) => errors.push(e.message))
   await side.goto(url)
@@ -1594,7 +1596,21 @@ try {
     const panel = document.querySelector('.notes-panel')
     return {
       topbar: !!document.querySelector('.topbar'),
-      top: !!panel.querySelector('.side-top .doc-title') && !!panel.querySelector('.side-top .share-button'),
+      // Sotto il logo subito gli appunti: niente titolo della nota
+      top: !document.querySelector('.doc-title, .doc-info') && box('.notes-head').top - box('.side-top').bottom < 4,
+      // In fondo una riga sola, piena: «Apri .md», «Salva .md» e «Condividi» (a destra)
+      foot: (() => {
+        const foot = box('.notes-foot')
+        const buttons = [...panel.querySelectorAll('.notes-foot button')]
+        const r = buttons.map((b) => b.getBoundingClientRect())
+        return (
+          buttons.map((b) => b.textContent).join('|') === 'Apri .md|Salva .md|Condividi' &&
+          r.every((x) => Math.abs(x.top - r[0].top) < 1) &&
+          Math.abs(r[0].left - (foot.left + 12)) < 1 &&
+          Math.abs(r[2].right - (foot.right - 12)) < 1 &&
+          buttons.every((b) => b.scrollWidth <= b.clientWidth)
+        )
+      })(),
       bottom: ['Come si usa', 'Impostazioni'].every((l) => panel.querySelector(`.side-profile button[aria-label="${l}"]`)) && !!panel.querySelector('.side-profile .account-button'),
       profileAtBottom: Math.abs(box('.side-profile').bottom - box('.notes-panel').bottom) < 1,
       // Il tema si cambia solo nelle impostazioni
@@ -1604,8 +1620,8 @@ try {
     }
   })
   check(
-    !sideLayout.topbar && sideLayout.top && sideLayout.bottom && sideLayout.profileAtBottom && sideLayout.noTheme && sideLayout.subFits,
-    `la barra in alto non c'è: nota e pulsanti in cima alla barra laterale; in fondo account, «Come si usa» e impostazioni; niente pulsante del tema (${JSON.stringify(sideLayout)})`,
+    !sideLayout.topbar && sideLayout.top && sideLayout.foot && sideLayout.bottom && sideLayout.profileAtBottom && sideLayout.noTheme && sideLayout.subFits,
+    `la barra in alto non c'è: sotto il logo subito gli appunti; in fondo una riga piena con «Apri .md», «Salva .md» e «Condividi», poi account, «Come si usa» e impostazioni; niente pulsante del tema (${JSON.stringify(sideLayout)})`,
   )
   const withPanels = await rowLayout()
   await side.locator('.symbols-toggle').click()
@@ -1640,6 +1656,17 @@ try {
   check(
     openLogo.logo && closedLogo.logo && openLogo.bg === closedLogo.bg && Math.abs(openLogo.x - closedLogo.x) < 1 && Math.abs(openLogo.y - closedLogo.y) < 1 && openLogo.w === 34,
     `il pulsante della barra laterale è il logo, nello stesso punto da aperta e da chiusa (${JSON.stringify({ openLogo, closedLogo })})`,
+  )
+  // «Condividi», in fondo: senza account spiega che serve l'account, e da lì si stampa (o si salva in PDF)
+  await side.evaluate(() => {
+    window.print = () => (window.__stampato = true)
+  })
+  await side.locator('.notes-foot .share-button').click()
+  await side.locator('dialog.dialog-share .share-print').click()
+  await side.waitForTimeout(300)
+  check(
+    (await side.evaluate(() => window.__stampato === true)) && !(await side.locator('dialog.dialog-share').count()),
+    'da «Condividi» si stampa la nota o la si salva in PDF, anche senza account',
   )
   await side.close()
   // Sul telefono la barra laterale si apre sopra il testo, e niente esce dallo schermo
@@ -1804,6 +1831,8 @@ try {
     (await viewer.locator('.share-button').isVisible()) &&
     (await viewer.locator('.side-profile button[aria-label="Impostazioni"]').isVisible())
   await viewer.locator('.share-button').click()
+  // Dentro claude.ai la stampa non c'è
+  const viewerPrint = await viewer.locator('dialog.dialog-share .share-print').count()
   await viewer.locator('dialog.dialog-share .btn-primary', { hasText: 'Accedi' }).click()
   const login = viewer.locator('dialog.dialog-login')
   await login.locator('.login-google').click()
@@ -1815,6 +1844,7 @@ try {
   const stillEmail = (await login.locator('input[type="email"]').count()) === 1
   check(
     viewerButtons &&
+      viewerPrint === 0 &&
       offMessage.includes('accesso è spento') &&
       stillEmail &&
       !viewerRequests.some((u) => /supabase|google/.test(u)) &&

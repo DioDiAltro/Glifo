@@ -65,9 +65,12 @@ prossimi passi sono in «In programma» nella ROADMAP.
   toglie script, moduli, pulsanti e stili (`FORBIDDEN_TAGS`; con `untrusted` le caselle non si
   cliccano) e `.markdown-body` ha `contain: paint`, così niente esce dal riquadro della nota.
 - `src/ui/`: interfaccia (`resize.ts`: i bordi da trascinare tra le sezioni). Non c'è una barra in
-  alto: la barra laterale è l'elenco degli appunti (`notesPanel.ts`) con sopra il logo, la nota
-  aperta e i suoi pulsanti e sotto l'account, «Come si usa» e le impostazioni (`sidebarTop` e
-  `sidebarBottom` in `main.ts`; il tema si cambia solo nelle impostazioni). Il logo apre e chiude la
+  alto: la barra laterale è l'elenco degli appunti (`notesPanel.ts`) con sopra il logo (niente
+  titolo della nota) e in fondo la riga `foot` con «Apri .md», «Salva .md» e «Condividi» (larghi
+  uguali, senza spazi vuoti; la stampa è nella finestra «Condividi»), poi l'account, «Come si usa» e
+  le impostazioni (`sidebarTop`, `shareButton` e `sidebarBottom` in `main.ts`; il tema si cambia
+  solo nelle impostazioni). Lo stato del salvataggio non si vede: è in `data-save` sulla pagina,
+  per le prove nel browser. Il logo apre e chiude la
   barra (`sidebarToggle`, come in Gemini) e sta nello stesso punto da aperta e da chiusa;
   i pulsanti volanti (simboli, viste) sono in `.float-bar`, dentro `.content` con testo e
   anteprima, e nell'anteprima la loro fascia è il bordo in alto (`syncTo` ne tiene conto). Nella

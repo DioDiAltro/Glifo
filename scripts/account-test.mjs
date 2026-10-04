@@ -356,6 +356,7 @@ try {
   )
   const link = await share.locator('.share-url').inputValue()
   check(link.startsWith(url), `il link porta alla pagina accanto a Glifo (${link})`)
+  check((await share.locator('.share-print').count()) === 1, 'anche con l\'account, da «Condividi» si stampa o si salva in PDF')
   await share.locator('.btn-primary', { hasText: 'Fine' }).click()
 
   // Chi riceve il link lo apre senza account, e se ne salva una copia.

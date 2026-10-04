@@ -20,7 +20,7 @@ export interface SizeLimits {
   initial: number
 }
 
-export const NOTES_WIDTH: SizeLimits = { min: 200, max: 480, initial: 250 }
+export const NOTES_WIDTH: SizeLimits = { min: 200, max: 480, initial: 270 }
 export const SYMBOLS_WIDTH: SizeLimits = { min: 280, max: 640, initial: 348 }
 export const EDITOR_SHARE: SizeLimits = { min: 0.15, max: 0.85, initial: 0.5 }
 

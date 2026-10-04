@@ -52,7 +52,7 @@
   --editor-font-size: 16px;
   /* Le larghezze di partenza dei pannelli (src/store/layout.ts); trascinandone il bordo
      valgono --notes-size e --symbols-size, scritte da src/ui/resize.ts. */
-  --notes-w: 250px;
+  --notes-w: 270px;
   --symbols-w: 348px;
   --topbar-h: 52px;
   /* La fascia sopra il testo con i pulsanti volanti (simboli, viste). */
@@ -236,24 +236,17 @@ kbd {
   height: 100%;
 }
 
-/* ——— Barra laterale: in cima il logo, la nota aperta e i suoi pulsanti ——— */
+/* ——— Barra laterale: in cima il logo e il nome, subito sotto gli appunti ——— */
 
 .side-top {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  /* Il logo sta dove sta a barra chiusa (.float-bar): a 10px dal bordo, in mezzo ai 48px della riga. */
-  padding: 7px 8px 12px 10px;
-  border-bottom: 1px solid var(--border);
-}
-
-.side-brand-row {
-  display: flex;
   align-items: center;
   gap: 10px;
+  /* Il logo sta dove sta a barra chiusa (.float-bar): a 10px dal bordo, in mezzo ai 48px della riga. */
+  padding: 7px 8px 0 10px;
 }
 
-.side-brand-row .brand-name {
+.side-top .brand-name {
   font-weight: 700;
   font-size: 15px;
   letter-spacing: -0.01em;
@@ -308,37 +301,6 @@ kbd {
   border-radius: 8px;
   background: var(--accent);
   color: var(--on-accent);
-}
-
-.doc-info {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-  padding: 0 6px 0 4px;
-}
-
-.doc-title {
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.doc-status {
-  color: var(--muted);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.side-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.side-actions .share-button {
-  margin-right: auto;
 }
 
 /* In fondo alla barra laterale: l'account e le impostazioni. */
@@ -1387,9 +1349,17 @@ kbd {
 .notes-foot {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 5px;
   padding: 10px 12px;
   border-top: 1px solid var(--border);
+}
+
+/* «Apri .md», «Salva .md» e «Condividi» riempiono la riga, larghi uguali: niente spazi vuoti.
+   Solo se la barra è molto stretta vanno a capo (e riempiono anche la seconda riga). */
+.notes-foot .btn {
+  flex: 1 1 0;
+  padding: 0 6px;
+  font-size: 12px;
 }
 
 /* ——— Pulsanti ——— */
@@ -3942,7 +3912,6 @@ kbd {
 
   .view-button[aria-label='Diviso'],
   .view-label,
-  .hide-narrow,
   .symbols-toggle-label,
   .panel-search-kbd {
     display: none;

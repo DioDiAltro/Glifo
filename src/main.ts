@@ -121,8 +121,11 @@ let saveWarningShown = false
 
 // ——— Struttura della pagina ———
 
-const titleEl = h('span', { class: 'doc-title' }, active.title)
-const statusEl = h('span', { class: 'doc-status', attrs: { 'aria-live': 'polite' } }, 'Salvato')
+/** A che punto è il salvataggio della nota aperta (sulla pagina, `data-save`: lo guardano le prove nel browser). */
+function saveState(state: 'salvato' | 'da-salvare' | 'non-salvato'): void {
+  document.documentElement.dataset.save = state
+}
+saveState('salvato')
 
 const viewButtons = new Map<ViewMode, HTMLButtonElement>()
 const viewSwitch = h(
@@ -170,39 +173,14 @@ const sidebarToggle = (label: string, className: string) =>
   })
 const sideOpen = sidebarToggle('Apri la barra laterale', 'side-open')
 
-// Non c'è più una barra in alto. In cima alla barra laterale: il logo, la nota aperta e i suoi
-// pulsanti; in fondo l'account e le impostazioni, come nell'app di Claude.
-const sidebarTop = h(
-  'div',
-  { class: 'side-top' },
-  h('div', { class: 'side-brand-row' }, sidebarToggle('Chiudi la barra laterale', 'side-close'), h('span', { class: 'brand-name' }, 'Glifo')),
-  h('div', { class: 'doc-info' }, titleEl, statusEl),
-  h(
-    'div',
-    { class: 'side-actions' },
-    h(
-      'button',
-      {
-        class: 'btn btn-small share-button',
-        title: 'Condividi la nota con un link',
-        attrs: { type: 'button', 'aria-label': 'Condividi' },
-        on: { click: () => openShare() },
-      },
-      icon(ICONS.share, 15),
-      h('span', {}, 'Condividi'),
-    ),
-    h(
-      'button',
-      {
-        class: 'icon-button hide-narrow',
-        title: 'Stampa o salva in PDF',
-        // Dentro claude.ai la stampa non è disponibile.
-        attrs: { type: 'button', 'aria-label': 'Stampa o salva in PDF', hidden: inClaudeViewer() },
-        on: { click: () => printNote() },
-      },
-      icon(ICONS.print),
-    ),
-  ),
+// Non c'è più una barra in alto. In cima alla barra laterale il logo e il nome, e subito sotto
+// gli appunti; in fondo i pulsanti della nota, l'account e le impostazioni, come nell'app di Claude.
+const sidebarTop = h('div', { class: 'side-top' }, sidebarToggle('Chiudi la barra laterale', 'side-close'), h('span', { class: 'brand-name' }, 'Glifo'))
+// Accanto ad «Apri .md» e «Salva .md», in fondo all'elenco; da lì anche la stampa e il PDF.
+const shareButton = h(
+  'button',
+  { class: 'btn btn-small share-button', title: 'Condividi la nota con un link, o stampala', attrs: { type: 'button' }, on: { click: () => openShare() } },
+  'Condividi',
 )
 
 // In fondo, come nell'app di Claude: l'account, poi «Come si usa» e le impostazioni (anche il tema).
@@ -233,7 +211,7 @@ const preview = new Preview({
 
 const editor = new MarkdownEditor(editorHost, active.content, {
   onDocChange: (doc) => {
-    statusEl.textContent = 'Modifiche non salvate…'
+    saveState('da-salvare')
     scheduleSave()
     preview.update(doc)
   },
@@ -352,6 +330,7 @@ const resizer = new PaneResizer(
   (changes) => savePaneSizes(changes),
 )
 notesPanel.el.prepend(sidebarTop)
+notesPanel.foot.append(shareButton)
 notesPanel.el.append(sidebarBottom)
 // Testo e anteprima, con sopra i pulsanti volanti.
 const content = h('div', { class: 'content' }, floatBar, editorPane, resizer.splitHandle, preview.el)
@@ -518,15 +497,14 @@ function flushSave(): void {
   if (unloading) return
   const content = editor.getDoc()
   if (content === active.content) {
-    statusEl.textContent = 'Salvato'
+    saveState('salvato')
     return
   }
   active.content = content
   const ok = store.save(active.id, content)
   active.title = deriveTitle(content)
-  titleEl.textContent = active.title
   document.title = `${active.title} · Glifo`
-  statusEl.textContent = ok ? 'Salvato' : 'Non salvato!'
+  saveState(ok ? 'salvato' : 'non-salvato')
   changedHere()
   if (!ok && !saveWarningShown) {
     saveWarningShown = true
@@ -569,9 +547,8 @@ function loadNote(id: string, focus = true): void {
   store.activeId = id
   editor.setDoc(note.content)
   preview.update(note.content, true)
-  titleEl.textContent = note.title
   document.title = `${note.title} · Glifo`
-  statusEl.textContent = 'Salvato'
+  saveState('salvato')
   notesPanel.refresh(id)
   if (!focus) return
   if (notesOverlay.matches) setPanels({ notesOpen: false })
@@ -750,7 +727,6 @@ function notesChangedElsewhere(changedId: string | null, content: string | null)
     active.title = deriveTitle(content)
     editor.applyExternalDoc(content)
     preview.update(content)
-    titleEl.textContent = active.title
     document.title = `${active.title} · Glifo`
   }
   notesPanel.refresh(active.id)
@@ -1013,7 +989,6 @@ function applyAccountChange(change: LocalChange): void {
       active = note
       editor.applyExternalDoc(note.content)
       preview.update(note.content)
-      titleEl.textContent = note.title
       document.title = `${note.title} · Glifo`
     }
   }
@@ -1098,6 +1073,8 @@ function openShare(): void {
           }
         : null,
     onLogin: () => openAccount(),
+    // Dentro claude.ai la stampa non è disponibile.
+    onPrint: inClaudeViewer() ? undefined : () => printNote(),
   })
 }
 

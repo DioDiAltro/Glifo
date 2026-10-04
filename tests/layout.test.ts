@@ -19,7 +19,7 @@ beforeEach(() => {
 
 describe('misure delle sezioni salvate', () => {
   it('senza niente di salvato valgono quelle di partenza', () => {
-    expect(loadPaneSizes()).toEqual({ notesWidth: 250, symbolsWidth: 348, editorShare: 0.5 })
+    expect(loadPaneSizes()).toEqual({ notesWidth: 270, symbolsWidth: 348, editorShare: 0.5 })
   })
 
   it('una misura salvata male torna dentro i limiti, o a quella di partenza', () => {
@@ -27,7 +27,7 @@ describe('misure delle sezioni salvate', () => {
     expect(loadPaneSizes()).toEqual({ notesWidth: NOTES_WIDTH.max, symbolsWidth: SYMBOLS_WIDTH.initial, editorShare: EDITOR_SHARE.min })
     for (const broken of ['[300]', '{rotto', 'null', '42']) {
       localStorage.setItem(LAYOUT_KEY, broken)
-      expect(loadPaneSizes()).toEqual({ notesWidth: 250, symbolsWidth: 348, editorShare: 0.5 })
+      expect(loadPaneSizes()).toEqual({ notesWidth: 270, symbolsWidth: 348, editorShare: 0.5 })
     }
     expect(validSize(Number.NaN, NOTES_WIDTH)).toBe(NOTES_WIDTH.initial)
     expect(validSize(Infinity, NOTES_WIDTH)).toBe(NOTES_WIDTH.initial)
@@ -165,7 +165,7 @@ describe('i bordi tra le sezioni', () => {
     resizer.notesHandle.dispatchEvent(pointer('pointerdown', 250))
     resizer.notesHandle.dispatchEvent(pointer('pointermove', 400, 2))
     resizer.notesHandle.dispatchEvent(pointer('pointerup', 400, 2))
-    expect(style(parts.notes, '--notes-size')).toBe('250px')
+    expect(style(parts.notes, '--notes-size')).toBe(`${NOTES_WIDTH.initial}px`)
     resizer.notesHandle.dispatchEvent(pointer('pointerup', 250))
     expect(save).not.toHaveBeenCalled()
   })
@@ -173,10 +173,10 @@ describe('i bordi tra le sezioni', () => {
   it('con un doppio clic torna la misura di partenza', () => {
     const { parts, save, resizer } = setup({ notes: 400, editor: 500, preview: 500, symbols: 500 }, { notesWidth: 400, symbolsWidth: 500, editorShare: 0.3 })
     for (const handle of [resizer.notesHandle, resizer.splitHandle, resizer.symbolsHandle]) handle.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))
-    expect(style(parts.notes, '--notes-size')).toBe('250px')
+    expect(style(parts.notes, '--notes-size')).toBe(`${NOTES_WIDTH.initial}px`)
     expect(style(parts.symbols, '--symbols-size')).toBe('348px')
     expect(style(parts.editor, '--split-grow')).toBe('500')
-    expect(save.mock.calls).toEqual([[{ notesWidth: 250 }], [{ editorShare: 0.5 }], [{ symbolsWidth: 348 }]])
+    expect(save.mock.calls).toEqual([[{ notesWidth: NOTES_WIDTH.initial }], [{ editorShare: 0.5 }], [{ symbolsWidth: 348 }]])
     // Se è già quella, non c'è niente da salvare.
     resizer.notesHandle.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))
     expect(save).toHaveBeenCalledTimes(3)

@@ -21,6 +21,29 @@ export interface ShareDialogDeps {
   /** Null senza account: allora il dialogo spiega che serve e propone di accedere. */
   server: ShareServer | null
   onLogin(): void
+  /** «Stampa o PDF»: anche senza account (non c'è dove la stampa non funziona, dentro claude.ai). */
+  onPrint?(): void
+}
+
+/** Il pulsante «Stampa o PDF»: chiude la finestra e stampa la nota (o la salva in PDF). */
+function printButton(dialog: () => HTMLDialogElement, onPrint: (() => void) | undefined): HTMLElement | null {
+  if (!onPrint) return null
+  return h(
+    'button',
+    {
+      class: 'btn share-print',
+      title: 'Stampa la nota o salvala in PDF',
+      attrs: { type: 'button' },
+      on: {
+        click: () => {
+          dialog().close()
+          onPrint()
+        },
+      },
+    },
+    icon(ICONS.print, 16),
+    'Stampa o PDF',
+  )
 }
 
 /** Cosa dire se un'operazione sul link non riesce (`action`: «creare il link»…). */
@@ -42,7 +65,7 @@ export function shareProblem(err: unknown, action: string): string {
  */
 export function openShareDialog(deps: ShareDialogDeps): HTMLDialogElement {
   const { title } = deps.note()
-  if (!deps.server) return openSignedOut(title, deps.onLogin)
+  if (!deps.server) return openSignedOut(title, deps.onLogin, deps.onPrint)
   const server = deps.server
 
   let link: SharedLink | null = null
@@ -110,6 +133,7 @@ export function openShareDialog(deps: ShareDialogDeps): HTMLDialogElement {
         'div',
         { class: 'dialog-actions share-actions' },
         copyLink,
+        printButton(() => dialog, deps.onPrint),
         h('span', { class: 'share-actions-spacer' }),
         h('button', { class: 'btn btn-primary', attrs: { type: 'button' }, on: { click: () => dialog.close() } }, 'Fine'),
       ),
@@ -227,8 +251,8 @@ export function openShareDialog(deps: ShareDialogDeps): HTMLDialogElement {
 }
 
 /** Senza account: il link si può creare solo con l'account, che tiene la fotografia della nota. */
-function openSignedOut(title: string, onLogin: () => void): HTMLDialogElement {
-  const dialog = dialogShell(
+function openSignedOut(title: string, onLogin: () => void, onPrint?: () => void): HTMLDialogElement {
+  const dialog: HTMLDialogElement = dialogShell(
     `Condividi «${title}»`,
     [
       h(
@@ -236,9 +260,12 @@ function openSignedOut(title: string, onLogin: () => void): HTMLDialogElement {
         { class: 'confirm-message' },
         'Per condividere una nota con un link serve l\'account: la fotografia della nota resta nell\'account, e chi ha il link la apre anche senza.',
       ),
+      onPrint ? h('p', { class: 'field-help' }, 'Senza account puoi stamparla o salvarla in PDF.') : null,
       h(
         'div',
-        { class: 'dialog-actions' },
+        { class: 'dialog-actions share-actions' },
+        printButton(() => dialog, onPrint),
+        h('span', { class: 'share-actions-spacer' }),
         h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => dialog.close() } }, 'Annulla'),
         h(
           'button',
