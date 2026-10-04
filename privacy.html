@@ -116,14 +116,15 @@
     <main>
       <a class="back" href="./">← Torna a Glifo</a>
       <h1>Informativa sulla privacy</h1>
-      <p class="updated">Aggiornata il 1° ottobre 2026.</p>
+      <p class="updated">Aggiornata il 4 ottobre 2026.</p>
 
       <div class="summary">
         <p>
           <strong>In breve.</strong> Senza account i tuoi appunti restano solo nel tuo browser. Con
           l'account vengono salvati anche sui server di Supabase, in Europa, per ritrovarli su ogni
-          dispositivo. Non li vendiamo e non li usiamo per pubblicità o per altri scopi. Puoi
-          scaricarli o eliminarli quando vuoi, direttamente da Glifo.
+          dispositivo. Una nota che condividi con un link la vede chi ha il link. Non li vendiamo e
+          non li usiamo per pubblicità o per altri scopi. Puoi scaricarli o eliminarli quando vuoi,
+          direttamente da Glifo.
         </p>
       </div>
 
@@ -155,6 +156,12 @@
           scrivi parte dal tuo browser e va direttamente ad Anthropic (o all'indirizzo che hai
           indicato nelle impostazioni). La chiave resta solo nel tuo browser.
         </li>
+        <li>
+          Se apri una nota condivisa con un link, il tuo browser la chiede a Supabase (vedi sotto),
+          che come per ogni richiesta riceve l'indirizzo IP e alcune informazioni tecniche. Chi ti
+          ha mandato il link non sa se e quando l'hai aperto. Se te ne salvi una copia, la copia sta
+          tra i tuoi appunti, come gli altri.
+        </li>
       </ul>
 
       <h2>Con l'account: cosa salviamo e perché</h2>
@@ -165,6 +172,11 @@
           del profilo. Restano con i dati dell'accesso; Glifo usa solo l'email.
         </li>
         <li>Note (titolo e testo) e cartelle, con le date di creazione e di modifica.</li>
+        <li>
+          Le note che condividi con un link: una copia del titolo e del testo com'erano quando le hai
+          condivise (la «fotografia»), con la data e con la tua scelta se chi apre il link può
+          salvarsene una copia.
+        </li>
         <li>
           Alcune impostazioni (tema, dimensione del testo, a capo automatico, controllo ortografico
           e lingue, modello dell'assistente) e il dizionario personale. La chiave API
@@ -204,7 +216,17 @@
       <h2>Chi può vedere le tue note</h2>
       <p>
         Solo tu, dai dispositivi in cui fai l'accesso: le regole del database impediscono agli altri
-        account di vederle o di cambiarle. Le note però non sono cifrate «end-to-end»: tecnicamente
+        account di vederle o di cambiarle.
+      </p>
+      <p>
+        Le note che condividi con un link sono l'eccezione: la loro fotografia la vede chiunque abbia
+        il link, anche senza account, e chi la riceve può inoltrarla ad altri. La pagina mostra
+        titolo, testo e data, non chi l'ha condivisa né la tua email. Il link contiene un codice
+        casuale che non si può indovinare; smette di funzionare quando lo togli («Condividi» →
+        «Con limitazioni»), quando elimini la nota o quando elimini l'account.
+      </p>
+      <p>
+        Le note però non sono cifrate «end-to-end»: tecnicamente
         chi gestisce Glifo e Supabase potrebbero accedervi. Glifo non lo fa, se non quando glielo
         chiedi tu per risolvere un problema. Per questo è meglio non salvare nelle note password o
         dati molto delicati.
@@ -217,6 +239,10 @@
           testo, perché la tolgano anche gli altri dispositivi.
         </li>
         <li>
+          La fotografia di una nota condivisa resta finché non togli il link, non elimini la nota o
+          non elimini l'account. Le copie che altri si sono salvati stanno nei loro appunti.
+        </li>
+        <li>
           Quando elimini l'account, note, cartelle, impostazioni e dati di accesso vengono cancellati
           subito dal database. I registri tecnici e le eventuali copie di sicurezza di Supabase si
           cancellano da soli dopo poco tempo.
@@ -227,8 +253,8 @@
       <ul>
         <li>
           <strong>Vedere e portare via i tuoi dati:</strong> in Glifo apri l'account (il pulsante in
-          alto) e premi «Scarica i miei dati». Ricevi un file con note, cartelle, impostazioni e dati
-          dell'accesso, che Glifo sa rileggere con «Ripristina backup».
+          alto) e premi «Scarica i miei dati». Ricevi un file con note, cartelle, impostazioni, link
+          condivisi e dati dell'accesso, che Glifo sa rileggere con «Ripristina backup».
         </li>
         <li><strong>Correggerli:</strong> modifica note, cartelle e impostazioni in Glifo.</li>
         <li><strong>Cancellarli:</strong> apri l'account e premi «Elimina account».</li>

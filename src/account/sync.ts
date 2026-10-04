@@ -92,6 +92,8 @@ export class SyncError extends Error {
   constructor(
     readonly kind: SyncErrorKind,
     message: string,
+    /** Il suggerimento (hint) del database, per esempio «quota» o «missing». */
+    readonly hint?: string,
   ) {
     super(message)
   }

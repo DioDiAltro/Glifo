@@ -77,6 +77,24 @@ chi sta provando Glifo.*
   l'[informativa sulla privacy](https://diodialtro.github.io/Glifo/privacy.html)
   (`privacy.html`).
 
+#### Condividere una nota con un link
+
+Il pulsante **Condividi** in alto (le tre palline unite) apre una finestra come quelle di
+Google. In «Accesso con il link» scegli **Chiunque abbia il link**: arriva il link, da copiare
+con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve il link no.
+
+- **È una fotografia,** come le conversazioni condivise di Gemini: chi apre il link vede la
+  nota com'era quando l'hai condivisa, con formule, grafici e schemi, ma non può cambiarla.
+  Se poi la nota cambia, la finestra lo dice e **Aggiorna il link** rifà la fotografia; il
+  link resta lo stesso.
+- **Consenti copie:** chi apre il link può salvarsene una copia tra i suoi appunti
+  (**Salva una copia**). Togliendo la spunta, la nota si può solo leggere.
+- **Togliere il link:** scegli **Con limitazioni**. Il link non si apre più; condividendo di
+  nuovo la nota il link è un altro. Anche eliminando la nota, o l'account, il link smette di
+  funzionare.
+- Il link apre una pagina di Glifo (`nota.html`) che non mostra chi l'ha condivisa. Il codice
+  nel link è casuale e non si indovina.
+
 ## Funzionalità
 
 **Editor**
@@ -677,7 +695,7 @@ src/
     worker.ts, client.ts  il correttore gira in un worker, fuori dalla pagina
   render/
     mathDelims.ts         regole dei delimitatori (condivise da editor e anteprima)
-    markdown.ts           Markdown → HTML sicuro
+    markdown.ts           Markdown → HTML sicuro (niente script, moduli, pulsanti o stili)
     lists.ts              elenchi con tutti i marcatori e rientri comodi nell'anteprima
     katex.ts              disegno delle formule, messaggi di errore in italiano
   ui/                     pannello dei simboli, anteprima, elenco appunti, finestre,
@@ -688,8 +706,13 @@ src/
     sync.ts               sincronizzazione: manda e scarica le modifiche, nei conflitti tiene tutte e due le versioni
     controller.ts         quando sincronizzare (avvio, ritorno su Glifo, rete, dopo le modifiche)
     space.ts              le note di ogni account in uno spazio a parte del browser
-    supabase.ts           accesso con Google o via email (link o codice), eliminazione dell'account
+    supabase.ts           accesso con Google o via email (link o codice), eliminazione dell'account,
+                          le chiamate per condividere una nota con un link
     export.ts             il file di «Scarica i miei dati»
+  share/                  le note condivise con un link (una fotografia della nota)
+    link.ts               il link (nota.html#codice) e la lettura della nota, anche senza account
+    dialog.ts             la finestra «Condividi»
+    page.ts               la pagina nota.html: la nota in sola lettura e «Salva una copia»
   schema/
     model.ts              il formato degli schemi (blocchi ```schema), i controlli e i colori dei due temi
     blocks.ts             trova i blocchi ```schema nella nota
@@ -757,6 +780,7 @@ src/
     file.ts               i grafici nei file .md: immagine SVG più il testo nascosto, e ritorno
   host.ts                 integrazione facoltativa con claude.ai (per la demo pubblicata lì)
 privacy.html              l'informativa sulla privacy (una seconda pagina, fuori dall'app)
+nota.html                 la pagina delle note condivise con un link (src/share/page.ts)
 tests/                    test automatici (Vitest), anche del database con le vere migrazioni (PGlite)
 scripts/smoke-test.mjs    prova nel browser del flusso principale
 scripts/account-test.mjs  prova nel browser dell'account, con un Supabase finto (fake-supabase.mjs)
@@ -791,6 +815,6 @@ all'app, in `licenze/`.
 
 ## Idee per il futuro
 
-Gli **account** ci sono, in prova: si entra con Google o con un'email. In programma: aprirli a
-tutti, poi mandare note ad altri e cartelle condivise. I dettagli, con le altre idee, sono
+Gli **account** ci sono, in prova: si entra con Google o con un'email, e una nota si condivide
+con un link. In programma: aprirli a tutti, poi le cartelle condivise. I dettagli, con le altre idee, sono
 in [ROADMAP.md](ROADMAP.md).

@@ -54,7 +54,10 @@ prossimi passi sono in «In programma» nella ROADMAP.
   anteprima (`src/render/lists.ts`). Niente codice rientrato: il rientro è per gli elenchi.
 - `src/spell/`: controllo ortografico (Hunspell in WebAssembly in un worker, dizionari
   `dictionary-it` e `dictionary-en`, glossario tecnico in `glossary.ts`).
-- `src/render/`: KaTeX e anteprima Markdown, con le stesse regole di VS Code per `$…$`.
+- `src/render/`: KaTeX e anteprima Markdown, con le stesse regole di VS Code per `$…$`. Una nota
+  può essere di un'altra persona (link condiviso, la copia salvata da lì, un .md): `renderMarkdown`
+  toglie script, moduli, pulsanti e stili (`FORBIDDEN_TAGS`; con `untrusted` le caselle non si
+  cliccano) e `.markdown-body` ha `contain: paint`, così niente esce dal riquadro della nota.
 - `src/ui/`: interfaccia (`resize.ts`: i bordi da trascinare tra le sezioni). `src/store/`: note,
   cartelle (`folders.ts`), impostazioni e misure delle sezioni (`layout.ts`, solo su quel
   dispositivo) nel browser (chiavi `glifo.*`).
@@ -195,8 +198,14 @@ prossimi passi sono in «In programma» nella ROADMAP.
   `supabase.ts` fa l'accesso con Google o via email (il link aperto qui o incollato, o il
   codice) e controlla che l'accesso salvato nel browser sia dell'account aperto prima di
   sincronizzare, scaricare o eliminare. Il client di Supabase si carica solo se si accede.
-- `privacy.html`: l'informativa sulla privacy, una seconda pagina della build (vedi
-  `vite.config.ts`), collegata da `src/ui/links.ts`.
+- `src/share/`: le note condivise con un link, come in Gemini (una fotografia della nota): `link.ts`
+  (il link `nota.html#codice`; la nota si legge con la sola chiave pubblica, senza il client di
+  Supabase), `dialog.ts` (la finestra «Condividi», come quelle di Google), `page.ts` (la pagina
+  `nota.html`: la nota in sola lettura e «Salva una copia»). Le chiamate dell'account (`shareNote`,
+  `sharedLinks`…) sono in `src/account/supabase.ts`; nel database la tabella `shared_notes` e le
+  funzioni della migrazione «note condivise» (vedi supabase/README.md).
+- `privacy.html` e `nota.html`: l'informativa sulla privacy e la pagina delle note condivise, altre
+  due pagine della build (vedi `vite.config.ts`); l'informativa è collegata da `src/ui/links.ts`.
 - `supabase/`: il database degli account (progetto Supabase `glifo`, Francoforte, piano
   gratuito): tabelle e regole di accesso in `migrations/`, test in `tests/`. Il README spiega
   indirizzo, chiave pubblica, sincronizzazione (`sync_pull`/`sync_push`) e come si cambia.

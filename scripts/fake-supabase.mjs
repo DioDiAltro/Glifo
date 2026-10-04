@@ -2,8 +2,8 @@
  * Un Supabase finto per le prove nel browser. L'accesso accetta sempre il codice 123456, il
  * link dell'ultima email (aperto o incollato) e Google (la «pagina di Google» riporta subito
  * a Glifo con l'account scelto con setGoogle); la sincronizzazione invece è quella vera:
- * sync_pull e sync_push girano sulle migrazioni di supabase/migrations, in un Postgres in
- * memoria (PGlite).
+ * sync_pull, sync_push e le note condivise con un link girano sulle migrazioni di
+ * supabase/migrations, in un Postgres in memoria (PGlite).
  */
 import { randomBytes } from 'node:crypto'
 import { readdirSync, readFileSync } from 'node:fs'
@@ -83,21 +83,31 @@ export async function createFakeSupabase() {
     }
   }
 
-  /** Come l'API di Supabase: una transazione per richiesta, con l'utente preso dal token. */
+  /** Le funzioni del database che l'app chiama, con gli argomenti presi dal corpo della richiesta. */
+  const CALLS = {
+    sync_pull: (b) => ['select public.sync_pull($1) as r', [b.since ?? null]],
+    sync_push: (b) => ['select public.sync_push($1::jsonb) as r', [JSON.stringify(b.changes ?? {})]],
+    delete_account: () => ['select public.delete_account() as r', []],
+    share_note: (b) => ['select public.share_note($1, $2, $3, $4) as r', [b.note, b.title, b.content, b.allow_copy ?? true]],
+    set_shared_copy: (b) => ['select public.set_shared_copy($1, $2) as r', [b.note, b.allow_copy]],
+    unshare_note: (b) => ['select public.unshare_note($1) as r', [b.note]],
+    shared_links: (b) => ['select public.shared_links($1) as r', [b.note ?? null]],
+    shared_note: (b) => ['select public.shared_note($1) as r', [b.token ?? null]],
+  }
+  /** Quelle che si possono chiamare anche senza accesso (come anon). */
+  const PUBLIC_CALLS = new Set(['shared_note'])
+
+  /** Come l'API di Supabase: una transazione per richiesta, con l'utente preso dal token (o anon). */
   function rpc(name, userId, body) {
     return db.transaction(async (tx) => {
-      await tx.query(`select set_config('role', 'authenticated', true), set_config('request.jwt.claims', $1, true)`, [
-        JSON.stringify({ sub: userId, role: 'authenticated' }),
-      ])
-      if (name === 'delete_account') {
-        await tx.query('select public.delete_account()')
-        return null
-      }
-      const { rows } =
-        name === 'sync_pull'
-          ? await tx.query('select public.sync_pull($1) as r', [body.since ?? null])
-          : await tx.query('select public.sync_push($1::jsonb) as r', [JSON.stringify(body.changes ?? {})])
-      return rows[0].r
+      if (userId) {
+        await tx.query(`select set_config('role', 'authenticated', true), set_config('request.jwt.claims', $1, true)`, [
+          JSON.stringify({ sub: userId, role: 'authenticated' }),
+        ])
+      } else await tx.query(`select set_config('role', 'anon', true), set_config('request.jwt.claims', '', true)`)
+      const [sql, args] = CALLS[name](body)
+      const { rows } = await tx.query(sql, args)
+      return rows[0].r ?? null
     })
   }
 
@@ -175,10 +185,12 @@ export async function createFakeSupabase() {
       const id = userIdFrom(request.headers().authorization ?? '')
       return id ? reply(200, userJson({ id, email: emailOf(id) })) : reply(401, { code: 'no_authorization', message: 'No authorization' })
     }
-    const fn = /^\/rest\/v1\/rpc\/(sync_pull|sync_push|delete_account)$/.exec(path)?.[1]
-    if (fn) {
+    const fn = /^\/rest\/v1\/rpc\/(\w+)$/.exec(path)?.[1]
+    if (fn && Object.hasOwn(CALLS, fn)) {
       const userId = userIdFrom(request.headers().authorization ?? '')
-      if (!userId) return reply(401, { code: '42501', message: `permission denied for function ${fn}`, details: null, hint: null })
+      if (!userId && !PUBLIC_CALLS.has(fn)) {
+        return reply(401, { code: '42501', message: `permission denied for function ${fn}`, details: null, hint: null })
+      }
       if (fn === 'sync_push' && pushFails) return reply(503, { code: 'PGRST000', message: 'Servizio non disponibile (prova)', details: null, hint: null })
       try {
         const result = await rpc(fn, userId, body)

@@ -715,6 +715,9 @@ kbd {
   line-height: 1.7;
   color: var(--text);
   overflow-wrap: break-word;
+  /* Niente di quello che c'è in una nota (per esempio un riquadro con position: fixed) esce dal
+     suo riquadro e copre l'app: una nota può essere di un'altra persona. */
+  contain: paint;
 }
 
 .markdown-body > :first-child {
@@ -3478,6 +3481,11 @@ kbd {
     padding: 0 6px;
   }
 
+  /* Sul telefono il tema si cambia dalle Impostazioni: il posto serve a «Condividi». */
+  .theme-toggle {
+    display: none;
+  }
+
   .icon-button {
     min-width: 32px;
     padding: 0 6px;
@@ -3520,6 +3528,8 @@ kbd {
     max-width: none;
     padding: 0;
     color: #000;
+    /* Sulla carta la nota va divisa in pagine: il contenimento dello schermo non serve. */
+    contain: none;
   }
 
   .markdown-body .math-block,
@@ -3560,5 +3570,237 @@ kbd {
     padding: 0;
     border: 0;
     background: none;
+  }
+}
+
+/* ——— Condividi con un link (src/share/dialog.ts) ——— */
+
+.dialog-share {
+  width: min(520px, calc(100vw - 32px));
+}
+
+.share-heading {
+  margin: 12px 0 8px;
+  font-size: 14px;
+}
+
+.share-access {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.share-access-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.share-access-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.dialog .share-access select {
+  width: auto;
+  max-width: 100%;
+  font-weight: 600;
+}
+
+.share-access-help {
+  margin: 4px 0 0;
+}
+
+.share-link {
+  margin: 12px 0 0 48px;
+}
+
+.dialog input.share-url {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+.share-snapshot-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.share-snapshot {
+  flex: 1 1 220px;
+  margin: 0;
+}
+
+.share-copy {
+  margin: 16px 0 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.share-copy > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.share-copy .field-help {
+  margin: 0;
+}
+
+.share-status {
+  min-height: 1.45em;
+  margin: 6px 0 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.share-status.is-error {
+  color: var(--danger);
+}
+
+.share-actions-spacer {
+  flex: 1;
+}
+
+/* ——— La pagina di una nota condivisa (nota.html, src/share/page.ts) ——— */
+
+body.shared-page {
+  height: auto;
+  min-height: 100%;
+  overflow: auto;
+  background: var(--pane-preview);
+}
+
+.shared-top {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--topbar-h);
+  padding: 6px max(12px, env(safe-area-inset-left));
+  background: var(--frame);
+  border-bottom: 1px solid var(--border);
+}
+
+.shared-top .brand {
+  color: inherit;
+  text-decoration: none;
+}
+
+.shared-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.shared-title {
+  margin: 0;
+  overflow: hidden;
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shared-when {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.shared-actions {
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+
+.shared-actions .btn {
+  text-decoration: none;
+}
+
+.shared-status {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 48px 36px;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.shared-status.is-problem {
+  color: var(--text);
+}
+
+/* La nota è di un'altra persona: si legge soltanto. Come ogni nota, niente di quello che
+   contiene esce dal suo riquadro (vedi .markdown-body). */
+.shared-body {
+  padding-bottom: 48px;
+}
+
+.shared-body .schema-edit,
+.shared-body .graph-add-slider {
+  display: none !important;
+}
+
+.shared-foot {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 16px 36px 32px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.shared-foot a {
+  color: var(--link);
+}
+
+/* Sul telefono il titolo va sotto, su una riga sua. */
+@media (max-width: 640px) {
+  .shared-top {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  .shared-info {
+    order: 3;
+    flex: 1 1 100%;
+  }
+
+  .shared-actions {
+    margin-left: auto;
+  }
+
+  .shared-actions .btn svg {
+    display: none;
+  }
+
+  .shared-actions .btn {
+    padding: 0 10px;
+  }
+
+  .shared-status,
+  .shared-foot {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+@media print {
+  .shared-top {
+    position: static;
+  }
+
+  .shared-actions,
+  .shared-foot {
+    display: none;
   }
 }

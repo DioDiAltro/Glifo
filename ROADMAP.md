@@ -39,7 +39,8 @@ Gli appunti si possono mandare a un'altra persona o tenere in una cartella condi
 avanti l'account servirà anche per l'abbonamento (vedi «Più avanti»).
 
 **Oggi:** l'account c'è, in prova. Si entra con Google o con un'email e gli appunti si
-sincronizzano tra i dispositivi (passi 1-3 e l'accesso con Google del passo 4). Per ora entrano
+sincronizzano tra i dispositivi (passi 1-3 e l'accesso con Google del passo 4). Una nota si
+condivide con un link, come in Gemini (il primo pezzo del passo 5). Per ora entrano
 in pochi: con Google gli indirizzi aggiunti tra i «Test users» dell'app Google (fino a 100),
 con l'email i membri del team Supabase. Chi non accede continua a usare Glifo come prima, con
 gli appunti nel browser.
@@ -160,11 +161,35 @@ Perché non gli altri:
      usare un account Gmail con una «password per le app»; più avanti, con un dominio, un
      servizio come Brevo o Resend.
 5. **Condivisione:**
-   - profili (il nome che vedono gli altri) e membri di ogni cartella;
-   - mandare una copia di una nota a un'altra persona, che la trova tra i «Ricevuti»;
-   - cartelle condivise con persone scelte, che possono solo leggere o anche modificare;
-   - se due persone cambiano la stessa nota insieme restano tutte e due le versioni.
-     Scrivere insieme in tempo reale, come in Google Docs, è un passo successivo.
+   - fatto (4 ottobre 2026): **il link a una nota, come in Gemini**. «Condividi» →
+     «Chiunque abbia il link»: chi apre il link, anche senza account, vede una fotografia della
+     nota in sola lettura (la pagina `nota.html`). «Aggiorna il link» rifà la fotografia,
+     «Consenti copie» lascia salvarne una copia, «Con limitazioni» toglie il link; eliminando la
+     nota o l'account il link smette di funzionare. Nel database: la tabella `shared_notes` e le
+     funzioni `share_note`, `set_shared_copy`, `unshare_note`, `shared_links` e `shared_note`
+     (migrazione «note condivise», 33 controlli in `supabase/tests/condivisione.test.sql`).
+     Le note arrivano anche da altre persone: l'anteprima non mostra moduli, pulsanti e stili
+     scritti nelle note, e niente esce dal riquadro della nota;
+   - si decide dopo il link (lo studente: «facciamo prima il link, poi ne parliamo»):
+     - profili (il nome che vedono gli altri) e membri di ogni cartella;
+     - mandare una copia di una nota a un'altra persona, che la trova tra i «Ricevuti»;
+     - cartelle condivise con persone scelte, con i permessi come nei servizi di Google (lo
+       studente ha mostrato la finestra «Condividi» di NotebookLM): il proprietario aggiunge
+       le persone e per ognuna decide cosa può fare (per esempio solo leggere o anche
+       modificare); in più «Chiunque abbia il link» e «Consenti copie», come per le note;
+     - gli inviti con un link da mandare, perché senza un servizio di posta nostro Supabase
+       scrive solo al team; e per far entrare gli altri con Google serve «Publish app» (passo 4).
+   - **scrivere insieme senza conflitti** (messo da parte il 4 ottobre 2026, se ne riparla):
+     lo studente vuole che due persone che scrivono nello stesso punto non vadano in conflitto.
+     Due modi di lavorare insieme:
+     - come **Google Docs**: tutti scrivono sulla stessa nota nello stesso momento e le battute
+       si uniscono lettera per lettera (CRDT): nessun conflitto, anche dopo aver scritto senza
+       rete. È la strada che fa quello che chiede lo studente: per esempio Yjs, che funziona con
+       CodeMirror (l'editor di Glifo), con il canale in tempo reale di Supabase (gratuito);
+     - come **GitHub**: ognuno ha la sua copia e le modifiche si uniscono quando si mandano;
+       se due cambiano le stesse righe è un conflitto che una persona deve risolvere (oggi
+       Glifo tiene tutte e due le versioni). In più la cronologia (chi ha cambiato cosa) e le
+       proposte di modifica da approvare.
 
 **Da tenere a mente:**
 

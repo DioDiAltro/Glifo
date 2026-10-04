@@ -20,6 +20,7 @@ Le tabelle sono in `migrations/`:
 
 - `folders`, `notes` e `user_settings`: cartelle, note, impostazioni e dizionario personale di
   ogni account.
+- `shared_notes`: le note condivise con un link (vedi «Note condivise con un link», sotto).
 - **Regole di accesso:**
   - ognuno legge e modifica solo le sue righe, e chi non ha fatto l'accesso non vede niente;
   - una nota può stare solo in una cartella dello stesso account.
@@ -89,13 +90,39 @@ Due funzioni, da chiamare dopo l'accesso con `supabase.rpc(...)`.
   - `rejected`: l'id appartiene a un altro account.
 - Una nota in una cartella che sul server non c'è resta fuori dalle cartelle.
 
+## Note condivise con un link
+
+Una nota condivisa è una fotografia (titolo e testo come erano quando la si è condivisa), che
+chi ha il link legge anche senza account, nella pagina `nota.html#codice` di Glifo. Il codice è
+casuale (22 caratteri, 122 bit). La tabella `shared_notes` la legge solo il proprietario; il
+browser non ci scrive: tutto passa da queste funzioni.
+
+- `share_note({ note, title, content, allow_copy })`: condivide una propria nota, o ne aggiorna
+  la fotografia (il link resta lo stesso). La nota deve essere nell'account e non eliminata,
+  altrimenti errore con `hint = 'missing'`. Restituisce il link: `{ token, note_id, title,
+  allow_copy, created_at, updated_at, content_hash }`, dove `content_hash` è lo SHA-256 del
+  testo (l'app lo confronta con la nota per dire se è cambiata dopo la fotografia).
+- `set_shared_copy({ note, allow_copy })`: «Consenti copie» sì o no, senza cambiare la
+  fotografia. `null` se la nota non ha link.
+- `unshare_note({ note })`: toglie il link, che non si apre più.
+- `shared_links({ note? })`: i propri link (di una nota sola, se si dice quale).
+- `shared_note({ token })`: per chi ha il link, **anche senza accesso** (ruolo `anon`):
+  `{ title, content, allow_copy, updated_at }`, oppure `null`. Non dice di chi è la nota.
+  L'app la chiama con la sola chiave pubblica nell'intestazione `apikey`, senza il client.
+
+Eliminando la nota (`deleted_at`) o l'account il link sparisce. Le fotografie di un account
+occupano al massimo 20 MB (`hint = 'quota'`). Le funzioni che scrivono stanno in `private`
+(`security definer`, controllano `auth.uid()`); quelle in `public` le chiamano con i permessi
+di chi chiama. I test sono in `tests/condivisione.test.sql`.
+
 ## Nell'app
 
 - `src/account/sync.ts` usa queste due funzioni: manda le modifiche, poi scarica le novità.
 - `src/account/space.ts` tiene le note di ogni account in uno spazio a parte del browser.
 - `src/account/supabase.ts` si occupa dell'accesso (email o Google). Sincronizza, scarica i
-  dati ed elimina l'account solo se l'accesso salvato nel browser è dell'account aperto: così
-  le note di un account non finiscono mai in un altro.
+  dati, condivide le note ed elimina l'account solo se l'accesso salvato nel browser è
+  dell'account aperto: così le note di un account non finiscono mai in un altro.
+- `src/share/` è la condivisione con un link: la finestra «Condividi» e la pagina `nota.html`.
 
 L'email per entrare:
 
@@ -162,7 +189,7 @@ un dominio personalizzato per Supabase, che però è a pagamento.
 1. Ogni modifica è un file nuovo in `migrations/`. Quelli già applicati non si toccano.
 2. Si applica con il connettore Supabase (`apply_migration`), poi si rinomina il file con
    la versione che dà `list_migrations`. Con la CLI: `supabase db push`.
-3. Si eseguono i test di `tests/database.test.sql`. `npm test` li esegue già in un Postgres
+3. Si eseguono i test di `tests/` (`database.test.sql` e `condivisione.test.sql`). `npm test` li esegue già in un Postgres
    in memoria (PGlite), con `tests/supabase-stub.sql` al posto delle parti di Supabase. Sul
    progetto vero si eseguono dal SQL editor di Supabase, con `psql` o con `execute_sql` del
    connettore. Tutto viene annullato alla fine, e il risultato giusto è l'errore

@@ -1,6 +1,7 @@
 import { PGlite } from '@electric-sql/pglite'
 import stubSql from '../../supabase/tests/supabase-stub.sql?raw'
 import testsSql from '../../supabase/tests/database.test.sql?raw'
+import shareTestsSql from '../../supabase/tests/condivisione.test.sql?raw'
 
 // Le migrazioni, lette come testo: le chiavi sono i percorsi, in ordine di versione.
 const MIGRATIONS = import.meta.glob<string>('../../supabase/migrations/*.sql', { query: '?raw', import: 'default', eager: true })
@@ -14,6 +15,11 @@ export function migrations(): string[] {
 
 export function databaseTests(): string {
   return testsSql
+}
+
+/** I test delle note condivise con un link. */
+export function shareTests(): string {
+  return shareTestsSql
 }
 
 /** Un database nuovo, in memoria, con tutte le migrazioni applicate. */

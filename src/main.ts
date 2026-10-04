@@ -47,11 +47,16 @@ import {
   deleteAccount as deleteAccountOnServer,
   loginDetails,
   sendCode,
+  setSharedCopy,
+  sharedLinks,
+  shareNote,
   signInWithGoogle,
   signOut,
   supabaseBackendFor,
+  unshareNote,
   verifyCode,
 } from './account/supabase'
+import { openShareDialog } from './share/dialog'
 import { SyncError, type LocalChange } from './account/sync'
 import { AccountButton, confirmAccountDeletion, openAccountDialog, openLoginDialog, type SignedIn } from './ui/account'
 import { logoMark } from './ui/logo'
@@ -60,6 +65,7 @@ import { Preview } from './ui/preview'
 import { PaneResizer } from './ui/resize'
 import { SidePanel } from './ui/sidePanel'
 import { toast } from './ui/toast'
+import { leaveNotice, takeNotice } from './ui/notice'
 import { createToolbar } from './ui/toolbar'
 
 // Il progetto si chiamava Matherdown: recupera gli appunti salvati con il vecchio nome.
@@ -142,7 +148,7 @@ const viewSwitch = h(
 const accountButton = new AccountButton(() => openAccount())
 
 const themeButton = h('button', {
-  class: 'icon-button',
+  class: 'icon-button theme-toggle',
   title: 'Tema chiaro/scuro',
   attrs: { type: 'button', 'aria-label': 'Cambia tema' },
   on: { click: () => toggleTheme() },
@@ -173,6 +179,16 @@ const topbar = h(
   h(
     'div',
     { class: 'topbar-actions' },
+    h(
+      'button',
+      {
+        class: 'icon-button share-button',
+        title: 'Condividi la nota con un link',
+        attrs: { type: 'button', 'aria-label': 'Condividi' },
+        on: { click: () => openShare() },
+      },
+      icon(ICONS.share),
+    ),
     h(
       'button',
       { class: 'icon-button', title: 'Nuova nota', attrs: { type: 'button', 'aria-label': 'Nuova nota' }, on: { click: () => createNote() } },
@@ -988,6 +1004,34 @@ function openAccount(): void {
   })
 }
 
+/** «Condividi»: la nota aperta con un link, una fotografia che si apre anche senza account (src/share). */
+function openShare(): void {
+  flushSave()
+  const noteId = active.id
+  const user = account
+  openShareDialog({
+    noteId,
+    note: () => {
+      const content = noteId === active.id ? editor.getDoc() : (store.get(noteId)?.content ?? '')
+      return { title: deriveTitle(content), content }
+    },
+    server:
+      user && sync
+        ? {
+            prepare: async () => {
+              flushSave()
+              await sync.syncNow()
+            },
+            get: async (id) => (await sharedLinks(user.userId, id))[0] ?? null,
+            share: (note, allowCopy) => shareNote(user.userId, note, allowCopy),
+            setCopy: (id, allowCopy) => setSharedCopy(user.userId, id, allowCopy),
+            unshare: (id) => unshareNote(user.userId, id),
+          }
+        : null,
+    onLogin: () => openAccount(),
+  })
+}
+
 const OAUTH_KEY = 'glifo.oauth'
 
 /** Accesso con Google: si salva tutto e si va sulla pagina di Google; al ritorno ci pensa il codice in fondo. */
@@ -1017,8 +1061,9 @@ async function downloadAccountData(): Promise<void> {
   try {
     const data = await supabaseBackendFor(account.userId).pull(null)
     const login = await loginDetails().catch(() => undefined)
+    const links = await sharedLinks(account.userId)
     const date = new Date().toISOString().slice(0, 10)
-    await downloadText(`glifo-dati-account-${date}.json`, accountDataFile(data, account, login), 'application/json')
+    await downloadText(`glifo-dati-account-${date}.json`, accountDataFile(data, account, login, new Date(), links), 'application/json')
   } catch (err) {
     toast(accountProblem(err, 'scaricare i dati'), 'error')
   }
@@ -1101,27 +1146,6 @@ async function signOutAccount(): Promise<void> {
   setCurrentAccount(null)
   forgetAccount(account.userId)
   reloadPage()
-}
-
-const NOTICE_KEY = 'glifo.notice'
-
-/** Un avviso da mostrare dopo aver ricaricato la pagina (resta solo in questa scheda). */
-function leaveNotice(message: string): void {
-  try {
-    sessionStorage.setItem(NOTICE_KEY, message)
-  } catch {
-    /* sessionStorage non disponibile: niente avviso */
-  }
-}
-
-function takeNotice(): string | null {
-  try {
-    const message = sessionStorage.getItem(NOTICE_KEY)
-    sessionStorage.removeItem(NOTICE_KEY)
-    return message
-  } catch {
-    return null
-  }
 }
 
 /** Ricarica la pagina senza salvare più niente: le note giuste si caricano all'avvio. */
