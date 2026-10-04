@@ -17,6 +17,8 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
 - **Il piano di mezzo si chiama Relativistico**, non più Super (4 ottobre 2026): *Classico →
   Relativistico → Quantistico* segue la storia della fisica (Newton, Einstein, i quanti) e, come ha
   detto lo studente, fa più effetto.
+- **Una piccola filigrana come pubblicità nel piano gratuito**, purché non sia in mezzo agli appunti
+  (4 ottobre 2026). Dove va: vedi «Classico».
 
 ## Com'è andata la discussione
 
@@ -30,6 +32,9 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
 3. **I grafici** (4 ottobre 2026). Lo studente precisa che i grafici non voleva toglierli e che il
    ragionamento gli piace: vedi «Deciso». Restano le domande di «Da approfondire».
 4. **Il nome** (4 ottobre 2026). Super diventa Relativistico: vedi «Deciso».
+5. **La filigrana e le spiegazioni** (4 ottobre 2026). Lo studente vuole la filigrana, piccola e
+   fuori dagli appunti (vedi «Deciso»), e chiede di capire meglio come funzionerebbero le
+   spiegazioni con il motore di Glifo: vedi «Le spiegazioni, come funzionano».
 
 ## La proposta dello studente (4 ottobre 2026)
 
@@ -117,6 +122,19 @@ che fa più effetto, e proprio per questo stanno nella vetrina. L'idea è far pa
 «da pubblicazione» (figure numerate con didascalia, pronte per la tesi), in Quantistico; le immagini
 semplici di un grafico (in programma) restano gratis, come già quelle degli schemi.
 
+**La filigrana** (deciso il 4 ottobre 2026: piccola, come pubblicità, mai in mezzo agli appunti).
+Dove va, come proposta:
+
+- sulle immagini scaricate o copiate di schemi e grafici: «Fatto con Glifo», piccolo, in un angolo,
+  fuori dal disegno;
+- sui PDF e sulle stampe: una riga in fondo alla pagina;
+- mai nell'editor, nell'anteprima, dentro le note o nei file .md, che sono gli appunti stessi;
+- la pagina del link condiviso fa già pubblicità (il logo, «Apri Glifo» e una riga che spiega cos'è
+  Glifo): lì non serve altro.
+
+Nei piani a pagamento la proposta è che non ci sia: in Quantistico di sicuro, perché in una tesi non
+può stare.
+
 ### Relativistico: per studiare
 
 Proposta: **4,99 € al mese o 39 € l'anno.** Chi lo usa: chi prepara gli esami. Quando lo compra:
@@ -125,7 +143,7 @@ fa al posto tuo.**
 
 | Dentro | Perché è a pagamento |
 |---|---|
-| **Le spiegazioni passo passo**: i passaggi del motore di Glifo (le regole usate, perché il risultato è quello), come Wolfram\|Alpha Pro; dove il motore non arriva, l'AI spiega e il motore controlla | È quello per cui gli studenti pagano già altrove, e costa molto lavoro costruirle, argomento per argomento. Quello che il motore mostra già oggi (Euclide, Bézout, Ruffini, le tabelle del calcolo numerico, le righe dello studio di funzione) resta gratis |
+| **Le spiegazioni passo passo**: i passaggi del motore di Glifo (le regole usate, perché il risultato è quello), come Wolfram\|Alpha Pro; dove il motore non arriva, l'AI spiega e il motore controlla (vedi «Le spiegazioni, come funzionano») | È quello per cui gli studenti pagano già altrove, e costa molto lavoro costruirle, argomento per argomento. Quello che il motore mostra già oggi (Euclide, Bézout, Ruffini, le tabelle del calcolo numerico, le righe dello studio di funzione) resta gratis |
 | **Il tutor** (la voce «Aiuto con gli esercizi» della ROADMAP): chiede cosa hai provato, dà un indizio alla volta, controlla i tuoi passaggi; con un tetto al mese (per esempio 100 domande) | Ogni domanda costa a Glifo circa 2 centesimi: con il tetto il piano resta in attivo anche con chi lo usa molto. Un indizio alla volta è il «non semplificare troppo» |
 | **La trascrizione delle lezioni**: poche ore al mese (per esempio 3) e pacchetti di ore per chi ne vuole di più | Costa 20-40 centesimi per ora di lezione: chi registra tutte le lezioni (80 ore al mese) costerebbe 15-30 €. Se un giorno la trascrizione girerà nel browser (sul computer), quella non avrà tetto |
 | **L'SQL e il codice dagli schemi**: oggi l'SQL per più database; poi dallo schema E-R alle tabelle, dall'SQL allo schema, il codice da altri diagrammi | Fa un lavoro al posto tuo, serve a un gruppo preciso con una scadenza (l'esame di basi di dati) e non è il motivo per scegliere Glifo. Nella proposta era già fuori dal gratuito. Gira nel browser, quindi si blocca solo sulla fiducia, e va bene così |
@@ -172,6 +190,99 @@ ricercatori (come fa Overleaf).
 - Oltre lo spazio gratuito le note restano, ma non se ne aggiungono finché non si torna sotto il
   limite (come Google Drive).
 - Le cartelle condivise restano leggibili; per invitare o scrivere insieme serve di nuovo il piano.
+
+## Le spiegazioni, come funzionano
+
+Spiegato allo studente il 4 ottobre 2026: è un'idea, niente di deciso.
+
+### Cosa vede chi studia
+
+Scrive `\int_{-R}^{R} \pi (R^2 - x^2) \, dx =` e Glifo, come già oggi, scrive il risultato: 4πR³/3.
+Accanto c'è **«Spiegami»**. Premendolo, nel pannello della formula compaiono i passaggi, ognuno con
+la formula, una frase che dice cosa si è fatto e il segno ✓ di Glifo:
+
+1. π esce dall'integrale, perché è una costante: π ∫ (R² − x²) dx tra −R e R ✓
+2. una primitiva di R² − x² è R²x − x³/3 (quella di x² è x³/3) ✓
+3. si sostituiscono gli estremi: (R³ − R³/3) − (−R³ + R³/3) = 2R³/3 + 2R³/3 = 4R³/3 ✓
+4. quindi il volume è π · 4R³/3 = 4πR³/3, lo stesso risultato di Glifo ✓
+
+Ogni passaggio ha un «Perché?» per chiedere di più (è una domanda all'AI, e conta nel tetto). Con
+«Inserisci nella nota» i passaggi vanno negli appunti, se si vogliono tenere; se no restano nel
+pannello e la nota non cambia.
+
+### Cosa succede dietro
+
+Ci lavorano in due, ognuno per quello che sa fare:
+
+- **l'AI (Claude)** sceglie la strada (portare fuori π, cercare la primitiva, sostituire gli
+  estremi) e scrive le frasi, come farebbe un professore; ma da sola a volte sbaglia un conto (un
+  segno, un fattore 2);
+- **il motore di Glifo** fa i conti esatti e non sbaglia, ma non sa scegliere la strada né spiegarla
+  a parole, e alcuni risultati li trova con i numeri, per una via che una persona non farebbe mai.
+
+I passi:
+
+1. Glifo manda all'AI la formula, il risultato che ha già calcolato e le definizioni della nota.
+2. L'AI scrive i passaggi uno alla volta e, per ognuno, chiede al motore di controllarlo. Nell'API di
+   Claude si chiamano *strumenti* (*tool use*): funzioni di Glifo che l'AI può usare, come «controlla
+   che queste due espressioni siano uguali» o «controlla che questa sia una primitiva».
+3. Il motore risponde ✓, oppure ✗ con il valore giusto. Se per esempio l'AI scrivesse al passaggio 3
+   «= 2R³/3» (dimenticando l'estremo −R), il motore direbbe ✗: viene 4R³/3.
+4. Un passaggio ✗ l'AI lo corregge prima di mostrarlo: chi studia non vede mai un passaggio sbagliato.
+5. Alla fine il risultato dei passaggi deve essere quello che il motore aveva calcolato all'inizio; se
+   non lo è, la spiegazione si rifà.
+
+Come controlla il motore: mette dei numeri al posto delle lettere e confronta i due lati, con più
+scelte di numeri. Lo fa già oggi per le primitive (le deriva e le confronta con la funzione), per gli
+integrali con le lettere e per le soluzioni delle equazioni differenziali. Il controllo delle
+uguaglianze che si scrivono (✓/✗, il primo punto di «In programma» nella ROADMAP) è la stessa cosa,
+ed è la base di tutto: va fatto prima.
+
+In breve: **il testo lo scrive l'AI, i conti li firma Glifo.**
+
+### Quando basta il motore, e quando serve l'AI
+
+- **Basta il motore** dove i passaggi sono sempre gli stessi: derivate (le regole una dopo l'altra),
+  integrali immediati, Ruffini, l'eliminazione di Gauss, Euclide. Lì i passaggi può scriverli lui,
+  con frasi fisse: gratis, subito e anche offline (va costruito argomento per argomento; alcuni ci
+  sono già: Euclide, Bézout, Ruffini, le tabelle del calcolo numerico, le righe dello studio di
+  funzione).
+- **Serve l'AI** dove bisogna scegliere una strada (per parti o per sostituzione? quale limite
+  notevole?), spiegare il perché o rispondere a una domanda («perché qui cambia il segno?»). Può
+  anche seguire il metodo del corso: «spiegamelo per sostituzione».
+
+### Quello che il controllo non copre
+
+- Le frasi di ragionamento («la serie converge per il criterio del rapporto») non si controllano con
+  i numeri: si controllano i conti dentro (il limite del rapporto è 1/2 < 1 ✓), e la frase resta senza
+  ✓. Si vede sempre quali passaggi sono controllati e quali no.
+- La parte dell'AI ha bisogno di internet e costa qualche centesimo a spiegazione: ogni controllo è
+  un giro in più tra l'AI e Glifo. I passaggi del motore no.
+
+### Nei piani
+
+- **Classico**: il ✓/✗ su quello che si scrive e i passaggi che il motore mostra già oggi.
+- **Relativistico**: «Spiegami» (passaggi del motore e dell'AI, controllati) e il tutor, con il tetto
+  al mese. Il tutor usa lo stesso meccanismo al contrario: i passaggi li scrive chi studia, Glifo li
+  segna ✓ o ✗, e l'AI dà un indizio quando ci si blocca o spiega dov'è l'errore.
+- **Quantistico**: la soluzione completa su richiesta, con il tetto più alto e il modello migliore per
+  i casi difficili.
+
+### Come si costruisce (per dopo)
+
+1. Il controllo ✓/✗ delle uguaglianze («In programma», gratis).
+2. Gli strumenti per l'AI: le funzioni del motore che servono (calcolare, controllare
+   un'uguaglianza, controllare una primitiva, derivare, risolvere), descritte all'AI.
+3. Il giro parte dal browser, dove c'è il motore; le richieste all'AI passano dal server di Glifo, che
+   tiene la chiave, conta le domande e lascia passare solo spiegazioni, non domande qualsiasi.
+4. Un primo argomento per provare tutto: gli integrali, con l'esempio della sfera.
+
+Da decidere (anche in «Da approfondire»):
+
+- dove si vedono: nel pannello della formula con «Inserisci nella nota» (proposta) o subito nella
+  nota;
+- da quali argomenti partire (proposta: integrali e derivate, poi limiti e algebra lineare);
+- il tono: come il professore o più semplice (si potrebbe scegliere nelle impostazioni).
 
 ## Quanto costano a Glifo le cose a pagamento
 
@@ -288,11 +399,11 @@ ricerca, i piani per università e dipartimenti.
 ## Da approfondire
 
 - **La lavagna**: com'è l'idea dello studente? Decide in che piano va e quanto costa a Glifo.
-- **Le spiegazioni**: dal motore di Glifo, dall'AI o tutte e due? Da quali argomenti partire?
+- **Le spiegazioni**: dove si vedono, da quali argomenti partire e con che tono (le proposte sono
+  in «Le spiegazioni, come funzionano»).
 - **L'SQL**: in Relativistico, come nella proposta, o resta gratis?
 - **L'assaggio** nel gratuito: 7 giorni di Relativistico o poche domande al mese?
-- **Il segno «Fatto con Glifo»** sulle immagini del piano gratuito: pubblicità gratis, ma dà
-  fastidio (e spinge verso i piani a pagamento).
+- **La filigrana nei piani a pagamento**: si toglie? (Proposta: sì; in Quantistico di sicuro.)
 - **I prezzi e i tetti**: da verificare con gli studenti e con l'uso vero.
 
 ## Fonti (controllate il 4 ottobre 2026)
