@@ -28,6 +28,11 @@ export interface Stroke {
   points: number[]
   /** Evidenziatore: trasparente, sempre sotto la scrittura, spesso uguale dall'inizio alla fine. */
   highlight?: boolean
+  /**
+   * Una figura precisa (linea, freccia, cerchio, rettangolo…, vedi shapes.ts): i punti sono i vertici,
+   * uniti da tratti dritti tutti dello stesso spessore.
+   */
+  shape?: boolean
 }
 
 export interface Box {
@@ -202,9 +207,18 @@ export function eraseStroke(s: Stroke, e0: Pt, e1: Pt, r: number): number[][] | 
   return pieces.filter((p) => p.length >= 6 && pieceLength(p) >= s.size)
 }
 
-/** I nuovi tratti fatti con i pezzi rimasti: stesso colore, spessore e momento (e, se lo era, evidenziatore). */
+/** I nuovi tratti fatti con i pezzi rimasti: stesso colore, spessore e momento (e, se lo era, evidenziatore o figura). */
 export function piecesOf(s: Stroke, pieces: number[][], newId: () => string = newStrokeId): Stroke[] {
-  return pieces.map((points) => ({ id: newId(), t: s.t, color: s.color, size: s.size, pen: s.pen, points, ...(s.highlight ? { highlight: true } : {}) }))
+  return pieces.map((points) => ({
+    id: newId(),
+    t: s.t,
+    color: s.color,
+    size: s.size,
+    pen: s.pen,
+    points,
+    ...(s.highlight ? { highlight: true } : {}),
+    ...(s.shape ? { shape: true } : {}),
+  }))
 }
 
 /**

@@ -103,6 +103,20 @@ describe('lavagna: la gomma', () => {
     expect(piecesOf(line(0, 100), [[0, 0, 0.5, 10, 0, 0.5]])[0]).not.toHaveProperty('highlight')
   })
 
+  it('una figura precisa si taglia esattamente anche dove non ci sono punti, e i pezzi restano figure', () => {
+    // Un quadrato: solo i quattro vertici (e il primo di nuovo).
+    const square: Stroke = { id: 'q', t: 1, color: 'ink', size: 3, pen: true, shape: true, points: [0, 0, 0.5, 100, 0, 0.5, 100, 100, 0.5, 0, 100, 0.5, 0, 0, 0.5] }
+    const pieces = eraseStroke(square, { x: 50, y: -20 }, { x: 50, y: 20 }, 5)!
+    expect(pieces).toHaveLength(2)
+    const rest = piecesOf(square, pieces)
+    expect(rest.every((p) => p.shape === true && p.size === 3)).toBe(true)
+    // I pezzi finiscono dove passa la gomma, a metà del lato in alto.
+    const ends = rest.flatMap((p) => [p.points.slice(0, 2), p.points.slice(-3, -1)])
+    expect(ends.some(([x, y]) => y === 0 && Math.abs(x - 43.5) < 1e-9)).toBe(true)
+    expect(ends.some(([x, y]) => y === 0 && Math.abs(x - 56.5) < 1e-9)).toBe(true)
+    expect(piecesOf(line(0, 100), [[0, 0, 0.5, 10, 0, 0.5]])[0]).not.toHaveProperty('shape')
+  })
+
   it('i pezzi tengono colore, spessore, penna e momento del tratto, con id nuovi', () => {
     const s: Stroke = { ...line(0, 100), color: 'blue', size: 3, pen: true, t: 42 }
     let n = 0

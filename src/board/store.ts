@@ -53,16 +53,18 @@ interface StrokeRecord {
   points: Float32Array | number[]
   /** Solo per gli evidenziatori. */
   highlight?: boolean
+  /** Solo per le figure precise. */
+  shape?: boolean
 }
 
 export function toRecord(note: string, s: Stroke): StrokeRecord {
-  return { note, id: s.id, t: s.t, color: s.color, size: s.size, pen: s.pen, points: Float32Array.from(s.points), ...(s.highlight ? { highlight: true } : {}) }
+  return { note, id: s.id, t: s.t, color: s.color, size: s.size, pen: s.pen, points: Float32Array.from(s.points), ...(s.highlight ? { highlight: true } : {}), ...(s.shape ? { shape: true } : {}) }
 }
 
 /** Un tratto letto da IndexedDB o da un backup: quello che non torna si sistema o si scarta. */
 export function fromRecord(r: unknown): Stroke | null {
   if (typeof r !== 'object' || r === null) return null
-  const { id, t, color, size, pen, points, highlight } = r as Partial<StrokeRecord>
+  const { id, t, color, size, pen, points, highlight, shape } = r as Partial<StrokeRecord>
   if (typeof id !== 'string' || !id) return null
   const values = points instanceof Float32Array || Array.isArray(points) ? Array.from(points as ArrayLike<number>) : []
   const usable = values.slice(0, values.length - (values.length % 3))
@@ -83,6 +85,7 @@ export function fromRecord(r: unknown): Stroke | null {
     pen: pen === true,
     points: roundPoints(usable),
     ...(highlight === true ? { highlight: true } : {}),
+    ...(shape === true ? { shape: true } : {}),
   }
 }
 
@@ -276,7 +279,7 @@ export class MemoryBoards implements BoardBackend {
 export interface BackupBoard {
   note: string
   view?: BoardView
-  strokes: { t: number; color: InkColor | HighlightColor; size: number; pen: boolean; points: string; highlight?: boolean }[]
+  strokes: { t: number; color: InkColor | HighlightColor; size: number; pen: boolean; points: string; highlight?: boolean; shape?: boolean }[]
 }
 
 const CHANNEL = 'glifo.lavagne'
@@ -399,6 +402,7 @@ export class BoardStore {
           pen: s.pen,
           points: roundPoints(s.points).join(' '),
           ...(s.highlight ? { highlight: true } : {}),
+          ...(s.shape ? { shape: true } : {}),
         })),
       })
     }

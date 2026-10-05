@@ -2291,6 +2291,100 @@ try {
         kept.size === 'Spessore della penna: fine' && kept.eraser === 'stroke' && kept.green === 'true' && kept.strokes > 0,
       `cambiando strumento la barra non si sposta, e ricaricando restano spessore, colore e modo della gomma (${JSON.stringify({ toolsAt, kept })})`,
     )
+    // Le figure precise: tenendo ferma la penna alla fine del tratto, la linea diventa dritta (e la
+    // penna ancora giù la allunga); Annulla riporta il tratto a mano. Con le «Forme automatiche» le
+    // figure diventano precise da sole, la scrittura no. In una nota nuova, con la lavagna vuota.
+    await tp.locator('.notes-head button[aria-label="Nuova nota"]').click()
+    await tp.keyboard.type('Figure precise')
+    await tp.waitForSelector('.board-pane[data-loaded="true"][data-strokes="0"]')
+    const fnote = await tpane.getAttribute('data-note')
+    const fsaved = () =>
+      tp.evaluate(
+        (note) =>
+          new Promise((resolve, reject) => {
+            const open = indexedDB.open('glifo-lavagne')
+            open.onerror = () => reject(open.error)
+            open.onsuccess = () => {
+              const db = open.result
+              const req = db.transaction('strokes', 'readonly').objectStore('strokes').getAll(IDBKeyRange.bound([note], [note, []]))
+              req.onerror = () => reject(req.error)
+              req.onsuccess = () => {
+                db.close()
+                resolve(req.result.map((r) => ({ shape: r.shape === true, highlight: r.highlight === true, points: Array.from(r.points).map((v) => Math.round(v * 100) / 100) })))
+              }
+            }
+          }),
+        fnote,
+      )
+    /** Un tratto con la penna che alla fine resta ferma `hold` ms, poi (se ci sono) va ai punti `after`. */
+    const penHold = async (points, hold, after = []) => {
+      const send = (type, [x, y], pressed = true) =>
+        tcdp.send('Input.dispatchMouseEvent', { type, x: tstage.x + x, y: tstage.y + y, button: 'left', buttons: pressed ? 1 : 0, clickCount: 1, pointerType: 'pen', force: 0.5 })
+      await send('mousePressed', points[0])
+      for (const q of points.slice(1)) await send('mouseMoved', q)
+      if (hold) await tp.waitForTimeout(hold)
+      for (const q of after) await send('mouseMoved', q)
+      await send('mouseReleased', (after.length ? after : points).at(-1), false)
+    }
+    const wobbly = (x0, x1, y, n = 24) => Array.from({ length: n }, (_, i) => [x0 + ((x1 - x0) * i) / (n - 1), y + Math.sin(i * 1.3) * 3 + (i / (n - 1)) * 4])
+    await penHold(wobbly(60, 330, 150), 800)
+    await painted()
+    const held = { shape: await tpane.getAttribute('data-shape'), saved: await fsaved() }
+    const heldLine = held.saved[0]
+    const lineY = heldLine?.points[1]
+    const straight = {
+      flat: heldLine?.shape && heldLine.points.length === 6 && heldLine.points[1] === heldLine.points[4],
+      ink: Math.min(await sum(195, lineY - 1), await sum(195, lineY), await sum(195, lineY + 1)) < 400,
+      paper: (await sum(195, Math.round(lineY) - 6)) > 600 && (await sum(195, Math.round(lineY) + 6)) > 600,
+    }
+    // La penna ancora giù dopo che la linea è diventata dritta: la allunga.
+    await penHold(wobbly(60, 200, 230, 14), 800, [[230, 232], [260, 233], [300, 232]])
+    await painted()
+    const longer = (await fsaved()).find((s) => s.points[1] > 200)
+    check(
+      held.shape === 'line' && held.saved.length === 1 && Object.values(straight).every(Boolean) && longer?.shape && Math.abs(longer.points[3] - 300) < 4 && longer.points[1] === longer.points[4],
+      `tenendo ferma la penna alla fine, la linea diventa dritta; con la penna ancora giù la si allunga (${JSON.stringify({ held: held.shape, straight, longer: longer?.points })})`,
+    )
+    // Annulla: prima torna il tratto a mano, poi va via anche quello; Ripeti rimette la figura.
+    await tp.keyboard.press('Control+Z')
+    const undoOnce = (await fsaved()).find((s) => s.points[1] > 200)
+    await tp.keyboard.press('Control+Z')
+    const undoTwice = await tcount()
+    await tp.keyboard.press('Control+Y')
+    await tp.keyboard.press('Control+Y')
+    const redone = (await fsaved()).find((s) => s.points[1] > 200)
+    check(
+      undoOnce && !undoOnce.shape && undoOnce.points.length > 30 && undoTwice === 1 && redone?.shape === true,
+      `Annulla toglie la figura e riporta il tratto fatto a mano, poi toglie anche quello; Ripeti rimette la figura (${JSON.stringify({ undoOnce: undoOnce && { shape: undoOnce.shape, n: undoOnce.points.length / 3 }, undoTwice, redone: redone?.shape })})`,
+    )
+    // Le forme automatiche, dal menu della penna (la penna premuta di nuovo).
+    await tp.locator('.board-button[aria-label="Penna"]').click()
+    await tp.locator('.board-menu-switch').click()
+    const switched = { checked: await tp.locator('.board-menu-switch').getAttribute('aria-checked'), mode: await tpane.getAttribute('data-shapes'), open: (await tp.locator('.board-menu').count()) === 1 }
+    await tp.keyboard.press('Escape')
+    const rect = [[70, 300], [250, 303], [252, 420], [72, 418], [70, 301]].flatMap(([x, y], i, all) =>
+      i === 0 ? [[x, y]] : Array.from({ length: 10 }, (_, k) => [all[i - 1][0] + ((x - all[i - 1][0]) * (k + 1)) / 10 + Math.sin(k) * 1.5, all[i - 1][1] + ((y - all[i - 1][1]) * (k + 1)) / 10 + Math.cos(k) * 1.5]),
+    )
+    await penHold(rect, 0)
+    const autoRect = { shape: await tpane.getAttribute('data-shape'), saved: (await fsaved()).find((s) => s.points[1] > 280) }
+    // Una parola scritta a mano, piccola: resta com'è.
+    const word = Array.from({ length: 30 }, (_, i) => [300 + i * 1.6, 470 + Math.sin(i * 0.9) * 7])
+    await penHold(word, 0)
+    const written = (await fsaved()).find((s) => s.points[1] > 450)
+    await tp.reload()
+    await tp.waitForSelector('.board-pane[data-loaded="true"]')
+    const keptAuto = await tpane.getAttribute('data-shapes')
+    check(
+      switched.checked === 'true' && switched.mode === 'auto' && switched.open &&
+        autoRect.shape === 'rectangle' && autoRect.saved?.shape && autoRect.saved.points.length === 15 &&
+        written && !written.shape && keptAuto === 'auto',
+      `«Forme automatiche» nel menu della penna: il rettangolo fatto a mano diventa preciso da solo, la scrittura resta com'è, e ricaricando resta acceso (${JSON.stringify({ switched, autoRect: autoRect.shape, written: written && !written.shape, keptAuto })})`,
+    )
+    // L'evidenziatore tenuto fermo diventa una linea dritta (e resta evidenziatore).
+    await tp.locator('.board-button[aria-label="Evidenziatore"]').click()
+    await penHold(wobbly(60, 330, 520), 800)
+    const marker = (await fsaved()).find((s) => s.highlight)
+    check(marker?.shape === true && marker.points[1] === marker.points[4], `l'evidenziatore tenuto fermo diventa una linea dritta (${JSON.stringify(marker?.points)})`)
     await toolsContext.close()
   }
   // Niente barra in alto: in cima alla barra laterale il logo e subito gli appunti; in fondo

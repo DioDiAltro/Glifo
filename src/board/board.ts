@@ -1,7 +1,8 @@
 import { readJson, writeJson } from '../store/storage'
 import { h, icon, ICONS } from '../ui/dom'
 import { appleTouch } from './device'
-import { BOARD_PALETTES, highlightName, inkName, outlineSvg, strokeOutline, TOOL_SIZES, type BoardTheme, type SizeChoice } from './ink'
+import { BOARD_PALETTES, highlightName, inkName, outlineSvg, shapeSvg, strokeOutline, TOOL_SIZES, type BoardTheme, type SizeChoice } from './ink'
+import { adjustShape, recognize, SHAPE_NAMES, shapePoints, type Shape } from './shapes'
 import type { BoardChange, BoardStore, BoardView } from './store'
 import { touchLog, where } from './touchlog'
 import {
@@ -30,6 +31,9 @@ import {
  * - Strumenti, come in Microsoft Whiteboard: la penna, l'evidenziatore (trasparente, sotto la
  *   scrittura) e la gomma, che cancella dove passa (e si allarga se la si muove veloce) o tocca una
  *   linea e la cancella tutta. Ognuno ha tre misure e ricorda colore, misura e modo (`PREFS_KEY`).
+ * - Figure precise (shapes.ts): tenendo ferma la penna alla fine del tratto, la linea o la figura
+ *   diventa precisa e, finché la penna è giù, la si regola; con le «Forme automatiche» succede da
+ *   solo. Annulla riporta il tratto fatto a mano.
  * - Penna: lo spessore segue la pressione. Appena si usa una penna, Glifo se lo ricorda: da lì un
  *   dito solo non fa niente (è quasi sempre la mano appoggiata), due dita spostano e ingrandiscono.
  *   La mano che tocca mentre si scrive, o appena dopo, non conta: né sulla lavagna né sui pulsanti.
@@ -56,6 +60,8 @@ type EraserMode = 'area' | 'stroke'
 interface Step {
   removed: Stroke[]
   added: Stroke[]
+  /** Ha messo la figura precisa al posto del tratto a mano del passo prima. */
+  pair?: true
 }
 
 interface DrawAction {
@@ -67,6 +73,11 @@ interface DrawAction {
   /** Quanta strada ha fatto sullo schermo, in pixel. */
   travel: number
   last: Pt
+  /** Dove si è fermata la punta (sullo schermo): ferma per `HOLD_MS`, il tratto diventa una figura. */
+  holdAt: Pt
+  holdTimer: number
+  /** La figura in cui è diventato: com'era (`base`), dov'era la punta (sulla lavagna) e com'è adesso. */
+  snapped: { base: Shape; anchor: Pt; shape: Shape } | null
 }
 
 interface EraseAction {
@@ -127,6 +138,9 @@ const YOUNG = { ms: 260, px: 26 }
 const PALM_MS = 500
 /** Di quanti pixel si devono muovere le due dita prima che la lavagna le segua: la mano che si posa trema. */
 const SLOP = 8
+/** La punta ferma (entro `HOLD_SLOP` pixel) per tanto così alla fine di un tratto: diventa una figura precisa. */
+const HOLD_MS = 550
+const HOLD_SLOP = 6
 /** Su questo dispositivo: se si è usata una penna e l'ultimo colore. */
 const PREFS_KEY = 'glifo.lavagna.v1'
 const START: BoardView = { x: 0, y: 0, zoom: 1 }
@@ -161,6 +175,13 @@ function pressureOf(ev: PointerEvent, pen: boolean): number {
   return Number.isFinite(p) && p > 0 ? Math.min(1, p) : 0.5
 }
 
+/** I punti di un tratto senza la pressione. */
+function pointsOf(s: Stroke): Pt[] {
+  const out: Pt[] = []
+  for (let i = 0; i + 1 < s.points.length; i += 3) out.push({ x: s.points[i], y: s.points[i + 1] })
+  return out
+}
+
 /** Un tratto in breve, per il registro dei tocchi: quanti punti, la pressione e quanto è durato. */
 function strokeSummary(a: DrawAction): string {
   const p = a.stroke.points.filter((_, i) => i % 3 === 2)
@@ -182,6 +203,8 @@ interface Prefs {
   /** La misura scelta per ogni strumento (0, 1 o 2: vedi TOOL_SIZES). */
   sizes?: Partial<Record<Tool, SizeChoice>>
   eraser?: EraserMode
+  /** Forme automatiche: i tratti della penna che somigliano a una figura diventano precisi da soli. */
+  shapes?: boolean
 }
 
 function loadPrefs(): Prefs {
@@ -249,6 +272,7 @@ export class Board {
   private highlightColor: HighlightColor
   private readonly sizes: Record<Tool, SizeChoice>
   private eraserMode: EraserMode
+  private autoShapes: boolean
   private penMode: boolean
   private action: Action | null = null
   private readonly touches = new Map<number, Finger>()
@@ -285,6 +309,7 @@ export class Board {
     const sizes = typeof prefs.sizes === 'object' && prefs.sizes !== null ? prefs.sizes : {}
     this.sizes = { pen: sizeChoice(sizes.pen), highlight: sizeChoice(sizes.highlight), eraser: sizeChoice(sizes.eraser) }
     this.eraserMode = prefs.eraser === 'stroke' ? 'stroke' : 'area'
+    this.autoShapes = prefs.shapes === true
 
     this.canvas = h('canvas', { class: 'board-canvas', attrs: { 'aria-hidden': 'true' } })
     this.live = h('canvas', { class: 'board-live', attrs: { 'aria-hidden': 'true' } })
@@ -376,7 +401,7 @@ export class Board {
     const tools = h(
       'div',
       { class: 'board-tools', attrs: { role: 'toolbar', 'aria-label': 'Strumenti della lavagna' } },
-      toolButton('pen', 'Penna', ICON.pen, 'Penna (premuta di nuovo: lo spessore)'),
+      toolButton('pen', 'Penna', ICON.pen, 'Penna (premuta di nuovo: lo spessore e le forme automatiche)'),
       toolButton('highlight', 'Evidenziatore', ICON.highlight, 'Evidenziatore: trasparente, sotto la scrittura'),
       toolButton('eraser', 'Gomma', ICON.eraser, 'Gomma (premuta di nuovo: come cancella e quanto è grande)'),
       sep(),
@@ -495,6 +520,7 @@ export class Board {
 
     if (this.penMode) this.el.dataset.pen = 'true'
     this.el.dataset.eraser = this.eraserMode
+    this.el.dataset.shapes = this.autoShapes ? 'auto' : 'hold'
     this.setTool('pen')
     this.setColor(this.color, false)
     this.setHighlightColor(this.highlightColor, false)
@@ -640,6 +666,13 @@ export class Board {
     this.scheduleLive()
   }
 
+  private setAutoShapes(on: boolean): void {
+    touchLog.add(`forme automatiche: ${on ? 'accese' : 'spente'}`)
+    this.autoShapes = on
+    this.el.dataset.shapes = on ? 'auto' : 'hold'
+    this.savePrefs({ shapes: on })
+  }
+
   private setEraserMode(mode: EraserMode): void {
     touchLog.add(`gomma: ${MODE_NAMES[mode].toLowerCase()}`)
     this.eraserMode = mode
@@ -731,7 +764,29 @@ export class Board {
       }
       parts.push(sizes)
     }
-    const menu = h('div', { class: `board-menu${tool === 'eraser' ? ' is-eraser' : ''}`, attrs: { role: 'group', 'aria-label': tool === 'eraser' ? 'Gomma' : `Spessore ${tool === 'pen' ? 'della penna' : "dell'evidenziatore"}` } }, parts)
+    if (sizesToo && tool === 'pen') {
+      // Le forme automatiche: l'interruttore lascia il menu aperto, nella posizione nuova.
+      const toggle = h(
+        'button',
+        {
+          class: 'board-menu-switch',
+          attrs: { type: 'button', role: 'switch', 'aria-checked': String(this.autoShapes) },
+          on: {
+            click: () => {
+              this.setAutoShapes(!this.autoShapes)
+              this.openMenu(anchor)
+              this.menu?.querySelector<HTMLElement>('.board-menu-switch')?.focus()
+            },
+          },
+        },
+        h('span', { class: 'board-menu-text' }, h('strong', {}, 'Forme automatiche'), h('small', {}, 'Linee e figure diventano precise da sole. Anche senza: alla fine del tratto tieni ferma la penna.')),
+        h('span', { class: 'board-switch', attrs: { 'aria-hidden': 'true' } }),
+      )
+      parts.push(h('span', { class: 'board-menu-sep', attrs: { 'aria-hidden': 'true' } }), toggle)
+    } else if (sizesToo && tool === 'highlight') {
+      parts.push(h('p', { class: 'board-menu-hint' }, 'Alla fine del tratto tieni ferma la penna: la linea diventa dritta.'))
+    }
+    const menu = h('div', { class: `board-menu${tool === 'eraser' ? ' is-eraser' : ''}`, attrs: { role: 'group', 'aria-label': tool === 'eraser' ? 'Gomma' : tool === 'pen' ? 'Penna' : 'Evidenziatore' } }, parts)
     menu.style.setProperty('--swatch', this.sizeButton.style.getPropertyValue('--swatch'))
     this.el.append(menu)
     this.menu = menu
@@ -771,6 +826,8 @@ export class Board {
     if (last && performance.now() - last.at < 900 && this.undoStack[this.undoStack.length - 1] === last.step) {
       touchLog.add('→ tolto il tratto fatto un attimo prima col dito: era il palmo')
       this.undoStack.pop()
+      // Diventato una figura: anche il passo prima, quello del tratto a mano, se ne va.
+      if (last.step.pair && this.undoStack[this.undoStack.length - 1]?.added[0] === last.step.removed[0]) this.undoStack.pop()
       this.removeStrokes(last.step.added.map((s) => s.id))
       this.persist({ remove: last.step.added.map((s) => s.id) })
       this.render()
@@ -876,6 +933,7 @@ export class Board {
     const rect = this.stage.getBoundingClientRect()
     if (a.kind === 'draw') {
       for (const e of coalesced(ev)) this.drawTo(a, this.local(e, rect), e)
+      this.watchHold(a, this.local(ev, rect))
       this.scheduleLive()
     } else if (a.kind === 'erase') {
       for (const e of coalesced(ev)) this.eraseTo(a, this.local(e, rect), e.timeStamp)
@@ -945,6 +1003,7 @@ export class Board {
     const a = this.action
     if (!a) return
     this.action = null
+    if (a.kind === 'draw') clearTimeout(a.holdTimer)
     if (a.kind === 'erase') {
       this.removeStrokes(a.added.keys())
       this.addStrokes([...a.removed.values()])
@@ -995,11 +1054,38 @@ export class Board {
       points: [w.x, w.y, pressureOf(ev, pen)],
       ...(highlight ? { highlight: true } : {}),
     }
-    this.action = { kind: 'draw', pointer: ev.pointerId, type: ev.pointerType, stroke, started: performance.now(), travel: 0, last: pos }
+    const a: DrawAction = { kind: 'draw', pointer: ev.pointerId, type: ev.pointerType, stroke, started: performance.now(), travel: 0, last: pos, holdAt: pos, holdTimer: 0, snapped: null }
+    a.holdTimer = window.setTimeout(() => this.holdShape(a), HOLD_MS)
+    this.action = a
+    this.scheduleLive()
+  }
+
+  /** La punta si è mossa: se è andata oltre `HOLD_SLOP`, si ricomincia ad aspettare che stia ferma. */
+  private watchHold(a: DrawAction, pos: Pt): void {
+    if (a.snapped || Math.hypot(pos.x - a.holdAt.x, pos.y - a.holdAt.y) < HOLD_SLOP) return
+    a.holdAt = pos
+    clearTimeout(a.holdTimer)
+    a.holdTimer = window.setTimeout(() => this.holdShape(a), HOLD_MS)
+  }
+
+  /** La punta è ferma da `HOLD_MS`: se il tratto somiglia a una figura, diventa quella (e la penna la regola). */
+  private holdShape(a: DrawAction): void {
+    if (this.action !== a || a.snapped) return
+    const shape = recognize(pointsOf(a.stroke), { unit: 1 / this.view.zoom })
+    if (!shape) return void touchLog.add('→ punta ferma: il tratto non somiglia a una figura')
+    const pts = a.stroke.points
+    const anchor = { x: pts[pts.length - 3], y: pts[pts.length - 2] }
+    a.snapped = { base: shape, anchor, shape }
+    touchLog.add(`→ punta ferma: diventa ${SHAPE_NAMES[shape.kind]}`)
     this.scheduleLive()
   }
 
   private drawTo(a: DrawAction, pos: Pt, e: PointerEvent): void {
+    // Già una figura: la penna la regola (la allunga, la gira, la ingrandisce).
+    if (a.snapped) {
+      a.snapped.shape = adjustShape(a.snapped.base, a.snapped.anchor, this.world(pos))
+      return
+    }
     const d = Math.hypot(pos.x - a.last.x, pos.y - a.last.y)
     // Punti quasi uguali non servono: pesano e basta.
     if (d < 0.75) return
@@ -1011,16 +1097,36 @@ export class Board {
 
   private finishDraw(a: DrawAction, keep: boolean): void {
     this.action = null
+    clearTimeout(a.holdTimer)
     if (touchLog.on) touchLog.add(keep ? `tratto: ${strokeSummary(a)}` : 'tratto scartato')
     if (keep) {
       const s = { ...a.stroke, points: roundPoints(a.stroke.points) }
-      this.addStrokes([s])
-      const step = { removed: [], added: [s] }
+      // La figura: quella tenendo ferma la penna o, con le forme automatiche, quella che somiglia (solo la penna).
+      const shape = a.snapped?.shape ?? (this.autoShapes && !s.highlight ? recognize(pointsOf(s), { unit: 1 / this.view.zoom, strict: true }) : null)
+      const figure: Stroke | null = shape && {
+        id: newStrokeId(),
+        t: s.t,
+        color: s.color,
+        size: s.size,
+        pen: s.pen,
+        points: roundPoints(shapePoints(shape).flatMap((p) => [p.x, p.y, 0.5])),
+        ...(s.highlight ? { highlight: true } : {}),
+        shape: true,
+      }
+      const drawn = figure ?? s
+      this.addStrokes([drawn])
+      // Con la figura due passi: Annulla toglie prima la figura e rimette il tratto a mano, poi anche quello.
+      if (figure) this.record({ removed: [], added: [s] })
+      const step: Step = figure ? { removed: [s], added: [figure], pair: true } : { removed: [], added: [s] }
       this.record(step)
+      if (shape) {
+        this.el.dataset.shape = shape.kind
+        touchLog.add(`figura (${a.snapped ? 'punta ferma' : 'forme automatiche'}): ${SHAPE_NAMES[shape.kind]}`)
+      }
       this.lastTouchStep = a.type === 'touch' ? { step, at: performance.now() } : null
-      this.persist({ put: [s] })
+      this.persist({ put: [drawn] })
       if (this.frame) this.render()
-      else this.paint(s)
+      else this.paint(drawn)
     }
     this.renderLive()
     this.ended()
@@ -1243,8 +1349,22 @@ export class Board {
 
   private pathOf(s: Stroke): Path2D {
     let path = this.paths.get(s.id)
-    if (!path) this.paths.set(s.id, (path = new Path2D(outlineSvg(strokeOutline(s)))))
+    if (!path) this.paths.set(s.id, (path = new Path2D(s.shape ? shapeSvg(s.points) : outlineSvg(strokeOutline(s)))))
     return path
+  }
+
+  /** Un tratto: il contorno pieno (perfect-freehand) o, per le figure, la linea larga quanto lo spessore. */
+  private drawStroke(ctx: CanvasRenderingContext2D, s: Pick<Stroke, 'shape' | 'size'>, path: Path2D, color: string): void {
+    if (s.shape) {
+      ctx.strokeStyle = color
+      ctx.lineWidth = s.size
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+      ctx.stroke(path)
+    } else {
+      ctx.fillStyle = color
+      ctx.fill(path)
+    }
   }
 
   private sorted(): Stroke[] {
@@ -1434,17 +1554,9 @@ export class Board {
     const shown = this.sorted().filter((s) => boxesTouch(this.boxOf(s), visible))
     // Prima gli evidenziatori, trasparenti: la scrittura resta sopra, anche quella fatta prima.
     ctx.globalAlpha = palette.highlightAlpha
-    for (const s of shown) {
-      if (!s.highlight) continue
-      ctx.fillStyle = palette.highlight[s.color as HighlightColor]
-      ctx.fill(this.pathOf(s))
-    }
+    for (const s of shown) if (s.highlight) this.drawStroke(ctx, s, this.pathOf(s), palette.highlight[s.color as HighlightColor])
     ctx.globalAlpha = 1
-    for (const s of shown) {
-      if (s.highlight) continue
-      ctx.fillStyle = palette.ink[s.color as InkColor]
-      ctx.fill(this.pathOf(s))
-    }
+    for (const s of shown) if (!s.highlight) this.drawStroke(ctx, s, this.pathOf(s), palette.ink[s.color as InkColor])
   }
 
   /** Un tratto appena finito, sopra gli altri: non serve ridisegnare tutto (l'evidenziatore va sotto, quindi sì). */
@@ -1452,8 +1564,7 @@ export class Board {
     if (!this.size.w || !this.size.h) return
     if (s.highlight) return this.render()
     this.applyView(this.ctx)
-    this.ctx.fillStyle = BOARD_PALETTES[this.theme].ink[s.color as InkColor]
-    this.ctx.fill(this.pathOf(s))
+    this.drawStroke(this.ctx, s, this.pathOf(s), BOARD_PALETTES[this.theme].ink[s.color as InkColor])
   }
 
   private drawGrid(color: string): void {
@@ -1490,13 +1601,13 @@ export class Board {
     const palette = BOARD_PALETTES[this.theme]
     const a = this.action
     if (a?.kind === 'draw') {
-      const d = outlineSvg(strokeOutline(a.stroke, false))
+      // Il tratto che si sta scrivendo o, tenuta ferma la punta, la figura in cui è diventato.
+      const s = a.stroke
+      const d = a.snapped ? shapeSvg(shapePoints(a.snapped.shape).flatMap((p) => [p.x, p.y, 0.5])) : outlineSvg(strokeOutline(s, false))
       if (d) {
         this.applyView(ctx)
-        const s = a.stroke
         ctx.globalAlpha = s.highlight ? palette.highlightAlpha : 1
-        ctx.fillStyle = s.highlight ? palette.highlight[s.color as HighlightColor] : palette.ink[s.color as InkColor]
-        ctx.fill(new Path2D(d))
+        this.drawStroke(ctx, { size: s.size, shape: !!a.snapped }, new Path2D(d), s.highlight ? palette.highlight[s.color as HighlightColor] : palette.ink[s.color as InkColor])
         ctx.globalAlpha = 1
       }
     }

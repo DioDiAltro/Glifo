@@ -204,9 +204,9 @@ con Claude. La discussione è in [ABBONAMENTI.md](ABBONAMENTI.md), «La lavagna�
 - con l'AI e nei piani a pagamento, le formule scritte a mano convertite in LaTeX e aggiunte alla
   nota se si vuole («Aggiungi alla nota»): aspetta la discussione sulla chiave API;
 - **una lavagna completa di tutto** (lo studente, 5 ottobre 2026: «deve essere una lavagna completa
-  di tutto», come Microsoft Whiteboard). I primi tre punti sono fatti sul ramo `prova` (5 ottobre
-  2026, «sì a tutto, comincia dagli strumenti della lavagna») e aspettano il «va bene» dello studente
-  per andare online:
+  di tutto», come Microsoft Whiteboard). I primi quattro punti sono fatti sul ramo `prova` (5 ottobre
+  2026, «sì a tutto, comincia dagli strumenti della lavagna», poi «sì, parti con le linee e le
+  figure») e aspettano il «va bene» dello studente per andare online:
   - fatto su `prova`: la grandezza dello strumento scelto, cioè lo spessore della penna,
     dell'evidenziatore e della gomma (tre misure, dal menu che si apre premendo di nuovo lo
     strumento o il pulsante con il pallino);
@@ -214,6 +214,12 @@ con Claude. La discussione è in [ABBONAMENTI.md](ABBONAMENTI.md), «La lavagna�
   - fatto su `prova`: la gomma con due modi, «Dove passa», che cancella dove passa e diventa più
     grande quando la si muove veloce, e «Linea intera», che toccando anche un solo punto di una
     linea la cancella tutta;
+  - fatto su `prova`: **linee e figure precise** (lo studente, 5 ottobre 2026: «se fai una linea e
+    tieni premuto te l'allinea da sola; anche le altre figure», e un pulsante perché «le figure che
+    si disegnano si aggiustano da sole», come in Whiteboard). Tenendo ferma la penna alla fine del
+    tratto: linea, freccia, spezzata, triangolo, rettangolo, quadrato, rombo, pentagono, esagono,
+    ellisse, cerchio, raddrizzati; con la penna ancora giù la si regola. Nel menu della penna
+    l'interruttore «Forme automatiche». Annulla riporta il tratto a mano;
   - scaricare la lavagna come immagine;
 - la lavagna sugli altri dispositivi, con l'account;
 - sull'iPad la prima prova (5 ottobre 2026) ha trovato quattro problemi, corretti subito: le parole

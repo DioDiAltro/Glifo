@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BOARD_PALETTES, highlightName, inkName, outlineSvg, PEN_SIZE, strokeOutline, TOOL_SIZES } from '../src/board/ink'
+import { BOARD_PALETTES, highlightName, inkName, outlineSvg, PEN_SIZE, shapeSvg, strokeOutline, TOOL_SIZES } from '../src/board/ink'
 import { HIGHLIGHT_COLORS, INK_COLORS } from '../src/board/strokes'
 
 /** Un colore #rrggbb steso con la trasparenza `alpha` sopra un altro, come lo disegna il canvas. */
@@ -85,5 +85,12 @@ describe('lavagna: colori e tratti', () => {
     expect(dot.length).toBeGreaterThan(4)
     expect(outlineSvg(dot)).not.toBe('')
     expect(outlineSvg([])).toBe('')
+  })
+
+  it('una figura è fatta di tratti dritti tra i vertici: chiusa se finisce dove comincia', () => {
+    expect(shapeSvg([0, 0, 0.5, 10, 0, 0.5])).toBe('M0.00,0.00 L10.00,0.00')
+    expect(shapeSvg([0, 0, 0.5, 10, 0, 0.5, 10, 10, 0.5, 0, 0, 0.5])).toBe('M0.00,0.00 L10.00,0.00 L10.00,10.00 Z')
+    expect(shapeSvg([5, 5, 0.5])).toBe('M5.00,5.00 L5.00,5.00')
+    expect(shapeSvg([])).toBe('')
   })
 })

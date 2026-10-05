@@ -27,7 +27,7 @@ export function touchLogHeader(): string[] {
     `Copiato: ${new Date().toLocaleString('it-IT')} · Glifo ${__GLIFO_VERSION__}`,
     `Dispositivo: ${nav.userAgent}`,
     `Tocchi insieme: ${nav.maxTouchPoints} · schermo ${screen.width}×${screen.height} ×${devicePixelRatio} · finestra ${innerWidth}×${innerHeight} · ${installed ? 'app installata' : 'nel browser'}`,
-    `Glifo: vista ${views[app?.dataset.view ?? ''] ?? '?'} · lavagna ${board?.classList.contains('is-full') ? 'a tutto schermo' : 'non a tutto schermo'} · penna vista ${board?.dataset.pen === 'true' ? 'sì' : 'no'} · strumento ${tool}${eraser} · tema ${theme}`,
+    `Glifo: vista ${views[app?.dataset.view ?? ''] ?? '?'} · lavagna ${board?.classList.contains('is-full') ? 'a tutto schermo' : 'non a tutto schermo'} · penna vista ${board?.dataset.pen === 'true' ? 'sì' : 'no'} · strumento ${tool}${eraser} · forme ${board?.dataset.shapes === 'auto' ? 'automatiche' : 'tenendo ferma la penna'} · tema ${theme}`,
   ]
 }
 

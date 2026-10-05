@@ -206,7 +206,8 @@ const SCENES = {
     },
   },
   // La lavagna: si apre accanto al testo e ci si scrive a mano con una penna (simulata, con la
-  // pressione): gli assi, la parabola in blu, «y = x²» e il vertice cerchiato in rosso.
+  // pressione): gli assi (frecce storte che, tenendo ferma la penna, diventano precise), la parabola
+  // in blu, «y = x²» con l'evidenziatore e il vertice cerchiato in rosso.
   lavagna: {
     settings: { view: 'editor', notesOpen: false },
     async setup(page) {
@@ -230,14 +231,21 @@ const SCENES = {
           pointerType: 'pen',
           force,
         })
-      /** Un tratto per i punti dati, un punto ogni 6 pixel; `pressure(t)` da 0 (inizio) a 1 (fine). */
-      async function pen(points, pressure = () => 0.5, pace = 3) {
+      /**
+       * Un tratto per i punti dati, un punto ogni 6 pixel; `pressure(t)` da 0 (inizio) a 1 (fine);
+       * `hold`: alla fine la penna resta ferma tanti millisecondi (il tratto diventa una figura precisa).
+       */
+      async function pen(points, pressure = () => 0.5, pace = 3, hold = 0, wobble = 0) {
         const dense = [points[0]]
         for (let i = 1; i < points.length; i++) {
           const [ax, ay] = points[i - 1]
           const [bx, by] = points[i]
           const steps = Math.max(1, Math.round(Math.hypot(bx - ax, by - ay) / 6))
-          for (let k = 1; k <= steps; k++) dense.push([ax + ((bx - ax) * k) / steps, ay + ((by - ay) * k) / steps])
+          for (let k = 1; k <= steps; k++) {
+            // Un po' storto, come a mano.
+            const w = wobble * Math.sin((dense.length + k) * 0.7)
+            dense.push([ax + ((bx - ax) * k) / steps + w * 0.4, ay + ((by - ay) * k) / steps + w])
+          }
         }
         // La penna arriva da sopra il foglio, sospesa, come una vera.
         await send('mouseMoved', dense[0], 0)
@@ -247,6 +255,7 @@ const SCENES = {
           await send('mouseMoved', dense[i], pressure(i / (dense.length - 1)))
           await page.waitForTimeout(pace)
         }
+        if (hold) await page.waitForTimeout(hold)
         await send('mouseReleased', dense.at(-1), 0)
         await page.waitForTimeout(60)
       }
@@ -260,11 +269,9 @@ const SCENES = {
         await send('mouseReleased', at, 0)
         await page.waitForTimeout(250)
       }
-      // Gli assi, con le frecce.
-      await pen([[40, 330], [440, 330]])
-      await pen([[426, 322], [440, 330], [426, 338]])
-      await pen([[200, 410], [200, 105]])
-      await pen([[192, 119], [200, 105], [208, 119]])
+      // Gli assi: frecce in un tratto solo, un po' storte; la penna ferma alla fine le fa precise.
+      await pen([[40, 333], [440, 327], [426, 319], [440, 327], [426, 337]], () => 0.5, 3, 900, 2.5)
+      await pen([[202, 410], [198, 105], [190, 119], [198, 105], [206, 119]], () => 0.5, 3, 900, 2.5)
       // La parabola, in blu: la pressione cresce un po' verso la fine.
       await color('blue')
       const parabola = Array.from({ length: 41 }, (_, i) => {

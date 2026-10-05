@@ -609,6 +609,15 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
   colori, si sceglie lo spessore della penna e dell'evidenziatore e quanto è grande la gomma (tre
   misure); quello della gomma apre anche i suoi due modi. Le scelte restano su quel dispositivo, e
   cambiando strumento la barra non si sposta (sulla lavagna stretta si stringe).
+- **Linee e figure precise**, come in Microsoft Whiteboard e nelle Note dell'iPad: alla fine del
+  tratto si tiene ferma la penna (o il dito, o il mouse) per mezzo secondo e il tratto diventa la
+  figura precisa più vicina: linea, freccia, spezzata, triangolo, rettangolo o quadrato, rombo,
+  pentagono, esagono, ellisse o cerchio. Quelle quasi dritte diventano dritte, gli angoli quasi
+  retti retti. Finché la penna è giù la si regola: la linea si allunga o gira, le figure si
+  ingrandiscono. Con l'evidenziatore la linea diventa dritta. Nel menu della penna (premuta di
+  nuovo) c'è l'interruttore **Forme automatiche**: acceso, le figure diventano precise da sole,
+  senza fermarsi; la scrittura e le figure piccole restano come sono. Annulla riporta il tratto
+  fatto a mano.
 - **Annulla** e **Ripeti** (anche Ctrl+Z e Ctrl+Y) e **Pulisci**, con la conferma.
 - **Spostarsi e ingrandire**: due dita, oppure la rotellina (con Ctrl ingrandisce), il tasto
   centrale o lo spazio tenuto premuto; il numero in basso a destra riporta alla vista di

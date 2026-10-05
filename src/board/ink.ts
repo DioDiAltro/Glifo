@@ -94,6 +94,22 @@ export function strokeOutline(s: Pick<Stroke, 'points' | 'size' | 'pen' | 'highl
 const mid = (a: number, b: number) => (a + b) / 2
 
 /**
+ * Il percorso SVG di una figura precisa (vedi shapes.ts): i vertici uniti da tratti dritti, chiuso se
+ * finisce dove comincia. Si disegna con il contorno (`stroke`) largo quanto lo spessore, a punte tonde.
+ */
+export function shapeSvg(points: number[]): string {
+  const n = Math.floor(points.length / 3)
+  if (!n) return ''
+  const f = (v: number) => v.toFixed(2)
+  let d = `M${f(points[0])},${f(points[1])}`
+  // Un punto solo: un pallino (una linea lunga zero, con le punte tonde).
+  if (n === 1) return `${d} L${f(points[0])},${f(points[1])}`
+  const closed = n > 2 && points[0] === points[(n - 1) * 3] && points[1] === points[(n - 1) * 3 + 1]
+  for (let i = 1; i < (closed ? n - 1 : n); i++) d += ` L${f(points[i * 3])},${f(points[i * 3 + 1])}`
+  return closed ? `${d} Z` : d
+}
+
+/**
  * Il contorno come percorso SVG, con curve che passano per i punti di mezzo (come nel README di
  * perfect-freehand): lo usa Path2D per il canvas.
  */
