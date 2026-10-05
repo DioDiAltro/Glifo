@@ -42,6 +42,9 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
    inserisce nella nota chi vuole; il tono si sceglie nelle impostazioni (vedi «Deciso»). Lo
    studente chiede di spiegare meglio la domanda su da quale argomento partire: la spiegazione è
    in «Le spiegazioni, come funzionano», in fondo.
+7. **In pausa** (5 ottobre 2026). La domanda su da quale argomento partire con le spiegazioni resta
+   aperta: si riprende più avanti. Prima lo studente vuole spiegare la lavagna, proporre un'idea e
+   parlare della chiave API.
 
 ## La proposta dello studente (4 ottobre 2026)
 
@@ -289,7 +292,8 @@ In breve: **il testo lo scrive l'AI, i conti li firma Glifo.**
 Deciso il 4 ottobre 2026: le spiegazioni si vedono nel pannello della formula e chi scrive decide se
 inserirle nella nota; il tono si sceglie nelle impostazioni.
 
-Da decidere: **da quale argomento partire.** Le spiegazioni non si costruiscono per tutta la
+Da decidere (in sospeso dal 5 ottobre 2026: si riprende più avanti): **da quale argomento
+partire.** Le spiegazioni non si costruiscono per tutta la
 matematica in un colpo solo: per ogni argomento servono
 
 - i controlli giusti del motore: un integrale si controlla derivando la primitiva, un limite
@@ -425,8 +429,10 @@ ricerca, i piani per università e dipartimenti.
 ## Da approfondire
 
 - **La lavagna**: com'è l'idea dello studente? Decide in che piano va e quanto costa a Glifo.
+- **Un'idea dello studente**, da raccontare (5 ottobre 2026).
+- **La chiave API**: lo studente vuole parlarne (5 ottobre 2026).
 - **Le spiegazioni**: da quale argomento partire (vedi «Le spiegazioni, come funzionano», in
-  fondo).
+  fondo). In sospeso dal 5 ottobre 2026: si riprende più avanti.
 - **L'SQL**: in Relativistico, come nella proposta, o resta gratis?
 - **L'assaggio** nel gratuito: 7 giorni di Relativistico o poche domande al mese?
 - **I prezzi e i tetti**: da verificare con gli studenti e con l'uso vero.
