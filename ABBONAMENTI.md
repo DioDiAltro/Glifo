@@ -23,8 +23,8 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
   inserirle nella nota; il tono (come il professore o più semplice) si sceglie nelle impostazioni.
   Vedi «Le spiegazioni, come funzionano».
 - **La lavagna** (5 ottobre 2026): una per ogni nota, e si salva; la lavagna è gratis (Classico), la
-  conversione in LaTeX è nei piani a pagamento. La lavagna base, senza AI, è fatta (5 ottobre 2026)
-  sul ramo `prova`, da provare. Vedi «La lavagna».
+  conversione in LaTeX è nei piani a pagamento. La lavagna base, senza AI, è fatta e pubblicata
+  (5 ottobre 2026). Vedi «La lavagna».
 - **I modelli e le chiavi** (5 ottobre 2026): nei piani a pagamento l'AI è inclusa, la paga Glifo
   con la sua chiave, che resta sul server e non si dà a nessuno; la propria chiave è facoltativa e
   può essere di qualsiasi servizio (si parte da Anthropic e da quelli che parlano la «lingua» di
@@ -72,6 +72,8 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
 12. **La lavagna base** (5 ottobre 2026). Lo studente dice «fai la lavagna»: Claude la costruisce sul
     ramo `prova`, come proposto (vedi «La lavagna base»). Si prova sull'iPad dell'amico e con la
     tavoletta prima di pubblicarla.
+13. **La lavagna pubblicata** (5 ottobre 2026). Lo studente dice «va bene, pubblicala»: la lavagna
+    base è online, gratis per tutti.
 
 ## La proposta dello studente (4 ottobre 2026)
 
@@ -99,7 +101,7 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
 - I piani si dividono **per chi li usa**: Relativistico per studiare, Quantistico per la tesi e la ricerca.
 - Per uno studente italiano i prezzi sono alti: la proposta è di dimezzarli (4,99 € e 9,99 € al
   mese).
-- Le spiegazioni non ci sono ancora (la lavagna base sì, sul ramo `prova`, ed è gratis): si parte con
+- Le spiegazioni non ci sono ancora (la lavagna base sì, ed è gratis): si parte con
   Classico + Relativistico (quando c'è almeno il tutor), e Quantistico arriva quando ci sono le
   funzioni per riempirlo.
 - Prima di incassare servono un soggetto che vende (S&Z o una partita IVA), un servizio che incassa
@@ -365,7 +367,7 @@ se si vuole, si aggiungono alla nota con un pulsante («Aggiungi alla nota»).
 - Dove si prova: sull'iPad di un amico dello studente; lo studente ha anche una tavoletta grafica
   senza schermo, che però non ha a portata di mano.
 
-### La lavagna base (fatta il 5 ottobre 2026 sul ramo `prova`, da provare)
+### La lavagna base (fatta e pubblicata il 5 ottobre 2026)
 
 - **Dove si apre**: accanto al testo, al posto dell'anteprima (il foglio accanto alla calcolatrice);
   sul telefono a tutto schermo, e a richiesta anche sul computer. Con la tavoletta senza schermo si
@@ -596,8 +598,6 @@ ricerca, i piani per università e dipartimenti.
 
 ## Da approfondire
 
-- **La lavagna base**: fatta sul ramo `prova` (5 ottobre 2026); si prova sull'iPad e con la tavoletta,
-  poi si pubblica (vedi «La lavagna»).
 - **Un'idea dello studente** (5 ottobre 2026): forse è quella del modello aperto piccolo, da
   confermare.
 - **Le spiegazioni**: da quale argomento partire (vedi «Le spiegazioni, come funzionano», in

@@ -187,40 +187,24 @@ Perché non gli altri:
 - Le note eliminate restano nel database come segno per gli altri dispositivi: dopo qualche
   mese si potranno togliere con un lavoro programmato (`pg_cron`).
 
-### La lavagna (la base è fatta sul ramo `prova`: da provare)
-
-**Cosa:** una lavagna per scrivere a mano (penna, dito, tavoletta grafica) accanto al testo, come il
-foglio accanto alla calcolatrice: non entra nella nota, è un aiuto personale. Decisa con lo studente
-il 5 ottobre 2026; tutta la discussione è in [ABBONAMENTI.md](ABBONAMENTI.md), «La lavagna».
-
-**Oggi:** la lavagna base, senza AI, è fatta (5 ottobre 2026, lo studente ha detto «fai la lavagna»)
-sul ramo `prova`, che non va online (`src/board/`, descritta nel README):
-
-- la vista «Lavagna», la quarta in alto, la apre accanto al testo al posto dell'anteprima; sul
-  telefono prende il posto del testo; il pulsante con i quattro angoli la porta a tutto schermo
-  (anche lo schermo del computer, se il browser lo permette);
-- penna con la pressione, gomma che cancella solo dove passa (anche quella in fondo alla penna, o il
-  tasto laterale), quattro colori, annulla e ripeti, pulisci con la conferma, quadretti appena
-  visibili; si sposta e si ingrandisce con due dita, la rotellina, il tasto centrale o lo spazio;
-  quando Glifo vede una penna le dita spostano e il palmo appoggiato non scrive; va anche con il
-  mouse;
-- una lavagna per ogni nota, salvata su quel dispositivo (IndexedDB, un tratto per record, con le
-  altre schede avvisate), con i colori del tema chiaro e di quello scuro; eliminando la nota si
-  elimina anche la sua lavagna; il backup la porta con sé; uscendo dall'account si toglie (Glifo
-  lo dice prima);
-- è gratis (piano Classico) e niente esce dal dispositivo: l'informativa dice solo che anche le
-  lavagne restano nel browser.
-
-**Resta da fare:** provarla sull'iPad dell'amico dello studente e con la tavoletta grafica senza
-schermo (con Glifo del ramo `prova` sulla pagina privata di claude.ai); se va bene, unire `prova` al
-ramo principale e pubblicarla. Il tutorial ha già la sua pagina, «La lavagna», con il video.
-
-**Dopo**, con l'AI e nei piani a pagamento: le formule scritte a mano convertite in LaTeX e aggiunte
-alla nota se si vuole («Aggiungi alla nota»). Aspetta la discussione sulla chiave API. Altre idee:
-lo spessore della penna da scegliere, l'evidenziatore, scaricare la lavagna come immagine, la
-lavagna sugli altri dispositivi con l'account.
-
 ## Più avanti
+
+### La lavagna: idee in più
+
+La lavagna base, senza AI, è fatta e pubblicata (5 ottobre 2026: lo studente ha detto «fai la
+lavagna» e poi, vista sul ramo `prova`, «va bene, pubblicala»). È descritta nel README e in
+`src/board/`: la vista «Lavagna» accanto al testo (sul telefono al suo posto, e a tutto schermo con
+un pulsante), penna con la pressione, gomma che taglia i tratti, quattro colori, annulla e ripeti,
+due dita per spostare e ingrandire, il palmo che non scrive; una lavagna per nota, salvata su quel
+dispositivo (IndexedDB), che va nel backup e non nell'account. La discussione è in
+[ABBONAMENTI.md](ABBONAMENTI.md), «La lavagna». Se servirà:
+
+- con l'AI e nei piani a pagamento, le formule scritte a mano convertite in LaTeX e aggiunte alla
+  nota se si vuole («Aggiungi alla nota»): aspetta la discussione sulla chiave API;
+- lo spessore della penna da scegliere, l'evidenziatore, scaricare la lavagna come immagine;
+- la lavagna sugli altri dispositivi, con l'account;
+- se sull'iPad o con la tavoletta grafica senza schermo qualcosa non va (la pressione, il palmo, lo
+  schermo intero), si sistema.
 
 ### Schemi: idee in più
 
