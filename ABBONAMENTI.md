@@ -80,7 +80,8 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
     subito, sul ramo principale: su iPad niente schermo intero del browser (Safari prendeva i tocchi
     della penna per una tastiera finta e ne usciva), i tocchi sulla lavagna non selezionano più niente
     e non fanno partire Scribble, e con la penna un dito solo non fa niente: la mano appoggiata non
-    sposta la lavagna e non preme i pulsanti.
+    sposta la lavagna e non preme i pulsanti. Le correzioni sono online; lo studente per ora non ha
+    l'iPad e le proverà quando ce l'avrà di nuovo.
 
 ## La proposta dello studente (4 ottobre 2026)
 

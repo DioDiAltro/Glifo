@@ -206,7 +206,8 @@ dispositivo (IndexedDB), che va nel backup e non nell'account. La discussione è
 - sull'iPad la prima prova (5 ottobre 2026) ha trovato quattro problemi, corretti subito: le parole
   che si selezionavano, la lavagna che si chiudeva e l'iPad che la prendeva per una tastiera (era lo
   schermo intero di Safari, che lì non si usa più), e la mano appoggiata (con la penna un dito solo
-  non fa niente). Se resta qualcosa, o con la tavoletta grafica senza schermo, si sistema.
+  non fa niente). Le correzioni sono online ma vanno ancora provate sull'iPad, che lo studente per
+  ora non ha. Se resta qualcosa, o con la tavoletta grafica senza schermo, si sistema.
 
 ### Schemi: idee in più
 

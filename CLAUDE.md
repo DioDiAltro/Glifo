@@ -284,6 +284,11 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
   nella finestra «Condividi» di NotebookLM) e lo scrivere insieme senza conflitti. Il 4 ottobre
   2026, fatto il link, lo studente ha chiesto di tenerlo per dopo e di sistemare prima la
   grafica: le idee sono al passo 5 di ROADMAP.md.
+- Provare la lavagna sull'iPad con la Apple Pencil, quando l'avrà di nuovo: le correzioni del 5
+  ottobre 2026 sono già online. Scrivendo non si deve selezionare niente, a tutto schermo la lavagna
+  non si deve chiudere e la mano appoggiata non deve spostarla né premere i pulsanti; per spostarla
+  servono due dita. Poi dire com'è andata (se qualcosa non va: in Safari o nell'app sulla schermata
+  Home, a tutto schermo o no, e che messaggio compare).
 
 ## Regole
 
