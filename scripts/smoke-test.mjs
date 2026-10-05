@@ -1722,10 +1722,19 @@ try {
     const cleared = await strokeCount()
     await lp.keyboard.press('Control+Z')
     check(drawn === 6 && cleared === 0 && (await strokeCount()) === 6, `«Pulisci» chiede conferma e cancella tutto; Ctrl+Z lo fa tornare (${JSON.stringify({ drawn, cleared })})`)
-    // Con la penna vista, un dito sposta la lavagna (non scrive) e due dita la ingrandiscono.
+    // Con la penna vista un dito solo non fa niente (è quasi sempre la mano appoggiata): non scrive e
+    // non sposta. Due dita spostano la lavagna e la ingrandiscono. Prima si lascia passare il tempo in
+    // cui un tocco, appena alzata la penna, vale come la mano.
+    await lp.waitForTimeout(600)
     const inkBefore = await inkAt(stage.x + 80, stage.y + 140)
     await touch('touchStart', [[stage.x + 200, stage.y + 400]])
     for (let i = 1; i <= 8; i++) await touch('touchMove', [[stage.x + 200, stage.y + 400 + i * 10]])
+    await touch('touchEnd', [])
+    await lp.waitForTimeout(100)
+    const oneFinger = { strokes: await strokeCount(), there: await inkAt(stage.x + 80, stage.y + 140), zoom: await lp.locator('.board-zoom-level').textContent() }
+    await touch('touchStart', [[stage.x + 200, stage.y + 400]])
+    await touch('touchStart', [[stage.x + 200, stage.y + 400], [stage.x + 300, stage.y + 400]])
+    for (let i = 1; i <= 8; i++) await touch('touchMove', [[stage.x + 200, stage.y + 400 + i * 10], [stage.x + 300, stage.y + 400 + i * 10]])
     await touch('touchEnd', [])
     await lp.waitForTimeout(100)
     const moved = { strokes: await strokeCount(), before: inkBefore, there: await inkAt(stage.x + 80, stage.y + 140), below: await inkAt(stage.x + 80, stage.y + 220) }
@@ -1736,8 +1745,16 @@ try {
     await lp.waitForTimeout(100)
     const zoomed = await lp.locator('.board-zoom-level').textContent()
     check(
-      moved.strokes === 6 && moved.before < 400 && moved.there > 600 && moved.below < 400 && Number.parseInt(zoomed) > 150 && (await strokeCount()) === 6,
-      `con la penna, un dito sposta la lavagna e due dita la ingrandiscono, senza scrivere (${JSON.stringify({ moved, zoomed })})`,
+      oneFinger.strokes === 6 &&
+        oneFinger.there < 400 &&
+        oneFinger.zoom === '100%' &&
+        moved.strokes === 6 &&
+        moved.before < 400 &&
+        moved.there > 600 &&
+        moved.below < 400 &&
+        Number.parseInt(zoomed) > 150 &&
+        (await strokeCount()) === 6,
+      `con la penna, un dito solo non scrive e non sposta; due dita spostano la lavagna e la ingrandiscono (${JSON.stringify({ oneFinger, moved, zoomed })})`,
     )
     // Il palmo appoggiato mentre si scrive con la penna non scrive e non sposta niente.
     await lp.locator('.board-zoom-level').click()
@@ -1758,6 +1775,87 @@ try {
     check(
       palm.strokes === 8 && palm.beforePalm < 400 && palm.after < 400 && palm.zoom === '100%',
       `il palmo appoggiato mentre si scrive con la penna non scrive e non sposta la lavagna (${JSON.stringify(palm)})`,
+    )
+    // La mano che si appoggia appena alzata la penna, anche con due punti di contatto che si
+    // allargano, non sposta e non ingrandisce la lavagna.
+    const zoomText = () => lp.locator('.board-zoom-level').textContent()
+    await penStroke(row(380, 0.5).slice(0, 3))
+    await touch('touchStart', [[stage.x + 300, stage.y + 450]])
+    await touch('touchStart', [[stage.x + 300, stage.y + 450], [stage.x + 340, stage.y + 470]])
+    for (let i = 1; i <= 6; i++) await touch('touchMove', [[stage.x + 300 + i * 8, stage.y + 450 + i * 6], [stage.x + 340 + i * 14, stage.y + 470 + i * 9]])
+    await touch('touchEnd', [])
+    await lp.waitForTimeout(100)
+    const afterPen = { strokes: await strokeCount(), ink: await inkAt(stage.x + 80, stage.y + 140), zoom: await zoomText() }
+    // Due dita lontane dalla penna ingrandiscono; se il sistema annulla il tocco (l'iPad lo fa
+    // quando capisce che era il palmo), la lavagna torna com'era.
+    await lp.waitForTimeout(600)
+    await touch('touchStart', [[stage.x + 150, stage.y + 500]])
+    await touch('touchStart', [[stage.x + 150, stage.y + 500], [stage.x + 250, stage.y + 500]])
+    // Le dita che si muovono appena (la mano che si posa trema) non cambiano niente.
+    await touch('touchMove', [[stage.x + 147, stage.y + 501], [stage.x + 253, stage.y + 502]])
+    const trembling = await zoomText()
+    for (let i = 1; i <= 6; i++) await touch('touchMove', [[stage.x + 150 - i * 8, stage.y + 500], [stage.x + 250 + i * 8, stage.y + 500]])
+    const pinching = await zoomText()
+    await touch('touchCancel', [])
+    await lp.waitForTimeout(100)
+    const cancelled = { zoom: await zoomText(), ink: await inkAt(stage.x + 80, stage.y + 140) }
+    check(
+      afterPen.strokes === 9 &&
+        afterPen.ink < 400 &&
+        afterPen.zoom === '100%' &&
+        trembling === '100%' &&
+        Number.parseInt(pinching) > 150 &&
+        cancelled.zoom === '100%' &&
+        cancelled.ink < 400,
+      `la mano appena alzata la penna non sposta e non ingrandisce, nemmeno le dita che tremano appena; un tocco annullato dal sistema riporta la lavagna com'era (${JSON.stringify({ afterPen, trembling, pinching, cancelled })})`,
+    )
+    // La mano sui pulsanti mentre si scrive (o appena dopo) non li preme; un dito, dopo, sì.
+    const zoomIn = await lp.locator('.board-zoom .board-button[aria-label="Ingrandisci"]').boundingBox()
+    const zoomInAt = [zoomIn.x + zoomIn.width / 2, zoomIn.y + zoomIn.height / 2]
+    const tap = async (at) => {
+      await touch('touchStart', [at])
+      await touch('touchEnd', [])
+    }
+    const pen = (type, x, y) =>
+      cdp.send('Input.dispatchMouseEvent', { type, x: stage.x + x, y: stage.y + y, button: 'left', buttons: type === 'mouseReleased' ? 0 : 1, clickCount: 1, pointerType: 'pen', force: 0.5 })
+    await pen('mousePressed', 40, 440)
+    await pen('mouseMoved', 70, 440)
+    await tap(zoomInAt)
+    await pen('mouseMoved', 100, 440)
+    await pen('mouseReleased', 100, 440)
+    await tap(zoomInAt)
+    await lp.waitForTimeout(100)
+    const palmButtons = await zoomText()
+    await lp.waitForTimeout(600)
+    await tap(zoomInAt)
+    await lp.waitForTimeout(100)
+    const fingerButton = await zoomText()
+    check(
+      palmButtons === '100%' && fingerButton === '125%' && (await strokeCount()) === 10,
+      `la mano sui pulsanti mentre si scrive con la penna, o appena dopo, non li preme; un dito, dopo, sì (${JSON.stringify({ palmButtons, fingerButton })})`,
+    )
+    await lp.locator('.board-zoom-level').click()
+    await lp.locator('.board-stage').focus()
+    await lp.keyboard.press('Control+Z')
+    await lp.keyboard.press('Control+Z')
+    // Sull'iPad i tocchi sulla lavagna non devono selezionare le parole, aprire la lente o far
+    // partire Scribble: il browser li riceve già annullati (i tratti arrivano dai puntatori). Sulla
+    // lavagna e sui pulsanti non si seleziona niente, e Safari non accende il riquadro grigio.
+    await lp.evaluate(() => {
+      window.__touches = []
+      for (const type of ['touchstart', 'touchmove', 'touchend']) document.addEventListener(type, (ev) => window.__touches.push(`${type}:${ev.defaultPrevented}`))
+    })
+    const middle = [stage.x + stage.width / 2, stage.y + stage.height / 2]
+    await touch('touchStart', [middle])
+    await touch('touchMove', [[middle[0] + 20, middle[1] + 10]])
+    await touch('touchEnd', [])
+    const noSelect = await lp.evaluate(() => {
+      const css = getComputedStyle(document.querySelector('.board-pane'))
+      return { touches: window.__touches, select: css.userSelect || css.webkitUserSelect, highlight: css.webkitTapHighlightColor }
+    })
+    check(
+      noSelect.touches.join() === 'touchstart:true,touchmove:true,touchend:true' && noSelect.select === 'none' && noSelect.highlight === 'rgba(0, 0, 0, 0)' && (await strokeCount()) === 8,
+      `i tocchi sulla lavagna non selezionano niente e non fanno partire Scribble (${JSON.stringify(noSelect)})`,
     )
     // Ogni nota ha la sua lavagna: in un'altra nota è vuota, tornando c'è ancora.
     await lp.locator('.notes-head button[aria-label="Nuova nota"]').click()
@@ -1791,16 +1889,43 @@ try {
     const darkInk = await inkAt(stage.x + 80, stage.y + 140)
     check(darkPaper < 150 && darkInk > 600, `nel tema scuro la lavagna è scura e i tratti chiari (${JSON.stringify({ darkPaper, darkInk })})`)
     await lp.emulateMedia({ colorScheme: 'light' })
-    // A tutto schermo copre la finestra; Esc la riporta com'era.
+    // A tutto schermo copre la finestra, e sul computer chiede al browser lo schermo intero; il
+    // resto dell'app, sotto, è nascosto. Esc la riporta com'era.
+    await lp.evaluate(() => {
+      window.__fullscreenCalls = 0
+      const original = Element.prototype.requestFullscreen
+      Element.prototype.requestFullscreen = function (...args) {
+        window.__fullscreenCalls++
+        return original.apply(this, args)
+      }
+    })
+    const underBoard = () =>
+      lp.evaluate(() => ['.editor-pane', '.notes-panel', '.float-bar', '.board-pane'].map((s) => getComputedStyle(document.querySelector(s)).visibility).join())
     await lp.locator('.board-button[aria-label="Schermo intero"]').click()
     await lp.waitForTimeout(300)
     const fullBox = await boardPane.boundingBox()
+    const fullUnder = await underBoard()
+    const fullCalls = await lp.evaluate(() => window.__fullscreenCalls)
+    // Stampando con la lavagna a tutto schermo si stampa la nota, come sempre.
+    await lp.emulateMedia({ media: 'print' })
+    const fullPrint = await lp.evaluate(() => getComputedStyle(document.querySelector('.editor-pane')).visibility)
+    await lp.emulateMedia({ media: 'screen' })
     await lp.keyboard.press('Escape')
     await lp.waitForTimeout(300)
     const backBox = await boardPane.boundingBox()
+    const backUnder = await underBoard()
     check(
-      fullBox.x === 0 && fullBox.y === 0 && fullBox.width === 1440 && fullBox.height === 900 && backBox.width < 800 && !(await lp.evaluate(() => document.fullscreenElement)),
-      `«Schermo intero» allarga la lavagna a tutta la finestra, Esc la riporta accanto al testo (${JSON.stringify({ fullBox, backBox })})`,
+      fullBox.x === 0 &&
+        fullBox.y === 0 &&
+        fullBox.width === 1440 &&
+        fullBox.height === 900 &&
+        fullCalls === 1 &&
+        fullUnder === 'hidden,hidden,hidden,visible' &&
+        fullPrint === 'visible' &&
+        backBox.width < 800 &&
+        backUnder === 'visible,visible,visible,visible' &&
+        !(await lp.evaluate(() => document.fullscreenElement)),
+      `«Schermo intero» allarga la lavagna a tutta la finestra e nasconde il resto, Esc la riporta accanto al testo (${JSON.stringify({ fullBox, fullCalls, fullUnder, fullPrint, backBox, backUnder })})`,
     )
     // Eliminando la nota si elimina anche la sua lavagna.
     await lp.locator('.note-item', { hasText: 'Lavagna di prova' }).hover()
@@ -1830,6 +1955,48 @@ try {
       `il backup porta anche le lavagne, e ripristinandolo tornano sulle note ricreate (${JSON.stringify({ backupBoards, restoredNote })})`,
     )
     await lb.close()
+    // Sull'iPad (Safari si presenta come un Mac, con lo schermo touch) «Schermo intero» non chiede
+    // lo schermo intero al browser: Safari ne usciva mentre si scriveva, prendendo i tocchi della
+    // penna per una tastiera finta. La lavagna copre la finestra, e sotto il resto è nascosto.
+    const ipadContext = await browser.newContext({
+      viewport: { width: 1180, height: 820 },
+      hasTouch: true,
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15',
+    })
+    await ipadContext.addInitScript(() => {
+      Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { get: () => 5 })
+      window.__fullscreenCalls = 0
+      const original = Element.prototype.requestFullscreen
+      Element.prototype.requestFullscreen = function (...args) {
+        window.__fullscreenCalls++
+        return original.apply(this, args)
+      }
+    })
+    const ip = await ipadContext.newPage()
+    ip.on('pageerror', (e) => errors.push(e.message))
+    await ip.goto(url)
+    await ip.waitForSelector('.cm-editor')
+    await ip.locator('.view-button[aria-label="Lavagna"]').click()
+    await ip.waitForSelector('.board-pane[data-loaded="true"]')
+    await ip.locator('.board-button[aria-label="Schermo intero"]').click()
+    await ip.waitForTimeout(300)
+    const ipadFull = await ip.evaluate(() => {
+      const r = document.querySelector('.board-pane').getBoundingClientRect()
+      return {
+        calls: window.__fullscreenCalls,
+        browserFull: Boolean(document.fullscreenElement),
+        covers: r.left === 0 && r.top === 0 && r.width === innerWidth && r.height === innerHeight,
+        under: ['.editor-pane', '.notes-panel'].map((s) => getComputedStyle(document.querySelector(s)).visibility).join(),
+      }
+    })
+    await ip.locator('.board-button[aria-label="Esci dallo schermo intero"]').click()
+    await ip.waitForTimeout(200)
+    const ipadBack = await ip.evaluate(() => ['.editor-pane', '.notes-panel'].map((s) => getComputedStyle(document.querySelector(s)).visibility).join())
+    check(
+      ipadFull.calls === 0 && !ipadFull.browserFull && ipadFull.covers && ipadFull.under === 'hidden,hidden' && ipadBack === 'visible,visible',
+      `sull'iPad «Schermo intero» copre la finestra senza lo schermo intero del browser, e nasconde quello che c'è sotto (${JSON.stringify({ ipadFull, ipadBack })})`,
+    )
+    await ipadContext.close()
     // Sul telefono la lavagna prende il posto del testo, e un dito scrive (finché non si usa una penna).
     const phoneBoard = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
     const pb = await phoneBoard.newPage()

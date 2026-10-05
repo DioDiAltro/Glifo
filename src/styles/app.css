@@ -3794,6 +3794,12 @@ kbd {
   border-left: 1px solid var(--border);
   /* Come nell'anteprima, la fascia dei pulsanti volanti è un bordo: lì non si scrive. */
   border-top: var(--float-h) solid var(--pane-editor);
+  /* Sulla lavagna e sui suoi pulsanti non si seleziona niente, tenendo premuto non esce il menu e
+     toccando non si accende il riquadro grigio di Safari (sull'iPad sembrava una selezione). */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .app[data-view='board'] .board-pane {
@@ -3973,6 +3979,16 @@ kbd {
   z-index: 45;
   display: block;
   border: 0;
+}
+
+/* Sotto, il resto dell'app non si vede e non si tocca: coperto non basta, perché sull'iPad la
+   penna ci selezionava le parole e Scribble ci scriveva come con la tastiera. Le misure non
+   cambiano: tornando indietro è tutto com'era. Nella stampa (dove la lavagna non c'è) si vede. */
+@media screen {
+  :root.board-full .workspace > :not(.content),
+  :root.board-full .content > :not(.board-pane) {
+    visibility: hidden;
+  }
 }
 
 /* ——— Notifiche ——— */

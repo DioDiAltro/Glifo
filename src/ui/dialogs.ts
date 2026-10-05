@@ -511,7 +511,7 @@ export function openHelpDialog(): HTMLDialogElement {
     h(
       'p',
       { class: 'field-help' },
-      'Lavagna: la vista «Lavagna», in alto, la apre accanto al testo (sul telefono al suo posto); il pulsante con i quattro angoli la allarga a tutto schermo, Esc la riporta com\'era. Ci scrivi a mano con la penna, il dito o il mouse: con la penna lo spessore segue la pressione e la gomma in fondo alla penna (o il tasto laterale) cancella. Quando Glifo vede una penna, le dita spostano la lavagna e il palmo appoggiato non scrive. Due dita, la rotellina (Ctrl + rotellina per ingrandire), il tasto centrale o lo spazio tenuto premuto la spostano; ',
+      'Lavagna: la vista «Lavagna», in alto, la apre accanto al testo (sul telefono al suo posto); il pulsante con i quattro angoli la allarga a tutto schermo, Esc la riporta com\'era. Ci scrivi a mano con la penna, il dito o il mouse: con la penna lo spessore segue la pressione e la gomma in fondo alla penna (o il tasto laterale) cancella. Quando Glifo vede una penna se lo ricorda: da lì un dito solo non fa niente, così la mano appoggiata non scrive, non sposta la lavagna e non preme i pulsanti. Due dita, la rotellina (Ctrl + rotellina per ingrandire), il tasto centrale o lo spazio tenuto premuto la spostano; ',
       h('kbd', {}, 'Ctrl'),
       ' ',
       h('kbd', {}, 'Z'),

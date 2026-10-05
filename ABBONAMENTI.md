@@ -74,6 +74,13 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
     tavoletta prima di pubblicarla.
 13. **La lavagna pubblicata** (5 ottobre 2026). Lo studente dice «va bene, pubblicala»: la lavagna
     base è online, gratis per tutti.
+14. **La lavagna sull'iPad** (5 ottobre 2026). Provandola sull'iPad, lo studente trova che a volte
+    si selezionavano le parole come se stesse selezionando, a volte la lavagna si chiudeva, a volte
+    l'iPad la prendeva per una tastiera, e che la mano appoggiata dava problemi. Claude lo corregge
+    subito, sul ramo principale: su iPad niente schermo intero del browser (Safari prendeva i tocchi
+    della penna per una tastiera finta e ne usciva), i tocchi sulla lavagna non selezionano più niente
+    e non fanno partire Scribble, e con la penna un dito solo non fa niente: la mano appoggiata non
+    sposta la lavagna e non preme i pulsanti.
 
 ## La proposta dello studente (4 ottobre 2026)
 
@@ -374,14 +381,17 @@ se si vuole, si aggiungono alla nota con un pulsante («Aggiungi alla nota»).
   scrive guardando lo schermo: più la lavagna è grande, meglio è (il driver della tavoletta può anche
   limitarne l'area a quella della lavagna).
 - **Cosa c'è**: penna con la pressione, gomma, pochi colori, annulla e ripeti, pulisci, spostarsi e
-  ingrandire con due dita; con la penna, il palmo appoggiato non scrive. Va anche con il mouse.
+  ingrandire con due dita; con la penna un dito solo non fa niente, così la mano appoggiata non
+  scrive, non sposta la lavagna e non preme i pulsanti. Va anche con il mouse.
 - **Cosa resta**: non va nella nota né nell'account; una lavagna per ogni nota, salvata su quel
   dispositivo, in uno spazio a parte del browser (i disegni pesano più del testo), con i colori giusti
   nel tema chiaro e in quello scuro. Se si elimina la nota, si elimina anche la sua lavagna.
 - **Niente esce dal dispositivo**: l'informativa sulla privacy dice solo che anche le lavagne restano
   nel browser (e che non vanno all'account).
 - **Come si prova**: test e prove nel browser con una penna simulata, poi sull'iPad e con la
-  tavoletta; prima sul ramo `prova` e su una pagina privata di claude.ai, come per la grafica.
+  tavoletta; prima sul ramo `prova` e su una pagina privata di claude.ai, come per la grafica. La
+  prima prova sull'iPad ha trovato quattro problemi, corretti subito (vedi il punto 14 della
+  discussione); la tavoletta non è ancora stata provata.
 
 ### Dopo
 

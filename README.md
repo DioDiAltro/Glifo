@@ -605,11 +605,14 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
   **Annulla** e **Ripeti** (anche Ctrl+Z e Ctrl+Y) e **Pulisci**, con la conferma.
 - **Spostarsi e ingrandire**: due dita, oppure la rotellina (con Ctrl ingrandisce), il tasto
   centrale o lo spazio tenuto premuto; il numero in basso a destra riporta alla vista di
-  partenza. Quando Glifo vede una penna se lo ricorda: da lì le dita spostano la lavagna e **il
-  palmo appoggiato non scrive**.
+  partenza. Quando Glifo vede una penna se lo ricorda: da lì un dito solo non fa niente, così
+  **la mano appoggiata** non scrive, non sposta la lavagna e non preme i pulsanti (nemmeno se
+  tocca un attimo dopo che la penna si è alzata).
 - **A tutto schermo** con il pulsante con i quattro angoli (Esc torna indietro): con una tavoletta
   senza schermo si scrive guardando lo schermo, e più la lavagna è grande meglio è. Sul telefono
-  la vista Lavagna prende già tutto il posto del testo.
+  la vista Lavagna prende già tutto il posto del testo. Su iPad e iPhone la lavagna copre la
+  finestra senza lo schermo intero del browser: lì Safari ne usciva mentre si scriveva, perché
+  prendeva i tocchi della penna per una tastiera.
 - **Una lavagna per ogni nota**, salvata su quel dispositivo (nel browser, in IndexedDB), non
   nella nota né nell'account: niente esce dal dispositivo. Eliminando la nota si elimina anche
   la sua lavagna; il backup la porta con sé. Con Glifo aperto in due schede, quello che si
@@ -792,6 +795,7 @@ src/
     ink.ts                il contorno dei tratti (perfect-freehand) e i colori dei due temi
     store.ts              le lavagne in IndexedDB, un tratto per record, e le altre schede avvisate
     board.ts              penna, dita, mouse e palmo; gomma, colori, annulla, spostare e ingrandire
+    device.ts             iPad e iPhone, dove lo schermo intero del browser non va bene per scrivere
   share/                  le note condivise con un link (una fotografia della nota)
     link.ts               il link (nota.html#codice) e la lettura della nota, anche senza account
     dialog.ts             la finestra «Condividi»

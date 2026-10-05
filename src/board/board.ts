@@ -1,5 +1,6 @@
 import { readJson, writeJson } from '../store/storage'
 import { h, icon, ICONS } from '../ui/dom'
+import { appleTouch } from './device'
 import { BOARD_PALETTES, inkName, outlineSvg, PEN_SIZE, strokeOutline, type BoardTheme } from './ink'
 import type { BoardChange, BoardStore, BoardView } from './store'
 import {
@@ -21,8 +22,9 @@ import {
  * La lavagna: si scrive a mano accanto al testo (o a tutto schermo), con la penna, il dito o il
  * mouse. Una per nota, salvata su questo dispositivo (store.ts); non va nella nota.
  *
- * - Penna: lo spessore segue la pressione. Appena si usa una penna, Glifo se lo ricorda: da lì le
- *   dita spostano e ingrandiscono la lavagna, e il palmo appoggiato non scrive.
+ * - Penna: lo spessore segue la pressione. Appena si usa una penna, Glifo se lo ricorda: da lì un
+ *   dito solo non fa niente (è quasi sempre la mano appoggiata), due dita spostano e ingrandiscono.
+ *   La mano che tocca mentre si scrive, o appena dopo, non conta: né sulla lavagna né sui pulsanti.
  * - Senza penna: un dito scrive, due dita spostano e ingrandiscono.
  * - Mouse: scrive col tasto sinistro; si sposta con la rotellina, con il tasto centrale o tenendo
  *   premuto lo spazio; Ctrl + rotellina ingrandisce.
@@ -81,6 +83,8 @@ interface PinchAction {
   before: BoardView
   mid: Pt
   dist: number
+  /** Le dita si sono mosse abbastanza: la vista le segue. */
+  moving: boolean
 }
 
 type Action = DrawAction | EraseAction | PanAction | PinchAction
@@ -99,6 +103,10 @@ const HISTORY_MAX = 300
 const GRID = 24
 /** Un tratto col dito così breve, quando arriva il secondo dito, era l'inizio dello spostamento. */
 const YOUNG = { ms: 260, px: 26 }
+/** Per così tanti millisecondi dopo che la penna si è alzata, un tocco è la mano che si appoggia. */
+const PALM_MS = 500
+/** Di quanti pixel si devono muovere le due dita prima che la lavagna le segua: la mano che si posa trema. */
+const SLOP = 8
 /** Su questo dispositivo: se si è usata una penna e l'ultimo colore. */
 const PREFS_KEY = 'glifo.lavagna.v1'
 const START: BoardView = { x: 0, y: 0, zoom: 1 }
@@ -196,6 +204,12 @@ export class Board {
   private readonly warned = new Set<string>()
   /** L'ultimo tratto fatto col dito: se arriva subito la penna per la prima volta, era il palmo. */
   private lastTouchStep: { step: Step; at: number } | null = null
+  /** L'ultima volta che la penna ha toccato la lavagna (performance.now()). */
+  private lastPen = -Infinity
+  /** I tocchi sui pulsanti cominciati mentre si scriveva con la penna: la mano, non un dito. */
+  private readonly palmTaps = new Set<number>()
+  /** Fino a quando un clic viene dalla mano appena alzata da un pulsante, e non vale. */
+  private palmClickUntil = 0
 
   constructor(private readonly opts: BoardOptions) {
     const prefs = loadPrefs()
@@ -299,6 +313,38 @@ export class Board {
     })
     stage.addEventListener('wheel', (ev) => this.onWheel(ev), { passive: false })
     stage.addEventListener('contextmenu', (ev) => ev.preventDefault())
+    // Safari (iPad e iPhone): senza questo la penna e le dita sulla lavagna selezionano le parole
+    // vicine, aprono la lente o fanno partire Scribble, che scrive nel testo come con la tastiera.
+    // I tratti arrivano lo stesso: sono gli eventi dei puntatori, qui sopra.
+    for (const type of ['touchstart', 'touchmove', 'touchend', 'gesturestart', 'gesturechange'])
+      stage.addEventListener(type, (ev) => ev.preventDefault(), { passive: false })
+    // La mano appoggiata mentre si scrive non preme i pulsanti della lavagna (annulla, ingrandisci…).
+    const el = this.el
+    el.addEventListener(
+      'pointerdown',
+      (ev) => {
+        if (ev.pointerType === 'touch' && !stage.contains(ev.target as Node) && this.penMode && this.penNear()) this.palmTaps.add(ev.pointerId)
+      },
+      true,
+    )
+    el.addEventListener(
+      'pointerup',
+      (ev) => {
+        if (this.palmTaps.delete(ev.pointerId)) this.palmClickUntil = performance.now() + 400
+      },
+      true,
+    )
+    el.addEventListener('pointercancel', (ev) => this.palmTaps.delete(ev.pointerId), true)
+    el.addEventListener(
+      'click',
+      (ev) => {
+        if (performance.now() > this.palmClickUntil) return
+        this.palmClickUntil = 0
+        ev.preventDefault()
+        ev.stopPropagation()
+      },
+      true,
+    )
     this.el.addEventListener('keydown', (ev) => this.onKey(ev))
     this.el.addEventListener('keyup', (ev) => {
       if (ev.key === ' ') this.setSpace(false)
@@ -380,7 +426,11 @@ export class Board {
     return this.full
   }
 
-  /** A tutto schermo: la lavagna copre la finestra e, se il browser lo permette, lo schermo intero. */
+  /**
+   * A tutto schermo: la lavagna copre la finestra (il resto dell'app, sotto, si nasconde: vedi
+   * `.board-full` in app.css) e, se il browser lo permette, lo schermo intero. Su iPad e iPhone no
+   * (device.ts): lì Safari ne esce da solo mentre si scrive.
+   */
   setFull(on: boolean): void {
     if (on === this.full) return
     this.full = on
@@ -391,7 +441,7 @@ export class Board {
     this.fullButton.title = label
     this.fullButton.setAttribute('aria-label', label)
     const root = document.documentElement
-    if (on && !document.fullscreenElement && typeof root.requestFullscreen === 'function') {
+    if (on && !document.fullscreenElement && !appleTouch() && typeof root.requestFullscreen === 'function') {
       root
         .requestFullscreen({ navigationUI: 'hide' })
         .then(() => {
@@ -431,7 +481,12 @@ export class Board {
     writeJson(PREFS_KEY, { ...loadPrefs(), ...changes })
   }
 
-  /** Si è usata una penna: da qui le dita spostano la lavagna, e il palmo non scrive. */
+  /** La penna sta scrivendo, o si è appena alzata: un tocco adesso è la mano che si appoggia. */
+  private penNear(): boolean {
+    return this.action?.type === 'pen' || performance.now() - this.lastPen < PALM_MS
+  }
+
+  /** Si è usata una penna: da qui un dito solo non fa niente, due dita spostano la lavagna, e il palmo non scrive. */
   private rememberPen(): void {
     if (this.penMode) return
     this.penMode = true
@@ -474,6 +529,7 @@ export class Board {
     const pos = this.local(ev)
     if (ev.pointerType === 'touch') return this.touchDown(ev, pos)
     if (ev.pointerType === 'pen') {
+      this.lastPen = performance.now()
       this.rememberPen()
       // Le dita e il palmo appoggiati: non scrivono e non spostano niente finché non si alzano.
       this.dropTouches()
@@ -492,16 +548,17 @@ export class Board {
   }
 
   private touchDown(ev: PointerEvent, pos: Pt): void {
-    const penBusy = this.action?.type === 'pen'
-    this.touches.set(ev.pointerId, { ...pos, ignored: penBusy })
-    if (penBusy) return
+    // La mano che si appoggia mentre si scrive con la penna, o appena dopo: non conta finché non si alza.
+    const palm = this.penMode && this.penNear()
+    this.touches.set(ev.pointerId, { ...pos, ignored: palm })
+    if (palm) return
     const active = [...this.touches].filter(([, t]) => !t.ignored).map(([id]) => id)
     const a = this.action
     if (active.length === 1) {
       if (a) return
       this.capture(ev)
-      if (this.penMode) this.startPan(ev.pointerId, 'touch', pos)
-      else this.startTool(ev, pos, this.tool)
+      // Con la penna un dito solo non fa niente: è quasi sempre il palmo. Si sposta con due dita.
+      if (!this.penMode) this.startTool(ev, pos, this.tool)
     } else if (active.length === 2) {
       if (a && a.type !== 'touch') return
       // Il secondo dito: si sposta e si ingrandisce. Il tratto appena cominciato col primo era l'inizio del gesto.
@@ -517,6 +574,8 @@ export class Board {
 
   private onMove(ev: PointerEvent): void {
     const a = this.action
+    // Solo la penna che tocca: quella sospesa sopra (sugli iPad che la sentono) non conta.
+    if (ev.pointerType === 'pen' && ev.buttons) this.lastPen = performance.now()
     if (ev.pointerType === 'touch') {
       const t = this.touches.get(ev.pointerId)
       if (!t || t.ignored) return
@@ -552,11 +611,16 @@ export class Board {
   }
 
   private onUp(ev: PointerEvent, cancelled: boolean): void {
+    if (ev.pointerType === 'pen') this.lastPen = performance.now()
     if (ev.pointerType === 'touch') this.touches.delete(ev.pointerId)
     const a = this.action
     if (!a) return
+    // Un tocco annullato dal sistema (sull'iPad, quando capisce che era il palmo): quello che
+    // stava facendo si annulla, come se non fosse successo.
+    const dropped = cancelled && a.type === 'touch'
     if (a.kind === 'pinch') {
       if (!a.pointers.includes(ev.pointerId)) return
+      if (dropped) return this.cancelAction()
       this.finishPinch()
       // Il dito rimasto continua a spostare la lavagna.
       const rest = a.pointers.find((id) => id !== ev.pointerId)!
@@ -565,7 +629,8 @@ export class Board {
       return
     }
     if (a.pointer !== ev.pointerId) return
-    if (a.kind === 'draw') this.finishDraw(a, !(cancelled && a.type === 'touch'))
+    if (dropped && a.kind !== 'draw') this.cancelAction()
+    else if (a.kind === 'draw') this.finishDraw(a, !dropped)
     else if (a.kind === 'erase') this.finishErase(a)
     else this.finishPan()
   }
@@ -706,6 +771,7 @@ export class Board {
       before: { ...this.view },
       mid: { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 },
       dist: Math.max(1, Math.hypot(p.x - q.x, p.y - q.y)),
+      moving: false,
     }
   }
 
@@ -714,7 +780,11 @@ export class Board {
     const q = this.touches.get(a.pointers[1])
     if (!p || !q) return
     const mid = { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 }
-    const zoom = clampZoom((a.before.zoom * Math.max(1, Math.hypot(p.x - q.x, p.y - q.y))) / a.dist)
+    const dist = Math.max(1, Math.hypot(p.x - q.x, p.y - q.y))
+    // Finché le dita si muovono appena la lavagna sta ferma: la mano che si posa trema un po'.
+    if (!a.moving && Math.hypot(mid.x - a.mid.x, mid.y - a.mid.y) < SLOP && Math.abs(dist - a.dist) < SLOP) return
+    a.moving = true
+    const zoom = clampZoom((a.before.zoom * dist) / a.dist)
     // Il punto della lavagna che era sotto le dita resta sotto le dita.
     const wx = a.before.x + a.mid.x / a.before.zoom
     const wy = a.before.y + a.mid.y / a.before.zoom

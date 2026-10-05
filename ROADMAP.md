@@ -203,8 +203,10 @@ dispositivo (IndexedDB), che va nel backup e non nell'account. La discussione è
   nota se si vuole («Aggiungi alla nota»): aspetta la discussione sulla chiave API;
 - lo spessore della penna da scegliere, l'evidenziatore, scaricare la lavagna come immagine;
 - la lavagna sugli altri dispositivi, con l'account;
-- se sull'iPad o con la tavoletta grafica senza schermo qualcosa non va (la pressione, il palmo, lo
-  schermo intero), si sistema.
+- sull'iPad la prima prova (5 ottobre 2026) ha trovato quattro problemi, corretti subito: le parole
+  che si selezionavano, la lavagna che si chiudeva e l'iPad che la prendeva per una tastiera (era lo
+  schermo intero di Safari, che lì non si usa più), e la mano appoggiata (con la penna un dito solo
+  non fa niente). Se resta qualcosa, o con la tavoletta grafica senza schermo, si sistema.
 
 ### Schemi: idee in più
 

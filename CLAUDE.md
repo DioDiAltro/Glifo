@@ -238,8 +238,12 @@ prossimi passi sono in «In programma» nella ROADMAP.
   `store.ts` le lavagne in IndexedDB (`glifo-lavagne`, un tratto per record con la chiave [nota, id],
   le altre schede avvisate da un BroadcastChannel; in memoria se IndexedDB non c'è), il backup
   (`exportBoards`, `importBoard`) e `prune` (all'avvio toglie quelle senza nota, `noteIdsInBrowser`);
-  `board.ts` il componente: penna con la pressione (vista una penna, `glifo.lavagna.v1`, le dita
-  spostano e il palmo non scrive), dita, mouse, gomma, annulla e ripeti, schermo intero. In `main.ts`
+  `board.ts` il componente: penna con la pressione (vista una penna, `glifo.lavagna.v1`, un dito solo
+  non fa niente e due dita spostano; un tocco mentre la penna scrive o entro `PALM_MS` è la mano: non
+  conta, nemmeno sui pulsanti), dita, mouse, gomma, annulla e ripeti, schermo intero (su iPad e iPhone
+  senza quello del browser, `device.ts`: Safari ne usciva prendendo la penna per una tastiera; sotto,
+  il resto dell'app è nascosto con `.board-full`). Sulla lavagna touchstart, touchmove e touchend
+  sono annullati: sull'iPad selezionavano le parole e facevano partire Scribble. In `main.ts`
   la lavagna si toglie con la nota, segue la nota che cambia id con l'account (`replaced`,
   `adoptGuestNotes`) e uscendo dall'account si toglie, con l'avviso. Per le prove nel browser lo stato
   è in `data-strokes`, `data-note` e `data-loaded` sulla `.board-pane`.
