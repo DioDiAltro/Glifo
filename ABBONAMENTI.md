@@ -92,7 +92,8 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
     studente vuole poi una lavagna «completa di tutto», come Microsoft Whiteboard (la grandezza degli
     strumenti, gli evidenziatori, la gomma a tratto e a linea intera: vedi la ROADMAP), i diagrammi di
     flusso trasformati in codice e negli schemi le tabelle come in Excel, che usava alle superiori in
-    G.E.S.P. (Gestione Economica e Servizi Produttivi): il racconto si è interrotto, da completare.
+    G.E.S.P. (Gestione Economica e Servizi Produttivi): la pianificazione della produzione, i costi
+    fissi e variabili con il prezzo e il punto di pareggio, i flussi dei processi (vedi la ROADMAP).
     Decide che il codice, come l'SQL, è nei piani a pagamento (vedi «Deciso»).
 
 ## La proposta dello studente (4 ottobre 2026)
@@ -625,8 +626,8 @@ ricerca, i piani per università e dipartimenti.
   confermare.
 - **Le spiegazioni**: da quale argomento partire (vedi «Le spiegazioni, come funzionano», in
   fondo). In sospeso dal 5 ottobre 2026: si riprende più avanti.
-- **Le tabelle come in Excel** negli schemi: lo studente stava raccontando come le usava alle
-  superiori (G.E.S.P.) quando il messaggio si è interrotto (5 ottobre 2026).
+- **Le tabelle come in Excel** negli schemi (5 ottobre 2026): gratis, come i calcoli e i grafici
+  (la proposta di Claude: sono conti, non un lavoro fatto al posto di chi studia), o a pagamento?
 - **L'assaggio** nel gratuito: 7 giorni di Relativistico o poche domande al mese?
 - **I prezzi e i tetti**: da verificare con gli studenti e con l'uso vero.
 

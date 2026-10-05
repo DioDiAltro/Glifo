@@ -206,7 +206,7 @@ con Claude. La discussione è in [ABBONAMENTI.md](ABBONAMENTI.md), «La lavagna�
 - **una lavagna completa di tutto** (lo studente, 5 ottobre 2026: «deve essere una lavagna completa
   di tutto», come Microsoft Whiteboard):
   - la grandezza dello strumento scelto: lo spessore della penna, dell'evidenziatore e della gomma
-    (da chiarire se intende anche scegliere un pezzo di lavagna e cambiarne la grandezza);
+    (lo studente ha chiarito che intende questo);
   - gli evidenziatori, di più colori, che si vedono sotto la scrittura;
   - la gomma con due modi: «a tratto», che cancella dove passa e diventa più grande quando la si
     muove veloce, e «a linea intera», che toccando anche un solo punto di una linea la cancella tutta;
@@ -233,9 +233,21 @@ delle tabelle per più database. Tutto è descritto nel README. Se serviranno:
   tornano indietro diventano cicli; un diagramma che non si può scrivere con if e cicli lo dice.
   Come l'SQL, solo nei piani a pagamento, perché scrivere il codice a mano fa bene (vedi
   [ABBONAMENTI.md](ABBONAMENTI.md), «Deciso»);
-- **tabelle come in Excel** negli schemi (lo studente, 5 ottobre 2026): le usava alle superiori in
-  G.E.S.P. (Gestione Economica e Servizi Produttivi); il racconto si è interrotto, da completare con
-  lui prima di cominciare;
+- **tabelle come in Excel** negli schemi (lo studente, 5 ottobre 2026), per gli esercizi che faceva
+  alle superiori in G.E.S.P. (Gestione Economica e Servizi Produttivi):
+  - la pianificazione e il controllo della produzione: come un'azienda informatica organizza i suoi
+    servizi (sviluppo del software, assistenza, cicli produttivi);
+  - la gestione dei costi: i costi fissi e variabili dei servizi e delle risorse, per trovare il
+    prezzo di vendita o il punto di pareggio (break-even point);
+  - l'ottimizzazione dei flussi: lo studio dei processi per automatizzarli o gestirli con un
+    gestionale (ERP).
+
+  La proposta di Claude, da confermare con lo studente: una tabella con le celle e le formule come in
+  Excel (=B2*C2, SOMMA, MEDIA, SE…), con i numeri in euro e in percentuale, che si apre a tutto schermo
+  come gli schemi; i conti li fa il motore di Glifo. Insieme: il grafico del punto di pareggio (costi
+  totali e ricavi che si incontrano) con il blocco grafico, il diagramma di Gantt per pianificare
+  (attività, durate, chi le fa, il percorso critico), i flussi con le corsie (chi fa cosa) e i file di
+  Excel (.xlsx) e .csv da aprire e scaricare;
 - il contrario dell'SQL: da un file SQL alle tabelle disegnate; e il passaggio dallo schema E-R
   alle tabelle (la progettazione logica);
 - stampare con i colori del tema chiaro anche se si usa quello scuro;
