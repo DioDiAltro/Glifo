@@ -207,6 +207,32 @@ Perché non gli altri:
 - Le note eliminate restano nel database come segno per gli altri dispositivi: dopo qualche
   mese si potranno togliere con un lavoro programmato (`pg_cron`).
 
+### La lavagna (si comincia quando lo dice lo studente)
+
+**Cosa:** una lavagna per scrivere a mano (penna, dito, tavoletta grafica) accanto al testo, come il
+foglio accanto alla calcolatrice: non entra nella nota, è un aiuto personale. Decisa con lo studente
+il 5 ottobre 2026; tutta la discussione è in [ABBONAMENTI.md](ABBONAMENTI.md), «La lavagna».
+
+**Prima la lavagna base, senza AI**, e solo quando lo dice lo studente:
+
+- si apre accanto al testo, al posto dell'anteprima; sul telefono, e a richiesta sul computer, a
+  tutto schermo;
+- penna con la pressione, gomma, pochi colori, annulla e ripeti, pulisci, spostarsi e ingrandire con
+  due dita; con la penna il palmo appoggiato non scrive; va anche con il mouse;
+- una lavagna per ogni nota, salvata su quel dispositivo (non nella nota e non nell'account), con i
+  colori del tema chiaro e di quello scuro; eliminando la nota si elimina anche la sua lavagna;
+- è gratis (piano Classico); niente esce dal dispositivo, quindi l'informativa non cambia;
+- si prova sull'iPad di un amico dello studente e con una tavoletta grafica senza schermo; prima sul
+  ramo `prova`.
+
+**Dopo**, con l'AI e nei piani a pagamento: le formule scritte a mano convertite in LaTeX e aggiunte
+alla nota se si vuole («Aggiungi alla nota»). Aspetta la discussione sulla chiave API.
+
+**Da sapere** per costruirla: Pointer Events (`pointerType` pen, touch e mouse, `pressure`) e
+`touch-action: none` sulla lavagna; i tratti salvati come vettori (punti con la pressione) e disegnati
+su un canvas; i disegni in IndexedDB, perché localStorage ha pochi MB ed è già usato dalle note;
+Glifo può essere aperto in più schede.
+
 ## Più avanti
 
 ### Schemi: idee in più

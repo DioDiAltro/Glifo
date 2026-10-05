@@ -22,6 +22,12 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
 - **Le spiegazioni** (4 ottobre 2026): compaiono nel pannello della formula e decide chi scrive se
   inserirle nella nota; il tono (come il professore o più semplice) si sceglie nelle impostazioni.
   Vedi «Le spiegazioni, come funzionano».
+- **La lavagna** (5 ottobre 2026): una per ogni nota, e si salva; la lavagna è gratis (Classico), la
+  conversione in LaTeX è nei piani a pagamento. Si comincia dalla lavagna base, senza AI, ma solo
+  quando lo dice lo studente. Vedi «La lavagna».
+- **Le cose dell'AI aspettano** (5 ottobre 2026): quello che riguarda l'AI (la conversione della
+  lavagna, le spiegazioni, il tutor, con quale chiave) resta salvato qui e si decide dopo la
+  discussione sulla chiave API, che lo studente spiegherà.
 
 ## Com'è andata la discussione
 
@@ -48,6 +54,10 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
 8. **La lavagna** (5 ottobre 2026). Lo studente la racconta: una lavagna per scrivere a mano, fuori
    dalla nota, da cui le formule si possono convertire in LaTeX e aggiungere alla nota. Claude
    propone come farla: vedi «La lavagna». Se ne parla prima di costruirla.
+9. **Le risposte sulla lavagna** (5 ottobre 2026). Una lavagna per ogni nota, che si salva; lavagna
+   gratis e conversione nei piani a pagamento. Lo studente la proverà sull'iPad di un amico (ha anche
+   una tavoletta grafica senza schermo). Le cose dell'AI restano salvate per dopo: c'entrano con la
+   chiave API. Niente codice finché non lo dice lo studente; poi si parte dalla lavagna base.
 
 ## La proposta dello studente (4 ottobre 2026)
 
@@ -126,9 +136,10 @@ mandato un link.
 | **Condividere una nota con un link** | Ogni link è pubblicità: chi lo apre scopre Glifo |
 | **L'assistente AI con la propria chiave** | A Glifo non costa niente |
 | **Un assaggio** dei piani a pagamento: 7 giorni di Relativistico, oppure poche domande al mese all'AI | Non si compra quello che non si è mai provato |
+| **La lavagna**: scrivere a mano accanto al testo, una per ogni nota, salvata sul dispositivo (deciso il 5 ottobre 2026) | Non costa niente, gira nel browser ed è scrivere |
 
-Fuori: spiegazioni, tutor e trascrizione (costano a ogni uso), l'SQL e il codice dagli schemi, la
-lavagna, le cartelle condivise, gli strumenti per la tesi.
+Fuori: spiegazioni, tutor, trascrizione e la conversione in LaTeX della lavagna (costano a ogni uso),
+l'SQL e il codice dagli schemi, le cartelle condivise, gli strumenti per la tesi.
 
 **I grafici restano qui** (deciso il 4 ottobre 2026: lo studente non voleva toglierli). Sono la cosa
 che fa più effetto, e proprio per questo stanno nella vetrina. L'idea è far pagare solo la parte
@@ -159,7 +170,7 @@ fa al posto tuo.**
 | **Il tutor** (la voce «Aiuto con gli esercizi» della ROADMAP): chiede cosa hai provato, dà un indizio alla volta, controlla i tuoi passaggi; con un tetto al mese (per esempio 100 domande) | Ogni domanda costa a Glifo circa 2 centesimi: con il tetto il piano resta in attivo anche con chi lo usa molto. Un indizio alla volta è il «non semplificare troppo» |
 | **La trascrizione delle lezioni**: poche ore al mese (per esempio 3) e pacchetti di ore per chi ne vuole di più | Costa 20-40 centesimi per ora di lezione: chi registra tutte le lezioni (80 ore al mese) costerebbe 15-30 €. Se un giorno la trascrizione girerà nel browser (sul computer), quella non avrà tetto |
 | **L'SQL e il codice dagli schemi**: oggi l'SQL per più database; poi dallo schema E-R alle tabelle, dall'SQL allo schema, il codice da altri diagrammi | Fa un lavoro al posto tuo, serve a un gruppo preciso con una scadenza (l'esame di basi di dati) e non è il motivo per scegliere Glifo. Nella proposta era già fuori dal gratuito. Gira nel browser, quindi si blocca solo sulla fiducia, e va bene così |
-| **La lavagna**: la conversione in LaTeX di quello che si scrive a mano (vedi «La lavagna») | In discussione: la proposta è tenere la lavagna gratis, perché non costa ed è scrivere, e far pagare la conversione, che usa l'AI |
+| **La conversione della lavagna**: le formule scritte a mano diventano LaTeX, da aggiungere alla nota se si vuole (vedi «La lavagna») | Usa l'AI, che costa (poco) a ogni formula; la lavagna invece è gratis (deciso il 5 ottobre 2026) |
 | **Un gruppo di studio**: una cartella condivisa con pochi compagni (per esempio fino a 5), anche se loro hanno Classico | Chi è invitato entra gratis: ogni abbonato porta compagni su Glifo |
 | **Più spazio** (servirà con immagini e allegati) e la **cronologia delle versioni** di 30 giorni | Lo spazio costa |
 | **Senza la filigrana** sulle immagini e sui PDF | Chi paga non fa pubblicità a Glifo |
@@ -326,34 +337,44 @@ nella nota: è un aiuto personale, come il foglio accanto alla calcolatrice (all
 serve, a chi fa i conti e pensa sì). Al massimo: le formule scritte a mano si convertono in LaTeX e,
 se si vuole, si aggiungono alla nota con un pulsante («Aggiungi alla nota»).
 
-### La proposta di Claude (in discussione)
+### Deciso (5 ottobre 2026)
+
+- Una lavagna per ogni nota, e si salva.
+- La lavagna è gratis, in Classico; la conversione in LaTeX è nei piani a pagamento. Nella proposta
+  iniziale la lavagna intera era in Super.
+- Si comincia dalla lavagna base, senza AI, e solo quando lo dice lo studente. È anche nella
+  ROADMAP, in «In programma».
+- Le parti con l'AI (la conversione, e con quale chiave) restano salvate qui e si decidono dopo la
+  discussione sulla chiave API.
+- Dove si prova: sull'iPad di un amico dello studente; lo studente ha anche una tavoletta grafica
+  senza schermo, che però non ha a portata di mano.
+
+### La lavagna base (proposta, da costruire quando lo dice lo studente)
 
 - **Dove si apre**: accanto al testo, al posto dell'anteprima (il foglio accanto alla calcolatrice);
-  sul telefono a tutto schermo.
+  sul telefono a tutto schermo, e a richiesta anche sul computer. Con la tavoletta senza schermo si
+  scrive guardando lo schermo: più la lavagna è grande, meglio è (il driver della tavoletta può anche
+  limitarne l'area a quella della lavagna).
 - **Cosa c'è**: penna con la pressione, gomma, pochi colori, annulla e ripeti, pulisci, spostarsi e
-  ingrandire con due dita; con la penna, il palmo appoggiato non scrive.
-- **Cosa resta**: non va nella nota; si salva sul dispositivo, una lavagna per nota, con i colori
-  giusti nel tema chiaro e in quello scuro.
-- **Da scrittura a LaTeX**: si cerchia la formula e si preme «Converti»; Glifo la mostra disegnata con
-  KaTeX, con il codice da correggere se serve, e «Aggiungi alla nota» la mette dove c'è il cursore. Se
-  finisce con `=`, Glifo la calcola come le altre.
-- **Come si riconosce**: con l'AI, che legge l'immagine della formula (una frazione di centesimo a
-  formula, e serve internet). I modelli che girano nel browser sono pesanti e sbagliano di più. Per
-  cominciare, con la propria chiave, come l'assistente di oggi: si può fare subito, senza aspettare
-  abbonamento e server.
-- **Nei piani**: la lavagna non costa niente ed è scrivere, quindi Classico; la conversione costa
-  (poco), quindi Relativistico con il tetto, gratis con la propria chiave e magari qualche conversione
-  al mese per assaggiare. Nella proposta iniziale la lavagna intera era in Super.
-- **Più avanti**: riconoscere un simbolo senza internet (come Detexify, già tra le idee della
-  ROADMAP), il testo scritto a mano, il tutor che guarda la lavagna e dice dove si è sbagliato.
+  ingrandire con due dita; con la penna, il palmo appoggiato non scrive. Va anche con il mouse.
+- **Cosa resta**: non va nella nota né nell'account; una lavagna per ogni nota, salvata su quel
+  dispositivo, in uno spazio a parte del browser (i disegni pesano più del testo), con i colori giusti
+  nel tema chiaro e in quello scuro. Se si elimina la nota, si elimina anche la sua lavagna.
+- **Niente esce dal dispositivo**: l'informativa sulla privacy non cambia.
+- **Come si prova**: test e prove nel browser con una penna simulata, poi sull'iPad e con la
+  tavoletta; prima sul ramo `prova` e su una pagina privata di claude.ai, come per la grafica.
 
-### Da decidere
+### Dopo
 
-- una lavagna per ogni nota o una sola per tutto;
-- se si salva o si cancella quando si chiude;
-- su quale dispositivo la proverà lo studente;
-- se la conversione parte con la propria chiave;
-- lavagna gratis e conversione a pagamento, o tutto in Relativistico.
+- **La conversione in LaTeX**: si cerchia la formula e si preme «Converti»; Glifo la mostra disegnata
+  con KaTeX, con il codice da correggere se serve, e «Aggiungi alla nota» la mette dove c'è il
+  cursore. Se finisce con `=`, Glifo la calcola come le altre. La fa l'AI, che legge l'immagine della
+  formula (una frazione di centesimo a formula, e serve internet): i modelli che girano nel browser
+  sono pesanti e sbagliano di più. Con quale chiave (quella di chi scrive o quella di Glifo) si decide
+  con la discussione sulla chiave API.
+- La lavagna anche sugli altri dispositivi, con l'account.
+- Riconoscere un simbolo senza internet (come Detexify, già tra le idee della ROADMAP), il testo
+  scritto a mano, il tutor che guarda la lavagna e dice dove si è sbagliato.
 
 ## Quanto costano a Glifo le cose a pagamento
 
@@ -469,9 +490,10 @@ ricerca, i piani per università e dipartimenti.
 
 ## Da approfondire
 
-- **La lavagna**: in discussione dal 5 ottobre 2026 (vedi «La lavagna», «Da decidere»).
+- **La lavagna base**: si costruisce quando lo dice lo studente (vedi «La lavagna»).
 - **Un'idea dello studente**, da raccontare (5 ottobre 2026).
-- **La chiave API**: lo studente vuole parlarne (5 ottobre 2026).
+- **La chiave API**: lo studente vuole parlarne (5 ottobre 2026). Le cose dell'AI aspettano questa
+  discussione.
 - **Le spiegazioni**: da quale argomento partire (vedi «Le spiegazioni, come funzionano», in
   fondo). In sospeso dal 5 ottobre 2026: si riprende più avanti.
 - **L'SQL**: in Relativistico, come nella proposta, o resta gratis?
