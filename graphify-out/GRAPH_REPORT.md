@@ -1,7 +1,7 @@
-# Graph Report - matherdown  (2026-10-04)
+# Graph Report - matherdown  (2026-10-05)
 
 ## Corpus Check
-- 219 files · ~405,184 words
+- 219 files · ~405,260 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 5 file(s) not represented in the graph (top: (none) 4, .css 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `16a98ce2`
+- Built from commit: `f67d3439`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
