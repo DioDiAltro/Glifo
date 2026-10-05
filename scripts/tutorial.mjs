@@ -160,7 +160,8 @@ const SCENES = {
       await page.waitForTimeout(300)
     },
   },
-  // I calcoli e i grafici: il risultato dopo l'uguale, Tab per scriverlo, il pulsante del grafico.
+  // I calcoli e i grafici: il risultato dopo l'uguale, Tab per scriverlo (✓), il controllo di un risultato
+  // scritto sbagliato (✗), il pulsante del grafico.
   calcoli: {
     settings: { view: 'split' },
     async setup(page) {
@@ -172,7 +173,15 @@ const SCENES = {
       await page.waitForSelector('.cm-calc-result', { timeout: 5000 })
       await page.waitForTimeout(1000)
       await page.keyboard.press('Tab')
+      await page.waitForSelector('.cm-calc-check.is-ok', { timeout: 5000 })
+      await page.waitForTimeout(900)
       await page.keyboard.press('End')
+      await page.keyboard.press('Enter')
+      await page.keyboard.press('Enter')
+      await type(page, '$\\int_0^1 2x \\, dx = 2')
+      await page.keyboard.press('End')
+      await page.waitForSelector('.cm-calc-check.is-wrong', { timeout: 5000 })
+      await page.waitForTimeout(1400)
       await page.keyboard.press('Enter')
       await page.keyboard.press('Enter')
       await type(page, '$f(x) = x^2 - 2x')
