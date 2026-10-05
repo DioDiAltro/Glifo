@@ -1,4 +1,4 @@
-import { INK_COLORS, roundPoints, type InkColor, type Stroke } from './strokes'
+import { HIGHLIGHT_COLORS, INK_COLORS, roundPoints, type HighlightColor, type InkColor, type Stroke } from './strokes'
 import { PEN_SIZE } from './ink'
 
 /**
@@ -51,16 +51,18 @@ interface StrokeRecord {
   size: number
   pen: boolean
   points: Float32Array | number[]
+  /** Solo per gli evidenziatori. */
+  highlight?: boolean
 }
 
 export function toRecord(note: string, s: Stroke): StrokeRecord {
-  return { note, id: s.id, t: s.t, color: s.color, size: s.size, pen: s.pen, points: Float32Array.from(s.points) }
+  return { note, id: s.id, t: s.t, color: s.color, size: s.size, pen: s.pen, points: Float32Array.from(s.points), ...(s.highlight ? { highlight: true } : {}) }
 }
 
 /** Un tratto letto da IndexedDB o da un backup: quello che non torna si sistema o si scarta. */
 export function fromRecord(r: unknown): Stroke | null {
   if (typeof r !== 'object' || r === null) return null
-  const { id, t, color, size, pen, points } = r as Partial<StrokeRecord>
+  const { id, t, color, size, pen, points, highlight } = r as Partial<StrokeRecord>
   if (typeof id !== 'string' || !id) return null
   const values = points instanceof Float32Array || Array.isArray(points) ? Array.from(points as ArrayLike<number>) : []
   const usable = values.slice(0, values.length - (values.length % 3))
@@ -69,10 +71,18 @@ export function fromRecord(r: unknown): Stroke | null {
   return {
     id,
     t: typeof t === 'number' && Number.isFinite(t) ? t : 0,
-    color: INK_COLORS.includes(color as InkColor) ? (color as InkColor) : 'ink',
+    color:
+      highlight === true
+        ? HIGHLIGHT_COLORS.includes(color as HighlightColor)
+          ? (color as HighlightColor)
+          : 'yellow'
+        : INK_COLORS.includes(color as InkColor)
+          ? (color as InkColor)
+          : 'ink',
     size: typeof size === 'number' && size > 0 && size < 200 ? size : PEN_SIZE,
     pen: pen === true,
     points: roundPoints(usable),
+    ...(highlight === true ? { highlight: true } : {}),
   }
 }
 
@@ -266,7 +276,7 @@ export class MemoryBoards implements BoardBackend {
 export interface BackupBoard {
   note: string
   view?: BoardView
-  strokes: { t: number; color: InkColor; size: number; pen: boolean; points: string }[]
+  strokes: { t: number; color: InkColor | HighlightColor; size: number; pen: boolean; points: string; highlight?: boolean }[]
 }
 
 const CHANNEL = 'glifo.lavagne'
@@ -382,7 +392,14 @@ export class BoardStore {
       out.push({
         note,
         ...(data.view ? { view: data.view } : {}),
-        strokes: data.strokes.map((s) => ({ t: s.t, color: s.color, size: s.size, pen: s.pen, points: roundPoints(s.points).join(' ') })),
+        strokes: data.strokes.map((s) => ({
+          t: s.t,
+          color: s.color,
+          size: s.size,
+          pen: s.pen,
+          points: roundPoints(s.points).join(' '),
+          ...(s.highlight ? { highlight: true } : {}),
+        })),
       })
     }
     return out

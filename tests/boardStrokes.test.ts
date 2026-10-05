@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { capsuleSpan, compareStrokes, eraseStroke, piecesOf, roundPoints, segmentDistance, strokeBox, type Stroke } from '../src/board/strokes'
+import { capsuleSpan, compareStrokes, eraserGrowth, eraseStroke, piecesOf, roundPoints, segmentDistance, strokeBox, strokeTouched, type Stroke } from '../src/board/strokes'
 
 /** Un tratto dritto da (x0, y) a (x1, y), con un punto ogni `step`. */
 function line(x0: number, x1: number, y = 0, step = 10): Stroke {
@@ -70,6 +70,37 @@ describe('lavagna: la gomma', () => {
     const dot: Stroke = { id: 'p', t: 1, color: 'red', size: 4, pen: true, points: [10, 10, 0.7] }
     expect(eraseStroke(dot, { x: 0, y: 0 }, { x: 0, y: 0 }, 13)).toEqual([])
     expect(eraseStroke(dot, { x: 0, y: 0 }, { x: 0, y: 0 }, 5)).toBeNull()
+  })
+
+  it('la gomma a linea intera: basta toccare un punto della linea, anche passandoci in mezzo veloce', () => {
+    const s = line(0, 100)
+    // Tocca solo la fine della riga, di sbieco.
+    expect(strokeTouched(s, { x: 99, y: 8 }, { x: 99, y: 8 }, 8)).toBe(true)
+    // Passa in mezzo a due punti lontani: conta il segmento.
+    const fast: Stroke = { ...s, points: [0, 0, 0.5, 100, 0, 0.5] }
+    expect(strokeTouched(fast, { x: 50, y: -40 }, { x: 50, y: 40 }, 2)).toBe(true)
+    // Lontano: niente.
+    expect(strokeTouched(s, { x: 0, y: 30 }, { x: 100, y: 30 }, 8)).toBe(false)
+    // Un puntino si tocca dove sta.
+    const dot: Stroke = { ...s, points: [10, 10, 0.5] }
+    expect(strokeTouched(dot, { x: 14, y: 10 }, { x: 14, y: 10 }, 4)).toBe(true)
+    expect(strokeTouched(dot, { x: 30, y: 10 }, { x: 30, y: 10 }, 4)).toBe(false)
+  })
+
+  it('la gomma dove passa cresce con la velocità: lenta com\'è, veloce fino a tre volte', () => {
+    expect(eraserGrowth(0)).toBe(1)
+    expect(eraserGrowth(0.3)).toBe(1)
+    expect(eraserGrowth(0.9)).toBeCloseTo(2)
+    expect(eraserGrowth(1.5)).toBe(3)
+    expect(eraserGrowth(10)).toBe(3)
+  })
+
+  it('i pezzi di un evidenziatore restano evidenziatore', () => {
+    const s: Stroke = { ...line(0, 100), color: 'yellow', size: 18, highlight: true }
+    const rest = piecesOf(s, eraseStroke(s, { x: 50, y: -40 }, { x: 50, y: 40 }, 9)!)
+    expect(rest).toHaveLength(2)
+    expect(rest.every((p) => p.highlight === true && p.color === 'yellow' && p.size === 18)).toBe(true)
+    expect(piecesOf(line(0, 100), [[0, 0, 0.5, 10, 0, 0.5]])[0]).not.toHaveProperty('highlight')
   })
 
   it('i pezzi tengono colore, spessore, penna e momento del tratto, con id nuovi', () => {

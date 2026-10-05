@@ -1,5 +1,5 @@
 import { getStroke, type StrokeOptions } from 'perfect-freehand'
-import type { InkColor, Stroke } from './strokes'
+import type { HighlightColor, InkColor, Stroke } from './strokes'
 
 /**
  * Come si disegnano i tratti della lavagna: il contorno lo calcola perfect-freehand (lo spessore
@@ -15,22 +15,30 @@ export interface BoardPalette {
   /** I quadretti, appena visibili. */
   grid: string
   ink: Record<InkColor, string>
+  /** Gli evidenziatori, disegnati trasparenti (`highlightAlpha`) sotto la scrittura. */
+  highlight: Record<HighlightColor, string>
+  highlightAlpha: number
 }
 
 /**
  * Lo sfondo è quello del testo (--pane-editor); nel tema scuro la lavagna è scura e si scrive in
- * chiaro, come col gesso. Ogni colore si legge sullo sfondo (contrasto almeno 4,5, vedi i test).
+ * chiaro, come col gesso. Ogni colore si legge sullo sfondo (contrasto almeno 4,5, vedi i test). Gli
+ * evidenziatori si vedono sulla carta e la scrittura sopra si legge (vedi i test).
  */
 export const BOARD_PALETTES: Record<BoardTheme, BoardPalette> = {
   light: {
     paper: '#ffffff',
     grid: '#e9ecf3',
     ink: { ink: '#1c2030', blue: '#2453d4', red: '#cf2337', green: '#15803d' },
+    highlight: { yellow: '#fcc419', green: '#51cf66', pink: '#f06595', blue: '#4dabf7' },
+    highlightAlpha: 0.45,
   },
   dark: {
     paper: '#181b24',
     grid: '#232836',
     ink: { ink: '#e8eaf1', blue: '#86aaff', red: '#ff8a8f', green: '#5fd38c' },
+    highlight: { yellow: '#ffe066', green: '#63e6be', pink: '#faa2c1', blue: '#a5d8ff' },
+    highlightAlpha: 0.3,
   },
 }
 
@@ -40,10 +48,28 @@ export function inkName(color: InkColor, theme: BoardTheme): string {
   return { blue: 'Blu', red: 'Rosso', green: 'Verde' }[color]
 }
 
+/** Il nome del colore di un evidenziatore. */
+export function highlightName(color: HighlightColor): string {
+  return { yellow: 'Giallo', green: 'Verde', pink: 'Rosa', blue: 'Azzurro' }[color]
+}
+
 /** Lo spessore di partenza della penna, in unità della lavagna. */
 export const PEN_SIZE = 3.2
 
-export function strokeOptions(s: Pick<Stroke, 'size' | 'pen'>, last: boolean): StrokeOptions {
+/**
+ * Le tre misure di ogni strumento: lo spessore di penna ed evidenziatore in unità della lavagna, il
+ * raggio della gomma in pixel dello schermo (la gomma «dove passa» si allarga anche con la velocità).
+ */
+export const TOOL_SIZES = {
+  pen: [2, PEN_SIZE, 5.5],
+  highlight: [10, 18, 28],
+  eraser: [6, 11, 20],
+} as const
+export type SizeChoice = 0 | 1 | 2
+
+export function strokeOptions(s: Pick<Stroke, 'size' | 'pen' | 'highlight'>, last: boolean): StrokeOptions {
+  // L'evidenziatore è spesso uguale dall'inizio alla fine, e più morbido.
+  if (s.highlight) return { size: s.size, thinning: 0, smoothing: 0.6, streamline: 0.45, simulatePressure: false, start: { cap: true }, end: { cap: true }, last }
   return {
     size: s.size,
     // Con la penna la pressione conta un po' di più; col dito e col mouse la si simula.
@@ -59,7 +85,7 @@ export function strokeOptions(s: Pick<Stroke, 'size' | 'pen'>, last: boolean): S
 }
 
 /** Il contorno del tratto (un poligono), come coppie [x, y]. `last`: il tratto è finito. */
-export function strokeOutline(s: Pick<Stroke, 'points' | 'size' | 'pen'>, last = true): number[][] {
+export function strokeOutline(s: Pick<Stroke, 'points' | 'size' | 'pen' | 'highlight'>, last = true): number[][] {
   const input: number[][] = []
   for (let i = 0; i + 2 < s.points.length; i += 3) input.push([s.points[i], s.points[i + 1], s.points[i + 2]])
   return input.length ? getStroke(input, strokeOptions(s, last)) : []

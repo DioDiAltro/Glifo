@@ -1,19 +1,23 @@
 import { readJson, writeJson } from '../store/storage'
 import { h, icon, ICONS } from '../ui/dom'
 import { appleTouch } from './device'
-import { BOARD_PALETTES, inkName, outlineSvg, PEN_SIZE, strokeOutline, type BoardTheme } from './ink'
+import { BOARD_PALETTES, highlightName, inkName, outlineSvg, strokeOutline, TOOL_SIZES, type BoardTheme, type SizeChoice } from './ink'
 import type { BoardChange, BoardStore, BoardView } from './store'
 import { touchLog, where } from './touchlog'
 import {
   boxesTouch,
   compareStrokes,
+  eraserGrowth,
   eraseStroke,
+  HIGHLIGHT_COLORS,
   INK_COLORS,
   newStrokeId,
   piecesOf,
   roundPoints,
   strokeBox,
+  strokeTouched,
   type Box,
+  type HighlightColor,
   type InkColor,
   type Pt,
   type Stroke,
@@ -23,6 +27,9 @@ import {
  * La lavagna: si scrive a mano accanto al testo (o a tutto schermo), con la penna, il dito o il
  * mouse. Una per nota, salvata su questo dispositivo (store.ts); non va nella nota.
  *
+ * - Strumenti, come in Microsoft Whiteboard: la penna, l'evidenziatore (trasparente, sotto la
+ *   scrittura) e la gomma, che cancella dove passa (e si allarga se la si muove veloce) o tocca una
+ *   linea e la cancella tutta. Ognuno ha tre misure e ricorda colore, misura e modo (`PREFS_KEY`).
  * - Penna: lo spessore segue la pressione. Appena si usa una penna, Glifo se lo ricorda: da lì un
  *   dito solo non fa niente (è quasi sempre la mano appoggiata), due dita spostano e ingrandiscono.
  *   La mano che tocca mentre si scrive, o appena dopo, non conta: né sulla lavagna né sui pulsanti.
@@ -41,7 +48,9 @@ export interface BoardOptions {
   openLog?(): void
 }
 
-type Tool = 'pen' | 'eraser'
+type Tool = 'pen' | 'highlight' | 'eraser'
+/** La gomma cancella dove passa («area») o tutta la linea che tocca («stroke»). */
+type EraserMode = 'area' | 'stroke'
 
 /** Un passo da annullare o ripetere: i tratti che ha tolto e quelli che ha messo. */
 interface Step {
@@ -69,6 +78,13 @@ interface EraseAction {
   /** I tratti che c'erano prima e sono stati tolti (o tagliati), e quelli nuovi rimasti. */
   removed: Map<string, Stroke>
   added: Map<string, Stroke>
+  mode: EraserMode
+  /** Dov'era sullo schermo, quando (ms) e quanto andava veloce: la gomma «dove passa» si allarga. */
+  screen: Pt
+  time: number
+  speed: number
+  /** Il raggio di adesso, in pixel dello schermo. */
+  radius: number
 }
 
 interface PanAction {
@@ -100,8 +116,6 @@ interface Finger extends Pt {
   ignored: boolean
 }
 
-/** Raggio della gomma sullo schermo, in pixel. */
-export const ERASER_RADIUS = 11
 const ZOOM_MIN = 0.25
 const ZOOM_MAX = 6
 const HISTORY_MAX = 300
@@ -125,6 +139,7 @@ const ICON = {
   full: '<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>',
   exitFull: '<path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/>',
   minus: '<path d="M5 12h14"/>',
+  highlight: '<path d="M13.5 3.5l7 7-6 6-7-7z"/><path d="M7.5 9.5l-3 6.5 3.5 3.5 6.5-3"/><path d="M3 21h9"/>',
   rec: '<circle cx="12" cy="12" r="6" fill="currentColor" stroke="none"/>',
 }
 
@@ -160,13 +175,30 @@ function penErases(ev: PointerEvent): boolean {
 
 interface Prefs {
   pen?: boolean
+  /** Il colore della penna. */
   color?: InkColor
+  /** Il colore dell'evidenziatore. */
+  highlight?: HighlightColor
+  /** La misura scelta per ogni strumento (0, 1 o 2: vedi TOOL_SIZES). */
+  sizes?: Partial<Record<Tool, SizeChoice>>
+  eraser?: EraserMode
 }
 
 function loadPrefs(): Prefs {
   const raw = readJson<unknown>(PREFS_KEY, {})
   return typeof raw === 'object' && raw !== null ? (raw as Prefs) : {}
 }
+
+const sizeChoice = (v: unknown): SizeChoice => (v === 0 || v === 1 || v === 2 ? v : 1)
+
+/** Le misure a parole: spessori per penna ed evidenziatore, grandezze per la gomma. */
+const SIZE_NAMES: Record<Tool, readonly string[]> = {
+  pen: ['fine', 'media', 'spessa'],
+  highlight: ['fine', 'medio', 'largo'],
+  eraser: ['piccola', 'media', 'grande'],
+}
+const TOOL_NAMES: Record<Tool, string> = { pen: 'penna', highlight: 'evidenziatore', eraser: 'gomma' }
+const MODE_NAMES: Record<EraserMode, string> = { area: 'Dove passa', stroke: 'Linea intera' }
 
 export class Board {
   readonly el: HTMLElement
@@ -177,6 +209,15 @@ export class Board {
   private readonly liveCtx: CanvasRenderingContext2D
   private readonly toolButtons = new Map<Tool, HTMLButtonElement>()
   private readonly colorButtons = new Map<InkColor, HTMLButtonElement>()
+  private readonly highlightButtons = new Map<HighlightColor, HTMLButtonElement>()
+  /** I colori della penna, quelli dell'evidenziatore e il modo della gomma: si vede quello dello strumento scelto. */
+  private readonly inkGroup: HTMLElement
+  private readonly highlightGroup: HTMLElement
+  private readonly modeButton: HTMLButtonElement
+  /** La misura dello strumento: un pallino grande come il tratto; apre il menu. */
+  private readonly sizeButton: HTMLButtonElement
+  /** Il menu aperto (misure, modo della gomma), se c'è. */
+  private menu: HTMLElement | null = null
   private readonly undoButton: HTMLButtonElement
   private readonly redoButton: HTMLButtonElement
   private readonly clearButton: HTMLButtonElement
@@ -198,6 +239,9 @@ export class Board {
   private theme: BoardTheme = 'light'
   private tool: Tool = 'pen'
   private color: InkColor
+  private highlightColor: HighlightColor
+  private readonly sizes: Record<Tool, SizeChoice>
+  private eraserMode: EraserMode
   private penMode: boolean
   private action: Action | null = null
   private readonly touches = new Map<number, Finger>()
@@ -230,6 +274,10 @@ export class Board {
     const prefs = loadPrefs()
     this.penMode = prefs.pen === true
     this.color = INK_COLORS.includes(prefs.color as InkColor) ? (prefs.color as InkColor) : 'ink'
+    this.highlightColor = HIGHLIGHT_COLORS.includes(prefs.highlight as HighlightColor) ? (prefs.highlight as HighlightColor) : 'yellow'
+    const sizes = typeof prefs.sizes === 'object' && prefs.sizes !== null ? prefs.sizes : {}
+    this.sizes = { pen: sizeChoice(sizes.pen), highlight: sizeChoice(sizes.highlight), eraser: sizeChoice(sizes.eraser) }
+    this.eraserMode = prefs.eraser === 'stroke' ? 'stroke' : 'area'
 
     this.canvas = h('canvas', { class: 'board-canvas', attrs: { 'aria-hidden': 'true' } })
     this.live = h('canvas', { class: 'board-live', attrs: { 'aria-hidden': 'true' } })
@@ -252,8 +300,9 @@ export class Board {
 
     const button = (label: string, paths: string, onClick: () => void, title = label) =>
       h('button', { class: 'board-button', title, attrs: { type: 'button', 'aria-label': label }, on: { click: onClick } }, icon(paths, 18))
+    // Lo strumento già scelto, premuto di nuovo, apre le sue misure (come in Microsoft Whiteboard).
     const toolButton = (tool: Tool, label: string, paths: string, title: string) => {
-      const b = button(label, paths, () => this.setTool(tool), title)
+      const b = button(label, paths, () => (this.tool === tool ? this.toggleMenu(b) : this.setTool(tool)), title)
       b.setAttribute('aria-pressed', 'false')
       this.toolButtons.set(tool, b)
       return b
@@ -268,6 +317,30 @@ export class Board {
       this.colorButtons.set(c, b)
       return b
     })
+    const highlights = HIGHLIGHT_COLORS.map((c) => {
+      const b = h(
+        'button',
+        { class: 'board-color is-highlight', attrs: { type: 'button', 'aria-pressed': 'false' }, data: { highlight: c }, on: { click: () => this.setHighlightColor(c) } },
+        h('span', { class: 'board-swatch' }),
+      )
+      b.title = highlightName(c)
+      b.setAttribute('aria-label', `Evidenziatore ${highlightName(c).toLowerCase()}`)
+      this.highlightButtons.set(c, b)
+      return b
+    })
+    this.inkGroup = h('div', { class: 'board-colors', attrs: { role: 'group', 'aria-label': 'Colore della penna' } }, colors)
+    this.highlightGroup = h('div', { class: 'board-colors', attrs: { role: 'group', 'aria-label': 'Colore dell\'evidenziatore' } }, highlights)
+    this.modeButton = h(
+      'button',
+      { class: 'board-mode', attrs: { type: 'button', 'aria-haspopup': 'true' }, on: { click: () => this.toggleMenu(this.modeButton) } },
+      h('span', { class: 'board-mode-label' }),
+      icon(ICONS.chevronDown, 14),
+    )
+    this.sizeButton = h(
+      'button',
+      { class: 'board-button board-size', attrs: { type: 'button', 'aria-haspopup': 'true' }, on: { click: () => this.toggleMenu(this.sizeButton) } },
+      h('span', { class: 'board-size-dot' }),
+    )
     // Il pulsante premuto si spegne quando non c'è più niente da annullare: il fuoco torna alla
     // lavagna, così Ctrl+Z e Ctrl+Y continuano a funzionare.
     this.undoButton = button('Annulla', ICON.undo, () => (this.undo(), this.focus()), 'Annulla (Ctrl+Z)')
@@ -290,10 +363,14 @@ export class Board {
     const tools = h(
       'div',
       { class: 'board-tools', attrs: { role: 'toolbar', 'aria-label': 'Strumenti della lavagna' } },
-      toolButton('pen', 'Penna', ICON.pen, 'Penna'),
-      toolButton('eraser', 'Gomma', ICON.eraser, 'Gomma: cancella dove passa'),
+      toolButton('pen', 'Penna', ICON.pen, 'Penna (premuta di nuovo: lo spessore)'),
+      toolButton('highlight', 'Evidenziatore', ICON.highlight, 'Evidenziatore: trasparente, sotto la scrittura'),
+      toolButton('eraser', 'Gomma', ICON.eraser, 'Gomma (premuta di nuovo: come cancella e quanto è grande)'),
       sep(),
-      h('div', { class: 'board-colors', attrs: { role: 'group', 'aria-label': 'Colore' } }, colors),
+      this.inkGroup,
+      this.highlightGroup,
+      this.modeButton,
+      this.sizeButton,
       sep(),
       this.clearButton,
       this.fullButton,
@@ -396,9 +473,19 @@ export class Board {
     })
     void opts.store.persistent().then((p) => (this.persistent = p))
 
+    // Il menu delle misure si chiude toccando fuori, con Esc o scegliendo.
+    document.addEventListener(
+      'pointerdown',
+      (ev) => {
+        if (this.menu && !this.menu.contains(ev.target as Node) && !(ev.target as Element).closest?.('.board-size, .board-mode, .board-tools .board-button[aria-pressed="true"]')) this.closeMenu()
+      },
+      true,
+    )
+
     if (this.penMode) this.el.dataset.pen = 'true'
     this.setTool('pen')
     this.setColor(this.color, false)
+    this.setHighlightColor(this.highlightColor, false)
     this.updateState()
   }
 
@@ -454,6 +541,8 @@ export class Board {
       b.setAttribute('aria-label', name)
       b.style.setProperty('--swatch', palette.ink[c])
     }
+    for (const [c, b] of this.highlightButtons) b.style.setProperty('--swatch', palette.highlight[c])
+    this.updateToolUi()
     this.render()
     this.renderLive()
   }
@@ -499,26 +588,151 @@ export class Board {
   // ——— Strumenti ———
 
   private setTool(tool: Tool): void {
-    if (tool !== this.tool) touchLog.add(`strumento: ${tool === 'pen' ? 'penna' : 'gomma'}`)
+    if (tool !== this.tool) touchLog.add(`strumento: ${TOOL_NAMES[tool]}`)
     this.tool = tool
     this.el.dataset.tool = tool
     for (const [t, b] of this.toolButtons) b.setAttribute('aria-pressed', String(t === tool))
-    if (tool === 'pen') this.cursor = null
+    if (tool !== 'eraser') this.cursor = null
+    this.closeMenu()
+    this.updateToolUi()
     this.scheduleLive()
   }
 
   private setColor(color: InkColor, pickPen = true): void {
-    if (color !== this.color) touchLog.add(`colore: ${inkName(color, this.theme).toLowerCase()}`)
+    if (color !== this.color) touchLog.add(`colore della penna: ${inkName(color, this.theme).toLowerCase()}`)
     this.color = color
     for (const [c, b] of this.colorButtons) b.setAttribute('aria-pressed', String(c === color))
     if (pickPen) {
       this.setTool('pen')
       this.savePrefs({ color })
     }
+    this.updateToolUi()
+  }
+
+  private setHighlightColor(color: HighlightColor, pick = true): void {
+    if (color !== this.highlightColor) touchLog.add(`colore dell'evidenziatore: ${highlightName(color).toLowerCase()}`)
+    this.highlightColor = color
+    for (const [c, b] of this.highlightButtons) b.setAttribute('aria-pressed', String(c === color))
+    if (pick) {
+      this.setTool('highlight')
+      this.savePrefs({ highlight: color })
+    }
+    this.updateToolUi()
+  }
+
+  private setSize(tool: Tool, choice: SizeChoice): void {
+    touchLog.add(`misura ${TOOL_NAMES[tool] === 'gomma' ? 'della gomma' : `dell${tool === 'pen' ? 'a penna' : "'evidenziatore"}`}: ${SIZE_NAMES[tool][choice]}`)
+    this.sizes[tool] = choice
+    this.savePrefs({ sizes: { ...this.sizes } })
+    this.updateToolUi()
+    this.scheduleLive()
+  }
+
+  private setEraserMode(mode: EraserMode): void {
+    touchLog.add(`gomma: ${MODE_NAMES[mode].toLowerCase()}`)
+    this.eraserMode = mode
+    this.savePrefs({ eraser: mode })
+    this.updateToolUi()
+    this.scheduleLive()
+  }
+
+  /** I pulsanti dello strumento scelto: i colori della penna o dell'evidenziatore, o il modo della gomma; e la misura. */
+  private updateToolUi(): void {
+    if (!this.sizeButton) return
+    const tool = this.tool
+    this.inkGroup.hidden = tool !== 'pen'
+    this.highlightGroup.hidden = tool !== 'highlight'
+    this.modeButton.hidden = tool !== 'eraser'
+    this.modeButton.querySelector('.board-mode-label')!.textContent = MODE_NAMES[this.eraserMode]
+    this.modeButton.title = `Gomma: ${MODE_NAMES[this.eraserMode].toLowerCase()} (cambia il modo e la grandezza)`
+    this.modeButton.setAttribute('aria-label', this.modeButton.title)
+    const name = SIZE_NAMES[tool][this.sizes[tool]]
+    const label = tool === 'eraser' ? `Grandezza della gomma: ${name}` : `Spessore ${tool === 'pen' ? 'della penna' : "dell'evidenziatore"}: ${name}`
+    this.sizeButton.title = label
+    this.sizeButton.setAttribute('aria-label', label)
+    const palette = BOARD_PALETTES[this.theme]
+    this.sizeButton.style.setProperty('--dot', `${[7, 11, 16][this.sizes[tool]]}px`)
+    this.sizeButton.style.setProperty('--swatch', tool === 'pen' ? palette.ink[this.color] : tool === 'highlight' ? palette.highlight[this.highlightColor] : 'transparent')
+    this.sizeButton.classList.toggle('is-eraser', tool === 'eraser')
+    if (this.menu) this.openMenu(this.menu.dataset.for === 'mode' ? this.modeButton : this.sizeButton)
+  }
+
+  // ——— Il menu delle misure (e del modo della gomma) ———
+
+  private toggleMenu(anchor: HTMLElement): void {
+    if (this.menu) return this.closeMenu()
+    this.openMenu(anchor)
+  }
+
+  private closeMenu(): void {
+    this.menu?.remove()
+    this.menu = null
+  }
+
+  /** Il menu sotto il pulsante: le tre misure dello strumento e, per la gomma, come cancella. */
+  private openMenu(anchor: HTMLElement): void {
+    this.menu?.remove()
+    const tool = this.tool
+    const option = (label: string, pressed: boolean, pick: () => void, extra?: Node) =>
+      h(
+        'button',
+        {
+          class: 'board-menu-option',
+          attrs: { type: 'button', 'aria-pressed': String(pressed) },
+          on: {
+            click: () => {
+              pick()
+              this.closeMenu()
+              this.focus()
+            },
+          },
+        },
+        extra ?? null,
+        h('span', {}, label),
+      )
+    const parts: Node[] = []
+    if (tool === 'eraser') {
+      parts.push(
+        h('p', { class: 'board-menu-title' }, 'Come cancella'),
+        option(`${MODE_NAMES.area}: cancella solo dove passa, e se la muovi veloce si allarga`, this.eraserMode === 'area', () => this.setEraserMode('area')),
+        option(`${MODE_NAMES.stroke}: tocca una linea e la cancella tutta`, this.eraserMode === 'stroke', () => this.setEraserMode('stroke')),
+      )
+    }
+    parts.push(h('p', { class: 'board-menu-title' }, tool === 'eraser' ? 'Grandezza' : 'Spessore'))
+    const sizes = h('div', { class: 'board-menu-sizes' })
+    for (const choice of [0, 1, 2] as SizeChoice[]) {
+      const dot = h('span', { class: 'board-size-dot' })
+      dot.style.setProperty('--dot', `${[7, 11, 16][choice]}px`)
+      sizes.append(option(SIZE_NAMES[tool][choice], this.sizes[tool] === choice, () => this.setSize(tool, choice), dot))
+    }
+    parts.push(sizes)
+    const menu = h('div', { class: `board-menu${tool === 'eraser' ? ' is-eraser' : ''}`, attrs: { role: 'group', 'aria-label': tool === 'eraser' ? 'Gomma' : `Spessore ${tool === 'pen' ? 'della penna' : "dell'evidenziatore"}` } }, parts)
+    menu.dataset.for = anchor === this.modeButton ? 'mode' : 'size'
+    menu.style.setProperty('--swatch', this.sizeButton.style.getPropertyValue('--swatch'))
+    menu.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'Escape') return
+      ev.stopPropagation()
+      this.closeMenu()
+      anchor.focus()
+    })
+    this.el.append(menu)
+    this.menu = menu
+    // Sotto il pulsante, dentro la lavagna.
+    const pane = this.el.getBoundingClientRect()
+    const at = anchor.getBoundingClientRect()
+    const width = menu.offsetWidth
+    const left = Math.max(8, Math.min(pane.width - width - 8, at.left + at.width / 2 - pane.left - width / 2))
+    menu.style.left = `${left}px`
+    menu.style.top = `${at.bottom - pane.top + 8}px`
   }
 
   private savePrefs(changes: Prefs): void {
     writeJson(PREFS_KEY, { ...loadPrefs(), ...changes })
+  }
+
+  /** Che cosa fa lo strumento, per il registro dei tocchi. */
+  private verb(tool: Tool): string {
+    return tool === 'pen' ? 'scrive' : tool === 'highlight' ? 'evidenzia' : `cancella (${MODE_NAMES[this.eraserMode].toLowerCase()})`
   }
 
   /** La penna sta scrivendo, o si è appena alzata: un tocco adesso è la mano che si appoggia. */
@@ -578,7 +792,7 @@ export class Board {
       if (this.action) return void touchLog.add(`→ penna ignorata: c'è già ${ACTION_NAMES[this.action.kind]}`)
       this.capture(ev)
       const tool = penErases(ev) ? 'eraser' : this.tool
-      touchLog.add(`→ penna: ${tool === 'pen' ? 'scrive' : penErases(ev) ? 'cancella (gomma della penna)' : 'cancella'}`)
+      touchLog.add(`→ penna: ${this.verb(tool)}${penErases(ev) ? ' (gomma della penna)' : ''}`)
       return this.startTool(ev, pos, tool)
     }
     if (this.action) return void touchLog.add(`→ ${ev.pointerType} ignorato: c'è già ${ACTION_NAMES[this.action.kind]}`)
@@ -588,7 +802,7 @@ export class Board {
       this.startPan(ev.pointerId, ev.pointerType, pos)
     } else if (ev.button === 0) {
       this.capture(ev)
-      touchLog.add(`→ ${ev.pointerType}: ${this.tool === 'pen' ? 'scrive' : 'cancella'}`)
+      touchLog.add(`→ ${ev.pointerType}: ${this.verb(this.tool)}`)
       this.startTool(ev, pos, this.tool)
     }
   }
@@ -608,7 +822,7 @@ export class Board {
       this.capture(ev)
       // Con la penna un dito solo non fa niente: è quasi sempre il palmo. Si sposta con due dita.
       if (this.penMode) return void touchLog.add('→ un dito solo con la penna: non fa niente')
-      touchLog.add(`→ un dito: ${this.tool === 'pen' ? 'scrive' : 'cancella'}`)
+      touchLog.add(`→ un dito: ${this.verb(this.tool)}`)
       this.startTool(ev, pos, this.tool)
     } else if (active.length === 2) {
       if (a && a.type !== 'touch') return void touchLog.add(`→ secondo dito ignorato: c'è già ${ACTION_NAMES[a.kind]} (${a.type})`)
@@ -645,7 +859,7 @@ export class Board {
       for (const e of coalesced(ev)) this.drawTo(a, this.local(e, rect), e)
       this.scheduleLive()
     } else if (a.kind === 'erase') {
-      for (const e of coalesced(ev)) this.eraseTo(a, this.world(this.local(e, rect)))
+      for (const e of coalesced(ev)) this.eraseTo(a, this.local(e, rect), e.timeStamp)
       this.cursor = this.local(ev, rect)
       this.scheduleLive()
     } else {
@@ -728,17 +942,40 @@ export class Board {
   // ——— Scrivere ———
 
   private startTool(ev: PointerEvent, pos: Pt, tool: Tool): void {
+    this.closeMenu()
     const w = this.world(pos)
     if (tool === 'eraser') {
-      const a: EraseAction = { kind: 'erase', pointer: ev.pointerId, type: ev.pointerType, last: w, removed: new Map(), added: new Map() }
+      const radius = TOOL_SIZES.eraser[this.sizes.eraser]
+      const a: EraseAction = {
+        kind: 'erase',
+        pointer: ev.pointerId,
+        type: ev.pointerType,
+        last: w,
+        removed: new Map(),
+        added: new Map(),
+        mode: this.eraserMode,
+        screen: pos,
+        time: ev.timeStamp,
+        speed: 0,
+        radius,
+      }
       this.action = a
       this.cursor = pos
-      this.eraseTo(a, w)
+      this.eraseTo(a, pos, ev.timeStamp)
       this.scheduleLive()
       return
     }
     const pen = ev.pointerType === 'pen'
-    const stroke: Stroke = { id: newStrokeId(), t: Date.now(), color: this.color, size: PEN_SIZE, pen, points: [w.x, w.y, pressureOf(ev, pen)] }
+    const highlight = tool === 'highlight'
+    const stroke: Stroke = {
+      id: newStrokeId(),
+      t: Date.now(),
+      color: highlight ? this.highlightColor : this.color,
+      size: TOOL_SIZES[highlight ? 'highlight' : 'pen'][this.sizes[highlight ? 'highlight' : 'pen']],
+      pen,
+      points: [w.x, w.y, pressureOf(ev, pen)],
+      ...(highlight ? { highlight: true } : {}),
+    }
     this.action = { kind: 'draw', pointer: ev.pointerId, type: ev.pointerType, stroke, started: performance.now(), travel: 0, last: pos }
     this.scheduleLive()
   }
@@ -770,8 +1007,17 @@ export class Board {
     this.ended()
   }
 
-  private eraseTo(a: EraseAction, p: Pt): void {
-    const r = ERASER_RADIUS / this.view.zoom
+  /** La gomma arriva in `pos` (sullo schermo) all'istante `time`: cancella lungo la strada fatta. */
+  private eraseTo(a: EraseAction, pos: Pt, time: number): void {
+    // Dove passa si allarga con la velocità (media degli ultimi movimenti, per non tremare).
+    const speed = Math.hypot(pos.x - a.screen.x, pos.y - a.screen.y) / Math.max(1, time - a.time)
+    a.speed = a.speed * 0.7 + speed * 0.3
+    a.screen = pos
+    a.time = time
+    const base = TOOL_SIZES.eraser[this.sizes.eraser]
+    a.radius = a.mode === 'area' ? base * eraserGrowth(a.speed) : base
+    const p = this.world(pos)
+    const r = a.radius / this.view.zoom
     const reach: Box = {
       minX: Math.min(a.last.x, p.x) - r,
       minY: Math.min(a.last.y, p.y) - r,
@@ -781,6 +1027,14 @@ export class Board {
     let changed = false
     for (const s of [...this.strokes.values()]) {
       if (!boxesTouch(this.boxOf(s), reach)) continue
+      // Linea intera: basta toccarla, e va via tutta.
+      if (a.mode === 'stroke') {
+        if (!strokeTouched(s, a.last, p, r)) continue
+        changed = true
+        this.removeStrokes([s.id])
+        a.removed.set(s.id, s)
+        continue
+      }
       const pieces = eraseStroke(s, a.last, p, r)
       if (!pieces) continue
       changed = true
@@ -1149,18 +1403,28 @@ export class Board {
     this.applyView(ctx)
     const { x, y, zoom } = this.view
     const visible: Box = { minX: x, minY: y, maxX: x + this.size.w / zoom, maxY: y + this.size.h / zoom }
-    for (const s of this.sorted()) {
-      if (!boxesTouch(this.boxOf(s), visible)) continue
-      ctx.fillStyle = palette.ink[s.color]
+    const shown = this.sorted().filter((s) => boxesTouch(this.boxOf(s), visible))
+    // Prima gli evidenziatori, trasparenti: la scrittura resta sopra, anche quella fatta prima.
+    ctx.globalAlpha = palette.highlightAlpha
+    for (const s of shown) {
+      if (!s.highlight) continue
+      ctx.fillStyle = palette.highlight[s.color as HighlightColor]
+      ctx.fill(this.pathOf(s))
+    }
+    ctx.globalAlpha = 1
+    for (const s of shown) {
+      if (s.highlight) continue
+      ctx.fillStyle = palette.ink[s.color as InkColor]
       ctx.fill(this.pathOf(s))
     }
   }
 
-  /** Un tratto appena finito, sopra gli altri: non serve ridisegnare tutto. */
+  /** Un tratto appena finito, sopra gli altri: non serve ridisegnare tutto (l'evidenziatore va sotto, quindi sì). */
   private paint(s: Stroke): void {
     if (!this.size.w || !this.size.h) return
+    if (s.highlight) return this.render()
     this.applyView(this.ctx)
-    this.ctx.fillStyle = BOARD_PALETTES[this.theme].ink[s.color]
+    this.ctx.fillStyle = BOARD_PALETTES[this.theme].ink[s.color as InkColor]
     this.ctx.fill(this.pathOf(s))
   }
 
@@ -1201,19 +1465,26 @@ export class Board {
       const d = outlineSvg(strokeOutline(a.stroke, false))
       if (d) {
         this.applyView(ctx)
-        ctx.fillStyle = palette.ink[a.stroke.color]
+        const s = a.stroke
+        ctx.globalAlpha = s.highlight ? palette.highlightAlpha : 1
+        ctx.fillStyle = s.highlight ? palette.highlight[s.color as HighlightColor] : palette.ink[s.color as InkColor]
         ctx.fill(new Path2D(d))
+        ctx.globalAlpha = 1
       }
     }
     if (this.cursor) {
+      // Il cerchio della gomma, grande com'è adesso; tratteggiato quando cancella le linee intere.
+      const radius = a?.kind === 'erase' ? a.radius : TOOL_SIZES.eraser[this.sizes.eraser]
       ctx.setTransform(this.size.dpr, 0, 0, this.size.dpr, 0, 0)
       ctx.beginPath()
-      ctx.arc(this.cursor.x, this.cursor.y, ERASER_RADIUS, 0, 2 * Math.PI)
+      ctx.arc(this.cursor.x, this.cursor.y, radius, 0, 2 * Math.PI)
       ctx.fillStyle = this.theme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(28, 32, 48, 0.06)'
       ctx.fill()
       ctx.lineWidth = 1.25
       ctx.strokeStyle = this.theme === 'dark' ? 'rgba(232, 234, 241, 0.7)' : 'rgba(28, 32, 48, 0.55)'
+      ctx.setLineDash(this.eraserMode === 'stroke' ? [3, 3] : [])
       ctx.stroke()
+      ctx.setLineDash([])
     }
   }
 }

@@ -3943,6 +3943,109 @@ kbd {
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.14);
 }
 
+/* Gli evidenziatori: campioni squadrati, come la punta. */
+.board-color.is-highlight .board-swatch {
+  width: 20px;
+  height: 13px;
+  border-radius: 4px;
+}
+
+/* La gomma: il modo («Dove passa», «Linea intera») è scritto, e apre il menu. */
+.board-mode {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  height: 34px;
+  padding: 0 8px 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.board-mode:hover {
+  background: var(--surface-2);
+}
+
+/* La misura dello strumento: un pallino grande come il tratto, del suo colore (vuoto per la gomma). */
+.board-size-dot {
+  display: block;
+  width: var(--dot, 11px);
+  height: var(--dot, 11px);
+  border-radius: 50%;
+  background: var(--swatch, var(--muted));
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.14);
+}
+
+.board-size.is-eraser .board-size-dot,
+.board-menu.is-eraser .board-size-dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--muted);
+}
+
+/* Il menu delle misure (e del modo della gomma), sotto il pulsante. */
+.board-menu {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: max-content;
+  max-width: min(320px, calc(100% - 16px));
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.board-menu-title {
+  margin: 6px 8px 2px;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.board-menu-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.board-menu-option:hover {
+  background: var(--surface-2);
+}
+
+.board-menu-option[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.board-menu-sizes {
+  display: flex;
+  gap: 4px;
+}
+
+.board-menu-sizes .board-menu-option {
+  flex: 1;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 64px;
+  height: 60px;
+}
+
 /* Il registro dei tocchi sta registrando (src/board/touchlog.ts): il pallino rosso lo apre. */
 .board-button.board-log,
 .board-button.board-log:hover {

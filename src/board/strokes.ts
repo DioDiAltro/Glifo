@@ -7,6 +7,9 @@
 /** I colori della lavagna: nomi e non codici, così ogni tema ha i suoi (vedi ink.ts). */
 export type InkColor = 'ink' | 'blue' | 'red' | 'green'
 export const INK_COLORS: readonly InkColor[] = ['ink', 'blue', 'red', 'green']
+/** I colori degli evidenziatori (anche questi con i codici di ogni tema in ink.ts). */
+export type HighlightColor = 'yellow' | 'green' | 'pink' | 'blue'
+export const HIGHLIGHT_COLORS: readonly HighlightColor[] = ['yellow', 'green', 'pink', 'blue']
 
 export interface Stroke {
   id: string
@@ -15,13 +18,16 @@ export interface Stroke {
    * a metà tengono il suo, così restano sotto quelli scritti dopo.
    */
   t: number
-  color: InkColor
+  /** Un colore di INK_COLORS, o di HIGHLIGHT_COLORS per l'evidenziatore. */
+  color: InkColor | HighlightColor
   /** Lo spessore (il diametro con la pressione a metà), in unità della lavagna. */
   size: number
   /** true: la pressione è quella della penna; false (dito, mouse): la si simula dalla velocità. */
   pen: boolean
   /** x, y e pressione (da 0 a 1) di ogni punto, uno dopo l'altro. */
   points: number[]
+  /** Evidenziatore: trasparente, sempre sotto la scrittura, spesso uguale dall'inizio alla fine. */
+  highlight?: boolean
 }
 
 export interface Box {
@@ -196,9 +202,31 @@ export function eraseStroke(s: Stroke, e0: Pt, e1: Pt, r: number): number[][] | 
   return pieces.filter((p) => p.length >= 6 && pieceLength(p) >= s.size)
 }
 
-/** I nuovi tratti fatti con i pezzi rimasti: stesso colore, spessore e momento. */
+/** I nuovi tratti fatti con i pezzi rimasti: stesso colore, spessore e momento (e, se lo era, evidenziatore). */
 export function piecesOf(s: Stroke, pieces: number[][], newId: () => string = newStrokeId): Stroke[] {
-  return pieces.map((points) => ({ id: newId(), t: s.t, color: s.color, size: s.size, pen: s.pen, points }))
+  return pieces.map((points) => ({ id: newId(), t: s.t, color: s.color, size: s.size, pen: s.pen, points, ...(s.highlight ? { highlight: true } : {}) }))
+}
+
+/**
+ * La gomma «a linea intera»: se la gomma (un cerchio di raggio `r` che va da e0 a e1) tocca il
+ * tratto anche in un punto solo, va via tutto.
+ */
+export function strokeTouched(s: Stroke, e0: Pt, e1: Pt, r: number): boolean {
+  const pts = s.points
+  const n = Math.floor(pts.length / 3)
+  if (!n) return false
+  const reach = r + s.size / 2
+  if (n === 1) return segmentDistance(point(pts, 0), e0, e1) < reach
+  for (let i = 0; i < n - 1; i++) if (capsuleSpan(point(pts, i), point(pts, i + 1), e0, e1, reach)) return true
+  return false
+}
+
+/**
+ * La gomma «dove passa» si allarga quando la si muove veloce, come in Microsoft Whiteboard: ferma o
+ * lenta è com'è, poi cresce fino a tre volte. `speed` in pixel dello schermo al millisecondo.
+ */
+export function eraserGrowth(speed: number): number {
+  return 1 + Math.min(2, Math.max(0, (speed - 0.3) / 0.6))
 }
 
 /** Arrotonda i numeri di un tratto (due decimali le coordinate, tre la pressione): pesa meno da salvare. */

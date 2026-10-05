@@ -113,6 +113,22 @@ describe('lavagna: il salvataggio in IndexedDB', () => {
     expect(await new MemoryBoards().notes()).toEqual([])
   })
 
+  it('l\'evidenziatore si salva, si rilegge e va nel backup', async () => {
+    const boards = storeFor()
+    await boards.change('n1', { put: [stroke('h', { color: 'yellow', size: 18, highlight: true }), stroke('p')] })
+    const back = await boards.load('n1')
+    expect(back.strokes.find((s) => s.id === 'h')).toMatchObject({ color: 'yellow', size: 18, highlight: true })
+    expect(back.strokes.find((s) => s.id === 'p')).not.toHaveProperty('highlight')
+    const backup = JSON.parse(JSON.stringify(await boards.exportBoards(['n1'])))
+    expect(backup[0].strokes.map((s: { highlight?: boolean }) => s.highlight ?? false).sort()).toEqual([false, true])
+    let n = 0
+    await boards.importBoard('rifatta', backup[0], () => `id${++n}`)
+    expect((await boards.load('rifatta')).strokes.filter((s) => s.highlight).map((s) => s.color)).toEqual(['yellow'])
+    // Un evidenziatore con un colore che non c'è diventa giallo; una penna con un colore da evidenziatore, nera.
+    expect(fromRecord({ id: 'x', color: 'nero', highlight: true, points: [1, 2, 0.5] })).toMatchObject({ color: 'yellow', highlight: true })
+    expect(fromRecord({ id: 'y', color: 'pink', points: [1, 2, 0.5] })).toMatchObject({ color: 'ink' })
+  })
+
   it('un tratto salvato male si sistema o si scarta', () => {
     expect(fromRecord({ id: 'a', t: 'x', color: 'viola', size: -1, pen: 'sì', points: [1, 2, 0.5, 3] })).toEqual({
       id: 'a',
