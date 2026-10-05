@@ -58,6 +58,9 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
    gratis e conversione nei piani a pagamento. Lo studente la proverà sull'iPad di un amico (ha anche
    una tavoletta grafica senza schermo). Le cose dell'AI restano salvate per dopo: c'entrano con la
    chiave API. Niente codice finché non lo dice lo studente; poi si parte dalla lavagna base.
+10. **I modelli e le chiavi** (5 ottobre 2026). Lo studente propone un piccolo modello aperto (come
+    Qwen), le chiavi di qualsiasi servizio e chiede chi paga le chiavi. Claude dà il suo parere:
+    vedi «I modelli e le chiavi API».
 
 ## La proposta dello studente (4 ottobre 2026)
 
@@ -376,6 +379,87 @@ se si vuole, si aggiungono alla nota con un pulsante («Aggiungi alla nota»).
 - Riconoscere un simbolo senza internet (come Detexify, già tra le idee della ROADMAP), il testo
   scritto a mano, il tutor che guarda la lavagna e dice dove si è sbagliato.
 
+## I modelli e le chiavi API
+
+### Le idee dello studente (5 ottobre 2026)
+
+1. Un piccolo modello aperto (*open weight*), come Qwen, per le spiegazioni, e forse per la
+   conversione della lavagna. Non sarà bravo come i modelli di punta: per questo resta la
+   possibilità di mettere la propria chiave.
+2. Non solo la chiave di Anthropic: quella di qualsiasi servizio (Anthropic, OpenAI, Gemini…).
+3. Chi paga le chiavi: le paga Glifo e le dà a chi paga il piano, o ognuno ha la sua e la paga a
+   parte? Chi paga Relativistico deve pagare anche una chiave?
+
+### Il parere di Claude (niente di deciso)
+
+**Il modello aperto piccolo: sì, come parte economica, non come unica AI.**
+
+- Dove può girare:
+  - nel browser di chi usa Glifo (WebGPU, per esempio con WebLLM): gratis per Glifo, privato e anche
+    offline; ma un modello da 4 miliardi di parametri sono più di 2 GB da scaricare, va bene solo su
+    computer con una buona scheda grafica e su iPad non è ancora affidabile;
+  - su un servizio che fa girare i modelli aperti, come Cloudflare Workers AI (ha i Qwen e 10.000
+    «neuroni» gratis al giorno, poi costa poco): è la strada più adatta, anche perché il sito andrà
+    su Cloudflare e lì può stare anche il piccolo server per l'AI;
+  - su un server con le GPU tutto nostro: costa anche quando nessuno lo usa; per ora no (è la parte
+    «data center» del sogno).
+- La qualità: i Qwen piccoli (da 4 a 9 miliardi di parametri, con il ragionamento acceso) sono tra i
+  migliori per la matematica, ma sbagliano più dei modelli di punta, usano peggio gli strumenti e
+  scrivono peggio in italiano. Il motore di Glifo cambia le cose: ogni conto sbagliato viene fermato,
+  quindi anche un modello piccolo diventa usabile; resta più lento (più tentativi) e spiega meno bene.
+- Per la lavagna serve un'altra cosa: un modello fatto apposta per le formule, come TexTeller
+  (aperto, 300 milioni di parametri, riconosce anche la scrittura a mano). È abbastanza piccolo da
+  provare a farlo girare nel browser o su un server economico; va provato sulla scrittura vera. Se
+  costasse quasi niente, qualche conversione potrebbe stare anche in Classico, come assaggio.
+- Le licenze: molti Qwen hanno la licenza Apache 2.0, che permette l'uso in un servizio a pagamento;
+  va controllato modello per modello.
+
+**La chiave di qualsiasi servizio: sì.**
+
+- Quasi tutti i servizi parlano la stessa «lingua», quella di OpenAI: OpenAI, Gemini, OpenRouter (con
+  una chiave sola centinaia di modelli, anche i Qwen), Groq, Mistral, DeepSeek, e anche i modelli sul
+  proprio computer (Ollama, LM Studio). Con Anthropic, che ha la sua, bastano due «lingue» per quasi
+  tutto. Oggi nelle impostazioni ci sono già la chiave e l'indirizzo di un server proxy: si allarga.
+- Gemini ha un piano gratuito senza carta di credito: uno studente può farsi una chiave gratis in
+  Google AI Studio e usare l'AI di Glifo senza pagare nessuno.
+- Ogni modello però si comporta a modo suo, e il tutor e la lavagna chiedono modelli che sappiano
+  usare gli strumenti e leggere le immagini: Glifo indica i modelli provati, gli altri si usano a
+  proprio rischio, e si vede sempre quale modello ha risposto.
+- Con la propria chiave il testo va dal browser direttamente al servizio scelto, senza passare da
+  Glifo: va scritto nell'informativa.
+
+**Chi paga le chiavi.**
+
+- Chi paga Relativistico **non paga anche una chiave**: l'AI è inclusa. Glifo ha la sua chiave, la
+  tiene sul suo server, paga il servizio, e il prezzo del piano copre il costo (per questo ci sono i
+  tetti). Fanno così tutte le app: si paga l'app, non il servizio di AI.
+- La chiave di Glifo **non si dà mai a nessuno**: chi l'ha può usarla per qualsiasi cosa, e il conto
+  arriva a Glifo. Il server la usa al posto degli utenti e conta le domande di ognuno; sul servizio
+  si mette un tetto di spesa al mese, così un errore non svuota il conto.
+- La propria chiave è una cosa in più, per chi vuole: in Classico al posto dell'AI di Glifo, nei
+  piani a pagamento quando il tetto del mese è finito. Quasi nessuno la userà, ed è giusto così.
+
+| | Classico | Relativistico | Quantistico |
+|---|---|---|---|
+| L'AI di Glifo (la paga Glifo) | un assaggio con il modello piccolo | inclusa con il tetto: il modello piccolo per le cose facili, uno di punta per il resto | inclusa con il tetto più alto, un modello di punta |
+| La propria chiave (la paga chi la mette) | sì | sì, quando il tetto è finito | sì, quando il tetto è finito |
+
+Il modello piccolo per le cose facili e quello di punta per il resto: si prova prima il piccolo e, se
+i suoi passaggi non passano i controlli del motore, la domanda va a quello di punta. Va misurato: a
+volte costa di più, perché il lavoro si rifà. Quale modello di punta (Claude, GPT, Gemini) si sceglie
+provandoli sugli esercizi veri.
+
+**Il legame con il sogno**: è il primo passo verso «l'AI di Glifo» senza data center: modelli aperti
+più il motore di Glifo e, più avanti, un modello aperto addestrato apposta per i compiti di Glifo
+(con i dati solo di chi dà il consenso).
+
+### Da decidere
+
+- se questa divisione va bene;
+- dove far girare il modello piccolo (proposta: Cloudflare Workers AI);
+- quali servizi accettare all'inizio per la propria chiave (proposta: Anthropic e quelli che parlano
+  la «lingua» di OpenAI, provando Gemini, OpenRouter e Ollama).
+
 ## Quanto costano a Glifo le cose a pagamento
 
 Prezzi dell'API di Claude per milione di token (ingresso / uscita): Haiku 4.5 1 $ / 5 $, Sonnet 5.5
@@ -491,9 +575,10 @@ ricerca, i piani per università e dipartimenti.
 ## Da approfondire
 
 - **La lavagna base**: si costruisce quando lo dice lo studente (vedi «La lavagna»).
-- **Un'idea dello studente**, da raccontare (5 ottobre 2026).
-- **La chiave API**: lo studente vuole parlarne (5 ottobre 2026). Le cose dell'AI aspettano questa
-  discussione.
+- **Un'idea dello studente** (5 ottobre 2026): forse è quella del modello aperto piccolo, da
+  confermare.
+- **La chiave API**: in discussione dal 5 ottobre 2026 (vedi «I modelli e le chiavi API»). Le cose
+  dell'AI aspettano questa discussione.
 - **Le spiegazioni**: da quale argomento partire (vedi «Le spiegazioni, come funzionano», in
   fondo). In sospeso dal 5 ottobre 2026: si riprende più avanti.
 - **L'SQL**: in Relativistico, come nella proposta, o resta gratis?
@@ -516,3 +601,9 @@ ricerca, i piani per università e dipartimenti.
   [contributi INPS 2026](https://www.taxmanapp.it/blog/2026/02/17/inps-2026-contributi-per-gestione-separata-artigiani-e-commercianti-aliquote-e-minimali/).
 - Trascrizione: [prezzi delle API di trascrizione](https://www.buildmvpfast.com/api-costs/transcription).
 - API di Claude: i prezzi della documentazione di Anthropic (settembre 2026).
+- Modelli aperti e chiavi (controllati il 5 ottobre 2026):
+  [modelli aperti da far girare in locale](https://huggingface.co/blog/daya-shankar/open-source-llm-models-to-run-locally),
+  [prezzi di Cloudflare Workers AI](https://developers.cloudflare.com/workers-ai/platform/pricing/),
+  [TexTeller](https://github.com/OleehyO/TexTeller),
+  [piano gratuito di Gemini](https://tinkerllm.com/blog/gemini-api-free-tier-limits-rate-quotas/),
+  [modelli nel browser con WebGPU](https://pinggy.io/blog/run_llm_in_browser_webgpu/).
