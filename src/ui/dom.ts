@@ -74,6 +74,7 @@ export const ICONS = {
   split: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/>',
   eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
   panel: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/>',
+  board: '<rect x="3" y="3.5" width="18" height="13" rx="2"/><path d="M6.5 12.5c1.3-2.8 2.6-3.6 3.5-1.7s2 1.4 3-.6 2.4-1.9 3.5.4"/><path d="M9 21l1.4-4.5M15 21l-1.4-4.5"/>',
   bold: '<path d="M7 5h6a3.5 3.5 0 0 1 0 7H7zM7 12h7a3.5 3.5 0 0 1 0 7H7z"/>',
   italic: '<path d="M10 5h8M6 19h8M14 5l-4 14"/>',
   strike: '<path d="M4 12h16M16 6.5A4 4 0 0 0 12 5c-2.5 0-4 1.3-4 3 0 1.3.8 2.3 2.5 3M8 17.5c.8 1 2.2 1.5 4 1.5 2.5 0 4-1.3 4-3 0-.6-.1-1.1-.4-1.5"/>',

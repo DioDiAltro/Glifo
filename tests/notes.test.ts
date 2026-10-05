@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { NotesStore } from '../src/store/notes'
+import { noteIdsInBrowser, NotesStore } from '../src/store/notes'
 
 beforeEach(() => localStorage.clear())
 afterEach(() => {
@@ -108,6 +108,16 @@ describe('chiavi delle note', () => {
     expect(account.ownsKey(`glifo.u.123.note.v1.${nota.id}`)).toBe(true)
     expect(ospite.ownsKey(`glifo.u.123.note.v1.${nota.id}`)).toBe(false)
     expect(account.ownsKey('glifo.note.v1.abc')).toBe(false)
+  })
+
+  it('le note di tutto il browser, con e senza account: le lavagne senza nota si tolgono', () => {
+    const ospite = new NotesStore().create('# Di questo browser')
+    const account = new NotesStore({ space: 'u.123.' }).create('# Dell\'account')
+    const altro = new NotesStore({ space: 'u.456.' }).create('# Di un altro account')
+    localStorage.setItem('glifo.settings.v1', '{}')
+    expect([...noteIdsInBrowser()].sort()).toEqual([ospite.id, account.id, altro.id].sort())
+    new NotesStore({ space: 'u.123.' }).remove(account.id)
+    expect(noteIdsInBrowser().has(account.id)).toBe(false)
   })
 })
 

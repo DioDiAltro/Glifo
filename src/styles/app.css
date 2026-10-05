@@ -347,7 +347,8 @@ kbd {
   min-height: 0;
 }
 
-.app[data-view='split'] .content {
+.app[data-view='split'] .content,
+.app[data-view='board'] .content {
   min-width: 440px;
 }
 
@@ -379,6 +380,12 @@ kbd {
 .float-bar[data-fit='medium'] .symbols-toggle-label,
 .float-bar[data-fit='narrow'] .symbols-toggle-label {
   display: none;
+}
+
+/* Solo le icone: le quattro viste stanno strette (BAR.pill.icons in main.ts). */
+.float-bar[data-fit='medium'] .view-button,
+.float-bar[data-fit='narrow'] .view-button {
+  padding: 0 7px;
 }
 
 .float-bar .view-switch,
@@ -511,7 +518,8 @@ kbd {
 /* Nella vista divisa testo e anteprima si dividono il posto come si è scelto trascinando il
    bordo tra i due (--split-grow, in millesimi). */
 .app[data-view='split'] .editor-pane,
-.app[data-view='split'] .preview-pane {
+.app[data-view='split'] .preview-pane,
+.app[data-view='board'] .editor-pane {
   flex-grow: var(--split-grow, 1);
 }
 
@@ -532,7 +540,8 @@ kbd {
 }
 
 .app[data-view='editor'] .preview-pane,
-.app[data-view='preview'] .editor-pane {
+.app[data-view='preview'] .editor-pane,
+.app[data-view='board'] .preview-pane {
   display: none;
 }
 
@@ -3759,6 +3768,7 @@ kbd {
 
 .app.notes-open .resize-notes,
 .app[data-view='split'] .resize-split,
+.app[data-view='board'] .resize-split,
 .app.symbols-open .resize-symbols {
   display: block;
 }
@@ -3768,6 +3778,201 @@ kbd {
 :root.is-resizing * {
   cursor: ew-resize !important;
   user-select: none;
+}
+
+/* ——— La lavagna (src/board): accanto al testo, al posto dell'anteprima ——— */
+
+.board-pane {
+  position: relative;
+  display: none;
+  flex: 1 1 0;
+  /* Come PANE_MIN in src/ui/resize.ts. */
+  min-width: 220px;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--pane-editor);
+  border-left: 1px solid var(--border);
+  /* Come nell'anteprima, la fascia dei pulsanti volanti è un bordo: lì non si scrive. */
+  border-top: var(--float-h) solid var(--pane-editor);
+}
+
+.app[data-view='board'] .board-pane {
+  display: block;
+  flex-grow: var(--split-grow, 1);
+}
+
+/* Dove si scrive: le dita e la penna non fanno scorrere né ingrandire la pagina, e tenendo premuto
+   non si seleziona niente. */
+.board-stage {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  cursor: crosshair;
+  outline: none;
+}
+
+.board-stage:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+/* La gomma è il cerchio disegnato sulla lavagna. */
+.board-pane[data-tool='eraser'] .board-stage {
+  cursor: none;
+}
+
+.board-stage.is-grab {
+  cursor: grab;
+}
+
+.board-stage.is-panning {
+  cursor: grabbing;
+}
+
+.board-canvas,
+.board-live {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.board-tools,
+.board-history,
+.board-zoom {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(20, 24, 40, 0.08);
+  touch-action: manipulation;
+}
+
+/* Gli strumenti in alto al centro; se non c'è posto scorrono. */
+.board-tools {
+  top: 10px;
+  left: 50%;
+  max-width: calc(100% - 20px);
+  transform: translateX(-50%);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.board-tools::-webkit-scrollbar {
+  display: none;
+}
+
+.board-button,
+.board-color,
+.board-zoom-level {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.board-button {
+  width: 34px;
+}
+
+.board-color {
+  width: 30px;
+}
+
+.board-button:hover,
+.board-color:hover,
+.board-zoom-level:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.board-button[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.board-button:disabled {
+  opacity: 0.38;
+  pointer-events: none;
+}
+
+.board-colors {
+  display: flex;
+  gap: 1px;
+}
+
+/* Il colore (--swatch) lo mette la lavagna, secondo il tema. */
+.board-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--swatch);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.14);
+}
+
+.board-color[aria-pressed='true'] .board-swatch {
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--swatch);
+}
+
+.board-sep {
+  flex: none;
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: var(--border);
+}
+
+/* In basso: a sinistra annulla e ripeti; a destra rimpicciolisci, quanto è ingrandita (un clic: la
+   vista di partenza), ingrandisci. */
+.board-history,
+.board-zoom {
+  bottom: 12px;
+  padding: 3px;
+  border-radius: 10px;
+}
+
+.board-history {
+  left: 12px;
+}
+
+.board-zoom {
+  right: 12px;
+}
+
+.board-history .board-button,
+.board-zoom .board-button {
+  width: 32px;
+  height: 32px;
+}
+
+.board-zoom-level {
+  min-width: 50px;
+  height: 32px;
+  padding: 0 4px;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A tutto schermo: la lavagna copre la finestra (e lo schermo, se il browser lo permette). */
+.board-pane.is-full {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  display: block;
+  border: 0;
 }
 
 /* ——— Notifiche ——— */
@@ -3955,6 +4160,7 @@ kbd {
   }
 
   .app[data-view='split'] .resize-split,
+  .app[data-view='board'] .resize-split,
   .app.symbols-open .resize-symbols {
     display: none;
   }
@@ -3971,8 +4177,23 @@ kbd {
     display: none;
   }
 
-  .app[data-view='split'] .content {
+  .app[data-view='split'] .content,
+  .app[data-view='board'] .content {
     min-width: 220px;
+  }
+
+  /* Sul telefono (e sul tablet in verticale) la lavagna prende tutto il posto del testo. */
+  .app[data-view='board'] .editor-pane,
+  .app[data-view='board'] .editor-toolbar {
+    display: none;
+  }
+
+  .app[data-view='board'] .board-pane {
+    border-left: 0;
+  }
+
+  .view-button {
+    padding: 0 7px;
   }
 
   .view-button[aria-label='Diviso'],
@@ -4018,6 +4239,7 @@ kbd {
   .notes-panel,
   .symbols-panel,
   .editor-pane,
+  .board-pane,
   .resize-handle,
   .backdrop,
   .tutorial-hint,

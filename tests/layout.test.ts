@@ -80,7 +80,7 @@ describe('spostando un bordo', () => {
 
 describe('i bordi tra le sezioni', () => {
   /** Le sezioni con le larghezze che avrebbero sulla pagina (jsdom non le calcola). */
-  function setup(widths: Record<keyof ResizableParts, number>, sizes: PaneSizes = loadPaneSizes()) {
+  function setup(widths: Record<Exclude<keyof ResizableParts, 'board'>, number> & { board?: number }, sizes: PaneSizes = loadPaneSizes()) {
     const section = (width: number) => {
       const el = document.createElement('section')
       el.getBoundingClientRect = () => ({ width }) as DOMRect
@@ -90,6 +90,7 @@ describe('i bordi tra le sezioni', () => {
       notes: section(widths.notes),
       editor: section(widths.editor),
       preview: section(widths.preview),
+      board: widths.board === undefined ? undefined : section(widths.board),
       symbols: section(widths.symbols),
     }
     const save = vi.fn()
@@ -150,6 +151,23 @@ describe('i bordi tra le sezioni', () => {
     expect(style(parts.editor, '--split-grow')).toBe('600')
     expect(style(parts.preview, '--split-grow')).toBe('400')
     expect(save).toHaveBeenCalledExactlyOnceWith({ editorShare: 0.6 })
+  })
+
+  it('nella vista con la lavagna il bordo divide il testo e la lavagna', () => {
+    // L'anteprima è nascosta (larga zero): accanto al testo c'è la lavagna.
+    const { parts, save, resizer } = setup({ notes: 250, editor: 500, preview: 0, board: 500, symbols: 348 })
+    expect(resizer.splitHandle.getAttribute('aria-label')).toBe('Divisione tra testo e lavagna')
+    drag(resizer.splitHandle, 500, 600)
+    expect(style(parts.editor, '--split-grow')).toBe('600')
+    expect(style(parts.board!, '--split-grow')).toBe('400')
+    expect(save).toHaveBeenCalledExactlyOnceWith({ editorShare: 0.6 })
+    expect(resizer.splitHandle.getAttribute('aria-valuetext')).toBe('testo 60%, lavagna 40%')
+    // Si torna all'anteprima: il bordo lo dice.
+    parts.preview.getBoundingClientRect = () => ({ width: 400 }) as DOMRect
+    parts.board!.getBoundingClientRect = () => ({ width: 0 }) as DOMRect
+    resizer.refresh()
+    expect(resizer.splitHandle.getAttribute('aria-label')).toBe('Divisione tra testo e anteprima')
+    expect(resizer.splitHandle.getAttribute('aria-valuetext')).toBe('testo 60%, anteprima 40%')
   })
 
   it('allargando un pannello testo e anteprima restano larghi almeno PANE_MIN', () => {

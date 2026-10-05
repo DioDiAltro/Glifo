@@ -71,8 +71,10 @@ export function guestNoteCount(welcome: string): number {
 /**
  * Porta nell'account gli appunti di questo browser, con le loro cartelle: da qui in poi si
  * sincronizzano, e fuori dall'account non restano. Restituisce quante note ha portato.
+ * `renamed`: una nota ha dovuto cambiare id (quelle di prima delle cartelle non hanno un UUID),
+ * così la sua lavagna la segue.
  */
-export function adoptGuestNotes(userId: string, welcome: string): number {
+export function adoptGuestNotes(userId: string, welcome: string, renamed?: (from: string, to: string) => void): number {
   const guest = new NotesStore()
   const guestFolders = new FoldersStore()
   const { notes, folders } = accountSpace(userId)
@@ -97,6 +99,7 @@ export function adoptGuestNotes(userId: string, welcome: string): number {
     })
     // La nota aperta resta aperta, se nell'account non ce n'era già una.
     if (meta.id === activeId && !notes.activeId) notes.activeId = id
+    if (id !== note.id) renamed?.(note.id, id)
     guest.remove(note.id)
     moved++
   }

@@ -52,12 +52,16 @@ describe('portare gli appunti di questo browser nell\'account', () => {
     const vecchioId = Date.UTC(2026, 3, 1).toString(36) + 'abcd1234'
     localStorage.setItem('glifo.note.v1.' + vecchioId, '# Nota di aprile')
     new NotesStore().activeId = vecchioId
-    adoptGuestNotes('u1', WELCOME)
+    const nuova = new NotesStore().create('# Nota di oggi')
+    const renamed: [string, string][] = []
+    adoptGuestNotes('u1', WELCOME, (from, to) => renamed.push([from, to]))
     const { notes } = accountSpace('u1')
-    const [nota] = notes.list()
-    expect(nota.title).toBe('Nota di aprile')
+    const nota = notes.list().find((n) => n.title === 'Nota di aprile')!
     expect(isUuid(nota.id)).toBe(true)
     expect(notes.activeId).toBe(nota.id)
+    // Lo sa chi tiene le lavagne, che vanno con la nota; quella con un UUID resta com'è.
+    expect(renamed).toEqual([[vecchioId, nota.id]])
+    expect(notes.get(nuova.id)?.title).toBe('Nota di oggi')
   })
 
   it('una cartella con lo stesso nome di una dell\'account diventa quella', () => {

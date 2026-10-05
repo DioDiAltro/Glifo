@@ -1579,6 +1579,292 @@ try {
   check(test.includes('non si rifiuta H₀'), `un test d'ipotesi ha il p-value e la decisione, con la regione di rifiuto nel pannello (${JSON.stringify(test.slice(0, 50))})`)
   await gp.close()
 
+  // La lavagna: accanto al testo al posto dell'anteprima, una per nota, salvata su questo
+  // dispositivo. Penna e dita sono simulate come le manda il browser (Chrome DevTools Protocol):
+  // pointerType «pen» con la pressione, e i tocchi delle dita. Tutto in un blocco: i nomi restano qui.
+  {
+    const lb = await browser.newContext({ viewport: { width: 1440, height: 900 }, hasTouch: true })
+    const lp = await lb.newPage()
+    lp.on('pageerror', (e) => errors.push(e.message))
+    await lp.goto(url)
+    await lp.waitForSelector('.cm-editor')
+    await lp.locator('.notes-head button[aria-label="Nuova nota"]').click()
+    await lp.keyboard.type('Lavagna di prova')
+    await lp.locator('.view-button[aria-label="Lavagna"]').click()
+    await lp.waitForSelector('.board-pane[data-loaded="true"]')
+    const cdp = await lb.newCDPSession(lp)
+    const boardPane = lp.locator('.board-pane')
+    const strokeCount = async () => Number(await boardPane.getAttribute('data-strokes'))
+    const stage = await lp.locator('.board-stage').boundingBox()
+    /** Un tratto con la penna (o il mouse): punti [x, y, pressione] sulla pagina. */
+    const penStroke = async (points, { pointerType = 'pen', button = 'left' } = {}) => {
+      const buttons = button === 'right' ? 2 : 1
+      const send = (type, [x, y, force], pressed = true) =>
+        cdp.send('Input.dispatchMouseEvent', { type, x, y, button, buttons: pressed ? buttons : 0, clickCount: 1, pointerType, force })
+      await send('mousePressed', points[0])
+      for (const p of points.slice(1)) await send('mouseMoved', p)
+      await send('mouseReleased', points.at(-1), false)
+    }
+    const touch = (type, points) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points.map(([x, y], i) => ({ x, y, id: i + 1 })) })
+    /** Una riga orizzontale sulla lavagna, a `dy` pixel dall'alto, con la pressione `p`. */
+    const row = (dy, p, from = 40, to = 300) => Array.from({ length: 14 }, (_, i) => [stage.x + from + ((to - from) * i) / 13, stage.y + dy, p])
+    /** Il colore della lavagna in un punto della pagina. */
+    const inkAt = (x, y) =>
+      lp.evaluate(([x, y]) => {
+        const c = document.querySelector('.board-canvas')
+        const r = c.getBoundingClientRect()
+        const k = c.width / r.width
+        const d = c.getContext('2d').getImageData(Math.round((x - r.left) * k), Math.round((y - r.top) * k), 1, 1).data
+        return d[0] + d[1] + d[2]
+      }, [x, y])
+    /** I tratti salvati in IndexedDB per una nota: colore, penna e pressioni. */
+    const savedStrokes = (page, note) =>
+      page.evaluate(
+        (note) =>
+          new Promise((resolve, reject) => {
+            const open = indexedDB.open('glifo-lavagne')
+            open.onerror = () => reject(open.error)
+            open.onsuccess = () => {
+              const db = open.result
+              const req = db.transaction('strokes', 'readonly').objectStore('strokes').getAll(IDBKeyRange.bound([note], [note, []]))
+              req.onerror = () => reject(req.error)
+              req.onsuccess = () => {
+                db.close()
+                resolve(req.result.map((r) => ({ color: r.color, pen: r.pen, pressures: Array.from(r.points).filter((_, i) => i % 3 === 2) })))
+              }
+            }
+          }),
+        note,
+      )
+    const boardLayout = await lp.evaluate(() => {
+      const box = (s) => document.querySelector(s)?.getBoundingClientRect()
+      const editor = box('.editor-pane')
+      const board = box('.board-pane')
+      const inside = (el) => {
+        const r = el.getBoundingClientRect()
+        return r.left >= board.left - 1 && r.right <= board.right + 1 && r.top >= board.top - 1 && r.bottom <= board.bottom + 1
+      }
+      return {
+        side: editor.width > 200 && board.width > 200 && Math.abs(editor.right - board.left) < 2,
+        noPreview: getComputedStyle(document.querySelector('.preview-pane')).display === 'none',
+        handle: getComputedStyle(document.querySelector('.resize-split')).display !== 'none',
+        handleLabel: document.querySelector('.resize-split').getAttribute('aria-label'),
+        // Gli strumenti stanno dentro la lavagna, sotto la fascia dei pulsanti volanti.
+        tools: [...document.querySelectorAll('.board-tools, .board-history, .board-zoom')].every(inside) && box('.board-tools').top >= box('.float-bar').bottom,
+        fit: document.querySelector('.float-bar').dataset.fit,
+        checked: document.querySelector('.view-button[aria-checked="true"]').getAttribute('aria-label'),
+        focus: document.activeElement === document.querySelector('.board-stage'),
+      }
+    })
+    check(
+      boardLayout.side && boardLayout.noPreview && boardLayout.handle && boardLayout.handleLabel === 'Divisione tra testo e lavagna' && boardLayout.tools && boardLayout.fit === 'medium' && boardLayout.checked === 'Lavagna' && boardLayout.focus,
+      `la vista «Lavagna» la apre accanto al testo, al posto dell'anteprima, con il bordo per allargarla (${JSON.stringify(boardLayout)})`,
+    )
+    // Con la penna lo spessore segue la pressione: piano una riga sottile, forte una spessa.
+    await penStroke(row(140, 0.15))
+    await penStroke(row(200, 0.95))
+    const note1 = await boardPane.getAttribute('data-note')
+    const saved1 = await savedStrokes(lp, note1)
+    const thick = async (dy) => {
+      let n = 0
+      for (let y = dy - 6; y <= dy + 6; y += 0.5) if ((await inkAt(stage.x + 170, stage.y + y)) < 400) n++
+      return n
+    }
+    const [thin, strong] = [await thick(140), await thick(200)]
+    check(
+      (await strokeCount()) === 2 &&
+        saved1.length === 2 &&
+        saved1.every((s) => s.pen && s.color === 'ink') &&
+        saved1.some((s) => Math.max(...s.pressures) < 0.3) &&
+        saved1.some((s) => Math.min(...s.pressures) > 0.85) &&
+        strong > thin * 1.5 &&
+        thin > 0,
+      `la penna scrive, con la pressione: piano sottile, forte spesso; i tratti sono salvati nel browser (${JSON.stringify({ thin, strong, saved: saved1.map((s) => [s.pen, s.pressures.length]) })})`,
+    )
+    // Un colore; la gomma taglia le righe dove passa (col mouse, e con la gomma della penna).
+    await lp.locator('.board-color[data-color="red"]').click()
+    await penStroke(row(260, 0.5))
+    await lp.locator('.board-button[aria-label="Gomma"]').click()
+    await penStroke(Array.from({ length: 8 }, (_, i) => [stage.x + 120, stage.y + 110 + i * 15, 0.5]), { pointerType: 'mouse' })
+    const afterErase = await strokeCount()
+    await lp.locator('.board-button[aria-label="Penna"]').click()
+    // La penna col tasto laterale cancella, anche con la penna scelta.
+    await penStroke(Array.from({ length: 8 }, (_, i) => [stage.x + 240, stage.y + 230 + i * 8, 0.5]), { button: 'right' })
+    const colors = (await savedStrokes(lp, note1)).map((s) => s.color).sort()
+    check(
+      afterErase === 5 &&
+        (await strokeCount()) === 6 &&
+        colors.join() === 'ink,ink,ink,ink,red,red' &&
+        (await inkAt(stage.x + 120, stage.y + 140)) > 600 &&
+        (await inkAt(stage.x + 80, stage.y + 140)) < 400 &&
+        (await inkAt(stage.x + 160, stage.y + 140)) < 400,
+      `la gomma cancella dove passa e taglia le righe in due, anche quella in fondo alla penna; il rosso resta rosso (${JSON.stringify({ afterErase, colors })})`,
+    )
+    // Annulla e Ripeti, con i pulsanti e da tastiera (spento il pulsante, il fuoco resta sulla lavagna).
+    const undoBtn = lp.locator('.board-button[aria-label="Annulla"]')
+    for (let i = 0; i < 5; i++) await undoBtn.click()
+    const allUndone = await strokeCount()
+    await lp.keyboard.press('Control+Y')
+    const redoOne = await strokeCount()
+    await lp.keyboard.press('Control+Shift+Z')
+    const redoTwo = await strokeCount()
+    await lp.keyboard.press('Control+Z')
+    check(
+      allUndone === 0 && redoOne === 1 && redoTwo === 2 && (await strokeCount()) === 1 && (await undoBtn.isEnabled()),
+      `Annulla e Ripeti, anche con Ctrl+Z, Ctrl+Y e Ctrl+Maiusc+Z (${JSON.stringify({ allUndone, redoOne, redoTwo })})`,
+    )
+    for (let i = 0; i < 4; i++) await lp.keyboard.press('Control+Y')
+    const drawn = await strokeCount()
+    // Pulisci, con la conferma; Ctrl+Z la riporta.
+    await lp.locator('.board-button[aria-label="Pulisci la lavagna"]').click()
+    await lp.locator('dialog .btn-danger', { hasText: 'Pulisci' }).click()
+    await lp.waitForFunction(() => document.querySelector('.board-pane').dataset.strokes === '0', null, { timeout: 3000 }).catch(() => {})
+    const cleared = await strokeCount()
+    await lp.keyboard.press('Control+Z')
+    check(drawn === 6 && cleared === 0 && (await strokeCount()) === 6, `«Pulisci» chiede conferma e cancella tutto; Ctrl+Z lo fa tornare (${JSON.stringify({ drawn, cleared })})`)
+    // Con la penna vista, un dito sposta la lavagna (non scrive) e due dita la ingrandiscono.
+    const inkBefore = await inkAt(stage.x + 80, stage.y + 140)
+    await touch('touchStart', [[stage.x + 200, stage.y + 400]])
+    for (let i = 1; i <= 8; i++) await touch('touchMove', [[stage.x + 200, stage.y + 400 + i * 10]])
+    await touch('touchEnd', [])
+    await lp.waitForTimeout(100)
+    const moved = { strokes: await strokeCount(), before: inkBefore, there: await inkAt(stage.x + 80, stage.y + 140), below: await inkAt(stage.x + 80, stage.y + 220) }
+    await touch('touchStart', [[stage.x + 150, stage.y + 500]])
+    await touch('touchStart', [[stage.x + 150, stage.y + 500], [stage.x + 250, stage.y + 500]])
+    for (let i = 1; i <= 8; i++) await touch('touchMove', [[stage.x + 150 - i * 6, stage.y + 500], [stage.x + 250 + i * 6, stage.y + 500]])
+    await touch('touchEnd', [])
+    await lp.waitForTimeout(100)
+    const zoomed = await lp.locator('.board-zoom-level').textContent()
+    check(
+      moved.strokes === 6 && moved.before < 400 && moved.there > 600 && moved.below < 400 && Number.parseInt(zoomed) > 150 && (await strokeCount()) === 6,
+      `con la penna, un dito sposta la lavagna e due dita la ingrandiscono, senza scrivere (${JSON.stringify({ moved, zoomed })})`,
+    )
+    // Il palmo appoggiato mentre si scrive con la penna non scrive e non sposta niente.
+    await lp.locator('.board-zoom-level').click()
+    await lp.waitForTimeout(100)
+    const beforePalm = await inkAt(stage.x + 80, stage.y + 140)
+    await penStroke(row(320, 0.5).slice(0, 2))
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: stage.x + 40, y: stage.y + 360, button: 'left', buttons: 1, clickCount: 1, pointerType: 'pen', force: 0.5 })
+    await touch('touchStart', [[stage.x + 250, stage.y + 450]])
+    for (let i = 1; i <= 6; i++) {
+      await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: stage.x + 40 + i * 20, y: stage.y + 360, button: 'left', buttons: 1, pointerType: 'pen', force: 0.5 })
+      await touch('touchMove', [[stage.x + 250 + i * 15, stage.y + 450 + i * 10]])
+    }
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: stage.x + 160, y: stage.y + 360, button: 'left', buttons: 0, clickCount: 1, pointerType: 'pen', force: 0 })
+    for (let i = 1; i <= 4; i++) await touch('touchMove', [[stage.x + 340 + i * 10, stage.y + 510]])
+    await touch('touchEnd', [])
+    await lp.waitForTimeout(100)
+    const palm = { strokes: await strokeCount(), beforePalm, after: await inkAt(stage.x + 80, stage.y + 140), zoom: await lp.locator('.board-zoom-level').textContent() }
+    check(
+      palm.strokes === 8 && palm.beforePalm < 400 && palm.after < 400 && palm.zoom === '100%',
+      `il palmo appoggiato mentre si scrive con la penna non scrive e non sposta la lavagna (${JSON.stringify(palm)})`,
+    )
+    // Ogni nota ha la sua lavagna: in un'altra nota è vuota, tornando c'è ancora.
+    await lp.locator('.notes-head button[aria-label="Nuova nota"]').click()
+    await lp.waitForSelector('.board-pane[data-loaded="true"]')
+    const otherNote = await boardPane.getAttribute('data-note')
+    const emptyOther = await strokeCount()
+    await penStroke(row(140, 0.5))
+    await lp.locator('.note-item', { hasText: 'Lavagna di prova' }).click()
+    await lp.waitForSelector(`.board-pane[data-note="${note1}"][data-loaded="true"]`)
+    check(otherNote !== note1 && emptyOther === 0 && (await strokeCount()) === 8, `ogni nota ha la sua lavagna (${JSON.stringify({ emptyOther })})`)
+    // Si salva: ricaricando la pagina c'è tutto, con la vista «Lavagna».
+    await lp.reload()
+    await lp.waitForSelector('.board-pane[data-loaded="true"]')
+    check(
+      (await lp.evaluate(() => document.querySelector('.app').dataset.view)) === 'board' && (await strokeCount()) === 8 && (await inkAt(stage.x + 80, stage.y + 140)) < 400,
+      'ricaricando la pagina la lavagna c\'è ancora, salvata nel browser',
+    )
+    // Due schede sulla stessa nota: quello che si scrive in una compare nell'altra.
+    const tabB = await lb.newPage()
+    tabB.on('pageerror', (e) => errors.push(e.message))
+    await tabB.goto(url)
+    await tabB.waitForSelector('.board-pane[data-loaded="true"]')
+    await penStroke(row(420, 0.6))
+    await tabB.waitForFunction(() => document.querySelector('.board-pane').dataset.strokes === '9', null, { timeout: 3000 }).catch(() => {})
+    check((await tabB.locator('.board-pane').getAttribute('data-strokes')) === '9', 'con Glifo aperto in due schede, quello che si scrive sulla lavagna in una compare nell\'altra')
+    await tabB.close()
+    // Tema scuro: la lavagna è scura e si scrive in chiaro.
+    await lp.emulateMedia({ colorScheme: 'dark' })
+    await lp.waitForTimeout(200)
+    const darkPaper = await inkAt(stage.x + 390, stage.y + 600)
+    const darkInk = await inkAt(stage.x + 80, stage.y + 140)
+    check(darkPaper < 150 && darkInk > 600, `nel tema scuro la lavagna è scura e i tratti chiari (${JSON.stringify({ darkPaper, darkInk })})`)
+    await lp.emulateMedia({ colorScheme: 'light' })
+    // A tutto schermo copre la finestra; Esc la riporta com'era.
+    await lp.locator('.board-button[aria-label="Schermo intero"]').click()
+    await lp.waitForTimeout(300)
+    const fullBox = await boardPane.boundingBox()
+    await lp.keyboard.press('Escape')
+    await lp.waitForTimeout(300)
+    const backBox = await boardPane.boundingBox()
+    check(
+      fullBox.x === 0 && fullBox.y === 0 && fullBox.width === 1440 && fullBox.height === 900 && backBox.width < 800 && !(await lp.evaluate(() => document.fullscreenElement)),
+      `«Schermo intero» allarga la lavagna a tutta la finestra, Esc la riporta accanto al testo (${JSON.stringify({ fullBox, backBox })})`,
+    )
+    // Eliminando la nota si elimina anche la sua lavagna.
+    await lp.locator('.note-item', { hasText: 'Lavagna di prova' }).hover()
+    await lp.locator('.note-item', { hasText: 'Lavagna di prova' }).locator('.note-delete').click()
+    await lp.locator('dialog .btn-danger', { hasText: 'Elimina' }).click()
+    await lp.waitForTimeout(300)
+    check((await savedStrokes(lp, note1)).length === 0 && (await savedStrokes(lp, otherNote)).length === 1, 'eliminando una nota si elimina anche la sua lavagna, le altre restano')
+    // Nella stampa la lavagna non c'è.
+    await lp.emulateMedia({ media: 'print' })
+    check((await lp.evaluate(() => getComputedStyle(document.querySelector('.board-pane')).display)) === 'none', 'la lavagna non va nella stampa')
+    await lp.emulateMedia({ media: 'screen' })
+    // Il backup (in Impostazioni) porta anche le lavagne, con i punti in una stringa; «Ripristina
+    // backup» le rimette sulle note ricreate, che hanno un id nuovo.
+    await lp.locator('.side-profile button[aria-label="Impostazioni"]').click()
+    const [backupFile] = await Promise.all([lp.waitForEvent('download'), lp.locator('dialog button', { hasText: 'Scarica backup' }).click()])
+    const backupData = JSON.parse(readFileSync(await backupFile.path(), 'utf8'))
+    const backupBoards = (backupData.boards ?? []).map((b) => ({ note: b.note, strokes: b.strokes.length, points: typeof b.strokes[0]?.points }))
+    const [chooser] = await Promise.all([lp.waitForEvent('filechooser'), lp.locator('dialog button', { hasText: 'Ripristina backup' }).click()])
+    await chooser.setFiles(await backupFile.path())
+    await lp.locator('.toast', { hasText: 'Ripristinati' }).waitFor()
+    await lp.keyboard.press('Escape')
+    await lp.locator('.note-item', { hasText: 'Nuovi appunti' }).first().click()
+    await lp.waitForSelector('.board-pane[data-loaded="true"]')
+    const restoredNote = await boardPane.getAttribute('data-note')
+    check(
+      JSON.stringify(backupBoards) === JSON.stringify([{ note: otherNote, strokes: 1, points: 'string' }]) && restoredNote !== otherNote && (await strokeCount()) === 1,
+      `il backup porta anche le lavagne, e ripristinandolo tornano sulle note ricreate (${JSON.stringify({ backupBoards, restoredNote })})`,
+    )
+    await lb.close()
+    // Sul telefono la lavagna prende il posto del testo, e un dito scrive (finché non si usa una penna).
+    const phoneBoard = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+    const pb = await phoneBoard.newPage()
+    pb.on('pageerror', (e) => errors.push(e.message))
+    await pb.goto(url)
+    await pb.waitForSelector('.cm-editor')
+    await pb.locator('.view-button[aria-label="Lavagna"]').tap()
+    await pb.waitForSelector('.board-pane[data-loaded="true"]')
+    const pcdp = await phoneBoard.newCDPSession(pb)
+    const ptouch = (type, points) => pcdp.send('Input.dispatchTouchEvent', { type, touchPoints: points.map(([x, y], i) => ({ x, y, id: i + 1 })) })
+    await ptouch('touchStart', [[60, 300]])
+    for (let i = 1; i <= 10; i++) await ptouch('touchMove', [[60 + i * 20, 300 + i * 5]])
+    await ptouch('touchEnd', [])
+    await pb.waitForTimeout(100)
+    const phoneLayout = await pb.evaluate(() => {
+      const board = document.querySelector('.board-pane').getBoundingClientRect()
+      const fits = [...document.querySelectorAll('.board-tools, .board-history, .board-zoom, .view-switch')].every((el) => {
+        const r = el.getBoundingClientRect()
+        return r.left >= 0 && r.right <= innerWidth && el.scrollWidth <= el.clientWidth + 1
+      })
+      return {
+        full: board.left === 0 && board.width === innerWidth && board.bottom === innerHeight,
+        noEditor: getComputedStyle(document.querySelector('.editor-pane')).display === 'none',
+        noFormat: [...document.querySelectorAll('.float-bar .editor-toolbar')].every((t) => !t.offsetParent),
+        fits,
+        strokes: document.querySelector('.board-pane').dataset.strokes,
+        scroll: document.documentElement.scrollWidth <= innerWidth,
+      }
+    })
+    check(
+      phoneLayout.full && phoneLayout.noEditor && phoneLayout.noFormat && phoneLayout.fits && phoneLayout.strokes === '1' && phoneLayout.scroll,
+      `sul telefono la lavagna prende il posto del testo, gli strumenti stanno nello schermo e il dito scrive (${JSON.stringify(phoneLayout)})`,
+    )
+    await phoneBoard.close()
+  }
   // Niente barra in alto: in cima alla barra laterale il logo e subito gli appunti; in fondo
   // «Apri .md», «Salva .md» e «Condividi», poi l'account e le impostazioni; sopra il testo,
   // volanti, i simboli e le viste
@@ -1749,17 +2035,17 @@ try {
     return !v.error && v.readyState >= 2 && v.muted && v.loop
   })
   check(
-    page1.step === '1 di 5' && !page1.back && page1.next === 'Avanti' && page1.video.endsWith('scrivere-chiaro.webm') && playing,
+    page1.step === '1 di 6' && !page1.back && page1.next === 'Avanti' && page1.video.endsWith('scrivere-chiaro.webm') && playing,
     `la prima volta si apre il tutorial, con il video che si vede (${JSON.stringify(page1)}, ${playing})`,
   )
-  for (let i = 0; i < 4; i++) await tutorial.locator('.tutorial-next').click()
+  for (let i = 0; i < 5; i++) await tutorial.locator('.tutorial-next').click()
   const last = await tutorialPage()
   await tutorial.locator('.tutorial-foot .btn:not(.btn-primary)').click()
   const backOne = await tutorialPage()
   await first.keyboard.press('ArrowRight')
   const keyNext = await tutorialPage()
   check(
-    last.step === '5 di 5' && last.next === 'Inizia' && last.back && backOne.step === '4 di 5' && keyNext.step === '5 di 5',
+    last.step === '6 di 6' && last.next === 'Inizia' && last.back && backOne.step === '5 di 6' && keyNext.step === '6 di 6',
     `Avanti e Indietro (anche con le frecce) sfogliano le pagine, e l'ultima ha «Inizia» (${JSON.stringify({ last, backOne, keyNext })})`,
   )
   await tutorial.locator('.tutorial-next').click()
@@ -1805,7 +2091,7 @@ try {
   const again = await tutorialPage()
   await tutorial.locator('.tutorial-shortcuts').click()
   check(
-    again.step === '1 di 5' && (await first.locator('dialog table.shortcuts').isVisible()),
+    again.step === '1 di 6' && (await first.locator('dialog table.shortcuts').isVisible()),
     '«Come si usa» riapre il tutorial, e da lì si arriva a tutte le scorciatoie',
   )
   // Chiusa la guida con la x, il fumetto dice dove si rivede il tutorial; poi se ne va da solo

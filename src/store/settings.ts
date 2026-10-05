@@ -1,7 +1,8 @@
 import { readJson, writeJson } from './storage'
 
 export type Theme = 'auto' | 'light' | 'dark'
-export type ViewMode = 'editor' | 'split' | 'preview'
+/** Le viste: il testo, il testo con l'anteprima, l'anteprima, il testo con la lavagna (src/board). */
+export type ViewMode = 'editor' | 'split' | 'preview' | 'board'
 /** Lingue del controllo ortografico: la prima è quella principale. */
 export type SpellLanguages = 'it+en' | 'it' | 'en'
 

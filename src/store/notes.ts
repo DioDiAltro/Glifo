@@ -60,6 +60,22 @@ export function deriveTitle(content: string): string {
   return 'Senza titolo'
 }
 
+/** Le chiavi del testo delle note, senza account (`glifo.note.v1.<id>`) e negli account (`glifo.u.<utente>.note.v1.<id>`). */
+const NOTE_KEY = /^glifo\.(?:u\.[^.]+\.)?note\.v1\.(.+)$/
+
+/**
+ * Gli id di tutte le note salvate in questo browser, con e senza account: una lavagna (src/board)
+ * senza la sua nota si può togliere.
+ */
+export function noteIdsInBrowser(): Set<string> {
+  const ids = new Set<string>()
+  for (const key of storageKeys('glifo.')) {
+    const m = NOTE_KEY.exec(key)
+    if (m) ids.add(m[1])
+  }
+  return ids
+}
+
 /**
  * Gli id delle note create prima delle cartelle cominciano con l'ora di creazione (8 cifre
  * in base 36): serve a ridare una data alle note recuperate.

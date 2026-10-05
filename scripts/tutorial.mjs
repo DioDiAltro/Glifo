@@ -33,18 +33,33 @@ function ffmpegPath() {
   return 'ffmpeg'
 }
 
-/** Un puntatore disegnato nella pagina: nei video di Chromium quello vero non si vede. */
+/**
+ * Un puntatore disegnato nella pagina: nei video di Chromium quello vero non si vede. Segue i
+ * pointermove, che arrivano anche mentre si scrive sulla lavagna; con la penna è la sua punta.
+ */
 function fakeCursor() {
   addEventListener('DOMContentLoaded', () => {
     const cursor = document.createElement('div')
-    cursor.innerHTML =
+    const arrow =
       '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M5 3v15.5l4.2-4.1 2.9 6.6 2.6-1.1-2.9-6.5H18z" fill="#14161f" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></svg>'
+    const tip = '<svg width="24" height="24" viewBox="0 0 24 24"><circle cx="5" cy="3" r="3.2" fill="#6366f1" stroke="#fff" stroke-width="1.4"/></svg>'
+    let kind = 'mouse'
+    cursor.innerHTML = arrow
     Object.assign(cursor.style, { position: 'fixed', left: '-50px', top: '-50px', zIndex: 2147483647, pointerEvents: 'none' })
     document.body.append(cursor)
-    addEventListener('mousemove', (e) => Object.assign(cursor.style, { left: `${e.clientX - 5}px`, top: `${e.clientY - 3}px` }), true)
     addEventListener(
-      'mousedown',
+      'pointermove',
       (e) => {
+        const next = e.pointerType === 'pen' ? 'pen' : 'mouse'
+        if (next !== kind) cursor.innerHTML = (kind = next) === 'pen' ? tip : arrow
+        Object.assign(cursor.style, { left: `${e.clientX - 5}px`, top: `${e.clientY - 3}px` })
+      },
+      true,
+    )
+    addEventListener(
+      'pointerdown',
+      (e) => {
+        if (e.pointerType === 'pen') return
         const ring = document.createElement('div')
         Object.assign(ring.style, {
           position: 'fixed',
@@ -188,6 +203,92 @@ const SCENES = {
       await page.waitForTimeout(400)
       await clickOn(page, '.editor-toolbar button[aria-label^="Grafico"]')
       await page.waitForSelector('.preview-pane .graph-block svg', { timeout: 5000 }).catch(() => {})
+    },
+  },
+  // La lavagna: si apre accanto al testo e ci si scrive a mano con una penna (simulata, con la
+  // pressione): gli assi, la parabola in blu, «y = x²» e il vertice cerchiato in rosso.
+  lavagna: {
+    settings: { view: 'editor', notesOpen: false },
+    async setup(page) {
+      await startNote(page, '# Appunti di Analisi\n\nLa parabola $y = x^2$ è rivolta verso l\'alto: il **vertice** è nell\'origine.\n')
+      await page.mouse.move(470, 330)
+    },
+    async play(page) {
+      await clickOn(page, '.view-button[aria-label="Lavagna"]')
+      await page.waitForSelector('.board-pane[data-loaded="true"]')
+      await page.waitForTimeout(700)
+      const stage = await page.locator('.board-stage').boundingBox()
+      const cdp = await page.context().newCDPSession(page)
+      const send = (type, [x, y], force) =>
+        cdp.send('Input.dispatchMouseEvent', {
+          type,
+          x: stage.x + x,
+          y: stage.y + y,
+          button: 'left',
+          buttons: type === 'mouseReleased' ? 0 : 1,
+          clickCount: 1,
+          pointerType: 'pen',
+          force,
+        })
+      /** Un tratto per i punti dati, un punto ogni 6 pixel; `pressure(t)` da 0 (inizio) a 1 (fine). */
+      async function pen(points, pressure = () => 0.5, pace = 3) {
+        const dense = [points[0]]
+        for (let i = 1; i < points.length; i++) {
+          const [ax, ay] = points[i - 1]
+          const [bx, by] = points[i]
+          const steps = Math.max(1, Math.round(Math.hypot(bx - ax, by - ay) / 6))
+          for (let k = 1; k <= steps; k++) dense.push([ax + ((bx - ax) * k) / steps, ay + ((by - ay) * k) / steps])
+        }
+        // La penna arriva da sopra il foglio, sospesa, come una vera.
+        await send('mouseMoved', dense[0], 0)
+        await page.waitForTimeout(40)
+        await send('mousePressed', dense[0], pressure(0))
+        for (let i = 1; i < dense.length; i++) {
+          await send('mouseMoved', dense[i], pressure(i / (dense.length - 1)))
+          await page.waitForTimeout(pace)
+        }
+        await send('mouseReleased', dense.at(-1), 0)
+        await page.waitForTimeout(60)
+      }
+      /** Si sceglie il colore con la penna, come sul tablet. */
+      const color = async (name) => {
+        const box = await page.locator(`.board-color[data-color="${name}"]`).boundingBox()
+        const at = [box.x + box.width / 2 - stage.x, box.y + box.height / 2 - stage.y]
+        await send('mouseMoved', at, 0)
+        await page.waitForTimeout(250)
+        await send('mousePressed', at, 0.5)
+        await send('mouseReleased', at, 0)
+        await page.waitForTimeout(250)
+      }
+      // Gli assi, con le frecce.
+      await pen([[40, 330], [440, 330]])
+      await pen([[426, 322], [440, 330], [426, 338]])
+      await pen([[200, 410], [200, 105]])
+      await pen([[192, 119], [200, 105], [208, 119]])
+      // La parabola, in blu: la pressione cresce un po' verso la fine.
+      await color('blue')
+      const parabola = Array.from({ length: 41 }, (_, i) => {
+        const t = i / 20 - 1
+        return [200 + 92 * t, 330 - 205 * t * t]
+      })
+      await pen(parabola, (t) => 0.35 + 0.4 * t, 6)
+      // «y = x²» scritto a mano.
+      await color('ink')
+      await pen([[292, 140], [297, 150], [303, 157], [307, 160]], (t) => 0.45 + 0.2 * t)
+      await pen([[318, 140], [312, 156], [306, 171], [300, 183], [293, 190]], (t) => 0.55 - 0.2 * t)
+      await pen([[328, 155], [347, 155]])
+      await pen([[328, 166], [347, 166]])
+      await pen([[358, 145], [380, 170]], (t) => 0.4 + 0.3 * t)
+      await pen([[380, 145], [358, 170]], (t) => 0.4 + 0.3 * t)
+      await pen([[386, 133], [389, 128], [394, 126], [399, 129], [398, 134], [387, 145], [400, 145]], () => 0.45)
+      // Il vertice cerchiato in rosso.
+      await color('red')
+      const circle = Array.from({ length: 33 }, (_, i) => {
+        const a = (i / 30) * 2 * Math.PI - 0.6
+        return [200 + 22 * Math.cos(a), 330 + 18 * Math.sin(a)]
+      })
+      await pen(circle, () => 0.55, 6)
+      await page.mouse.move(stage.x + 330, stage.y + 470, { steps: 20 })
     },
   },
   // Le viste e la barra laterale.

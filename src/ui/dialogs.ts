@@ -511,6 +511,19 @@ export function openHelpDialog(): HTMLDialogElement {
     h(
       'p',
       { class: 'field-help' },
+      'Lavagna: la vista «Lavagna», in alto, la apre accanto al testo (sul telefono al suo posto); il pulsante con i quattro angoli la allarga a tutto schermo, Esc la riporta com\'era. Ci scrivi a mano con la penna, il dito o il mouse: con la penna lo spessore segue la pressione e la gomma in fondo alla penna (o il tasto laterale) cancella. Quando Glifo vede una penna, le dita spostano la lavagna e il palmo appoggiato non scrive. Due dita, la rotellina (Ctrl + rotellina per ingrandire), il tasto centrale o lo spazio tenuto premuto la spostano; ',
+      h('kbd', {}, 'Ctrl'),
+      ' ',
+      h('kbd', {}, 'Z'),
+      ' annulla e ',
+      h('kbd', {}, 'Ctrl'),
+      ' ',
+      h('kbd', {}, 'Y'),
+      ' ripete. Ogni nota ha la sua lavagna, salvata su questo dispositivo: non va nella nota né nell\'account, ed eliminando la nota si elimina anche lei.',
+    ),
+    h(
+      'p',
+      { class: 'field-help' },
       'Schemi: il pulsante con i due riquadri nella barra apre un editor stile draw.io. Trascina le forme sul foglio, passa sopra una forma e trascina una freccia blu per collegarla, fai doppio clic per scriverci (anche formule tra ',
       h('code', {}, '$ … $'),
       '). Con «Fatto» lo schema va nella nota; per cambiarlo, «Modifica» nel testo o nell\'anteprima. Nel gruppo «Basi di dati» ci sono le figure dei diagrammi E-R e le tabelle: il nome in alto e i campi sotto, uno per riga, con PK o FK davanti alle chiavi; selezionando una tabella, nel pannello a destra la cambi campo per campo, anche con i tipi, e da «Scarica» ne ottieni il codice SQL per il database che usi. Sul foglio vuoto (o dal menu «Modelli») puoi partire da un modello pronto; con più forme selezionate le allinei e le distribuisci; «Scarica» le salva come immagine PNG o SVG, o le copia per incollarle in Word. Con «Salva .md» gli schemi diventano immagini, che si vedono anche in VS Code; riaprendo il file con Glifo si modificano di nuovo.',
@@ -1026,6 +1039,8 @@ export function openHelpDialog(): HTMLDialogElement {
       h('a', { attrs: { href: 'licenze/dizionario-inglese.txt', target: '_blank', rel: 'noopener' } }, 'licenza'),
       '). Gli schemi usano maxGraph (',
       h('a', { attrs: { href: 'licenze/maxgraph.txt', target: '_blank', rel: 'noopener' } }, 'licenza Apache 2.0'),
+      '), la lavagna perfect-freehand (',
+      h('a', { attrs: { href: 'licenze/perfect-freehand.txt', target: '_blank', rel: 'noopener' } }, 'licenza MIT'),
       ').',
     ),
   ]

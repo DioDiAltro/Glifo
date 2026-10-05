@@ -45,7 +45,7 @@ Cose da sapere:
   (vedi sotto).
 - Per spostarli o tenerli al sicuro puoi anche usare **Salva .md** (pure dentro una cartella
   di OneDrive, Google Drive o iCloud) e **Apri .md** sull'altro dispositivo. In *Impostazioni*
-  c'è anche **Scarica backup**, con tutti gli appunti in un solo file.
+  c'è anche **Scarica backup**, con tutti gli appunti (e le loro lavagne) in un solo file.
 - Puoi tenere Glifo aperto in più schede, o nell'app installata e nel browser insieme: si
   aggiornano a vicenda e nessuna cancella gli appunti scritti nelle altre.
 - Quando esce una nuova versione, l'app si aggiorna da sola alla riapertura.
@@ -69,7 +69,8 @@ chi sta provando Glifo.*
   browser. Se li lasci fuori, li ritrovi quando esci.
 - **Chiave API:** quella dell'assistente AI resta sul dispositivo e non va all'account.
 - **Uscita:** uscendo, le note dell'account vengono tolte dal browser, che magari non è il
-  tuo. Nell'account restano.
+  tuo. Nell'account restano. Le **lavagne** invece stanno solo nel browser: uscendo si tolgono
+  anche loro, e prima Glifo lo dice.
 - **Dove stanno i dati:** su [Supabase](https://supabase.com), in Europa (Francoforte).
   Ognuno può leggere solo i suoi appunti (vedi [supabase/README.md](supabase/README.md)).
 - **I tuoi dati:** nella finestra dell'account, «Scarica i miei dati» scarica tutto l'account
@@ -593,6 +594,27 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
   si vede anche nell'anteprima di VS Code o in Obsidian; il suo JSON resta nel file, in un
   commento che non si vede, e riaprendo il file con **Apri .md** lo schema torna da modificare.
 
+**Lavagna**
+- La vista **Lavagna** (in alto, accanto a Editor, Diviso e Anteprima) apre accanto al testo,
+  al posto dell'anteprima, un foglio a quadretti dove **scrivere a mano**: con la penna (Apple
+  Pencil, S Pen, una tavoletta grafica anche senza schermo), con il dito o con il mouse. Non
+  entra nella nota: è il foglio accanto alla calcolatrice, per i conti e le prove.
+- **Penna con la pressione** (piano scrive sottile, forte spesso), **gomma** che cancella solo
+  dove passa (anche quella in fondo alla penna, o la penna con il tasto laterale), quattro
+  colori (il primo è nero nel tema chiaro e bianco in quello scuro, dove la lavagna è scura),
+  **Annulla** e **Ripeti** (anche Ctrl+Z e Ctrl+Y) e **Pulisci**, con la conferma.
+- **Spostarsi e ingrandire**: due dita, oppure la rotellina (con Ctrl ingrandisce), il tasto
+  centrale o lo spazio tenuto premuto; il numero in basso a destra riporta alla vista di
+  partenza. Quando Glifo vede una penna se lo ricorda: da lì le dita spostano la lavagna e **il
+  palmo appoggiato non scrive**.
+- **A tutto schermo** con il pulsante con i quattro angoli (Esc torna indietro): con una tavoletta
+  senza schermo si scrive guardando lo schermo, e più la lavagna è grande meglio è. Sul telefono
+  la vista Lavagna prende già tutto il posto del testo.
+- **Una lavagna per ogni nota**, salvata su quel dispositivo (nel browser, in IndexedDB), non
+  nella nota né nell'account: niente esce dal dispositivo. Eliminando la nota si elimina anche
+  la sua lavagna; il backup la porta con sé. Con Glifo aperto in due schede, quello che si
+  scrive in una compare nell'altra.
+
 **Appunti**
 - Salvati automaticamente nel browser, con elenco, filtro e più note; con l'account, anche su
   tutti i tuoi dispositivi.
@@ -601,12 +623,12 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
 - Apri e salva file `.md` dal computer (su Chrome/Edge si risalva sullo stesso file); nel
   file gli schemi sono immagini.
 - Anteprima affiancata con scorrimento sincronizzato; doppio clic sull'anteprima porta alla riga.
-- Stampa / PDF dell'anteprima (da «Condividi»), backup di tutti gli appunti.
+- Stampa / PDF dell'anteprima (da «Condividi»), backup di tutti gli appunti (con le lavagne).
 - Niente barra in alto, come nell'app di Claude: a sinistra la **barra laterale**, che si apre e
   si chiude con il logo in alto a sinistra (come in Gemini); sotto il logo subito gli appunti, in
   fondo una riga con «Apri .md», «Salva .md» e l'icona di «Condividi», poi l'account, «Come si usa» e le
   impostazioni (lì c'è anche il tema). Sopra il testo una riga sola: a sinistra i pulsanti per
-  formattare, al centro le viste (Editor, Diviso, Anteprima), a destra quelli per inserire e i
+  formattare, al centro le viste (Editor, Diviso, Anteprima, Lavagna), a destra quelli per inserire e i
   **Simboli**, vicino al loro pannello.
 - **Tutorial** la prima volta che si entra: poche pagine, ognuna con un video e due righe, da
   sfogliare con Indietro e Avanti; l'ultima ha «Inizia». Si riapre da «Come si usa» (il «?» in
@@ -717,6 +739,7 @@ Web app in **TypeScript** con [Vite](https://vite.dev), senza framework e senza 
 | Assistente AI | SDK ufficiale di Anthropic (caricato solo quando serve) |
 | Account e sincronizzazione | [Supabase](https://supabase.com): database Postgres e accesso via email, senza password (il client si carica solo se si accede) |
 | Schemi | [maxGraph](https://github.com/maxGraph/maxGraph), il motore di draw.io (caricato solo quando serve) |
+| Lavagna | [perfect-freehand](https://github.com/steveruizok/perfect-freehand) per il contorno dei tratti con la pressione; disegno su canvas, salvataggio in IndexedDB |
 | Calcoli e grafici | scritti per Glifo: lettura delle formule LaTeX, conti (anche esatti, con le frazioni), disegno in SVG |
 | App installabile | vite-plugin-pwa |
 
@@ -764,6 +787,11 @@ src/
     supabase.ts           accesso con Google o via email (link o codice), eliminazione dell'account,
                           le chiamate per condividere una nota con un link
     export.ts             il file di «Scarica i miei dati»
+  board/                  la lavagna, per scrivere a mano accanto al testo (una per nota)
+    strokes.ts            i tratti come vettori (punti con la pressione) e la gomma che li taglia
+    ink.ts                il contorno dei tratti (perfect-freehand) e i colori dei due temi
+    store.ts              le lavagne in IndexedDB, un tratto per record, e le altre schede avvisate
+    board.ts              penna, dita, mouse e palmo; gomma, colori, annulla, spostare e ingrandire
   share/                  le note condivise con un link (una fotografia della nota)
     link.ts               il link (nota.html#codice) e la lettura della nota, anche senza account
     dialog.ts             la finestra «Condividi»
@@ -866,7 +894,9 @@ LGPL 2.1), il dizionario italiano di Andrea Pescetti e altri
 ([GPL 3](public/licenze/dizionario-italiano.txt), dal pacchetto `dictionary-it`) e quello
 inglese di SCOWL ([MIT e BSD](public/licenze/dizionario-inglese.txt), dal pacchetto
 `dictionary-en`). Gli schemi usano [maxGraph](https://github.com/maxGraph/maxGraph)
-([Apache 2.0](public/licenze/maxgraph.txt)). I testi delle licenze sono pubblicati anche insieme
+([Apache 2.0](public/licenze/maxgraph.txt)), la lavagna
+[perfect-freehand](https://github.com/steveruizok/perfect-freehand)
+([MIT](public/licenze/perfect-freehand.txt)). I testi delle licenze sono pubblicati anche insieme
 all'app, in `licenze/`.
 
 ## Idee per il futuro

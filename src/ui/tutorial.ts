@@ -37,9 +37,14 @@ export const TUTORIAL_PAGES: readonly TutorialPage[] = [
     text: 'Una formula che finisce con `=` mostra il risultato: con Tab lo scrivi nella nota. Se il risultato lo scrivi tu, Glifo lo controlla: ✓ se è giusto, ✗ se no. Il pulsante con gli assi disegna la funzione su cui c\'è il cursore.',
   },
   {
+    id: 'lavagna',
+    title: 'La lavagna',
+    text: 'Con «Lavagna», in alto, scrivi a mano accanto al testo: con la penna, che sente la pressione, con il dito o con il mouse. La gomma cancella dove passa, due dita spostano e ingrandiscono. Ogni nota ha la sua lavagna, che resta su questo dispositivo.',
+  },
+  {
     id: 'barra',
     title: 'Viste, appunti e account',
-    text: 'In alto al centro scegli Editor, Diviso o Anteprima. Il logo in alto a sinistra apre la barra laterale con gli appunti e le cartelle; in fondo ci sono «Condividi» (anche per stampare), l\'account, per ritrovare tutto su ogni dispositivo, «Come si usa» e le impostazioni.',
+    text: 'In alto al centro scegli Editor, Diviso, Anteprima o Lavagna, per scrivere a mano accanto al testo. Il logo in alto a sinistra apre la barra laterale con gli appunti e le cartelle; in fondo ci sono «Condividi» (anche per stampare), l\'account, per ritrovare tutto su ogni dispositivo, «Come si usa» e le impostazioni.',
   },
 ]
 

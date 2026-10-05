@@ -28,6 +28,8 @@ export interface ResizableParts {
   notes: HTMLElement
   editor: HTMLElement
   preview: HTMLElement
+  /** La lavagna, che nella sua vista sta al posto dell'anteprima (src/board). */
+  board?: HTMLElement
   symbols: HTMLElement
 }
 
@@ -84,7 +86,7 @@ export class PaneResizer {
       grows: 1,
       begin: () => {
         const start = width(parts.editor)
-        const total = start + width(parts.preview)
+        const total = start + width(this.besideText())
         return (dx) => editorShare(start + dx, total)
       },
     })
@@ -179,9 +181,21 @@ export class PaneResizer {
     this.apply()
   }
 
+  /** Quello che sta accanto al testo: l'anteprima, oppure la lavagna nella sua vista. */
+  private besideText(): HTMLElement {
+    const { preview, board } = this.parts
+    return board && !width(preview) && width(board) ? board : preview
+  }
+
+  /** È cambiata la vista: il bordo tra il testo e quello che gli sta accanto dice di nuovo cosa divide. */
+  refresh(): void {
+    this.apply()
+  }
+
   /** Quanto posto si può togliere a testo e anteprima (quelli che si vedono) senza stringerli sotto `PANE_MIN`. */
   private room(): number {
-    return [this.parts.editor, this.parts.preview]
+    return [this.parts.editor, this.parts.preview, this.parts.board]
+      .filter((el): el is HTMLElement => !!el)
       .map(width)
       .filter((w) => w > 0)
       .reduce((sum, w) => sum + w - PANE_MIN, 0)
@@ -196,10 +210,13 @@ export class PaneResizer {
     const editor = Math.round(editorShare * 1000)
     this.parts.editor.style.setProperty('--split-grow', String(editor))
     this.parts.preview.style.setProperty('--split-grow', String(1000 - editor))
+    this.parts.board?.style.setProperty('--split-grow', String(1000 - editor))
     aria(this.notesHandle, notesWidth, NOTES_WIDTH, `${notesWidth} pixel`)
     aria(this.symbolsHandle, symbolsWidth, SYMBOLS_WIDTH, `${symbolsWidth} pixel`)
     const percent = Math.round(editorShare * 100)
-    aria(this.splitHandle, percent, { min: EDITOR_SHARE.min * 100, max: EDITOR_SHARE.max * 100 }, `testo ${percent}%, anteprima ${100 - percent}%`)
+    const beside = this.besideText() === this.parts.board ? 'lavagna' : 'anteprima'
+    this.splitHandle.setAttribute('aria-label', `Divisione tra testo e ${beside}`)
+    aria(this.splitHandle, percent, { min: EDITOR_SHARE.min * 100, max: EDITOR_SHARE.max * 100 }, `testo ${percent}%, ${beside} ${100 - percent}%`)
   }
 }
 

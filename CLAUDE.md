@@ -231,6 +231,18 @@ prossimi passi sono in «In programma» nella ROADMAP.
   densità, P(…) come area o barre dell'evento, istogrammi, barre, dispersione e regressione; `extent` dice la
   parte dell'asse x da mostrare e `data` toglie le stesse unità sui due assi. Le variabili aleatorie del blocco
   (`X \sim B(n, p)` con n e p del blocco) si fanno in `readGraph` prima di disegnare.
+- `src/board/`: la lavagna, per scrivere a mano accanto al testo (la vista «Lavagna», `ViewMode`
+  `'board'`; per ora sul ramo `prova`). `strokes.ts` i tratti come vettori (x, y e pressione) e la
+  gomma che li taglia esattamente (`capsuleSpan`, `eraseStroke`); `ink.ts` il contorno con
+  perfect-freehand e i colori dei due temi (`BOARD_PALETTES`: nei tratti c'è il nome del colore);
+  `store.ts` le lavagne in IndexedDB (`glifo-lavagne`, un tratto per record con la chiave [nota, id],
+  le altre schede avvisate da un BroadcastChannel; in memoria se IndexedDB non c'è), il backup
+  (`exportBoards`, `importBoard`) e `prune` (all'avvio toglie quelle senza nota, `noteIdsInBrowser`);
+  `board.ts` il componente: penna con la pressione (vista una penna, `glifo.lavagna.v1`, le dita
+  spostano e il palmo non scrive), dita, mouse, gomma, annulla e ripeti, schermo intero. In `main.ts`
+  la lavagna si toglie con la nota, segue la nota che cambia id con l'account (`replaced`,
+  `adoptGuestNotes`) e uscendo dall'account si toglie, con l'avviso. Per le prove nel browser lo stato
+  è in `data-strokes`, `data-note` e `data-loaded` sulla `.board-pane`.
 - `src/ai/`: assistente AI, con la chiave di chi lo usa: Anthropic con l'SDK, o un servizio che parla la
   «lingua» di OpenAI (`services.ts`: Gemini gratis, OpenRouter, Ollama sul computer, un altro con il suo
   indirizzo; `askCompatible` in `assistant.ts` chiede lo schema, poi un oggetto JSON, poi niente, e legge la
@@ -264,6 +276,8 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
   l'informativa (`privacy.html`). Poi, aggiornata l'informativa, premere «Publish app» nella
   Google Auth Platform (Audience) per aprire a tutti l'accesso con Google. I passi sono in
   «Come si riprende», al passo 4 di ROADMAP.md.
+- Provare la lavagna (ramo `prova`, sulla pagina privata di claude.ai) sull'iPad dell'amico e con la
+  tavoletta grafica senza schermo, e dire se va bene: poi si pubblica (ROADMAP, «La lavagna»).
 - Riparlare della condivisione: le cartelle condivise con persone scelte e i loro permessi (come
   nella finestra «Condividi» di NotebookLM) e lo scrivere insieme senza conflitti. Il 4 ottobre
   2026, fatto il link, lo studente ha chiesto di tenerlo per dopo e di sistemare prima la

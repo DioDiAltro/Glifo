@@ -180,11 +180,44 @@ try {
   )
 
   // ——— Uscire dall'account ———
+  // Una lavagna scritta sta solo in questo browser, non nell'account: uscendo Glifo lo dice, e la
+  // toglie insieme alle note.
+  await pc.page.locator('.view-button[aria-label="Lavagna"]').click()
+  await pc.page.waitForSelector('.board-pane[data-loaded="true"]')
+  const drawnNote = await pc.page.locator('.board-pane').getAttribute('data-note')
+  const stage = await pc.page.locator('.board-stage').boundingBox()
+  await pc.page.mouse.move(stage.x + 60, stage.y + 120)
+  await pc.page.mouse.down()
+  for (let i = 1; i <= 10; i++) await pc.page.mouse.move(stage.x + 60 + i * 15, stage.y + 120 + i * 4)
+  await pc.page.mouse.up()
+  await pc.page.locator('.view-button[aria-label="Editor"]').click()
   await pc.page.locator('.account-button').click()
-  const out = pc.page.waitForEvent('load')
   await pc.page.locator('dialog.dialog-account button', { hasText: 'Esci dall\'account' }).click()
+  const boardWarning = pc.page.locator('dialog.dialog-confirm')
+  await boardWarning.waitFor()
+  const warningText = await boardWarning.locator('.confirm-message').textContent()
+  const out = pc.page.waitForEvent('load')
+  await boardWarning.locator('.btn-danger', { hasText: 'Esci lo stesso' }).click()
   await out
   await pc.page.waitForSelector('.cm-editor')
+  const boardLeft = await pc.page.evaluate(
+    (note) =>
+      new Promise((resolve) => {
+        const open = indexedDB.open('glifo-lavagne')
+        open.onsuccess = () => {
+          const req = open.result.transaction('strokes', 'readonly').objectStore('strokes').count(IDBKeyRange.bound([note], [note, []]))
+          req.onsuccess = () => {
+            open.result.close()
+            resolve(req.result)
+          }
+        }
+      }),
+    drawnNote,
+  )
+  check(
+    warningText.includes('La lavagna di una nota sta solo in questo browser') && boardLeft === 0,
+    `uscendo, Glifo avvisa che la lavagna non è nell'account, e la toglie dal browser con le note (${JSON.stringify({ warningText, boardLeft })})`,
+  )
   check((await accountState(pc.page)).includes('is-guest'), 'uscendo si torna senza account')
   check(JSON.stringify(await titles(pc.page)) === '["Benvenuto in Glifo"]', `restano solo gli appunti di prima (${await titles(pc.page)})`)
   const left = await pc.page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('glifo.u.') || k.startsWith('glifo.auth')))

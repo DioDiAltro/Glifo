@@ -4,7 +4,7 @@ import { EditorSelection } from '@codemirror/state'
 import welcomeNote from './welcome.md?raw'
 import { MarkdownEditor } from './editor/editor'
 import { addToGraphBlock, formulaAtCursor, insertGraphBlock, setGraphLabels } from './editor/graphInsert'
-import { deriveTitle, NotesStore, type Note } from './store/notes'
+import { deriveTitle, noteIdsInBrowser, NotesStore, type Note } from './store/notes'
 import { cleanFolderName, FOLDER_NAME_MAX, FoldersStore } from './store/folders'
 import { addPersonalWord, DICTIONARY_KEY, loadPersonalWords, savePersonalWords } from './store/dictionary'
 import {
@@ -68,6 +68,9 @@ import { toast } from './ui/toast'
 import { leaveNotice, takeNotice } from './ui/notice'
 import { createToolbar } from './ui/toolbar'
 import { openTutorial, showTutorialHint, tutorialSeen } from './ui/tutorial'
+import { Board } from './board/board'
+import { BoardStore } from './board/store'
+import { newStrokeId } from './board/strokes'
 
 /** La build per claude.ai (`GLIFO_NO_PWA=1`, vedi vite.config.ts): l'account è spento. */
 declare const __GLIFO_DEMO__: boolean
@@ -135,6 +138,7 @@ const viewSwitch = h(
     ['editor', 'Editor', ICONS.edit],
     ['split', 'Diviso', ICONS.split],
     ['preview', 'Anteprima', ICONS.eye],
+    ['board', 'Lavagna', ICONS.board],
   ] as const).map(([mode, label, paths]) => {
     const b = h(
       'button',
@@ -214,6 +218,22 @@ const preview = new Preview({
   onEditSchema: (line, source) => void openSchema(line, source),
   onAddToGraph: (line, text) => addToGraphBlock(editor.view, line, text),
   onGraphLabels: (line, labels) => setGraphLabels(editor.view, line, labels),
+})
+
+// La lavagna di ogni nota (src/board), per scrivere a mano: accanto al testo al posto
+// dell'anteprima, o a tutto schermo. Resta su questo dispositivo, non va nella nota.
+const boards = new BoardStore()
+const board = new Board({
+  store: boards,
+  confirmClear: () =>
+    confirmDialog({
+      title: 'Pulire la lavagna?',
+      message: 'Si cancella tutto quello che è scritto sulla lavagna di questa nota.',
+      note: 'Se cambi idea, la freccia «Annulla» della lavagna (o Ctrl+Z) lo fa tornare.',
+      confirmLabel: 'Pulisci',
+      danger: true,
+    }),
+  warn: (message) => toast(message, 'error'),
 })
 
 const editor = new MarkdownEditor(editorHost, active.content, {
@@ -332,22 +352,22 @@ const floatBar = h(
 const backdrop = h('div', { class: 'backdrop', on: { click: () => setPanels({ notesOpen: false, symbolsOpen: false }) } })
 // I bordi tra le sezioni: trascinandoli se ne cambiano le misure, ricordate su questo dispositivo.
 const resizer = new PaneResizer(
-  { notes: notesPanel.el, editor: editorPane, preview: preview.el, symbols: sidePanel.el },
+  { notes: notesPanel.el, editor: editorPane, preview: preview.el, board: board.el, symbols: sidePanel.el },
   loadPaneSizes(),
   (changes) => savePaneSizes(changes),
 )
 notesPanel.el.prepend(sidebarTop)
 notesPanel.foot.append(shareButton)
 notesPanel.el.append(sidebarBottom)
-// Testo e anteprima, con sopra i pulsanti volanti.
-const content = h('div', { class: 'content' }, floatBar, editorPane, resizer.splitHandle, preview.el)
+// Testo e anteprima (o la lavagna), con sopra i pulsanti volanti.
+const content = h('div', { class: 'content' }, floatBar, editorPane, resizer.splitHandle, preview.el, board.el)
 
 /** Le misure fisse della riga sopra il testo, in pixel. */
 const BAR = {
   /** I margini della riga e gli spazi tra le sue tre parti. */
   gaps: 36,
   /** Le viste con le scritte e solo con le icone. */
-  pill: { labels: 280, icons: 116 },
+  pill: { labels: 378, icons: 128 },
   /** Il pulsante dei simboli con la scritta e solo con l'icona. */
   symbols: { label: 100, icon: 40 },
   /** Il pulsante per riaprire la barra laterale, con lo spazio accanto. */
@@ -404,8 +424,9 @@ function applyTheme(): void {
   if (settings.theme === 'auto') delete root.dataset.theme
   else root.dataset.theme = settings.theme
   root.style.setProperty('--editor-font-size', `${settings.fontSize}px`)
-  // Gli schemi hanno i colori del tema: si ridisegnano.
+  // Gli schemi e la lavagna hanno i colori del tema: si ridisegnano.
   preview.setTheme(isDark() ? 'dark' : 'light')
+  board.setTheme(isDark() ? 'dark' : 'light')
 }
 
 /** `fromAccount`: arrivate dall'account, quindi non vanno rimandate. */
@@ -428,9 +449,15 @@ function setView(mode: ViewMode, focus = true): void {
   app.dataset.view = mode
   for (const [m, b] of viewButtons) b.setAttribute('aria-checked', String(m === mode))
   fitBar()
-  if (mode !== 'editor') preview.update(editor.getDoc(), true)
+  resizer.refresh()
+  if (mode === 'board') board.show(active.id)
+  else board.hide()
+  if (mode === 'split' || mode === 'preview') preview.update(editor.getDoc(), true)
   if (mode === 'preview') (document.activeElement as HTMLElement | null)?.blur()
-  else if (focus) editor.focus()
+  // Sulla lavagna si scrive a mano: il fuoco va lì, e su tablet e telefono non si apre la tastiera.
+  else if (mode === 'board') {
+    if (focus) board.focus()
+  } else if (focus) editor.focus()
 }
 
 function setPanels(next: Partial<Pick<Settings, 'notesOpen' | 'symbolsOpen'>>): void {
@@ -469,7 +496,7 @@ function openSettings(): void {
     onChange: (next) => updateSettings(next),
     personalWords: loadPersonalWords(),
     onPersonalWordsChange: (words) => setPersonalWords(words),
-    onBackup: () => backup(),
+    onBackup: () => void backup(),
     onRestore: () => void restore(),
     accountEmail: account?.email,
   })
@@ -477,6 +504,9 @@ function openSettings(): void {
 
 applyTheme()
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme)
+// Le lavagne rimaste senza nota (eliminata in un'altra scheda, su un altro dispositivo, o uscendo
+// dall'account) si tolgono. Solo se le note si leggono davvero dal browser: in memoria non ci sono tutte.
+if (storageAvailable()) window.setTimeout(() => void boards.prune(noteIdsInBrowser).catch(() => {}), 2000)
 if (notesOverlay.matches) settings.notesOpen = false
 if (narrow.matches) {
   settings.symbolsOpen = false
@@ -554,6 +584,7 @@ function loadNote(id: string, focus = true): void {
   store.activeId = id
   editor.setDoc(note.content)
   preview.update(note.content, true)
+  if (settings.view === 'board') board.show(id)
   document.title = `${note.title} · Glifo`
   saveState('salvato')
   notesPanel.refresh(id)
@@ -599,6 +630,8 @@ async function deleteNote(id: string): Promise<void> {
   }
   store.remove(id)
   fileHandles.delete(id)
+  // Con la nota se ne va la sua lavagna.
+  void boards.remove([id]).catch(() => {})
   changedHere()
   if (id === active.id) {
     const next = store.list()[0] ?? store.create('# Nuovi appunti\n\n')
@@ -909,16 +942,20 @@ function printNote(): void {
   window.print()
 }
 
-function backup(): void {
+async function backup(): Promise<void> {
   flushSave()
+  const notes = store.exportAll()
+  // Anche le lavagne con qualcosa scritto: stanno solo in questo browser.
+  const drawings = await boards.exportBoards(notes.map((n) => n.id)).catch(() => [])
   const data = JSON.stringify(
     {
       app: 'glifo',
       version: 1,
       exportedAt: new Date().toISOString(),
-      notes: store.exportAll(),
+      notes,
       folders: folders.list(),
       dictionary: loadPersonalWords(),
+      ...(drawings.length ? { boards: drawings } : {}),
     },
     null,
     2,
@@ -933,8 +970,13 @@ async function restore(): Promise<void> {
     const file = input.files?.[0]
     if (!file) return
     try {
-      const data = JSON.parse(await file.text()) as { notes?: { content?: unknown; folderId?: unknown }[]; folders?: unknown; dictionary?: unknown }
-      const notes = (data.notes ?? []).filter((n): n is { content: string; folderId?: unknown } => typeof n.content === 'string')
+      const data = JSON.parse(await file.text()) as {
+        notes?: { id?: unknown; content?: unknown; folderId?: unknown }[]
+        folders?: unknown
+        dictionary?: unknown
+        boards?: unknown
+      }
+      const notes = (data.notes ?? []).filter((n): n is { id?: unknown; content: string; folderId?: unknown } => typeof n.content === 'string')
       if (!notes.length) throw new Error('nessuna nota')
       flushSave()
       // Le cartelle del backup: si usano quelle che hanno già lo stesso nome, le altre si creano.
@@ -944,7 +986,16 @@ async function restore(): Promise<void> {
         const folder = folders.byName(f.name) ?? folders.create(f.name)
         if (folder) folderIds.set(f.id, folder.id)
       }
-      for (const n of notes) store.create(n.content, (typeof n.folderId === 'string' && folderIds.get(n.folderId)) || null)
+      // Le note tornano con un id nuovo: le lavagne del backup vanno su quelle ricreate.
+      const noteIds = new Map<string, string>()
+      for (const n of notes) {
+        const created = store.create(n.content, (typeof n.folderId === 'string' && folderIds.get(n.folderId)) || null)
+        if (typeof n.id === 'string') noteIds.set(n.id, created.id)
+      }
+      for (const b of Array.isArray(data.boards) ? (data.boards as { note?: unknown }[]) : []) {
+        const to = typeof b?.note === 'string' ? noteIds.get(b.note) : undefined
+        if (to) await boards.importBoard(to, b, newStrokeId).catch(() => 0)
+      }
       if (Array.isArray(data.dictionary)) {
         setPersonalWords([...loadPersonalWords(), ...data.dictionary.filter((w): w is string => typeof w === 'string')])
       }
@@ -964,6 +1015,8 @@ async function restore(): Promise<void> {
 function applyAccountChange(change: LocalChange): void {
   folders.reload()
   for (const r of change.replaced) {
+    // La lavagna segue la nota che ha cambiato id; dopo un conflitto ce l'hanno tutte e due le versioni.
+    void (r.conflict ? boards.copy(r.from, r.to) : boards.move(r.from, r.to)).catch(() => {})
     const handle = fileHandles.get(r.from)
     if (handle) {
       fileHandles.set(r.to, handle)
@@ -984,6 +1037,7 @@ function applyAccountChange(change: LocalChange): void {
   for (const id of change.restored) {
     toast(`«${store.meta(id)?.title ?? 'Una nota'}» era stata eliminata qui, ma su un altro dispositivo è cambiata: è tornata tra gli appunti.`)
   }
+  if (change.removed.length) void boards.remove(change.removed).catch(() => {})
   if (change.removed.includes(active.id)) {
     const title = active.title
     fileHandles.delete(active.id)
@@ -1000,6 +1054,7 @@ function applyAccountChange(change: LocalChange): void {
     }
   }
   dropStarter()
+  if (settings.view === 'board') board.show(active.id)
   notesPanel.refresh(active.id)
 }
 
@@ -1033,7 +1088,7 @@ function openAccount(): void {
     guestCount: guestNoteCount(welcomeNote),
     onAdoptGuest: () => {
       flushSave()
-      const moved = adoptGuestNotes(account.userId, welcomeNote)
+      const moved = adoptGuestNotes(account.userId, welcomeNote, (from, to) => void boards.move(from, to).catch(() => {}))
       store.reload()
       folders.reload()
       notesPanel.refresh(active.id)
@@ -1134,6 +1189,7 @@ async function deleteAccount(): Promise<void> {
   }
   unloading = true
   sync.stop()
+  await boards.remove(store.list().map((n) => n.id)).catch(() => {})
   await signOut()
   setCurrentAccount(null)
   forgetAccount(account.userId)
@@ -1165,7 +1221,10 @@ async function completeSignIn(user: SignedIn): Promise<void> {
       }))
     // Da qui la pagina si ricarica: niente deve tornare tra gli appunti di questo browser.
     unloading = true
-    if (add) adoptGuestNotes(user.userId, welcomeNote)
+    // Le lavagne delle note che cambiano id le seguono, prima di ricaricare.
+    const renamed: [string, string][] = []
+    if (add) adoptGuestNotes(user.userId, welcomeNote, (from, to) => renamed.push([from, to]))
+    await Promise.all(renamed.map(([from, to]) => boards.move(from, to).catch(() => {})))
     // Se l'account ha già delle impostazioni valgono quelle, altrimenti vanno all'account quelle di qui.
     accountSpace(user.userId).state.update(() => ({
       adopt: true,
@@ -1181,11 +1240,22 @@ async function signOutAccount(): Promise<void> {
   if (!account || !sync) return
   flushSave()
   await sync.syncNow()
-  if (sync.hasPending()) {
+  const pending = sync.hasPending()
+  // Le lavagne stanno solo in questo browser, non nell'account: uscendo si tolgono con le note.
+  const noteIds = store.list().map((n) => n.id)
+  const drawn = await boards.drawn(noteIds).catch(() => 0)
+  if (pending || drawn) {
     const ok = await confirmDialog({
       title: 'Uscire lo stesso?',
-      message:
-        'Alcune modifiche non sono ancora arrivate nell\'account, per esempio perché manca la connessione. Se esci ora, da questo browser si perdono.',
+      message: [
+        pending
+          ? 'Alcune modifiche non sono ancora arrivate nell\'account, per esempio perché manca la connessione. Se esci ora, da questo browser si perdono.'
+          : '',
+        drawn === 1 ? 'La lavagna di una nota sta solo in questo browser, non nell\'account: uscendo si elimina.' : '',
+        drawn > 1 ? `Le lavagne di ${drawn} note stanno solo in questo browser, non nell'account: uscendo si eliminano.` : '',
+      ]
+        .filter(Boolean)
+        .join(' '),
       confirmLabel: 'Esci lo stesso',
       cancelLabel: 'Resta',
       danger: true,
@@ -1194,6 +1264,7 @@ async function signOutAccount(): Promise<void> {
   }
   unloading = true
   sync.stop()
+  await boards.remove(noteIds).catch(() => {})
   await signOut()
   // Prima si esce e poi si tolgono le note: le altre schede se ne accorgono subito.
   setCurrentAccount(null)
@@ -1255,7 +1326,11 @@ window.addEventListener('keydown', (ev) => {
   // Se l'editor ha già gestito il tasto, non ripetere l'azione.
   if (ev.defaultPrevented) return
   const mod = ev.ctrlKey || ev.metaKey
-  if (mod && !ev.shiftKey && !ev.altKey && ev.key.toLowerCase() === 'k') {
+  // Esc chiude la lavagna a tutto schermo, anche se il fuoco non è lì.
+  if (ev.key === 'Escape' && board.isFull && !document.querySelector('dialog[open]')) {
+    ev.preventDefault()
+    board.setFull(false)
+  } else if (mod && !ev.shiftKey && !ev.altKey && ev.key.toLowerCase() === 'k') {
     ev.preventDefault()
     focusSymbolSearch()
   } else if (mod && !ev.shiftKey && !ev.altKey && ev.key.toLowerCase() === 's') {
