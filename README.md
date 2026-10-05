@@ -599,10 +599,17 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
   al posto dell'anteprima, un foglio a quadretti dove **scrivere a mano**: con la penna (Apple
   Pencil, S Pen, una tavoletta grafica anche senza schermo), con il dito o con il mouse. Non
   entra nella nota: è il foglio accanto alla calcolatrice, per i conti e le prove.
-- **Penna con la pressione** (piano scrive sottile, forte spesso), **gomma** che cancella solo
-  dove passa (anche quella in fondo alla penna, o la penna con il tasto laterale), quattro
-  colori (il primo è nero nel tema chiaro e bianco in quello scuro, dove la lavagna è scura),
-  **Annulla** e **Ripeti** (anche Ctrl+Z e Ctrl+Y) e **Pulisci**, con la conferma.
+- **Penna con la pressione** (piano scrive sottile, forte spesso) in quattro colori (il primo è
+  nero nel tema chiaro e bianco in quello scuro, dove la lavagna è scura), **evidenziatore** in
+  quattro colori, trasparente e sempre sotto la scrittura (anche passato dopo), e **gomma** con due
+  modi, come in Microsoft Whiteboard: **Dove passa** cancella solo dove passa e, mossa veloce, si
+  allarga; **Linea intera** toglie tutta la linea che tocca, anche in un punto solo. Cancellano
+  anche la gomma in fondo alla penna e la penna con il tasto laterale.
+- **Spessori**: premendo di nuovo lo strumento scelto, o il pulsante con il pallino accanto ai
+  colori, si sceglie lo spessore della penna e dell'evidenziatore e quanto è grande la gomma (tre
+  misure); quello della gomma apre anche i suoi due modi. Le scelte restano su quel dispositivo, e
+  cambiando strumento la barra non si sposta (sulla lavagna stretta si stringe).
+- **Annulla** e **Ripeti** (anche Ctrl+Z e Ctrl+Y) e **Pulisci**, con la conferma.
 - **Spostarsi e ingrandire**: due dita, oppure la rotellina (con Ctrl ingrandisce), il tasto
   centrale o lo spazio tenuto premuto; il numero in basso a destra riporta alla vista di
   partenza. Quando Glifo vede una penna se lo ricorda: da lì un dito solo non fa niente, così

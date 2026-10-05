@@ -3814,6 +3814,8 @@ kbd {
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
+  /* La barra degli strumenti si stringe quando la lavagna è stretta (@container più sotto). */
+  container-type: inline-size;
 }
 
 .app[data-view='board'] .board-pane {
@@ -3934,6 +3936,26 @@ kbd {
   gap: 1px;
 }
 
+/* I colori della penna, quelli dell'evidenziatore e il modo della gomma, uno sopra l'altro: la barra
+   è larga quanto il più largo e non cambia cambiando strumento. Si vede quello dello strumento scelto. */
+.board-options {
+  display: grid;
+  flex: none;
+  align-items: center;
+}
+
+.board-options > * {
+  grid-area: 1 / 1;
+}
+
+.board-options > .board-mode {
+  justify-self: center;
+}
+
+.board-options > .is-off {
+  visibility: hidden;
+}
+
 /* Il colore (--swatch) lo mette la lavagna, secondo il tema. */
 .board-swatch {
   width: 18px;
@@ -3950,14 +3972,15 @@ kbd {
   border-radius: 4px;
 }
 
-/* La gomma: il modo («Dove passa», «Linea intera») è scritto, e apre il menu. */
-.board-mode {
+/* I pulsanti con la freccia aprono il menu: la misura dello strumento e, per la gomma, anche il
+   modo («Dove passa», «Linea intera»), scritto. */
+.board-chip {
   display: inline-flex;
   flex: none;
   align-items: center;
   gap: 4px;
   height: 34px;
-  padding: 0 8px 0 10px;
+  padding: 0 6px 0 8px;
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -3966,18 +3989,38 @@ kbd {
   white-space: nowrap;
 }
 
-.board-mode:hover {
+.board-chip:hover {
   background: var(--surface-2);
+}
+
+.board-chip svg {
+  color: var(--muted);
+}
+
+/* Staccato dai colori, perché il suo pallino non sembri un altro colore. */
+.board-size {
+  margin-left: 6px;
+}
+
+.board-mode {
+  gap: 6px;
+  padding-left: 10px;
 }
 
 /* La misura dello strumento: un pallino grande come il tratto, del suo colore (vuoto per la gomma). */
 .board-size-dot {
   display: block;
+  flex: none;
   width: var(--dot, 11px);
   height: var(--dot, 11px);
   border-radius: 50%;
   background: var(--swatch, var(--muted));
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.14);
+}
+
+/* Nel pulsante il pallino ha sempre lo stesso posto: cambiando misura la barra non si sposta. */
+.board-chip .board-size-dot {
+  margin: calc((16px - var(--dot, 11px)) / 2);
 }
 
 .board-size.is-eraser .board-size-dot,
@@ -4032,6 +4075,21 @@ kbd {
   color: var(--accent-text);
 }
 
+/* Il nome del modo della gomma e, sotto, cosa fa. */
+.board-menu-text {
+  display: grid;
+  gap: 1px;
+}
+
+.board-menu-text strong {
+  font-weight: 600;
+}
+
+.board-menu-text small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .board-menu-sizes {
   display: flex;
   gap: 4px;
@@ -4062,6 +4120,34 @@ kbd {
   height: 20px;
   margin: 0 4px;
   background: var(--border);
+}
+
+/* Sulla lavagna stretta (il telefono, o accanto al testo) la barra si stringe e ci sta tutta. */
+@container (max-width: 460px) {
+  .board-tools {
+    gap: 0;
+    padding: 3px;
+  }
+
+  .board-tools .board-button {
+    width: 31px;
+  }
+
+  .board-tools .board-color {
+    width: 27px;
+  }
+
+  .board-tools .board-sep {
+    margin: 0 3px;
+  }
+
+  .board-chip {
+    padding: 0 4px 0 6px;
+  }
+
+  .board-size {
+    margin-left: 2px;
+  }
 }
 
 /* In basso: a sinistra annulla e ripeti; a destra rimpicciolisci, quanto è ingrandita (un clic: la

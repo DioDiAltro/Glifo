@@ -250,9 +250,9 @@ const SCENES = {
         await send('mouseReleased', dense.at(-1), 0)
         await page.waitForTimeout(60)
       }
-      /** Si sceglie il colore con la penna, come sul tablet. */
-      const color = async (name) => {
-        const box = await page.locator(`.board-color[data-color="${name}"]`).boundingBox()
+      /** Si sceglie il colore (o lo strumento) con la penna, come sul tablet. */
+      const color = async (name, selector = `.board-color[data-color="${name}"]`) => {
+        const box = await page.locator(selector).boundingBox()
         const at = [box.x + box.width / 2 - stage.x, box.y + box.height / 2 - stage.y]
         await send('mouseMoved', at, 0)
         await page.waitForTimeout(250)
@@ -281,7 +281,11 @@ const SCENES = {
       await pen([[358, 145], [380, 170]], (t) => 0.4 + 0.3 * t)
       await pen([[380, 145], [358, 170]], (t) => 0.4 + 0.3 * t)
       await pen([[386, 133], [389, 128], [394, 126], [399, 129], [398, 134], [387, 145], [400, 145]], () => 0.45)
-      // Il vertice cerchiato in rosso.
+      // L'evidenziatore giallo su «y = x²»: passato dopo, resta sotto la scrittura.
+      await color('highlight', '.board-button[aria-label="Evidenziatore"]')
+      await pen([[284, 160], [344, 158], [406, 159]], () => 0.5, 8)
+      // Il vertice cerchiato in rosso: prima si torna alla penna (con l'evidenziatore si vedono i suoi colori).
+      await color('pen', '.board-button[aria-label="Penna"]')
       await color('red')
       const circle = Array.from({ length: 33 }, (_, i) => {
         const a = (i / 30) * 2 * Math.PI - 0.6

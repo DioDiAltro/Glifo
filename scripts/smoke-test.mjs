@@ -2114,6 +2114,184 @@ try {
       `sul telefono la lavagna prende il posto del testo, gli strumenti stanno nello schermo e il dito scrive (${JSON.stringify(phoneLayout)})`,
     )
     await phoneBoard.close()
+    // Gli strumenti: l'evidenziatore (trasparente, sempre sotto la scrittura), lo spessore della penna,
+    // la gomma «Linea intera» che toccando un punto toglie tutta la linea e quella «Dove passa» che,
+    // mossa veloce, si allarga. Cambiando strumento la barra non si sposta; le scelte restano
+    // ricaricando la pagina.
+    const toolsContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, hasTouch: true })
+    const tp = await toolsContext.newPage()
+    tp.on('pageerror', (e) => errors.push(e.message))
+    await tp.goto(url)
+    await tp.waitForSelector('.cm-editor')
+    await tp.locator('.notes-head button[aria-label="Nuova nota"]').click()
+    await tp.keyboard.type('Strumenti della lavagna')
+    await tp.locator('.view-button[aria-label="Lavagna"]').click()
+    await tp.waitForSelector('.board-pane[data-loaded="true"]')
+    const tcdp = await toolsContext.newCDPSession(tp)
+    const tpane = tp.locator('.board-pane')
+    const tcount = async () => Number(await tpane.getAttribute('data-strokes'))
+    const tstage = await tp.locator('.board-stage').boundingBox()
+    /** Un tratto: punti [x, y] sulla lavagna; `pause` ms tra un movimento e l'altro. */
+    const tstroke = async (points, { pointerType = 'pen', pause = 0 } = {}) => {
+      const send = (type, [x, y], pressed = true) =>
+        tcdp.send('Input.dispatchMouseEvent', { type, x: tstage.x + x, y: tstage.y + y, button: 'left', buttons: pressed ? 1 : 0, clickCount: 1, pointerType, force: 0.5 })
+      await send('mousePressed', points[0])
+      for (const q of points.slice(1)) {
+        await send('mouseMoved', q)
+        if (pause) await tp.waitForTimeout(pause)
+      }
+      await send('mouseReleased', points.at(-1), false)
+    }
+    const across = (y, from = 40, to = 330) => Array.from({ length: 16 }, (_, i) => [from + ((to - from) * i) / 15, y])
+    const down = (x, from, to, step) => Array.from({ length: Math.round((to - from) / step) + 1 }, (_, i) => [x, from + i * step])
+    /** Il colore della lavagna in un punto (sulla lavagna): [r, g, b]. */
+    const rgbAt = (x, y) =>
+      tp.evaluate(([x, y]) => {
+        const c = document.querySelector('.board-canvas')
+        const r = c.getBoundingClientRect()
+        const k = c.width / r.width
+        return [...c.getContext('2d').getImageData(Math.round((x - r.left) * k), Math.round((y - r.top) * k), 1, 1).data].slice(0, 3)
+      }, [tstage.x + x, tstage.y + y])
+    const sum = async (x, y) => (await rgbAt(x, y)).reduce((a, b) => a + b, 0)
+    /** Aspetta che la lavagna abbia ridisegnato: la gomma e Annulla ridisegnano al fotogramma dopo. */
+    const painted = () => tp.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))))
+    /** Quanto è spessa la riga a `dy` (pixel scuri in verticale). */
+    const thickness = async (dy) => {
+      let n = 0
+      for (let y = dy - 8; y <= dy + 8; y += 0.5) if ((await sum(185, y)) < 400) n++
+      return n
+    }
+    /** Quanto è largo il buco della gomma nella riga a `dy` attorno a `x` (pixel di carta). */
+    const gap = async (x, dy) => {
+      let n = 0
+      for (let i = x - 45; i <= x + 45; i++) if ((await sum(i, dy)) > 600) n++
+      return n
+    }
+    const tsaved = (note) =>
+      tp.evaluate(
+        (note) =>
+          new Promise((resolve, reject) => {
+            const open = indexedDB.open('glifo-lavagne')
+            open.onerror = () => reject(open.error)
+            open.onsuccess = () => {
+              const db = open.result
+              const req = db.transaction('strokes', 'readonly').objectStore('strokes').getAll(IDBKeyRange.bound([note], [note, []]))
+              req.onerror = () => reject(req.error)
+              req.onsuccess = () => {
+                db.close()
+                resolve(req.result.map((r) => ({ color: r.color, size: r.size, highlight: r.highlight === true })))
+              }
+            }
+          }),
+        note,
+      )
+    const gommaX = () => tp.locator('.board-button[aria-label="Gomma"]').evaluate((b) => Math.round(b.getBoundingClientRect().x))
+    const toolsAt = { pen: await gommaX() }
+    // Una riga scritta, poi l'evidenziatore giallo sopra (più largo) e uno verde sotto.
+    await tstroke(across(150))
+    await tp.locator('.board-button[aria-label="Evidenziatore"]').click()
+    toolsAt.highlight = await gommaX()
+    await tstroke(across(150, 30, 340))
+    await tp.locator('.board-color[data-highlight="green"]').click()
+    await tstroke(across(205, 30, 340))
+    await painted()
+    const [inkOver, yellow, green] = [await rgbAt(185, 150), await rgbAt(185, 143), await rgbAt(185, 205)]
+    const tnote = await tpane.getAttribute('data-note')
+    const marked = (await tsaved(tnote)).filter((s) => s.highlight)
+    check(
+      inkOver.reduce((a, b) => a + b, 0) < 250 &&
+        yellow[0] > 200 && yellow[0] - yellow[2] > 60 && yellow[2] > 100 &&
+        green[1] > green[0] + 30 && green[1] > green[2] + 20 &&
+        marked.map((s) => s.color).sort().join() === 'green,yellow' &&
+        marked.every((s) => s.size === 18),
+      `l'evidenziatore è trasparente e sta sotto la scrittura anche se fatto dopo; giallo e verde (${JSON.stringify({ inkOver, yellow, green, marked })})`,
+    )
+    // Lo spessore della penna: il pulsante con il pallino apre il menu; spessa, poi fine.
+    await tp.locator('.board-button[aria-label="Penna"]').click()
+    await tp.locator('.board-size').click()
+    const penMenu = await tp.locator('.board-menu').textContent()
+    await tp.locator('.board-menu-option', { hasText: 'spessa' }).click()
+    const menuClosed = (await tp.locator('.board-menu').count()) === 0
+    await tstroke(across(265))
+    await tp.locator('.board-size').click()
+    await tp.locator('.board-menu-option', { hasText: 'fine' }).click()
+    await tstroke(across(320))
+    await painted()
+    const [thickLine, thinLine] = [await thickness(265), await thickness(320)]
+    const penSizes = (await tsaved(tnote)).filter((s) => !s.highlight).map((s) => s.size).sort((a, b) => a - b)
+    check(
+      penMenu.startsWith('Spessore') && menuClosed && thickLine > thinLine * 1.8 && thinLine > 0 && penSizes.join() === '2,3.2,5.5',
+      `lo spessore della penna si sceglie dal menu: fine, media, spessa (${JSON.stringify({ penMenu, thickLine, thinLine, penSizes })})`,
+    )
+    // La gomma «Linea intera»: il pulsante del modo apre solo i modi, quello della misura solo le
+    // grandezze, la gomma premuta di nuovo tutti e due. Poi toccando un punto va via tutta la riga spessa.
+    await tp.locator('.board-button[aria-label="Gomma"]').click()
+    toolsAt.eraser = await gommaX()
+    const menuText = async () => ((await tp.locator('.board-menu').count()) ? await tp.locator('.board-menu').textContent() : '')
+    await tp.locator('.board-mode').click()
+    const modeMenu = await menuText()
+    await tp.locator('.board-size').click()
+    const sizeMenu = await menuText()
+    await tp.locator('.board-button[aria-label="Gomma"]').click()
+    const bothMenu = await menuText()
+    await tp.keyboard.press('Escape')
+    const escClosed = (await menuText()) === ''
+    await tp.locator('.board-mode').click()
+    await tp.locator('.board-menu-option', { hasText: 'Linea intera' }).click()
+    const before = await tcount()
+    await tstroke([[60, 265]], { pointerType: 'mouse' })
+    await painted()
+    const afterTap = { strokes: await tcount(), start: await sum(60, 265), middle: await sum(185, 265), end: await sum(320, 265), thin: await sum(185, 320) }
+    await tp.keyboard.press('Control+Z')
+    await painted()
+    const undone = { strokes: await tcount(), middle: await sum(185, 265) }
+    check(
+      modeMenu.includes('Come cancella') && !modeMenu.includes('Grandezza') &&
+        sizeMenu.includes('Grandezza') && !sizeMenu.includes('Come cancella') &&
+        bothMenu.includes('Come cancella') && bothMenu.includes('Grandezza') && escClosed &&
+        (await tpane.getAttribute('data-eraser')) === 'stroke' &&
+        afterTap.strokes === before - 1 && afterTap.start > 600 && afterTap.middle > 600 && afterTap.end > 600 && afterTap.thin < 600 &&
+        undone.strokes === before && undone.middle < 400,
+      `la gomma «Linea intera» toccando un punto toglie tutta la riga e le altre restano; Ctrl+Z la rimette (${JSON.stringify({ modeMenu, sizeMenu, bothMenu, before, afterTap, undone })})`,
+    )
+    // La gomma «Dove passa»: piano cancella poco, veloce si allarga (passi lunghi, perché la velocità
+    // è la media degli ultimi movimenti).
+    await tp.locator('.board-mode').click()
+    await tp.locator('.board-menu-option', { hasText: 'Dove passa' }).click()
+    await tp.locator('.board-button[aria-label="Penna"]').click()
+    await tp.locator('.board-size').click()
+    await tp.locator('.board-menu-option', { hasText: 'media' }).click()
+    await tstroke(across(400))
+    await tp.locator('.board-button[aria-label="Gomma"]').click()
+    await tstroke(down(110, 380, 420, 2), { pointerType: 'mouse', pause: 25 })
+    await tstroke(down(250, 280, 520, 40), { pointerType: 'mouse' })
+    await painted()
+    const [slowGap, fastGap] = [await gap(110, 400), await gap(250, 400)]
+    check(
+      slowGap > 8 && fastGap > slowGap * 1.8,
+      `la gomma «Dove passa» cancella dove passa e, mossa veloce, si allarga (${JSON.stringify({ slowGap, fastGap })})`,
+    )
+    // Cambiando strumento la barra resta ferma; ricaricando la pagina restano lo spessore, il colore
+    // dell'evidenziatore e il modo della gomma.
+    await tp.locator('.board-mode').click()
+    await tp.locator('.board-menu-option', { hasText: 'Linea intera' }).click()
+    await tp.locator('.board-button[aria-label="Penna"]').click()
+    await tp.locator('.board-size').click()
+    await tp.locator('.board-menu-option', { hasText: 'fine' }).click()
+    await tp.reload()
+    await tp.waitForSelector('.board-pane[data-loaded="true"]')
+    const kept = {
+      size: await tp.locator('.board-size').getAttribute('aria-label'),
+      eraser: await tpane.getAttribute('data-eraser'),
+      green: await tp.locator('.board-color[data-highlight="green"]').getAttribute('aria-pressed'),
+      strokes: await tcount(),
+    }
+    check(
+      toolsAt.pen === toolsAt.highlight && toolsAt.pen === toolsAt.eraser &&
+        kept.size === 'Spessore della penna: fine' && kept.eraser === 'stroke' && kept.green === 'true' && kept.strokes > 0,
+      `cambiando strumento la barra non si sposta, e ricaricando restano spessore, colore e modo della gomma (${JSON.stringify({ toolsAt, kept })})`,
+    )
+    await toolsContext.close()
   }
   // Niente barra in alto: in cima alla barra laterale il logo e subito gli appunti; in fondo
   // «Apri .md», «Salva .md» e «Condividi», poi l'account e le impostazioni; sopra il testo,

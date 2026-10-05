@@ -204,12 +204,16 @@ con Claude. La discussione è in [ABBONAMENTI.md](ABBONAMENTI.md), «La lavagna�
 - con l'AI e nei piani a pagamento, le formule scritte a mano convertite in LaTeX e aggiunte alla
   nota se si vuole («Aggiungi alla nota»): aspetta la discussione sulla chiave API;
 - **una lavagna completa di tutto** (lo studente, 5 ottobre 2026: «deve essere una lavagna completa
-  di tutto», come Microsoft Whiteboard):
-  - la grandezza dello strumento scelto: lo spessore della penna, dell'evidenziatore e della gomma
-    (lo studente ha chiarito che intende questo);
-  - gli evidenziatori, di più colori, che si vedono sotto la scrittura;
-  - la gomma con due modi: «a tratto», che cancella dove passa e diventa più grande quando la si
-    muove veloce, e «a linea intera», che toccando anche un solo punto di una linea la cancella tutta;
+  di tutto», come Microsoft Whiteboard). I primi tre punti sono fatti sul ramo `prova` (5 ottobre
+  2026, «sì a tutto, comincia dagli strumenti della lavagna») e aspettano il «va bene» dello studente
+  per andare online:
+  - fatto su `prova`: la grandezza dello strumento scelto, cioè lo spessore della penna,
+    dell'evidenziatore e della gomma (tre misure, dal menu che si apre premendo di nuovo lo
+    strumento o il pulsante con il pallino);
+  - fatto su `prova`: gli evidenziatori, in quattro colori, trasparenti e sempre sotto la scrittura;
+  - fatto su `prova`: la gomma con due modi, «Dove passa», che cancella dove passa e diventa più
+    grande quando la si muove veloce, e «Linea intera», che toccando anche un solo punto di una
+    linea la cancella tutta;
   - scaricare la lavagna come immagine;
 - la lavagna sugli altri dispositivi, con l'account;
 - sull'iPad la prima prova (5 ottobre 2026) ha trovato quattro problemi, corretti subito: le parole

@@ -233,14 +233,22 @@ prossimi passi sono in «In programma» nella ROADMAP.
   (`X \sim B(n, p)` con n e p del blocco) si fanno in `readGraph` prima di disegnare.
 - `src/board/`: la lavagna, per scrivere a mano accanto al testo (la vista «Lavagna», `ViewMode`
   `'board'`). `strokes.ts` i tratti come vettori (x, y e pressione) e la
-  gomma che li taglia esattamente (`capsuleSpan`, `eraseStroke`); `ink.ts` il contorno con
-  perfect-freehand e i colori dei due temi (`BOARD_PALETTES`: nei tratti c'è il nome del colore);
+  gomma che li taglia esattamente (`capsuleSpan`, `eraseStroke`); la gomma «Linea intera» toglie il
+  tratto che tocca (`strokeTouched`), quella «Dove passa» si allarga andando veloce (`eraserGrowth`,
+  con la velocità sullo schermo); gli evidenziatori sono tratti con `highlight` (colori a parte,
+  `HIGHLIGHT_COLORS`), disegnati prima della scrittura e trasparenti. `ink.ts` il contorno con
+  perfect-freehand, le tre misure di ogni strumento (`TOOL_SIZES`) e i colori dei due temi
+  (`BOARD_PALETTES`: nei tratti c'è il nome del colore);
   `store.ts` le lavagne in IndexedDB (`glifo-lavagne`, un tratto per record con la chiave [nota, id],
   le altre schede avvisate da un BroadcastChannel; in memoria se IndexedDB non c'è), il backup
   (`exportBoards`, `importBoard`) e `prune` (all'avvio toglie quelle senza nota, `noteIdsInBrowser`);
   `board.ts` il componente: penna con la pressione (vista una penna, `glifo.lavagna.v1`, un dito solo
   non fa niente e due dita spostano; un tocco mentre la penna scrive o entro `PALM_MS` è la mano: non
-  conta, nemmeno sui pulsanti), dita, mouse, gomma, annulla e ripeti, schermo intero (su iPad e iPhone
+  conta, nemmeno sui pulsanti), dita, mouse, gomma, annulla e ripeti; la barra (penna, evidenziatore,
+  gomma; i colori e il modo della gomma uno sopra l'altro in `.board-options`, così cambiando
+  strumento non si sposta; sulla lavagna stretta si stringe con `@container`), il menu delle misure
+  (`openMenu`: lo strumento premuto di nuovo o il pulsante con il pallino; scelte in
+  `glifo.lavagna.v1`), schermo intero (su iPad e iPhone
   senza quello del browser, `device.ts`: Safari ne usciva prendendo la penna per una tastiera; sotto,
   il resto dell'app è nascosto con `.board-full`). Sulla lavagna touchstart, touchmove e touchend
   sono annullati: sull'iPad selezionavano le parole e facevano partire Scribble. `touchlog.ts` è il
@@ -252,7 +260,7 @@ prossimi passi sono in «In programma» nella ROADMAP.
   lavagna lo apre, e lo studente lo copia o lo scarica per mandarlo nella chat. In `main.ts`
   la lavagna si toglie con la nota, segue la nota che cambia id con l'account (`replaced`,
   `adoptGuestNotes`) e uscendo dall'account si toglie, con l'avviso. Per le prove nel browser lo stato
-  è in `data-strokes`, `data-note` e `data-loaded` sulla `.board-pane`.
+  è in `data-strokes`, `data-note`, `data-loaded`, `data-tool` e `data-eraser` sulla `.board-pane`.
 - `src/ai/`: assistente AI, con la chiave di chi lo usa: Anthropic con l'SDK, o un servizio che parla la
   «lingua» di OpenAI (`services.ts`: Gemini gratis, OpenRouter, Ollama sul computer, un altro con il suo
   indirizzo; `askCompatible` in `assistant.ts` chiede lo schema, poi un oggetto JSON, poi niente, e legge la

@@ -20,11 +20,14 @@ export function touchLogHeader(): string[] {
   const board = document.querySelector<HTMLElement>('.board-pane')
   const theme = document.documentElement.dataset.theme ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'scuro dal sistema' : 'chiaro dal sistema')
   const views: Record<string, string> = { editor: 'Editor', split: 'Diviso', preview: 'Anteprima', board: 'Lavagna' }
+  const tools: Record<string, string> = { pen: 'penna', highlight: 'evidenziatore', eraser: 'gomma' }
+  const tool = tools[board?.dataset.tool ?? ''] ?? '?'
+  const eraser = board?.dataset.tool === 'eraser' ? (board.dataset.eraser === 'stroke' ? ' (linea intera)' : ' (dove passa)') : ''
   return [
     `Copiato: ${new Date().toLocaleString('it-IT')} · Glifo ${__GLIFO_VERSION__}`,
     `Dispositivo: ${nav.userAgent}`,
     `Tocchi insieme: ${nav.maxTouchPoints} · schermo ${screen.width}×${screen.height} ×${devicePixelRatio} · finestra ${innerWidth}×${innerHeight} · ${installed ? 'app installata' : 'nel browser'}`,
-    `Glifo: vista ${views[app?.dataset.view ?? ''] ?? '?'} · lavagna ${board?.classList.contains('is-full') ? 'a tutto schermo' : 'non a tutto schermo'} · penna vista ${board?.dataset.pen === 'true' ? 'sì' : 'no'} · strumento ${board?.dataset.tool === 'eraser' ? 'gomma' : 'penna'} · tema ${theme}`,
+    `Glifo: vista ${views[app?.dataset.view ?? ''] ?? '?'} · lavagna ${board?.classList.contains('is-full') ? 'a tutto schermo' : 'non a tutto schermo'} · penna vista ${board?.dataset.pen === 'true' ? 'sì' : 'no'} · strumento ${tool}${eraser} · tema ${theme}`,
   ]
 }
 

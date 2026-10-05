@@ -199,6 +199,8 @@ const SIZE_NAMES: Record<Tool, readonly string[]> = {
 }
 const TOOL_NAMES: Record<Tool, string> = { pen: 'penna', highlight: 'evidenziatore', eraser: 'gomma' }
 const MODE_NAMES: Record<EraserMode, string> = { area: 'Dove passa', stroke: 'Linea intera' }
+/** Il pallino delle tre misure (in px), nel pulsante e nel menu. */
+const DOT_SIZES = [7, 11, 16] as const
 
 export class Board {
   readonly el: HTMLElement
@@ -210,7 +212,10 @@ export class Board {
   private readonly toolButtons = new Map<Tool, HTMLButtonElement>()
   private readonly colorButtons = new Map<InkColor, HTMLButtonElement>()
   private readonly highlightButtons = new Map<HighlightColor, HTMLButtonElement>()
-  /** I colori della penna, quelli dell'evidenziatore e il modo della gomma: si vede quello dello strumento scelto. */
+  /**
+   * I colori della penna, quelli dell'evidenziatore e il modo della gomma: stanno uno sopra l'altro e
+   * si vede quello dello strumento scelto.
+   */
   private readonly inkGroup: HTMLElement
   private readonly highlightGroup: HTMLElement
   private readonly modeButton: HTMLButtonElement
@@ -218,6 +223,8 @@ export class Board {
   private readonly sizeButton: HTMLButtonElement
   /** Il menu aperto (misure, modo della gomma), se c'è. */
   private menu: HTMLElement | null = null
+  /** Il pulsante sotto cui è aperto il menu. */
+  private menuAnchor: HTMLElement | null = null
   private readonly undoButton: HTMLButtonElement
   private readonly redoButton: HTMLButtonElement
   private readonly clearButton: HTMLButtonElement
@@ -330,17 +337,23 @@ export class Board {
     })
     this.inkGroup = h('div', { class: 'board-colors', attrs: { role: 'group', 'aria-label': 'Colore della penna' } }, colors)
     this.highlightGroup = h('div', { class: 'board-colors', attrs: { role: 'group', 'aria-label': 'Colore dell\'evidenziatore' } }, highlights)
+    // I pulsanti con la freccia aprono il menu: per la gomma come cancella, scritto; per ogni
+    // strumento la misura, un pallino grande come il tratto.
     this.modeButton = h(
       'button',
-      { class: 'board-mode', attrs: { type: 'button', 'aria-haspopup': 'true' }, on: { click: () => this.toggleMenu(this.modeButton) } },
+      { class: 'board-chip board-mode', attrs: { type: 'button', 'aria-haspopup': 'true' }, on: { click: () => this.toggleMenu(this.modeButton) } },
       h('span', { class: 'board-mode-label' }),
       icon(ICONS.chevronDown, 14),
     )
     this.sizeButton = h(
       'button',
-      { class: 'board-button board-size', attrs: { type: 'button', 'aria-haspopup': 'true' }, on: { click: () => this.toggleMenu(this.sizeButton) } },
+      { class: 'board-chip board-size', attrs: { type: 'button', 'aria-haspopup': 'true' }, on: { click: () => this.toggleMenu(this.sizeButton) } },
       h('span', { class: 'board-size-dot' }),
+      icon(ICONS.chevronDown, 14),
     )
+    // Uno sopra l'altro, larghi quanto il più largo: cambiando strumento la barra resta uguale e i
+    // pulsanti non si spostano sotto la penna (la barra sta al centro).
+    const options = h('div', { class: 'board-options' }, this.inkGroup, this.highlightGroup, this.modeButton)
     // Il pulsante premuto si spegne quando non c'è più niente da annullare: il fuoco torna alla
     // lavagna, così Ctrl+Z e Ctrl+Y continuano a funzionare.
     this.undoButton = button('Annulla', ICON.undo, () => (this.undo(), this.focus()), 'Annulla (Ctrl+Z)')
@@ -367,9 +380,7 @@ export class Board {
       toolButton('highlight', 'Evidenziatore', ICON.highlight, 'Evidenziatore: trasparente, sotto la scrittura'),
       toolButton('eraser', 'Gomma', ICON.eraser, 'Gomma (premuta di nuovo: come cancella e quanto è grande)'),
       sep(),
-      this.inkGroup,
-      this.highlightGroup,
-      this.modeButton,
+      options,
       this.sizeButton,
       sep(),
       this.clearButton,
@@ -477,12 +488,13 @@ export class Board {
     document.addEventListener(
       'pointerdown',
       (ev) => {
-        if (this.menu && !this.menu.contains(ev.target as Node) && !(ev.target as Element).closest?.('.board-size, .board-mode, .board-tools .board-button[aria-pressed="true"]')) this.closeMenu()
+        if (this.menu && !this.menu.contains(ev.target as Node) && !(ev.target as Element).closest?.('.board-chip, .board-tools .board-button[aria-pressed="true"]')) this.closeMenu()
       },
       true,
     )
 
     if (this.penMode) this.el.dataset.pen = 'true'
+    this.el.dataset.eraser = this.eraserMode
     this.setTool('pen')
     this.setColor(this.color, false)
     this.setHighlightColor(this.highlightColor, false)
@@ -631,49 +643,60 @@ export class Board {
   private setEraserMode(mode: EraserMode): void {
     touchLog.add(`gomma: ${MODE_NAMES[mode].toLowerCase()}`)
     this.eraserMode = mode
+    this.el.dataset.eraser = mode
     this.savePrefs({ eraser: mode })
     this.updateToolUi()
     this.scheduleLive()
   }
 
-  /** I pulsanti dello strumento scelto: i colori della penna o dell'evidenziatore, o il modo della gomma; e la misura. */
+  /**
+   * I pulsanti dello strumento scelto: i colori e lo spessore della penna o dell'evidenziatore, o per
+   * la gomma come cancella e quanto è grande.
+   */
   private updateToolUi(): void {
     if (!this.sizeButton) return
     const tool = this.tool
-    this.inkGroup.hidden = tool !== 'pen'
-    this.highlightGroup.hidden = tool !== 'highlight'
-    this.modeButton.hidden = tool !== 'eraser'
+    this.inkGroup.classList.toggle('is-off', tool !== 'pen')
+    this.highlightGroup.classList.toggle('is-off', tool !== 'highlight')
+    this.modeButton.classList.toggle('is-off', tool !== 'eraser')
     this.modeButton.querySelector('.board-mode-label')!.textContent = MODE_NAMES[this.eraserMode]
-    this.modeButton.title = `Gomma: ${MODE_NAMES[this.eraserMode].toLowerCase()} (cambia il modo e la grandezza)`
+    this.modeButton.title = `Gomma: ${MODE_NAMES[this.eraserMode].toLowerCase()} (cambia come cancella)`
     this.modeButton.setAttribute('aria-label', this.modeButton.title)
     const name = SIZE_NAMES[tool][this.sizes[tool]]
     const label = tool === 'eraser' ? `Grandezza della gomma: ${name}` : `Spessore ${tool === 'pen' ? 'della penna' : "dell'evidenziatore"}: ${name}`
     this.sizeButton.title = label
     this.sizeButton.setAttribute('aria-label', label)
     const palette = BOARD_PALETTES[this.theme]
-    this.sizeButton.style.setProperty('--dot', `${[7, 11, 16][this.sizes[tool]]}px`)
+    this.sizeButton.style.setProperty('--dot', `${DOT_SIZES[this.sizes[tool]]}px`)
     this.sizeButton.style.setProperty('--swatch', tool === 'pen' ? palette.ink[this.color] : tool === 'highlight' ? palette.highlight[this.highlightColor] : 'transparent')
     this.sizeButton.classList.toggle('is-eraser', tool === 'eraser')
-    if (this.menu) this.openMenu(this.menu.dataset.for === 'mode' ? this.modeButton : this.sizeButton)
+    if (this.menu && this.menuAnchor) this.openMenu(this.menuAnchor)
   }
 
   // ——— Il menu delle misure (e del modo della gomma) ———
 
   private toggleMenu(anchor: HTMLElement): void {
-    if (this.menu) return this.closeMenu()
+    if (this.menu && this.menuAnchor === anchor) return this.closeMenu()
     this.openMenu(anchor)
   }
 
   private closeMenu(): void {
     this.menu?.remove()
     this.menu = null
+    this.menuAnchor = null
   }
 
-  /** Il menu sotto il pulsante: le tre misure dello strumento e, per la gomma, come cancella. */
+  /**
+   * Il menu sotto il pulsante: le tre misure dello strumento e, per la gomma, come cancella. Il
+   * pulsante del modo apre solo i modi, quello della misura solo le misure, lo strumento premuto di
+   * nuovo tutti e due.
+   */
   private openMenu(anchor: HTMLElement): void {
     this.menu?.remove()
     const tool = this.tool
-    const option = (label: string, pressed: boolean, pick: () => void, extra?: Node) =>
+    const modes = tool === 'eraser' && anchor !== this.sizeButton
+    const sizesToo = anchor !== this.modeButton
+    const option = (label: string, pressed: boolean, pick: () => void, extra: Node | null = null, help = '') =>
       h(
         'button',
         {
@@ -687,36 +710,32 @@ export class Board {
             },
           },
         },
-        extra ?? null,
-        h('span', {}, label),
+        extra,
+        help ? h('span', { class: 'board-menu-text' }, h('strong', {}, label), h('small', {}, help)) : h('span', {}, label),
       )
     const parts: Node[] = []
-    if (tool === 'eraser') {
+    if (modes) {
       parts.push(
         h('p', { class: 'board-menu-title' }, 'Come cancella'),
-        option(`${MODE_NAMES.area}: cancella solo dove passa, e se la muovi veloce si allarga`, this.eraserMode === 'area', () => this.setEraserMode('area')),
-        option(`${MODE_NAMES.stroke}: tocca una linea e la cancella tutta`, this.eraserMode === 'stroke', () => this.setEraserMode('stroke')),
+        option(MODE_NAMES.area, this.eraserMode === 'area', () => this.setEraserMode('area'), null, 'Cancella solo dove passa; se la muovi veloce si allarga'),
+        option(MODE_NAMES.stroke, this.eraserMode === 'stroke', () => this.setEraserMode('stroke'), null, 'Tocca una linea e la cancella tutta'),
       )
     }
-    parts.push(h('p', { class: 'board-menu-title' }, tool === 'eraser' ? 'Grandezza' : 'Spessore'))
-    const sizes = h('div', { class: 'board-menu-sizes' })
-    for (const choice of [0, 1, 2] as SizeChoice[]) {
-      const dot = h('span', { class: 'board-size-dot' })
-      dot.style.setProperty('--dot', `${[7, 11, 16][choice]}px`)
-      sizes.append(option(SIZE_NAMES[tool][choice], this.sizes[tool] === choice, () => this.setSize(tool, choice), dot))
+    if (sizesToo) {
+      parts.push(h('p', { class: 'board-menu-title' }, tool === 'eraser' ? 'Grandezza' : 'Spessore'))
+      const sizes = h('div', { class: 'board-menu-sizes' })
+      for (const choice of [0, 1, 2] as SizeChoice[]) {
+        const dot = h('span', { class: 'board-size-dot' })
+        dot.style.setProperty('--dot', `${DOT_SIZES[choice]}px`)
+        sizes.append(option(SIZE_NAMES[tool][choice], this.sizes[tool] === choice, () => this.setSize(tool, choice), dot))
+      }
+      parts.push(sizes)
     }
-    parts.push(sizes)
     const menu = h('div', { class: `board-menu${tool === 'eraser' ? ' is-eraser' : ''}`, attrs: { role: 'group', 'aria-label': tool === 'eraser' ? 'Gomma' : `Spessore ${tool === 'pen' ? 'della penna' : "dell'evidenziatore"}` } }, parts)
-    menu.dataset.for = anchor === this.modeButton ? 'mode' : 'size'
     menu.style.setProperty('--swatch', this.sizeButton.style.getPropertyValue('--swatch'))
-    menu.addEventListener('keydown', (ev) => {
-      if (ev.key !== 'Escape') return
-      ev.stopPropagation()
-      this.closeMenu()
-      anchor.focus()
-    })
     this.el.append(menu)
     this.menu = menu
+    this.menuAnchor = anchor
     // Sotto il pulsante, dentro la lavagna.
     const pane = this.el.getBoundingClientRect()
     const at = anchor.getBoundingClientRect()
@@ -1172,6 +1191,15 @@ export class Board {
   private onKey(ev: KeyboardEvent): void {
     const mod = ev.ctrlKey || ev.metaKey
     const key = ev.key.toLowerCase()
+    // Esc chiude il menu delle misure (prima dello schermo intero), anche col fuoco sul pulsante
+    // che l'ha aperto; il fuoco torna lì.
+    if (ev.key === 'Escape' && this.menu) {
+      ev.preventDefault()
+      const anchor = this.menuAnchor
+      this.closeMenu()
+      anchor?.focus()
+      return
+    }
     if (mod && !ev.altKey && key === 'z') {
       ev.preventDefault()
       if (ev.shiftKey) this.redo()

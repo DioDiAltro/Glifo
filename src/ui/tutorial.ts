@@ -39,7 +39,7 @@ export const TUTORIAL_PAGES: readonly TutorialPage[] = [
   {
     id: 'lavagna',
     title: 'La lavagna',
-    text: 'Con «Lavagna», in alto, scrivi a mano accanto al testo: con la penna, che sente la pressione, con il dito o con il mouse. La gomma cancella dove passa, due dita spostano e ingrandiscono. Ogni nota ha la sua lavagna, che resta su questo dispositivo.',
+    text: 'Con «Lavagna», in alto, scrivi a mano accanto al testo: con la penna, che sente la pressione, con il dito o con il mouse. L\'evidenziatore resta sotto la scrittura; premendo di nuovo uno strumento ne scegli lo spessore, e la gomma cancella dove passa o la linea intera. Due dita spostano e ingrandiscono. Ogni nota ha la sua lavagna, che resta su questo dispositivo.',
   },
   {
     id: 'barra',
