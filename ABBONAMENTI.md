@@ -428,7 +428,8 @@ se si vuole, si aggiungono alla nota con un pulsante («Aggiungi alla nota»).
 - Quasi tutti i servizi parlano la stessa «lingua», quella di OpenAI: OpenAI, Gemini, OpenRouter (con
   una chiave sola centinaia di modelli, anche i Qwen), Groq, Mistral, DeepSeek, e anche i modelli sul
   proprio computer (Ollama, LM Studio). Con Anthropic, che ha la sua, bastano due «lingue» per quasi
-  tutto. Oggi nelle impostazioni ci sono già la chiave e l'indirizzo di un server proxy: si allarga.
+  tutto. Nelle impostazioni c'erano già la chiave e l'indirizzo di un server proxy: si è allargato
+  (fatto il 5 ottobre 2026).
 - Gemini ha un piano gratuito senza carta di credito: uno studente può farsi una chiave gratis in
   Google AI Studio e usare l'AI di Glifo senza pagare nessuno.
 - Ogni modello però si comporta a modo suo, e il tutor e la lavagna chiedono modelli che sappiano
@@ -467,7 +468,11 @@ più il motore di Glifo e, più avanti, un modello aperto addestrato apposta per
 - La divisione va bene: l'AI inclusa nei piani a pagamento, la propria chiave facoltativa.
 - Il modello piccolo gira su Cloudflare Workers AI.
 - Per la propria chiave si parte da Anthropic e dai servizi che parlano la «lingua» di OpenAI,
-  provando Gemini, OpenRouter e Ollama.
+  provando Gemini, OpenRouter e Ollama. **Fatto il 5 ottobre 2026**: nelle impostazioni si sceglie il
+  servizio (Anthropic, Gemini, OpenRouter, Ollama o un altro compatibile con OpenAI, con il suo
+  indirizzo), ognuno con la sua chiave e il suo modello, salvati solo nel browser; sopra la risposta
+  si vede quale modello ha risposto. L'informativa dice che la domanda va direttamente al servizio
+  scelto.
 - Finché Glifo è in sviluppo non si spende niente: le cose che costano sono in
   [COSTI.md](COSTI.md).
 

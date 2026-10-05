@@ -135,7 +135,8 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
   frecce, insiemi, logica, analisi, funzioni, parentesi, accenti, stili, matrici e sistemi,
   testo e spazi, chimica (`\ce{H2O}`). Oltre 470 simboli, con più di 600 varianti.
 - **Assistente AI** (facoltativo) per le domande difficili, es. «freccia con scritto sopra
-  n → ∞»: risponde con il codice LaTeX pronto da inserire.
+  n → ∞»: risponde con il codice LaTeX pronto da inserire. Con la chiave di Anthropic, di Gemini
+  (gratis), di OpenRouter, con Ollama sul tuo computer o con un altro servizio compatibile con OpenAI.
 
 **Calcoli e grafici** (come le Note matematiche della Calcolatrice dell'iPad)
 - Una formula che finisce con `=` mostra il **risultato**: nell'editor accanto all'uguale, più chiaro,
@@ -656,21 +657,34 @@ quello pubblicato da GitHub Pages. Si può anche rilanciare a mano dalla scheda 
 ## Assistente AI
 
 La ricerca dei simboli è locale: funziona sempre, anche senza internet, ed è gratuita.
-L'assistente AI serve solo per le domande che la ricerca non capisce e usa l'API di Claude:
+L'assistente AI serve solo per le domande che la ricerca non capisce e usa una **tua chiave**,
+del servizio che scegli in **Impostazioni → Assistente AI**:
 
-1. crea una chiave API su <https://console.anthropic.com/settings/keys>;
-2. in Glifo apri **Impostazioni → Assistente AI** e incollala;
-3. nel pannello dei simboli scrivi la domanda e premi **Chiedi all'AI** (o Ctrl+Invio).
+- **Anthropic (Claude)**: crea una chiave su <https://console.anthropic.com/settings/keys>. Il
+  modello predefinito è Claude Opus 5.5 (con ragionamento ridotto, per rispondere in fretta);
+  nelle impostazioni puoi scegliere Sonnet 5.5 o Haiku 4.5, più economici. Se la richiesta viene
+  rifiutata dai filtri di sicurezza, l'app chiede all'API di riprovare in automatico con un altro
+  modello (`fallbacks: "default"`).
+- **Google Gemini**, **gratis** e senza carta di credito: crea la chiave in Google AI Studio
+  (<https://aistudio.google.com/apikey>). Il modello di partenza è `gemini-flash-lite-latest`; il
+  piano gratuito ha un limite di domande al giorno e Google può usare quelle domande per
+  migliorare i suoi modelli.
+- **OpenRouter**: con una chiave sola (<https://openrouter.ai/keys>) tanti modelli, anche aperti
+  come Qwen e Gemma; `openrouter/free` sceglie ogni volta un modello gratuito.
+- **Ollama**, i modelli aperti **sul tuo computer**, gratis e senza internet: installa
+  <https://ollama.com>, scarica un modello (`ollama pull qwen3`) e avvialo permettendo le
+  richieste da Glifo: `OLLAMA_ORIGINS=https://diodialtro.github.io ollama serve`.
+- **Un altro servizio compatibile con OpenAI** (OpenAI, Mistral, Groq, DeepSeek, LM Studio…):
+  l'indirizzo della sua API, il modello e, se serve, la chiave.
 
-La chiave resta salvata **solo nel tuo browser** e viene inviata soltanto all'API di
-Anthropic. Il modello predefinito è Claude Opus 5.5 (con ragionamento ridotto, per rispondere
-in fretta); nelle impostazioni puoi scegliere Sonnet 5.5 o Haiku 4.5, più economici. Se la
-richiesta viene rifiutata dai filtri di sicurezza, l'app chiede all'API di riprovare in
-automatico con un altro modello (`fallbacks: "default"`).
+Poi nel pannello dei simboli scrivi la domanda e premi **Chiedi all'AI** (o Ctrl+Invio): sopra
+la risposta si vede quale modello ha risposto. Le chiavi restano salvate **solo nel tuo browser**
+e la domanda va direttamente al servizio scelto, senza passare da Glifo. I modelli che non sanno
+rispondere con lo schema chiesto ricevono la forma della risposta nelle istruzioni.
 
 Se pubblichi Glifo per altri studenti e non vuoi che ognuno usi la propria chiave, puoi
-mettere la chiave in un piccolo server "proxy" (per esempio un Cloudflare Worker) e indicarne
-l'indirizzo in **Impostazioni → Avanzate**.
+mettere la chiave di Anthropic in un piccolo server "proxy" (per esempio un Cloudflare Worker)
+e indicarne l'indirizzo in **Impostazioni → Assistente AI → Avanzate**.
 
 ## Compatibilità con VS Code
 
@@ -741,7 +755,8 @@ src/
   ui/                     pannello dei simboli, anteprima, elenco appunti, finestre,
                           bordi da trascinare tra le sezioni (resize.ts), il simbolo ∮ (logo.ts)
   store/                  salvataggio nel browser, file .md, impostazioni, misure delle sezioni (layout.ts)
-  ai/assistant.ts         assistente AI
+  ai/assistant.ts         assistente AI: Anthropic con l'SDK, gli altri servizi nella «lingua» di OpenAI
+  ai/services.ts          i servizi per la propria chiave: Anthropic, Gemini, OpenRouter, Ollama, altri
   account/
     sync.ts               sincronizzazione: manda e scarica le modifiche, nei conflitti tiene tutte e due le versioni
     controller.ts         quando sincronizzare (avvio, ritorno su Glifo, rete, dopo le modifiche)

@@ -1,4 +1,5 @@
 import { inClaudeViewer } from '../host'
+import { AI_SERVICES, aiService } from '../ai/services'
 import { AI_MODELS, SPELL_LANGUAGES, type Settings, type SpellLanguages, type Theme } from '../store/settings'
 import { ICONS, h, icon } from './dom'
 import { privacyLink } from './links'
@@ -41,6 +42,166 @@ export function dialogShell(title: string, body: (HTMLElement | null)[], extraCl
   return dialog
 }
 
+/**
+ * «Assistente AI (facoltativo)»: il servizio (Anthropic o uno che parla la «lingua» di OpenAI, vedi
+ * src/ai/services.ts) e, per quello scelto, la chiave, il modello e, se serve, l'indirizzo. Cambiando
+ * servizio i campi si rifanno; chiave e modello di ognuno restano salvati, in questo browser.
+ */
+function aiFieldset(initial: Settings, deps: SettingsDialogDeps): HTMLElement {
+  const current: Settings = { ...initial, aiKeys: { ...initial.aiKeys }, aiModels: { ...initial.aiModels }, aiUrls: { ...initial.aiUrls } }
+  const fieldset = h('fieldset', { class: 'ai-settings' })
+  const change = (changes: Partial<Settings>) => {
+    Object.assign(current, changes)
+    deps.onChange(changes)
+  }
+  const link = (href: string, text: string) => h('a', { attrs: { href, target: '_blank', rel: 'noopener noreferrer' } }, text)
+  const render = () => {
+    const service = aiService(current.aiService)
+    const anthropic = service.id === 'anthropic'
+    const keyInput = h('input', {
+      attrs: {
+        type: 'password',
+        value: anthropic ? current.apiKey : (current.aiKeys[service.id] ?? ''),
+        placeholder: service.keyPlaceholder,
+        autocomplete: 'off',
+        spellcheck: 'false',
+        id: 'api-key',
+      },
+      on: {
+        change: () => {
+          const key = keyInput.value.trim()
+          change(anthropic ? { apiKey: key } : { aiKeys: { ...current.aiKeys, [service.id]: key } })
+        },
+      },
+    })
+    const keyField =
+      service.id === 'ollama'
+        ? null
+        : h(
+            'label',
+            { class: 'field field-column', attrs: { for: 'api-key' } },
+            h('span', {}, service.id === 'compatible' ? 'Chiave API (se il servizio la chiede)' : 'Chiave API'),
+            h(
+              'div',
+              { class: 'input-row' },
+              keyInput,
+              h(
+                'button',
+                {
+                  class: 'btn btn-small',
+                  attrs: { type: 'button' },
+                  on: {
+                    click: (ev) => {
+                      keyInput.type = keyInput.type === 'password' ? 'text' : 'password'
+                      ;(ev.currentTarget as HTMLButtonElement).textContent = keyInput.type === 'password' ? 'Mostra' : 'Nascondi'
+                    },
+                  },
+                },
+                'Mostra',
+              ),
+            ),
+          )
+    // Il modello: per Anthropic quelli di Claude; per gli altri si scrive, con qualche proposta.
+    const listId = `ai-models-${service.id}`
+    const modelField = anthropic
+      ? h(
+          'label',
+          { class: 'field field-column' },
+          h('span', {}, 'Modello'),
+          h(
+            'select',
+            { on: { change: (ev) => change({ model: (ev.target as HTMLSelectElement).value }) } },
+            AI_MODELS.map((m) => h('option', { attrs: { value: m.id, selected: m.id === current.model } }, m.label)),
+          ),
+        )
+      : h(
+          'label',
+          { class: 'field field-column' },
+          h('span', {}, 'Modello'),
+          h('input', {
+            attrs: { type: 'text', value: current.aiModels[service.id] ?? '', placeholder: service.model || 'il nome del modello', list: listId, autocomplete: 'off', spellcheck: 'false' },
+            on: { change: (ev) => change({ aiModels: { ...current.aiModels, [service.id]: (ev.target as HTMLInputElement).value.trim() } }) },
+          }),
+          h('datalist', { attrs: { id: listId } }, service.models.map((m) => h('option', { attrs: { value: m } }))),
+        )
+    const urlField =
+      service.id === 'ollama' || service.id === 'compatible'
+        ? h(
+            'label',
+            { class: 'field field-column' },
+            h('span', {}, 'Indirizzo dell\'API'),
+            h('input', {
+              attrs: { type: 'url', value: current.aiUrls[service.id] ?? '', placeholder: service.url || 'https://api.openai.com/v1', autocomplete: 'off', spellcheck: 'false' },
+              on: { change: (ev) => change({ aiUrls: { ...current.aiUrls, [service.id]: (ev.target as HTMLInputElement).value.trim() } }) },
+            }),
+          )
+        : null
+    const help =
+      service.id === 'anthropic'
+        ? h('p', { class: 'field-help' }, 'Claude con una tua chiave API di Anthropic: ', link(service.keyUrl!, 'creane una qui'), '. La chiave resta salvata solo in questo browser e viene inviata soltanto ad Anthropic quando premi «Chiedi all\'AI».')
+        : service.id === 'gemini'
+          ? h('p', { class: 'field-help' }, 'Gratis, senza carta di credito: crea la chiave in ', link(service.keyUrl!, 'Google AI Studio'), ' (con il tuo account Google). Il piano gratuito ha un limite di domande al giorno; Google può usare le domande fatte gratis per migliorare i suoi modelli. La chiave resta in questo browser e la domanda va direttamente a Google.')
+          : service.id === 'openrouter'
+            ? h('p', { class: 'field-help' }, 'Con una chiave sola tanti modelli, anche aperti (Qwen, Gemma…): creala su ', link(service.keyUrl!, 'openrouter.ai'), '. «openrouter/free» sceglie ogni volta un modello gratuito. La chiave resta in questo browser e la domanda va direttamente a OpenRouter.')
+            : service.id === 'ollama'
+              ? h('p', { class: 'field-help' }, 'I modelli aperti sul tuo computer, gratis e senza internet: installa ', link('https://ollama.com', 'Ollama'), ', scarica un modello (per esempio «ollama pull qwen3») e avvialo permettendo le richieste da Glifo: OLLAMA_ORIGINS=https://diodialtro.github.io ollama serve. La domanda non esce dal computer.')
+              : h('p', { class: 'field-help' }, 'Un servizio che parla la «lingua» di OpenAI (OpenAI, Mistral, Groq, DeepSeek, LM Studio…): scrivi l\'indirizzo della sua API, il modello e, se serve, la chiave. La chiave resta in questo browser e la domanda va direttamente a quel servizio.')
+    const proxy = anthropic
+      ? h(
+          'details',
+          { class: 'advanced' },
+          h('summary', {}, 'Avanzate: usa un server proxy'),
+          h(
+            'p',
+            { class: 'field-help' },
+            'Se pubblichi Glifo per altri studenti, puoi mettere la chiave in un piccolo server (es. un Cloudflare Worker) e indicarne qui l\'indirizzo: così nessuno deve inserire la propria chiave.',
+          ),
+          h('input', {
+            attrs: { type: 'url', value: current.apiBaseUrl, placeholder: 'https://mio-proxy.example.workers.dev' },
+            on: { change: (ev) => change({ apiBaseUrl: (ev.target as HTMLInputElement).value.trim() }) },
+          }),
+        )
+      : null
+    const parts: (HTMLElement | null)[] = [
+      h('legend', {}, 'Assistente AI (facoltativo)'),
+      inClaudeViewer() && anthropic
+        ? h(
+            'p',
+            { class: 'field-help field-note' },
+            'In questa demo su claude.ai la chiave non serve: «Chiedi all\'AI» usa il tuo account Claude (la prima volta ti viene chiesto il permesso).',
+          )
+        : null,
+      h('p', { class: 'field-help' }, 'La ricerca dei simboli funziona sempre, anche offline. Per le domande più complesse puoi usare l\'AI con una tua chiave.'),
+      h(
+        'label',
+        { class: 'field field-column' },
+        h('span', {}, 'Servizio'),
+        h(
+          'select',
+          {
+            on: {
+              change: (ev) => {
+                change({ aiService: (ev.target as HTMLSelectElement).value })
+                render()
+                fieldset.querySelector<HTMLSelectElement>('select')?.focus()
+              },
+            },
+          },
+          AI_SERVICES.map((a) => h('option', { attrs: { value: a.id, selected: a.id === service.id } }, a.label)),
+        ),
+      ),
+      help,
+      keyField,
+      modelField,
+      urlField,
+      proxy,
+    ]
+    fieldset.replaceChildren(...parts.filter((p): p is HTMLElement => p !== null))
+  }
+  render()
+  return fieldset
+}
+
 export function openSettingsDialog(deps: SettingsDialogDeps): void {
   const s = deps.settings
   const themeOptions: [Theme, string][] = [
@@ -61,11 +222,6 @@ export function openSettingsDialog(deps: SettingsDialogDeps): void {
     },
   })
   wordsInput.value = deps.personalWords.join('\n')
-  const keyInput = h('input', {
-    attrs: { type: 'password', value: s.apiKey, placeholder: 'sk-ant-…', autocomplete: 'off', spellcheck: 'false', id: 'api-key' },
-    on: { change: () => deps.onChange({ apiKey: keyInput.value.trim() }) },
-  })
-
   const body = [
     h(
       'fieldset',
@@ -157,73 +313,7 @@ export function openSettingsDialog(deps: SettingsDialogDeps): void {
         wordsInput,
       ),
     ),
-    h(
-      'fieldset',
-      {},
-      h('legend', {}, 'Assistente AI (facoltativo)'),
-      inClaudeViewer()
-        ? h(
-            'p',
-            { class: 'field-help field-note' },
-            'In questa demo su claude.ai la chiave non serve: «Chiedi all\'AI» usa il tuo account Claude (la prima volta ti viene chiesto il permesso).',
-          )
-        : null,
-      h(
-        'p',
-        { class: 'field-help' },
-        'La ricerca dei simboli funziona sempre, anche offline. Per le domande più complesse puoi usare Claude con una tua chiave API di Anthropic: ',
-        h('a', { attrs: { href: 'https://console.anthropic.com/settings/keys', target: '_blank', rel: 'noopener noreferrer' } }, 'creane una qui'),
-        '. La chiave resta salvata solo in questo browser e viene inviata soltanto all\'API di Anthropic quando premi «Chiedi all\'AI».',
-      ),
-      h(
-        'label',
-        { class: 'field field-column', attrs: { for: 'api-key' } },
-        h('span', {}, 'Chiave API'),
-        h(
-          'div',
-          { class: 'input-row' },
-          keyInput,
-          h(
-            'button',
-            {
-              class: 'btn btn-small',
-              attrs: { type: 'button' },
-              on: {
-                click: (ev) => {
-                  keyInput.type = keyInput.type === 'password' ? 'text' : 'password'
-                  ;(ev.currentTarget as HTMLButtonElement).textContent = keyInput.type === 'password' ? 'Mostra' : 'Nascondi'
-                },
-              },
-            },
-            'Mostra',
-          ),
-        ),
-      ),
-      h(
-        'label',
-        { class: 'field field-column' },
-        h('span', {}, 'Modello'),
-        h(
-          'select',
-          { on: { change: (ev) => deps.onChange({ model: (ev.target as HTMLSelectElement).value }) } },
-          AI_MODELS.map((m) => h('option', { attrs: { value: m.id, selected: m.id === s.model } }, m.label)),
-        ),
-      ),
-      h(
-        'details',
-        { class: 'advanced' },
-        h('summary', {}, 'Avanzate: usa un server proxy'),
-        h(
-          'p',
-          { class: 'field-help' },
-          'Se pubblichi Glifo per altri studenti, puoi mettere la chiave in un piccolo server (es. un Cloudflare Worker) e indicarne qui l\'indirizzo: così nessuno deve inserire la propria chiave.',
-        ),
-        h('input', {
-          attrs: { type: 'url', value: s.apiBaseUrl, placeholder: 'https://mio-proxy.example.workers.dev' },
-          on: { change: (ev) => deps.onChange({ apiBaseUrl: (ev.target as HTMLInputElement).value.trim() }) },
-        }),
-      ),
-    ),
+    aiFieldset(s, deps),
     h(
       'fieldset',
       {},

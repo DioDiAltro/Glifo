@@ -1,17 +1,21 @@
 import { hostSample, isHostError } from '../host'
 import { renderTex } from '../render/katex'
+import { aiService, type AiServiceId } from './services'
 
 /**
  * Assistente AI per le domande che la ricerca locale non sa risolvere
  * ("come scrivo una freccia con sopra n → ∞?"). Usa l'API di Claude con la
  * chiave dello studente, salvata solo nel suo browser. L'SDK viene caricato
- * solo quando serve, così l'app resta leggera.
+ * solo quando serve, così l'app resta leggera. Con un altro servizio (Gemini,
+ * OpenRouter, Ollama…, vedi services.ts) parla la «lingua» di OpenAI, con fetch.
  */
 
 export interface AiSettings {
   apiKey: string
   model: string
   baseUrl?: string
+  /** Il servizio: Anthropic se manca; per gli altri `baseUrl` è l'indirizzo della loro API. */
+  service?: AiServiceId
 }
 
 export interface AiAnswer {
@@ -24,6 +28,8 @@ export interface AiAnswer {
 export interface AiResult {
   answers: AiAnswer[]
   note: string
+  /** Il modello che ha risposto, se il servizio lo dice (si mostra sotto la risposta). */
+  model?: string
 }
 
 export class AiError extends Error {}
@@ -104,8 +110,7 @@ async function askThroughHost(question: string, signal?: AbortSignal): Promise<A
   if (!sample) return null
   const prompt = `${SYSTEM_PROMPT}
 
-Rispondi solo con un oggetto JSON di questa forma, senza altro testo:
-{"answers": [{"latex": "\\\\infty", "description": "Il simbolo di infinito."}], "note": ""}
+${JSON_ONLY}
 
 Domanda dello studente:
 ${question}`
@@ -123,12 +128,124 @@ ${question}`
   }
 }
 
+/** Per i modelli che non sanno seguire lo schema: la forma della risposta, scritta. */
+const JSON_ONLY = `Rispondi solo con un oggetto JSON di questa forma, senza altro testo:
+{"answers": [{"latex": "\\\\infty", "description": "Il simbolo di infinito."}], "note": ""}`
+
+/** L'oggetto JSON nella risposta, anche tra ```json … ```, dopo il ragionamento (<think>) o con del testo attorno. */
+export function jsonIn(text: string): unknown {
+  const clean = text.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
+  for (const candidate of [clean, /```(?:json)?\s*([\s\S]*?)```/.exec(clean)?.[1], clean.slice(clean.indexOf('{'), clean.lastIndexOf('}') + 1)]) {
+    if (!candidate?.trim()) continue
+    try {
+      return JSON.parse(candidate)
+    } catch {
+      // Si prova il prossimo modo.
+    }
+  }
+  return null
+}
+
+/** Il messaggio d'errore del servizio, se nella risposta c'è (di solito in error.message). */
+function serviceMessage(body: string): string {
+  try {
+    const data = JSON.parse(body) as { error?: { message?: unknown } | string; message?: unknown } | Array<{ error?: { message?: unknown } }>
+    const first = Array.isArray(data) ? data[0] : data
+    const error = first?.error
+    const message = typeof error === 'string' ? error : (error as { message?: unknown } | undefined)?.message ?? (first as { message?: unknown } | undefined)?.message
+    if (typeof message === 'string' && message.trim()) return message.trim().slice(0, 300)
+  } catch {
+    // Non è JSON: il testo com'è.
+  }
+  return body.trim().slice(0, 300)
+}
+
+/**
+ * Una domanda a un servizio che parla la «lingua» di OpenAI (/chat/completions): Gemini, OpenRouter,
+ * Ollama o un altro. Si chiede la risposta con lo schema; se il servizio non lo accetta, come oggetto
+ * JSON; se no, solo con la forma scritta nelle istruzioni. La risposta si legge comunque con jsonIn.
+ */
+async function askCompatible(question: string, settings: AiSettings, signal?: AbortSignal): Promise<AiResult> {
+  const service = aiService(settings.service)
+  const base = (settings.baseUrl || service.url).trim().replace(/\/+$/, '').replace(/\/chat\/completions$/, '')
+  if (!base) throw new AiError('Scrivi nelle impostazioni l\'indirizzo del servizio (per esempio https://api.openai.com/v1).')
+  if (service.needsKey && !settings.apiKey) {
+    throw new AiError(`Per usare ${service.name} serve una chiave: inseriscila nelle impostazioni (resta salvata solo in questo browser).`)
+  }
+  const model = settings.model || service.model
+  if (!model) throw new AiError('Scrivi nelle impostazioni il nome del modello da usare.')
+  const messages = [
+    { role: 'system', content: `${SYSTEM_PROMPT}\n\n${JSON_ONLY}` },
+    { role: 'user', content: question },
+  ]
+  const formats: (Record<string, unknown> | null)[] = [
+    { type: 'json_schema', json_schema: { name: 'risposta', strict: true, schema: ANSWER_SCHEMA } },
+    { type: 'json_object' },
+    null,
+  ]
+  for (let i = 0; i < formats.length; i++) {
+    const format = formats[i]
+    let response: Response
+    try {
+      response = await fetch(`${base}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          ...(settings.apiKey && { authorization: `Bearer ${settings.apiKey}` }),
+          // OpenRouter mostra da quale app arrivano le richieste.
+          ...(service.id === 'openrouter' && { 'X-Title': 'Glifo' }),
+        },
+        body: JSON.stringify({ model, messages, ...(format && { response_format: format }) }),
+        signal,
+      })
+    } catch (err) {
+      if (signal?.aborted || (err instanceof DOMException && err.name === 'AbortError')) throw new AiError('Richiesta annullata.')
+      throw new AiError(
+        service.id === 'ollama'
+          ? 'Ollama non risponde: è acceso? Deve anche permettere le richieste da Glifo (OLLAMA_ORIGINS: vedi il README, «Assistente AI»).'
+          : `Impossibile contattare ${service.name}: controlla la connessione${service.id === 'compatible' ? ' e l\'indirizzo nelle impostazioni' : ''}.`,
+      )
+    }
+    if (!response.ok) {
+      const body = await response.text().catch(() => '')
+      // Lo schema (o il formato JSON) non va bene a questo servizio o a questo modello: senza.
+      if ((response.status === 400 || response.status === 422) && format && i < formats.length - 1) continue
+      const message = serviceMessage(body)
+      if (response.status === 401 || response.status === 403) throw new AiError(`La chiave di ${service.name} non è valida (o non ha i permessi): controllala nelle impostazioni.`)
+      if (response.status === 404) {
+        throw new AiError(
+          service.id === 'ollama'
+            ? `Il modello «${model}» non è in Ollama: scaricalo con «ollama pull ${model}», o scegline un altro nelle impostazioni.`
+            : `Il modello «${model}» non si trova: controlla il nome nelle impostazioni.`,
+        )
+      }
+      if (response.status === 429) throw new AiError('Troppe richieste in poco tempo (o è finito il limite gratuito): riprova tra poco, o scegli un altro modello.')
+      if (response.status >= 500) throw new AiError(`${service.name === 'il servizio' ? 'Il servizio' : service.name} ha un problema in questo momento (${response.status}): riprova più tardi.`)
+      throw new AiError(`Richiesta non valida (${response.status})${message ? `: ${message}` : ''}`)
+    }
+    const data = (await response.json().catch(() => null)) as { model?: unknown; choices?: { message?: { content?: unknown; refusal?: unknown }; finish_reason?: unknown }[] } | null
+    const choice = data?.choices?.[0]
+    if (typeof choice?.message?.refusal === 'string' && choice.message.refusal) throw new AiError('L\'assistente non può rispondere a questa richiesta. Prova a riformularla.')
+    const content = choice?.message?.content
+    const text = typeof content === 'string' ? content : Array.isArray(content) ? content.map((p) => (typeof p === 'string' ? p : (p as { text?: unknown })?.text ?? '')).join('') : ''
+    const parsed = text ? jsonIn(text) : null
+    if (!parsed || typeof parsed !== 'object') {
+      if (choice?.finish_reason === 'length') throw new AiError('La risposta è stata interrotta perché troppo lunga. Prova con una domanda più specifica.')
+      throw new AiError('Risposta non valida dall\'assistente (il modello non ha risposto nella forma chiesta). Riprova, o scegli un altro modello.')
+    }
+    const result = toResult(checkShape(parsed))
+    return typeof data?.model === 'string' && data.model ? { ...result, model: data.model } : { ...result, model }
+  }
+  throw new AiError('Risposta non valida dall\'assistente. Riprova.')
+}
+
 export async function askAi(question: string, settings: AiSettings, signal?: AbortSignal): Promise<AiResult> {
+  if (settings.service && settings.service !== 'anthropic') return askCompatible(question, settings, signal)
   if (!settings.apiKey && !settings.baseUrl) {
     const viaHost = await askThroughHost(question, signal)
     if (viaHost) return viaHost
     throw new AiError(
-      'Per usare l\'assistente AI serve una chiave API di Anthropic: inseriscila nelle impostazioni (resta salvata solo in questo browser).',
+      'Per usare l\'assistente AI serve una chiave API: inserisci nelle impostazioni quella di Anthropic, o scegli un altro servizio (con Gemini è gratis). Resta salvata solo in questo browser.',
     )
   }
   const [{ default: Anthropic }, { betaJSONSchemaOutputFormat }] = await Promise.all([
@@ -170,7 +287,7 @@ export async function askAi(question: string, settings: AiSettings, signal?: Abo
     }
     const parsed = response.parsed_output
     if (!parsed) throw new AiError('Risposta non valida dall\'assistente. Riprova.')
-    return toResult(parsed)
+    return { ...toResult(parsed), ...(response.model && { model: response.model }) }
   } catch (err) {
     if (err instanceof AiError) throw err
     if (err instanceof Anthropic.APIUserAbortError) throw new AiError('Richiesta annullata.')

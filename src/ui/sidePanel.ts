@@ -1,4 +1,5 @@
 import { askAi, type AiResult } from '../ai/assistant'
+import { aiSettingsOf } from '../ai/services'
 import type { MarkdownEditor } from '../editor/editor'
 import { formulaAtCursor, insertGraphBlock } from '../editor/graphInsert'
 import { staticGraphSvg } from '../graph/picture'
@@ -316,7 +317,7 @@ export class SidePanel {
     const controller = new AbortController()
     this.setAi({ status: 'loading', question, controller })
     try {
-      const result = await askAi(question, { apiKey: settings.apiKey, model: settings.model, baseUrl: settings.apiBaseUrl }, controller.signal)
+      const result = await askAi(question, aiSettingsOf(settings), controller.signal)
       if (this.ai.status === 'loading' && this.ai.controller === controller) this.setAi({ status: 'done', question, result })
     } catch (err) {
       if (this.ai.status === 'loading' && this.ai.controller === controller) {
@@ -534,7 +535,7 @@ export class SidePanel {
     }
     if (ai.status === 'error') {
       box.append(h('p', { class: 'ai-error' }, ai.message))
-      if (/chiave/i.test(ai.message)) {
+      if (/chiave|impostazioni/i.test(ai.message)) {
         box.append(h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => this.deps.openSettings() } }, icon(ICONS.settings, 14), ' Apri le impostazioni'))
       } else {
         box.append(h('button', { class: 'btn btn-small', attrs: { type: 'button' }, on: { click: () => void this.askAi() } }, 'Riprova'))
@@ -542,7 +543,15 @@ export class SidePanel {
       return box
     }
     // Risposta pronta
-    box.append(h('div', { class: 'panel-section-head' }, h('span', {}, icon(ICONS.sparkles, 14), ' Risposta dell\'AI')))
+    // Si vede sempre quale modello ha risposto.
+    box.append(
+      h(
+        'div',
+        { class: 'panel-section-head' },
+        h('span', {}, icon(ICONS.sparkles, 14), ' Risposta dell\'AI'),
+        ai.result.model ? h('span', { class: 'ai-model', title: 'Il modello che ha risposto' }, ai.result.model) : null,
+      ),
+    )
     if (!ai.result.answers.length) box.append(h('p', { class: 'panel-empty' }, 'Nessuna formula proposta.'))
     for (const a of ai.result.answers) {
       const rendered = a.error ? null : renderTex(a.latex, false).html

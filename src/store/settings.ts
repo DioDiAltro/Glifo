@@ -21,6 +21,12 @@ export interface Settings {
   model: string
   /** URL di un proxy compatibile con l'API di Anthropic (facoltativo). */
   apiBaseUrl: string
+  /** Il servizio dell'assistente: Anthropic o uno che parla la «lingua» di OpenAI (vedi src/ai/services.ts). */
+  aiService: string
+  /** Per gli altri servizi: la chiave, il modello e l'indirizzo di ognuno (restano nel browser). */
+  aiKeys: Record<string, string>
+  aiModels: Record<string, string>
+  aiUrls: Record<string, string>
 }
 
 export const SPELL_LANGUAGES: { id: SpellLanguages; label: string }[] = [
@@ -53,6 +59,10 @@ export const DEFAULT_SETTINGS: Settings = {
   apiKey: '',
   model: 'claude-opus-5-5',
   apiBaseUrl: '',
+  aiService: 'anthropic',
+  aiKeys: {},
+  aiModels: {},
+  aiUrls: {},
 }
 
 function stored(): Partial<Settings> {
@@ -74,7 +84,8 @@ export function saveSettings(changes: Partial<Settings>): void {
 
 /**
  * Le impostazioni che vanno con l'account, su ogni dispositivo. Le altre dipendono dallo
- * schermo (vista e pannelli), e la chiave API con il proxy restano in questo browser.
+ * schermo (vista e pannelli), e le chiavi API con il proxy e il servizio dell'assistente (che può
+ * essere Ollama, su un computer solo) restano in questo browser.
  */
 export const ACCOUNT_SETTINGS = ['theme', 'autoWrap', 'spellcheck', 'spellLanguages', 'fontSize', 'model'] as const satisfies readonly (keyof Settings)[]
 

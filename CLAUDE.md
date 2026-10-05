@@ -231,7 +231,11 @@ prossimi passi sono in «In programma» nella ROADMAP.
   densità, P(…) come area o barre dell'evento, istogrammi, barre, dispersione e regressione; `extent` dice la
   parte dell'asse x da mostrare e `data` toglie le stesse unità sui due assi. Le variabili aleatorie del blocco
   (`X \sim B(n, p)` con n e p del blocco) si fanno in `readGraph` prima di disegnare.
-- `src/ai/`: assistente AI. `src/host.ts`: funzioni della demo dentro claude.ai.
+- `src/ai/`: assistente AI, con la chiave di chi lo usa: Anthropic con l'SDK, o un servizio che parla la
+  «lingua» di OpenAI (`services.ts`: Gemini gratis, OpenRouter, Ollama sul computer, un altro con il suo
+  indirizzo; `askCompatible` in `assistant.ts` chiede lo schema, poi un oggetto JSON, poi niente, e legge la
+  risposta con `jsonIn`). Chiave, modello e indirizzo di ogni servizio restano nel browser (`aiKeys`,
+  `aiModels`, `aiUrls` nelle impostazioni). `src/host.ts`: funzioni della demo dentro claude.ai.
 - `src/account/`: account e sincronizzazione. `sync.ts` è il motore (manda, scarica, nei
   conflitti tiene tutte e due le versioni), `controller.ts` decide quando sincronizzare,
   `space.ts` tiene le note di ogni account in uno spazio a parte del browser (`glifo.u.<id>.…`),
