@@ -207,7 +207,12 @@ dispositivo (IndexedDB), che va nel backup e non nell'account. La discussione è
   che si selezionavano, la lavagna che si chiudeva e l'iPad che la prendeva per una tastiera (era lo
   schermo intero di Safari, che lì non si usa più), e la mano appoggiata (con la penna un dito solo
   non fa niente). Le correzioni sono online ma vanno ancora provate sull'iPad, che lo studente per
-  ora non ha. Se resta qualcosa, o con la tavoletta grafica senza schermo, si sistema.
+  ora non ha. Se resta qualcosa, o con la tavoletta grafica senza schermo, si sistema;
+- **il registro dei tocchi** (chiesto dallo studente il 5 ottobre 2026: «tieni presente di
+  aggiungere il registro dei tocchi»): a richiesta la lavagna annota quello che le arriva da penna e
+  dita (tipo, pressione, tempi, i tocchi presi per la mano) e lo si copia per mandarlo a Claude,
+  così si capisce cosa fa l'iPad senza averlo qui. Il registro resta sul dispositivo finché non lo
+  si copia. Meglio farlo prima della prossima prova sull'iPad.
 
 ### Schemi: idee in più
 
