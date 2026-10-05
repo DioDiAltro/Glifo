@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { chooseWindow, sampleArea, sampleFunction, sampleImplicit, sampleParametric, tickLabel, ticks, type Viewport } from '../src/graph/plot'
 import { formulaGraph, formulaGraphLine, graphNames, parseGraph, typedSliderValue, widenSlider, type GraphItem } from '../src/graph/spec'
 import { graphSvg, itemColors, PALETTES } from '../src/graph/svg'
+import { labelLine } from '../src/graph/spec'
+import { labelPlain, labelSvg, texSvg } from '../src/graph/labels'
 
 const r = String.raw
 
@@ -503,5 +505,42 @@ describe('il disegno in SVG', () => {
     expect(both).toContain('fill-opacity="0.28"')
     expect(both).toContain(`fill="${PALETTES.dark.series[0]}" data-area="0"`)
     expect(both).toContain(`stroke="${PALETTES.dark.series[0]}" data-item="0"`)
+  })
+})
+
+describe('il titolo e i nomi degli assi', () => {
+  /** Il testo che si legge, senza i <tspan>. */
+  const text = (svg: string) => svg.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&')
+
+  it('si scrivono nel blocco con titolo: e asse x: (y, z), e non sono righe da disegnare', () => {
+    expect(labelLine('titolo: La parabola $y = x^2$')).toEqual({ key: 'title', value: 'La parabola $y = x^2$' })
+    expect(labelLine('Asse Y:  spazio (m)')).toEqual({ key: 'y', value: 'spazio (m)' })
+    expect(labelLine('y = x^2')).toBeNull()
+    const spec = parseGraph('titolo: Moto\nasse x: $t$ (s)\nasse z: quota\ny = 2x')
+    expect(spec.title).toBe('Moto')
+    expect(spec.axes).toEqual({ x: '$t$ (s)', z: 'quota' })
+    expect(spec.items).toHaveLength(1)
+    expect(spec.errors).toEqual([])
+    expect([...graphNames('titolo: Moto di $k$\ny = a x')]).toEqual(['a'])
+  })
+
+  it('nei disegni le formule diventano testo: corsivo, esponenti e pedici, frazioni come a/b', () => {
+    const x2 = texSvg('x^2', 15).svg
+    expect(x2).toBe('<tspan font-style="italic">x</tspan><tspan dy="-6.3" font-size="10.8">2</tspan>')
+    expect(text(texSvg(r`\frac{1}{2}`, 15).svg)).toBe('1/2')
+    expect(text(texSvg(r`\frac{a + b}{2}`, 15).svg)).toBe('(a + b)/2')
+    expect(text(texSvg(r`\alpha t + \sin x`, 15).svg)).toBe('αt + sin\u2009x')
+    expect(text(texSvg(r`30^\circ`, 15).svg)).toBe('30°')
+    expect(text(texSvg(r`\int_0^2 x^2 \, dx = \frac{8}{3}`, 15).svg)).toBe('∫02x2\u2009dx = 8/3')
+    expect(texSvg('v_0', 15).svg).toContain('dy="3.6"')
+    expect(text(texSvg(r`\vec{v} \cdot \mathbb{R}`, 15).svg)).toBe('v\u20d7 · ℝ')
+    expect(text(texSvg(r`\left( x \right)^{-1}`, 15).svg)).toBe('(x)−1')
+  })
+
+  it('il testo scelto da chi scrive: dritto, con le formule tra $; una lettera da sola è una formula', () => {
+    expect(labelPlain('tempo $t$ (s)')).toBe('tempo t (s)')
+    expect(labelSvg('tempo $t$ (s)', 15).svg).toBe('<tspan>tempo </tspan><tspan font-style="italic">t</tspan><tspan> (s)</tspan>')
+    expect(labelSvg('t', 15).svg).toBe('<tspan font-style="italic">t</tspan>')
+    expect(labelSvg('Spazio <m>', 15).svg).toBe('<tspan>Spazio &lt;m&gt;</tspan>')
   })
 })

@@ -31,6 +31,7 @@ import {
 } from './space'
 import { GRAPH_WORK, type GraphSpec, type Plane, type Vec3 } from './spec'
 import { escapeXml, itemColors, pointName, type Palette } from './svg'
+import { labelSvg } from './labels'
 
 export interface Camera {
   /** Quanto si gira attorno all'asse z (in radianti). */
@@ -549,7 +550,12 @@ function drawScene(scene: Scene, spec: GraphSpec, camera: Camera, palette: Palet
     const ux = (s1[0] - s0[0]) / length
     const uy = (s1[1] - s0[1]) / length
     // Il nome dell'asse oltre la punta: un po' più vicino, così non lo copre la superficie che arriva lì.
-    prims.push({ depth: s1[2] + 0.05, sides: sidesAt(to), k: 'text', svg: `<text x="${f1(s1[0] + ux * 13)}" y="${f1(s1[1] + uy * 13 + 5)}" text-anchor="middle" ${math} fill="${palette.axis}" ${halo}>${names[a]}</text>` })
+    const named = spec.axes?.[names[a] as 'x' | 'y' | 'z']
+    // Il nome scelto da chi scrive (asse z: altezza $h$): dritto, con le formule in corsivo.
+    const text = named
+      ? `<text x="${f1(s1[0] + ux * 13)}" y="${f1(s1[1] + uy * 13 + 5)}" text-anchor="middle" font-family="'KaTeX_Main', 'Times New Roman', serif" font-size="15" fill="${palette.axis}" ${halo}>${labelSvg(named, 15).svg}</text>`
+      : `<text x="${f1(s1[0] + ux * 13)}" y="${f1(s1[1] + uy * 13 + 5)}" text-anchor="middle" ${math} fill="${palette.axis}" ${halo}>${names[a]}</text>`
+    prims.push({ depth: s1[2] + 0.05, sides: sidesAt(to), k: 'text', svg: text })
     // Le tacche da una parte dell'asse: sotto per x e y, a sinistra per z.
     let px = -uy
     let py = ux

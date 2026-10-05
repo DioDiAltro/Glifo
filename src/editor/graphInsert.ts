@@ -1,7 +1,7 @@
 import { syntaxTree } from '@codemirror/language'
 import { EditorSelection } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
-import { formulaGraph, formulaGraphLine, graphBlockText, graphNames } from '../graph/spec'
+import { formulaGraph, formulaGraphLine, graphBlockText, graphNames, labelLine } from '../graph/spec'
 import { calculationRequest } from '../math/sheet'
 import { sheetBefore } from './calcResults'
 import { mathRegionAt } from './mathContext'
@@ -69,6 +69,61 @@ export function addToGraphBlock(view: EditorView, line: number, text: string): b
   const lines = text.split('\n').map((t) => m[1] + t)
   const changes =
     line + 1 < doc.lines ? { from: doc.line(line + 2).from, insert: lines.join('\n') + '\n' } : { from: fence.to, insert: '\n' + lines.join('\n') }
+  view.dispatch({ changes, userEvent: 'input' })
+  return true
+}
+
+/** Il titolo e i nomi degli assi da scrivere in un blocco ```grafico (vuoto: la riga si toglie). */
+export interface GraphLabelLines {
+  title: string
+  x: string
+  y: string
+  z?: string
+}
+
+/**
+ * «Titolo e nomi degli assi…» nell'anteprima: nel blocco ```grafico che apre alla riga `line` (da 0)
+ * le righe `titolo: …` e `asse x: …` cambiano, si aggiungono all'inizio (nell'ordine titolo, x, y, z)
+ * o, se il campo è vuoto, si tolgono. Se lì non c'è più quel blocco, niente.
+ */
+export function setGraphLabels(view: EditorView, line: number, labels: GraphLabelLines): boolean {
+  const { doc } = view.state
+  if (line < 0 || line >= doc.lines) return false
+  const fence = doc.line(line + 1)
+  const m = /^([ \t]*)(`{3,}|~{3,})[ \t]*grafico[ \t]*$/.exec(fence.text)
+  if (!m) return false
+  const indent = m[1]
+  const wanted: [key: 'title' | 'x' | 'y' | 'z', text: string][] = [
+    ['title', labels.title ? `titolo: ${labels.title}` : ''],
+    ['x', labels.x ? `asse x: ${labels.x}` : ''],
+    ['y', labels.y ? `asse y: ${labels.y}` : ''],
+  ]
+  if (labels.z !== undefined) wanted.push(['z', labels.z ? `asse z: ${labels.z}` : ''])
+  const changes: { from: number; to?: number; insert?: string }[] = []
+  /** Le righe che ci sono già, per ogni nome. */
+  const rows = new Map<string, { from: number; to: number }>()
+  for (let n = line + 2; n <= doc.lines; n++) {
+    const row = doc.line(n)
+    if (/^[ \t]*(`{3,}|~{3,})[ \t]*$/.test(row.text) && row.text.trim().startsWith(m[2][0])) break
+    const label = labelLine(row.text)
+    if (label && !rows.has(label.key)) rows.set(label.key, { from: row.from, to: row.to })
+  }
+  const start = line + 1 < doc.lines ? doc.line(line + 2).from : null
+  wanted.forEach(([key, text], i) => {
+    const row = rows.get(key)
+    if (row) {
+      // Cambia, o (vuota) si toglie con il suo a capo.
+      changes.push(text ? { from: row.from, to: row.to, insert: indent + text } : { from: row.from, to: Math.min(row.to + 1, doc.length) })
+      return
+    }
+    if (!text) return
+    // Dopo la riga di quella che viene prima (titolo, x, y, z), se c'è; se no all'inizio del blocco.
+    const before = wanted.slice(0, i).reverse().map(([k]) => rows.get(k)).find((r) => r)
+    if (before) changes.push({ from: Math.min(before.to + 1, doc.length), insert: indent + text + '\n' })
+    else if (start !== null) changes.push({ from: start, insert: indent + text + '\n' })
+    else changes.push({ from: fence.to, insert: '\n' + indent + text })
+  })
+  if (!changes.length) return true
   view.dispatch({ changes, userEvent: 'input' })
   return true
 }

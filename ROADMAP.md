@@ -16,26 +16,6 @@ possano mostrare, più che coprire ogni argomento dei corsi.
 
 ## In programma
 
-### Controllare e mostrare quello che si scrive
-
-**Cosa:** con lo scopo chiarito (vedi sopra), prima delle voci «Restano» della matematica dei corsi
-vengono queste cose, in quest'ordine (decise con lo studente il 3 ottobre 2026):
-
-1. **Controllare le uguaglianze che si scrivono.** Se scrivo io il risultato, per esempio
-   `\int_0^1 x^2 \, dx = \frac{1}{3}`, Glifo dice se è giusto (✓) o sbagliato (✗, con il valore
-   giusto). Oggi non succede niente. Con le lettere il valore giusto c'è già (vedi sotto): così si
-   potrà controllare anche `\int_{-R}^{R} \pi (R^2 - x^2) \, dx = \frac{4}{3} \pi R^3`.
-2. **I grafici da mostrare**: scaricare un grafico o copiarlo come immagine (SVG e PNG, come già gli
-   schemi), con il titolo e i nomi degli assi scelti da chi scrive. Oggi un grafico finisce solo nel
-   file .md e nella stampa.
-
-Fatti il 4 ottobre 2026 (lo studente li ha chiesti prima degli altri due): **i calcoli con le lettere,
-partendo dagli integrali definiti**. Il volume della sfera scritto come sul quaderno
-(`\int_{-R}^{R} \pi (R^2 - x^2) \, dx =`, o in coordinate sferiche, cilindriche e cartesiane) dà 4πR³/3;
-gli integrali uno dentro l'altro e dentro un'espressione sono esatti, anche impropri; le lettere sono
-numeri positivi e ogni risultato si controlla con i numeri. Le idee che restano sono in «Calcoli e
-grafici: idee in più».
-
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
 **Cosa:** ognuno ha il suo account e ritrova gli stessi appunti su PC, tablet e telefono.
@@ -292,6 +272,22 @@ il valore nella legenda). Tutto è descritto nel README. Quello che serve per i 
   converge solo per p > 1: oggi nessun risultato);
 - i calcoli anche fuori dalle formule (`12 * 3 =` nel testo) e con le unità di misura (`3 m/s`);
 - un'impostazione per spegnere i risultati dopo `=`, se a qualcuno danno fastidio.
+
+Fatti il 4 e il 5 ottobre 2026 (i tre passi decisi con lo studente il 3 ottobre, per **controllare** e
+**mostrare** quello che si scrive): i **calcoli con le lettere** (il volume della sfera con l'integrale dà
+4πR³/3, scritto come sul quaderno o in coordinate sferiche, cilindriche e cartesiane), il **controllo
+delle uguaglianze scritte** (con il risultato scritto da chi prende appunti, `\int_0^1 x^2 \, dx =
+\frac{1}{3}`, Glifo dice ✓ o ✗ con il valore giusto: anche con le lettere, con i decimali arrotondati, in
+ogni passaggio di una catena e con la primitiva tra gli estremi) e i **grafici da mostrare** («Scarica»
+dà il grafico come immagine PNG o SVG, o lo copia per Word e le slide, con il titolo e i nomi degli assi
+scritti nel blocco: `titolo:`, `asse x:`). Restano, per il controllo e le immagini:
+
+- controllare anche le soluzioni scritte dopo ⇒ (`x^2 - 5x + 6 = 0 \Rightarrow x = 2 \lor x = 3`) e le
+  identità con le lettere (`(a + b)^2 = a^2 + 2ab + b^2`), che oggi non si distinguono dalle equazioni;
+- con un clic sul ✗, scrivere al posto del risultato sbagliato quello giusto (se si vuole);
+- le figure «da pubblicazione» (numerate, con la didascalia, pronte per la tesi): in
+  [ABBONAMENTI.md](ABBONAMENTI.md) sono un'idea per il piano Quantistico;
+- scegliere la misura dell'immagine (oggi 640 × 400) e scaricare anche in PDF.
 
 ### Matematica per i corsi: idee in più
 

@@ -4,10 +4,12 @@ import { EditorState } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { renderMarkdown } from '../src/render/markdown'
-import { hydrateGraphs } from '../src/graph/preview'
-import { graphImage, graphImagesFor, graphsForFile, graphsFromFile } from '../src/graph/file'
+import { containing, hydrateGraphs } from '../src/graph/preview'
+import { FIGURE_PALETTE, graphFigure, graphImage, graphImagesFor, graphsForFile, graphsFromFile } from '../src/graph/file'
+import { parseGraph } from '../src/graph/spec'
+import { graphSvg } from '../src/graph/svg'
 import { acceptCalcResult, calcPlugin, calcResults } from '../src/editor/calcResults'
-import { addToGraphBlock, formulaAtCursor, insertGraphBlock } from '../src/editor/graphInsert'
+import { addToGraphBlock, formulaAtCursor, insertGraphBlock, setGraphLabels } from '../src/editor/graphInsert'
 import { mathMarkdown } from '../src/editor/mathSyntax'
 import { Preview } from '../src/ui/preview'
 import { fullyParsed } from './support/editorState'
@@ -402,7 +404,7 @@ describe('gli slider sotto il grafico', () => {
 
   it('a un nome che manca, «Aggiungi lo slider per k» scrive k = 1 nel blocco', () => {
     const added: [number, string][] = []
-    const p = new Preview({ onToggleTask: () => {}, onJumpToLine: () => {}, onEditSchema: () => {}, onAddToGraph: (line, text) => added.push([line, text]) })
+    const p = new Preview({ onToggleTask: () => {}, onJumpToLine: () => {}, onEditSchema: () => {}, onAddToGraph: (line, text) => added.push([line, text]), onGraphLabels: () => {} })
     document.body.append(p.el)
     p.update('Testo\n\n```grafico\ny = a x^2 + b x\n```\n', true)
     const button = p.el.querySelector<HTMLButtonElement>('.graph-add-slider')!
@@ -510,5 +512,86 @@ describe('i grafici nei file .md', () => {
     expect([...images.keys()]).toEqual([2])
     // La retta y = 3 c'è: nessun errore «k non è definita» (l'immagine ha la curva).
     expect(images.get(2)).toContain('data-item="0"')
+  })
+})
+
+describe('i grafici da mostrare: titolo, nomi degli assi e immagini', () => {
+  const BLOCK = 'titolo: La caduta di un grave\nasse x: tempo $t$ (s)\nasse y: spazio $s$ (m)\ny = 4{,}9 x^2\nx \\in [0, 3]'
+
+  it('nell\'anteprima il titolo sta sopra il grafico e il nome dell\'asse al posto di x', () => {
+    const host = preview('```grafico\n' + BLOCK + '\n```')
+    hydrateGraphs(host, light)
+    const block = host.querySelector<HTMLElement>('.graph-block')!
+    expect(block.querySelector('.graph-title')?.textContent).toBe('La caduta di un grave')
+    const svg = block.querySelector('.graph-canvas svg')!
+    const names = [...svg.querySelectorAll('text')].map((t) => t.textContent)
+    expect(names.some((t) => t?.includes('tempo') && t.includes('(s)'))).toBe(true)
+    expect(names.some((t) => t?.includes('spazio'))).toBe(true)
+    // La t è una formula: in corsivo.
+    expect([...svg.querySelectorAll('tspan[font-style="italic"]')].some((t) => t.textContent === 't')).toBe(true)
+    // Le righe del titolo e degli assi non sono errori e non si disegnano.
+    expect(block.querySelector('.graph-errors')).toBeNull()
+    expect(block.querySelectorAll('.graph-legend li')).toHaveLength(1)
+    expect(block.querySelector('[data-action="image"]')).not.toBeNull()
+  })
+
+  it('la figura da scaricare: chiara su bianco, con il titolo, i nomi degli assi e la legenda in testo SVG', () => {
+    const spec = parseGraph(BLOCK)
+    const plot = graphSvg(spec, { x0: 0, x1: 3, y0: -2, y1: 45, width: 600, height: 380 }, FIGURE_PALETTE, { id: 'figura' })
+    const svg = graphFigure(spec, plot, 600, 380)
+    expect(svg).not.toContain('foreignObject')
+    const doc = new DOMParser().parseFromString(svg, 'image/svg+xml')
+    expect(doc.querySelector('parsererror')).toBeNull()
+    const root = doc.documentElement
+    expect(root.getAttribute('aria-label')).toBe('La caduta di un grave')
+    expect(Number(root.getAttribute('height'))).toBeGreaterThan(380 + 40)
+    const texts = [...root.querySelectorAll('text')].map((t) => t.textContent ?? '')
+    expect(texts[0]).toBe('La caduta di un grave')
+    expect(texts.some((t) => t.startsWith('y = 4,9x'))).toBe(true)
+    // L'esponente è più piccolo e sta sopra.
+    expect([...root.querySelectorAll('tspan')].some((t) => t.textContent === '2' && Number(t.getAttribute('dy')) < 0)).toBe(true)
+    expect(root.querySelector('rect')?.getAttribute('fill')).toBe('#ffffff')
+  })
+
+  it('la figura scaricata contiene tutta la parte che si vede, con la stessa forma', () => {
+    const w = containing({ x0: 0, x1: 2, y0: 0, y1: 1 }, 200, 100, 640, 400)
+    expect(w.x0).toBeCloseTo(0)
+    expect(w.x1).toBeCloseTo(2)
+    expect(w.y0).toBeCloseTo(-0.125)
+    expect(w.y1).toBeCloseTo(1.125)
+    // Più alta che larga: si allarga la x.
+    const tall = containing({ x0: -1, x1: 1, y0: -4, y1: 4 }, 100, 400, 640, 400)
+    expect(tall.y1 - tall.y0).toBeCloseTo(8)
+    expect((tall.x1 - tall.x0) / 640).toBeCloseTo((8 / 400) * (2 / 100 / (8 / 400)))
+  })
+
+  it('anche le immagini dei file .md hanno il titolo', () => {
+    const svg = graphImage(BLOCK)
+    expect(svg).toContain('La caduta di un grave')
+    expect(svg).toContain('aria-label="La caduta di un grave"')
+  })
+
+  it('«Titolo e nomi degli assi…» scrive, cambia e toglie le righe nel blocco', () => {
+    const v = makeView('Testo\n\n```grafico\ny = x^2\n```\n')
+    expect(setGraphLabels(v, 2, { title: 'Parabola', x: 'tempo $t$', y: '' })).toBe(true)
+    expect(v.state.doc.toString()).toBe('Testo\n\n```grafico\ntitolo: Parabola\nasse x: tempo $t$\ny = x^2\n```\n')
+    expect(setGraphLabels(v, 2, { title: 'La parabola', x: '', y: 'spazio' })).toBe(true)
+    expect(v.state.doc.toString()).toBe('Testo\n\n```grafico\ntitolo: La parabola\nasse y: spazio\ny = x^2\n```\n')
+    // Il blocco non c'è più lì: niente.
+    expect(setGraphLabels(v, 0, { title: 'x', x: '', y: '' })).toBe(false)
+    // In un elenco, con il rientro del blocco.
+    const list = makeView('- punto\n\n  ```grafico\n  y = kx\n  ```')
+    expect(setGraphLabels(list, 2, { title: 'Rette', x: '', y: '' })).toBe(true)
+    expect(list.state.doc.toString()).toBe('- punto\n\n  ```grafico\n  titolo: Rette\n  y = kx\n  ```')
+  })
+
+  it('dall\'anteprima i nomi arrivano alla nota con l\'evento graph-labels', () => {
+    const got: [number, unknown][] = []
+    const p = new Preview({ onToggleTask: () => {}, onJumpToLine: () => {}, onEditSchema: () => {}, onAddToGraph: () => {}, onGraphLabels: (line, labels) => got.push([line, labels]) })
+    document.body.append(p.el)
+    p.update('Testo\n\n```grafico\ny = x^2\n```\n', true)
+    const block = p.el.querySelector<HTMLElement>('.graph-block')!
+    block.dispatchEvent(new CustomEvent('graph-labels', { bubbles: true, detail: { title: 'T', x: 'a', y: 'b' } }))
+    expect(got).toEqual([[2, { title: 'T', x: 'a', y: 'b' }]])
   })
 })

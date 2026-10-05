@@ -3,7 +3,7 @@ import './styles/app.css'
 import { EditorSelection } from '@codemirror/state'
 import welcomeNote from './welcome.md?raw'
 import { MarkdownEditor } from './editor/editor'
-import { addToGraphBlock, formulaAtCursor, insertGraphBlock } from './editor/graphInsert'
+import { addToGraphBlock, formulaAtCursor, insertGraphBlock, setGraphLabels } from './editor/graphInsert'
 import { deriveTitle, NotesStore, type Note } from './store/notes'
 import { cleanFolderName, FOLDER_NAME_MAX, FoldersStore } from './store/folders'
 import { addPersonalWord, DICTIONARY_KEY, loadPersonalWords, savePersonalWords } from './store/dictionary'
@@ -213,6 +213,7 @@ const preview = new Preview({
   onJumpToLine: (line) => jumpToLine(line),
   onEditSchema: (line, source) => void openSchema(line, source),
   onAddToGraph: (line, text) => addToGraphBlock(editor.view, line, text),
+  onGraphLabels: (line, labels) => setGraphLabels(editor.view, line, labels),
 })
 
 const editor = new MarkdownEditor(editorHost, active.content, {

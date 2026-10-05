@@ -14,6 +14,8 @@
  *     a = 2                       un numero da usare nelle altre righe (con uno slider)
  *     a \in [0, 5]                da dove a dove va lo slider di a (anche 0 \le a \le 5)
  *     x \in [-5, 5]               la parte da mostrare (anche -1 \le y \le 3)
+ *     titolo: La parabola $y = x^2$   il titolo, sopra il grafico (anche nelle immagini)
+ *     asse x: tempo $t$ (s)       il nome dell'asse x (e asse y, asse z), al posto di x
  *     % commento                  non conta
  *
  * Con la z (o una funzione di x e y, o tre coordinate) il grafico è in 3D, e ogni equazione è
@@ -226,6 +228,20 @@ export interface GraphSpec {
   sliders: GraphSlider[]
   /** Il piano di Gauss (numeri complessi): sugli assi Re e Im, e le tacche dell'asse verticale con la i. */
   gauss?: boolean
+  /** Il titolo scritto nel blocco (`titolo: …`), con le formule tra $. */
+  title?: string
+  /** I nomi degli assi scritti nel blocco (`asse x: tempo $t$ (s)`), al posto di x, y e z. */
+  axes?: Partial<Record<'x' | 'y' | 'z', string>>
+}
+
+/** Le righe del titolo e dei nomi degli assi: `titolo: …`, `asse x: …` (e y, z). */
+const LABEL_LINE = /^(titolo|asse\s*([xyz]))\s*:\s*(.*)$/i
+
+/** Una riga del titolo o del nome di un asse: quale e il testo (null se la riga è altro). */
+export function labelLine(text: string): { key: 'title' | 'x' | 'y' | 'z'; value: string } | null {
+  const m = LABEL_LINE.exec(text.trim())
+  if (!m) return null
+  return { key: m[2] ? (m[2].toLowerCase() as 'x' | 'y' | 'z') : 'title', value: m[3].trim() }
 }
 
 const TRIG_FUNCTIONS = new Set(['sin', 'cos', 'tan', 'cot', 'sec', 'csc'])
@@ -923,6 +939,14 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   /** Le righe con seni e coseni: se sono funzioni di x, sull'asse x le tacche con π. */
   const trig = new Set<number>()
   for (const l of blockLines(source)) {
+    // titolo: …, asse x: …: non si disegnano.
+    const label = labelLine(l.text)
+    if (label) {
+      if (!label.value) continue
+      if (label.key === 'title') spec.title = label.value
+      else spec.axes = { ...spec.axes, [label.key]: label.value }
+      continue
+    }
     try {
       const { main, cond } = parseLine(l.text)
       // \operatorname{quadrica}(…): la superficie della sua equazione.
@@ -1822,6 +1846,7 @@ function usesSymbolicFunction(node: MathNode): boolean {
 export function graphNames(source: string): Set<string> {
   const names = new Set<string>()
   for (const l of blockLines(source)) {
+    if (labelLine(l.text)) continue
     try {
       const { main, cond } = parseLine(l.text)
       namesIn(main, names)

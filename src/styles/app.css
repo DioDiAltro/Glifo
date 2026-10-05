@@ -3404,6 +3404,14 @@ kbd {
   margin: 0 auto;
 }
 
+/* Il titolo scritto nel blocco (titolo: …), sopra il grafico (src/graph/preview.ts). */
+.markdown-body .graph-title {
+  margin: 0 auto 8px;
+  color: var(--heading);
+  font-weight: 600;
+  text-align: center;
+}
+
 .graph-frame {
   position: relative;
   border: 1px solid var(--border);

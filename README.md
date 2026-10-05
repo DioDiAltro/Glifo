@@ -510,6 +510,13 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
 - Con **Salva .md** ogni grafico diventa un'immagine (con il testo del blocco nascosto sotto), come
   gli schemi; riaprendo il file con **Apri .md** torna un blocco da modificare. Funziona offline:
   è tutto scritto per Glifo, senza librerie esterne.
+- **I grafici da mostrare**: il pulsante con la freccia in giù sopra il grafico dà il grafico come si
+  vede (con lo zoom, la rotazione e i valori degli slider) come **immagine PNG o SVG**, o lo **copia**
+  per incollarlo in Word, Google Docs o nelle slide: chiaro su bianco, 640 × 400 (il PNG due volte più
+  fitto), con la legenda sotto. Nel blocco `titolo: La caduta di un grave` mette il **titolo** sopra il
+  grafico e `asse x: tempo $t$ (s)` (e `asse y:`, `asse z:`) il **nome dell'asse** al posto di x, con
+  le formule tra `$`; dallo stesso pulsante, «Titolo e nomi degli assi…» li scrive per te. Nelle
+  immagini titolo, nomi e legenda sono testo, non MathML: si leggono anche in Word e in Inkscape.
 
 ![Risultati dopo «=» e grafici nell'anteprima](docs/grafici.png)
 
@@ -809,8 +816,9 @@ src/
     space.ts              i conti del 3D: superfici a quadretti e a tetraedri, piani, solidi, curve nello spazio, la scatola da mostrare
     view3d.ts             il disegno 3D in SVG: la luce, i pezzi dal più lontano al più vicino, i piani, gli assi
     picture.ts            il disegno fermo di un grafico, per il pannello a destra e i file .md
-    preview.ts            nell'anteprima: legenda, errori, slider, trascinare, ingrandire, coordinate
-    file.ts               i grafici nei file .md: immagine SVG più il testo nascosto, e ritorno
+    preview.ts            nell'anteprima: legenda, errori, slider, trascinare, ingrandire, coordinate, «Scarica»
+    file.ts               i grafici nei file .md: immagine SVG più il testo nascosto, e ritorno; la figura da scaricare
+    labels.ts             il titolo e i nomi degli assi: in HTML con KaTeX e, nei disegni, le formule come testo SVG
   host.ts                 integrazione facoltativa con claude.ai (per la demo pubblicata lì)
 privacy.html              l'informativa sulla privacy (una seconda pagina, fuori dall'app)
 nota.html                 la pagina delle note condivise con un link (src/share/page.ts)

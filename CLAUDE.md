@@ -200,7 +200,12 @@ prossimi passi sono in «In programma» nella ROADMAP.
   prima quello dietro), `picture.ts` il disegno fermo per pannello e file .md. Il valore si può anche scrivere nella casella accanto (`typedSliderValue`;
   fuori dallo slider, `widenSlider` lo allarga). «Aggiungi lo slider per k» passa da `onAddToGraph`
   (`src/ui/preview.ts`) a `addToGraphBlock`. Il pulsante «Grafico» e il grafico nel pannello della
-  formula: `src/editor/graphInsert.ts`. Le zone (disuguaglianze, insiemi, domini degli integrali
+  formula: `src/editor/graphInsert.ts`. I grafici da mostrare: `titolo: …` e `asse x: …` (y, z) nel
+  blocco (`labelLine`, `spec.title`, `spec.axes`; `labels.ts` li fa in HTML con KaTeX e, nei disegni, con
+  le formule come testo SVG nei `<tspan>`); il pulsante «Scarica» (`openImageMenu` in `preview.ts`) dà la
+  figura chiara su bianco 640 × 400 (`graphFigure` in `file.ts`, con la parte che contiene quella sullo
+  schermo, `containing`) come PNG (`svgToPng` degli schemi), SVG o copiata; «Titolo e nomi degli assi…»
+  scrive le righe nel blocco (evento `graph-labels` → `onGraphLabels` → `setGraphLabels`). Le zone (disuguaglianze, insiemi, domini degli integrali
   doppi) e i solidi (con la z, integrali tripli, volumi sotto le superfici) sono in `regions.ts`; il 3D
   (`space.ts` e `view3d.ts`, tutto in SVG con l'algoritmo del pittore) disegna i solidi condizione per
   condizione (`solidFaces`) o, se il dominio è a strati, faccia per faccia (`layeredFaces`, anche in

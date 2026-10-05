@@ -910,7 +910,11 @@ export function openHelpDialog(): HTMLDialogElement {
       h('code', {}, 'a = 2'),
       ') ha uno slider sotto il grafico: muovendolo, o scrivendo il valore nella casella accanto, il grafico cambia e la nota no; ▶ lo muove da solo e ',
       h('code', {}, 'a \\in [0, 5]'),
-      ' dice da dove a dove va. Con «Salva .md» diventa un\'immagine, come gli schemi.',
+      ' dice da dove a dove va. Con «Salva .md» diventa un\'immagine, come gli schemi. Il pulsante con la freccia in giù lo scarica come immagine PNG o SVG, o lo copia per Word e le slide; ',
+      h('code', {}, 'titolo: …'),
+      ' e ',
+      h('code', {}, 'asse x: tempo $t$ (s)'),
+      ' nel blocco danno il titolo e i nomi degli assi (li scrive anche «Titolo e nomi degli assi…», dallo stesso pulsante).',
     ),
     h(
       'p',

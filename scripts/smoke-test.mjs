@@ -1160,6 +1160,18 @@ try {
   await resetButton.click()
   await gp.waitForFunction(() => document.querySelector('.preview-pane .graph-block [data-action="reset"]')?.hidden, null, { timeout: 5000 })
   check(true, 'il grafico si trascina e si ingrandisce, e torna alla vista di partenza')
+  // «Scarica» → «Immagine PNG»: il grafico come figura chiara su bianco
+  await gp.locator('.preview-pane .graph-block').first().hover()
+  await gp.locator('.preview-pane .graph-block [data-action="image"]').first().click()
+  const [graphDownload] = await Promise.all([
+    gp.waitForEvent('download', { timeout: 10000 }),
+    gp.locator('.tool-menu[aria-label="Scarica il grafico"] .tool-menu-item', { hasText: 'Immagine PNG' }).click(),
+  ])
+  const png = readFileSync(await graphDownload.path())
+  check(
+    graphDownload.suggestedFilename() === 'grafico.png' && png.subarray(1, 4).toString() === 'PNG' && png.readUInt32BE(16) === 1280,
+    `«Scarica» dà il grafico come immagine PNG larga 1280 pixel (${graphDownload.suggestedFilename()}, ${png.length} byte)`,
+  )
   // Lo slider di a ($a = 3$ nella nota): con le frecce il grafico cambia e la nota no; ▶ lo muove da
   // solo; la freccia lo riporta al valore scritto
   const slider = gp.locator('.preview-pane .graph-block').first().locator('.graph-slider')

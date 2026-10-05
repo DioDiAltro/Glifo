@@ -1,4 +1,4 @@
-import { hydrateGraphs } from '../graph/preview'
+import { hydrateGraphs, type GraphLabels } from '../graph/preview'
 import { renderMarkdown } from '../render/markdown'
 import type { Theme } from '../schema/model'
 import { hydrateSchemas } from '../schema/preview'
@@ -13,6 +13,8 @@ export interface PreviewCallbacks {
   onEditSchema(line: number, source: string): void
   /** «Aggiungi lo slider per k» sotto un grafico: la riga (0-based) del suo blocco e le righe da aggiungere (k = 1). */
   onAddToGraph(line: number, text: string): void
+  /** «Titolo e nomi degli assi…» di un grafico: la riga (0-based) del suo blocco e i testi da scrivere. */
+  onGraphLabels(line: number, labels: GraphLabels): void
 }
 
 /** Riquadro dell'anteprima: ridisegna il Markdown e segue lo scorrimento dell'editor. */
@@ -43,6 +45,10 @@ export class Preview {
       const graph = add?.closest<HTMLElement>('.graph-block')
       if (add && graph) this.cb.onAddToGraph(Number(graph.dataset.line), add.dataset.add ?? '')
     })
+    this.content.addEventListener('graph-labels', (ev) => {
+      const graph = (ev.target as HTMLElement).closest<HTMLElement>('.graph-block')
+      if (graph) this.cb.onGraphLabels(Number(graph.dataset.line), (ev as CustomEvent<GraphLabels>).detail)
+    })
     this.content.addEventListener('dblclick', (ev) => {
       const target = (ev.target as HTMLElement).closest<HTMLElement>('[data-line]')
       if (!target) return
@@ -72,7 +78,7 @@ export class Preview {
       this.content.innerHTML = renderMarkdown(source)
       const surface = getComputedStyle(this.el).backgroundColor
       hydrateSchemas(this.content, { theme: this.theme, surface })
-      hydrateGraphs(this.content, { theme: this.theme, surface })
+      hydrateGraphs(this.content, { theme: this.theme, surface, editable: true })
       this.el.scrollTop = scroll
       this.anchors = [...this.content.querySelectorAll<HTMLElement>('[data-line]')]
         .map((el) => ({ line: Number(el.dataset.line), el }))

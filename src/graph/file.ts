@@ -15,9 +15,10 @@ import { renderTexMathml } from '../render/katex'
 import { renderMarkdown } from '../render/markdown'
 import { findFencedBlocks } from '../schema/blocks'
 import { base64 } from '../schema/file'
+import { labelPlain, labelSvg, texSvg } from './labels'
 import { staticGraphSvg } from './picture'
-import { parseGraph } from './spec'
-import { areaColor, graphTitle, itemColors, PALETTES, escapeXml } from './svg'
+import { parseGraph, type GraphItem, type GraphSpec } from './spec'
+import { areaColor, graphTitle, itemColors, PALETTES, escapeXml, type Palette } from './svg'
 
 const MARKER = 'glifo-grafico'
 const HINT = 'per modificare il grafico apri questo file con Glifo'
@@ -77,9 +78,80 @@ export function graphImage(source: string, defs: readonly string[] = []): string
       .join('')
     legend = `<foreignObject x="0" y="${height + 6}" width="${width}" height="${legendHeight - 6}">${new XMLSerializer().serializeToString(div)}</foreignObject>`
   }
-  const total = height + legendHeight
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${total}" width="${width}" height="${total}" role="img" aria-label="${escapeXml(graphTitle(spec))}"><rect width="${width}" height="${total}" fill="#ffffff"/>${plot}${legend}</svg>`
+  const title = titleBand(spec, width)
+  const total = title.height + height + legendHeight
+  const body = title.height ? `<g transform="translate(0 ${title.height})">${plot}${legend}</g>` : `${plot}${legend}`
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${total}" width="${width}" height="${total}" role="img" aria-label="${escapeXml(figureName(spec))}"><rect width="${width}" height="${total}" fill="#ffffff"/>${title.svg}${body}</svg>`
 }
+
+/** Il nome della figura, da leggere: il titolo scelto da chi scrive, se c'è. */
+function figureName(spec: GraphSpec): string {
+  return spec.title ? labelPlain(spec.title) : graphTitle(spec)
+}
+
+/** Il titolo sopra il grafico (`titolo: …` nel blocco), in testo SVG, e quanto spazio prende. */
+function titleBand(spec: GraphSpec, width: number): { svg: string; height: number } {
+  if (!spec.title) return { svg: '', height: 0 }
+  const { svg } = labelSvg(spec.title, 17)
+  return {
+    svg: `<text x="${width / 2}" y="26" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="17" font-weight="600" fill="#1c2030">${svg}</text>`,
+    height: 40,
+  }
+}
+
+/** Il quadratino della legenda in SVG, largo 20 e alto 14, con l'angolo in alto a sinistra in (x, y). */
+function swatchSvg(item: GraphItem, color: string, palette: Palette, x: number, y: number): string {
+  const kind = item.kind
+  if (item.dashed) return `<path d="M${x} ${y + 7}H${x + 20}" stroke="${color}" stroke-width="2.5" stroke-dasharray="5 3"/>`
+  if (kind === 'point' || kind === 'point3' || kind === 'points' || (kind === 'complex' && !item.arrows)) return `<circle cx="${x + 10}" cy="${y + 7}" r="4.5" fill="${color}"/>`
+  if (kind === 'area' || kind === 'bars') return `<rect x="${x + 1}" y="${y + 1}" width="18" height="12" fill="${areaColor(color, palette)}"/><path d="M${x + 1} ${y + 2.5}H${x + 19}" stroke="${color}" stroke-width="3"/>`
+  if (kind === 'region' || kind === 'polygon') return `<rect x="${x + 4}" y="${y + 1}" width="12" height="12" rx="2" fill="${areaColor(color, palette)}" stroke="${color}" stroke-width="2"/>`
+  if (kind === 'surface' || kind === 'implicit3' || kind === 'patch' || kind === 'solid') return `<rect x="${x + 3}" y="${y}" width="14" height="14" rx="3" fill="${color}"/>`
+  if (kind === 'field' || kind === 'field3' || kind === 'vector' || (kind === 'complex' && item.arrows)) return `<path d="M${x + 1} ${y + 7}H${x + 13}" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/><path d="M${x + 19} ${y + 7}L${x + 12} ${y + 3.5}V${y + 10.5}Z" fill="${color}"/>`
+  return `<rect x="${x + 1}" y="${y + 5.5}" width="18" height="3" rx="1.5" fill="${color}"/>`
+}
+
+/**
+ * Il grafico come figura da usare fuori da Glifo (PNG, SVG, copiata in Word o nelle slide), chiara su
+ * bianco: il titolo sopra (se c'è), il disegno `plot` (largo `width`, alto `height`, fatto con
+ * `FIGURE_PALETTE`), la legenda e i valori degli slider sotto. Tutto in testo SVG: MathML e KaTeX
+ * fuori dal browser non si vedono.
+ */
+export function graphFigure(spec: GraphSpec, plot: string, width: number, height: number): string {
+  const palette = FIGURE_PALETTE
+  const colors = itemColors(spec.items, palette)
+  const rows: string[] = []
+  const rowHeight = 26
+  const size = 15
+  const font = `font-family="'KaTeX_Main', 'Times New Roman', serif" font-size="${size}" fill="#1c2030"`
+  spec.items.forEach((item, i) => {
+    if (((item.kind === 'point' || item.kind === 'point3') && !item.name) || item.label === '') return
+    const text = texSvg(item.label, size)
+    const x = Math.max(8, (width - (28 + text.width)) / 2)
+    const y = rows.length * rowHeight
+    rows.push(`${swatchSvg(item, colors[i], palette, x, y + 6)}<text x="${(x + 28).toFixed(1)}" y="${y + 18}" ${font}>${text.svg}</text>`)
+  })
+  if (spec.sliders.length) {
+    const numbers = spec.sliders.map((s) => `${nameLatex(s.name)} = ${formatNumber(s.value, { comma: true, decimal: true, digits: 6 })?.tex ?? s.value}`).join(', \quad ')
+    const text = texSvg(numbers, size)
+    rows.push(`<text x="${width / 2}" y="${rows.length * rowHeight + 18}" text-anchor="middle" ${font}>${text.svg}</text>`)
+  }
+  const title = titleBand(spec, width)
+  const legendTop = title.height + height + 10
+  const legendHeight = rows.length ? rows.length * rowHeight + 14 : 4
+  const total = legendTop + legendHeight
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${total}" width="${width}" height="${total}" role="img" aria-label="${escapeXml(figureName(spec))}">`,
+    `<rect width="${width}" height="${total}" fill="#ffffff"/>`,
+    title.svg,
+    `<g transform="translate(0 ${title.height})">${plot}</g>`,
+    rows.length ? `<g transform="translate(0 ${legendTop})">${rows.join('')}</g>` : '',
+    '</svg>',
+  ].join('')
+}
+
+/** I colori delle figure che escono da Glifo: quelli del tema chiaro, su bianco. */
+export const FIGURE_PALETTE: Palette = { ...PALETTES.light, surface: '#ffffff', halo: '#ffffff' }
 
 /**
  * Il testo da scrivere nel file: ogni grafico diventa la sua immagine più il testo nascosto.

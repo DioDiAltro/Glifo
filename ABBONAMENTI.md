@@ -140,7 +140,7 @@ mandato un link.
 | Dentro | Perché è gratis |
 |---|---|
 | **Tutto lo scrivere**: editor, formule, pannello dei simboli, suggerimenti `\…`, controllo ortografico, elenchi, temi, cartelle, offline, app installabile, «Apri .md» e «Salva .md», stampa e PDF dalla stampa | È la base dello scopo («prima di tutto un posto dove si scrive»); Obsidian, Notion e gli altri lo danno gratis; gira nel browser e non costa niente |
-| **Tutti i calcoli**: i risultati dopo `=`, il controllo ✓/✗ (in programma), le soluzioni con ⇒, lo studio di funzione, le matrici, la probabilità, tutto il «foglio» | È il «controllare». I risultati sono gratis ovunque (Wolfram\|Alpha fa pagare i passaggi, non il risultato). Dividerli per argomento («Fourier è a pagamento») sarebbe arbitrario e romperebbe le note condivise, perché i risultati sono parte della nota. Non costano niente |
+| **Tutti i calcoli**: i risultati dopo `=`, il controllo ✓/✗ (fatto il 5 ottobre 2026), le soluzioni con ⇒, lo studio di funzione, le matrici, la probabilità, tutto il «foglio» | È il «controllare». I risultati sono gratis ovunque (Wolfram\|Alpha fa pagare i passaggi, non il risultato). Dividerli per argomento («Fourier è a pagamento») sarebbe arbitrario e romperebbe le note condivise, perché i risultati sono parte della nota. Non costano niente |
 | **Tutti i grafici**: 2D e 3D, slider, aree, zone, campi | È il «mostrare». Desmos e GeoGebra sono gratis; le note condivise e i file .md li devono mostrare comunque |
 | **Gli schemi**, con le immagini PNG e SVG (non l'SQL: vedi Relativistico) | Disegnare è scrivere; le immagini ci sono già e toglierle farebbe arrabbiare |
 | **L'account e la sincronizzazione**, con uno spazio base | Chi studia usa telefono e computer: senza, il gratuito sarebbe a metà. Il limite va sullo spazio (che costa), non sul numero di dispositivi: Evernote limitò i dispositivi del suo piano gratuito e fu molto criticato |
@@ -155,7 +155,8 @@ l'SQL e il codice dagli schemi, le cartelle condivise, gli strumenti per la tesi
 **I grafici restano qui** (deciso il 4 ottobre 2026: lo studente non voleva toglierli). Sono la cosa
 che fa più effetto, e proprio per questo stanno nella vetrina. L'idea è far pagare solo la parte
 «da pubblicazione» (figure numerate con didascalia, pronte per la tesi), in Quantistico; le immagini
-semplici di un grafico (in programma) restano gratis, come già quelle degli schemi.
+semplici di un grafico (PNG, SVG e copiate, con il titolo e i nomi degli assi: fatte il 5 ottobre 2026)
+restano gratis, come già quelle degli schemi.
 
 **La filigrana** (deciso il 4 ottobre 2026: piccola, come pubblicità, mai in mezzo agli appunti).
 Dove va, come proposta:

@@ -13,11 +13,23 @@
  * I grafici 3D (vedi view3d.ts) si girano trascinandoli, con il mouse o con un dito; + e − (o
  * Ctrl e la rotellina, o due dita) li avvicinano e li allontanano. Mentre si girano si disegnano con
  * meno quadretti, per seguire il mouse.
+ *
+ * Il pulsante «Scarica» dà il grafico come si vede adesso (con lo zoom, la rotazione e gli slider)
+ * come figura chiara su bianco: PNG, SVG o copiato come immagine, con il titolo e i nomi degli assi
+ * scritti nel blocco (`titolo: …`, `asse x: …`), che «Titolo e nomi degli assi…» aiuta a scrivere.
  */
 import { formatNumber } from '../math/format'
 import { nameLatex } from '../math/latex'
 import { escapeHtml, renderTex } from '../render/katex'
+import { svgToPng } from '../schema/image'
 import type { Theme } from '../schema/model'
+import { downloadBlob, downloadText, fileNameFor } from '../store/files'
+import { dialogShell } from '../ui/dialogs'
+import { h } from '../ui/dom'
+import { openMenu } from '../ui/menu'
+import { toast } from '../ui/toast'
+import { FIGURE_PALETTE, graphFigure } from './file'
+import { labelHtml, labelPlain } from './labels'
 import { chooseWindow, type Viewport } from './plot'
 import { chooseBox, type Box } from './space'
 import { parseGraph, typedSliderValue, widenSlider, type GraphError, type GraphSlider, type GraphSpec, type Range } from './spec'
@@ -28,6 +40,16 @@ export interface GraphLook {
   theme: Theme
   /** Lo sfondo dell'anteprima, dietro i numeri degli assi. */
   surface: string
+  /** La nota si può cambiare (non una nota condivisa): c'è «Titolo e nomi degli assi…». */
+  editable?: boolean
+}
+
+/** Il titolo e i nomi degli assi da scrivere nel blocco (vuoto: la riga si toglie). */
+export interface GraphLabels {
+  title: string
+  x: string
+  y: string
+  z?: string
 }
 
 type Window = Pick<Viewport, 'x0' | 'x1' | 'y0' | 'y1'>
@@ -118,6 +140,7 @@ const ICON = {
   reset: '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/>',
   play: '<path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/>',
   pause: '<path d="M9 6v12M15 6v12"/>',
+  download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
 }
 
 function icon(paths: string): string {
@@ -188,6 +211,25 @@ function texHtml(tex: string): string {
 /** La parte da mostrare scritta nel blocco (x \in [a, b]), per vedere se è cambiata. */
 function explicitWindow(spec: GraphSpec): string {
   return JSON.stringify([spec.x, spec.y, spec.z])
+}
+
+/** La misura delle figure scaricate: come le immagini dei file .md. */
+const FIGURE_SIZE = { width: 640, height: 400 }
+
+/**
+ * La parte del piano da mostrare in un disegno largo `W` e alto `H` che contiene tutta quella vista
+ * (`view`, in un disegno `w` × `h`), con lo stesso centro e la stessa forma (le unità dei due assi
+ * restano nello stesso rapporto).
+ */
+export function containing(view: Window, w: number, h: number, W: number, H: number): Window {
+  const ux = (view.x1 - view.x0) / w
+  const uy = (view.y1 - view.y0) / h
+  const s = Math.max((view.x1 - view.x0) / W, (view.y1 - view.y0) / ((uy / ux) * H))
+  const cx = (view.x0 + view.x1) / 2
+  const cy = (view.y0 + view.y1) / 2
+  const halfX = (s * W) / 2
+  const halfY = ((uy / ux) * s * H) / 2
+  return { x0: cx - halfX, x1: cx + halfX, y0: cy - halfY, y1: cy + halfY }
 }
 
 function sameCamera(a: Camera, b: Camera): boolean {
@@ -265,10 +307,13 @@ class GraphView {
   private slidAt = -Infinity
   private fineTimer = 0
 
+  private readonly editable: boolean
+
   constructor(
     private readonly block: HTMLElement,
     look: GraphLook,
   ) {
+    this.editable = !!look.editable
     this.source = block.dataset.graph ?? ''
     this.defs = readDefs(block)
     this.key = `${this.source}\n\u0000${this.defs.join('\n')}`
@@ -291,7 +336,8 @@ class GraphView {
     this.view = views.get(this.key) ?? this.base
 
     // I pulsanti stanno sopra il disegno (e si vedono passandoci sopra); sui telefoni sotto, sempre.
-    block.innerHTML = `<div class="graph-stage" style="max-width:${this.width}px"><div class="graph-frame"><div class="graph-canvas"></div><div class="graph-dot" hidden></div><div class="graph-tip" hidden></div></div><div class="graph-tools">${toolButton('Ingrandisci', ICON.plus, 'in')}${toolButton('Rimpicciolisci', ICON.minus, 'out')}${toolButton('Torna alla vista di partenza', ICON.reset, 'reset')}</div></div>${this.slidersHtml()}<div class="graph-notes"></div>`
+    const title = this.written.title ? `<div class="graph-title" style="max-width:${this.width}px">${labelHtml(this.written.title)}</div>` : ''
+    block.innerHTML = `${title}<div class="graph-stage" style="max-width:${this.width}px"><div class="graph-frame"><div class="graph-canvas"></div><div class="graph-dot" hidden></div><div class="graph-tip" hidden></div></div><div class="graph-tools">${toolButton('Ingrandisci', ICON.plus, 'in')}${toolButton('Rimpicciolisci', ICON.minus, 'out')}${toolButton('Torna alla vista di partenza', ICON.reset, 'reset')}${toolButton('Scarica il grafico come immagine', ICON.download, 'image')}</div></div>${this.slidersHtml()}<div class="graph-notes"></div>`
     const frame = block.querySelector<HTMLElement>('.graph-stage')!
     this.frameEl = frame
     this.canvas = block.querySelector<HTMLElement>('.graph-canvas')!
@@ -310,7 +356,7 @@ class GraphView {
       else if (action === 'reset') {
         if (this.space) this.setCamera(DEFAULT_CAMERA)
         else this.setView(this.base)
-      }
+      } else if (action === 'image') this.openImageMenu((ev.target as HTMLElement).closest<HTMLElement>('[data-action]')!, ev.detail === 0)
     })
     // Il doppio clic sui pulsanti non deve portare all'editor (lo fa il doppio clic sul grafico).
     frame.querySelector('.graph-tools')!.addEventListener('dblclick', (ev) => ev.stopPropagation())
@@ -610,6 +656,116 @@ class GraphView {
     return `<ul class="graph-errors">${rows.join('')}</ul>`
   }
 
+  /** Il menu di «Scarica»: il grafico come immagine e, nella propria nota, il titolo e i nomi degli assi. */
+  private openImageMenu(anchor: HTMLElement, fromKeyboard: boolean): void {
+    openMenu(
+      anchor,
+      [
+        { label: 'Immagine PNG', run: () => void this.exportImage('png') },
+        { label: 'Immagine SVG', run: () => void this.exportImage('svg') },
+        { label: 'Copia come immagine', run: () => void this.exportImage('copy') },
+        ...(this.editable ? ['sep' as const, { label: 'Titolo e nomi degli assi…', run: () => this.editLabels() }] : []),
+      ],
+      'Scarica il grafico',
+      fromKeyboard,
+    )
+  }
+
+  /**
+   * Il grafico come si vede adesso (con lo zoom, la rotazione e i valori degli slider), come figura
+   * chiara su bianco, con il titolo e la legenda (vedi graphFigure).
+   */
+  figure(): string {
+    const spec = this.currentSpec()
+    const { width, height } = FIGURE_SIZE
+    const title = graphTitle(spec)
+    if (this.space) return graphFigure(spec, sceneSvg(this.sceneFor(spec, 'fine'), spec, this.camera, FIGURE_PALETTE, { width, height, title }), width, height)
+    // Senza zoom né spostamenti, la parte scelta da Glifo per quella misura; se no quella che si vede.
+    const window = this.view === this.base ? chooseWindow(spec, width, height) : containing(this.view, this.width, this.height, width, height)
+    return graphFigure(spec, graphSvg(spec, { ...window, width, height }, FIGURE_PALETTE, { id: 'figura', title }), width, height)
+  }
+
+  /** PNG o SVG da scaricare, o PNG da incollare altrove (Word, Google Docs, le slide). */
+  private async exportImage(kind: 'png' | 'svg' | 'copy'): Promise<void> {
+    if (!this.spec.items.length) {
+      toast('Il grafico è vuoto: non c\'è ancora niente da salvare come immagine.')
+      return
+    }
+    const svg = this.figure()
+    const name = (ext: string) => fileNameFor(this.written.title ? labelPlain(this.written.title) : 'grafico', ext)
+    // Due volte più fitta (1280 pixel di larghezza): si legge anche ingrandita, su un foglio o su una slide.
+    const scale = 2
+    try {
+      if (kind === 'svg') {
+        if (await downloadText(name('.svg'), svg, 'image/svg+xml')) toast('Immagine SVG scaricata')
+      } else if (kind === 'png') {
+        downloadBlob(name('.png'), await svgToPng(svg, scale))
+        toast('Immagine PNG scaricata')
+      } else {
+        if (typeof ClipboardItem === 'undefined' || !navigator.clipboard?.write) {
+          toast('Questo browser non sa copiare le immagini: scaricala come PNG.', 'error')
+          return
+        }
+        // Safari vuole l'immagine (anche solo promessa) subito, durante il clic.
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': svgToPng(svg, scale) })])
+        toast('Immagine copiata: incollala dove vuoi (Word, Google Docs, le slide…)')
+      }
+    } catch {
+      toast(
+        kind === 'copy'
+          ? 'L\'immagine non si è riuscita a copiare (il browser l\'ha impedito?): scaricala come PNG.'
+          : 'L\'immagine non si è riuscita a fare su questo browser: prova con l\'altro formato.',
+        'error',
+      )
+    }
+  }
+
+  /**
+   * «Titolo e nomi degli assi…»: una finestra con il titolo e i nomi (quelli scritti nel blocco);
+   * con «Fatto» le righe `titolo: …` e `asse x: …` vanno nel blocco (lo fa src/ui/preview.ts, che
+   * riceve l'evento `graph-labels`).
+   */
+  private editLabels(): void {
+    const field = (label: string, value: string, placeholder: string) => {
+      const input = h('input', { class: 'prompt-input', attrs: { type: 'text', value, placeholder, autocomplete: 'off', spellcheck: 'false' } })
+      return { input, row: h('label', { class: 'prompt-label' }, h('span', {}, label), input) }
+    }
+    const axes = this.written.axes ?? {}
+    const title = field('Titolo', this.written.title ?? '', 'per esempio: La caduta di un grave')
+    const x = field('Nome dell\'asse x', axes.x ?? '', 'per esempio: tempo $t$ (s)')
+    const y = field('Nome dell\'asse y', axes.y ?? '', 'per esempio: spazio $s$ (m)')
+    const z = this.space ? field('Nome dell\'asse z', axes.z ?? '', 'per esempio: altezza $h$ (m)') : null
+    const form = h(
+      'form',
+      {
+        class: 'prompt-form graph-labels-form',
+        on: {
+          submit: (ev) => {
+            ev.preventDefault()
+            const one = (input: HTMLInputElement) => input.value.replace(/\s+/g, ' ').trim()
+            const labels: GraphLabels = { title: one(title.input), x: one(x.input), y: one(y.input), ...(z && { z: one(z.input) }) }
+            this.block.dispatchEvent(new CustomEvent<GraphLabels>('graph-labels', { bubbles: true, detail: labels }))
+            dialog.close()
+          },
+        },
+      },
+      title.row,
+      x.row,
+      y.row,
+      z?.row ?? null,
+      h('p', { class: 'field-help' }, 'Le formule tra $, come nella nota. Si vedono nel grafico e nelle immagini; un campo vuoto toglie il suo nome.'),
+      h(
+        'div',
+        { class: 'dialog-actions' },
+        h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => dialog.close() } }, 'Annulla'),
+        h('button', { class: 'btn btn-primary', attrs: { type: 'submit' } }, 'Fatto'),
+      ),
+    )
+    const dialog = dialogShell('Titolo e nomi degli assi', [form], 'dialog-prompt')
+    dialog.showModal()
+    title.input.focus()
+  }
+
   /** L'anteprima è diventata più larga o più stretta: il disegno si rifà alla misura nuova. */
   resize(): void {
     const size = graphSize(this.block.clientWidth)
@@ -622,6 +778,8 @@ class GraphView {
       if (!moved) this.view = this.base
     }
     this.frameEl.style.maxWidth = `${this.width}px`
+    const title = this.block.querySelector<HTMLElement>('.graph-title')
+    if (title) title.style.maxWidth = `${this.width}px`
     if (this.slidersEl) this.slidersEl.style.maxWidth = `${this.width}px`
     this.hideTip()
     this.render()

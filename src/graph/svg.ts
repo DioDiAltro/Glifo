@@ -6,6 +6,7 @@ import { withWorkLimit } from '../math/evaluate'
 import { lineAcross, regionEdges, sampleArea, sampleFunction, sampleImplicit, sampleParametric, sampleRegion, ticks, type Polyline, type Viewport } from './plot'
 import { contourLevels, equilibria, phaseTrajectory, solutionCurves } from './ode'
 import { GRAPH_WORK, type GraphItem, type GraphSpec } from './spec'
+import { labelSvg } from './labels'
 
 export interface Palette {
   /** Lo sfondo (null: trasparente, si vede quello dell'anteprima). */
@@ -460,12 +461,24 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
   // Nel piano di Gauss gli assi sono la parte reale e quella immaginaria.
   const [xName, yName] = spec.gauss ? ['Re', 'Im'] : ['x', 'y']
   const axisFont = spec.gauss ? math.replace('font-style="italic" ', '').replace("'KaTeX_Math'", "'KaTeX_Main'") : math
-  if (xAxis) {
+  // I nomi scelti da chi scrive (asse x: tempo $t$ (s)): anche se l'asse non si vede, sul bordo.
+  const custom = (text: string, x: number, y: number, anchor: 'start' | 'end') => {
+    const label = labelSvg(text, 15)
+    names.push(`<text x="${f1(x)}" y="${f1(y)}" text-anchor="${anchor}" font-family="'KaTeX_Main', 'Times New Roman', serif" font-size="15" fill="${palette.axis}" ${halo}>${label.svg}</text>`)
+    taken.push(textBox(x, y, anchor, label.width, 16))
+  }
+  if (spec.axes?.x) custom(spec.axes.x, W - 6, xAxis ? (ay > 24 ? ay - 9 : ay + 20) : vp.y1 <= 0 ? 34 : H - 24, 'end')
+  else if (xAxis) {
     const y = ay > 24 ? ay - 9 : ay + 20
     names.push(`<text x="${W - 6}" y="${f1(y)}" text-anchor="end" ${axisFont}>${xName}</text>`)
     taken.push(textBox(W - 6, y, 'end', 9 * xName.length, 16))
   }
-  if (yAxis) {
+  if (spec.axes?.y) {
+    const width = labelSvg(spec.axes.y, 15).width
+    const at = yAxis ? ax : vp.x1 <= 0 ? W - 40 : 40
+    if (at + 9 + width > W - 4) custom(spec.axes.y, at - 9, 14, 'end')
+    else custom(spec.axes.y, at + 9, 14, 'start')
+  } else if (yAxis) {
     names.push(`<text x="${f1(ax + 9)}" y="14" ${axisFont}>${yName}</text>`)
     taken.push(textBox(ax + 9, 14, 'start', 9 * yName.length, 16))
   }
