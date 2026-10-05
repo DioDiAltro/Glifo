@@ -273,7 +273,9 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
 - Database: ogni modifica è una nuova migrazione in `supabase/migrations/`, seguita dai test
   di `supabase/tests/` e dagli Advisors. Nel codice va solo la chiave pubblica di Supabase;
   quella segreta mai, nemmeno nei messaggi.
-- Solo servizi gratuiti, finché lo studente non decide diversamente.
+- Solo servizi gratuiti, finché lo studente non decide diversamente: quello che costerebbe
+  (dominio, Supabase Pro, l'AI di Glifo…) è in [COSTI.md](COSTI.md) e si attiva solo quando lo dice
+  lui, una voce alla volta (5 ottobre 2026).
 - Se cambia quali dati Glifo tiene o a quali servizi li manda (per esempio l'accesso con
   Google), aggiorna `privacy.html` e la sua data.
 

@@ -25,9 +25,13 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
 - **La lavagna** (5 ottobre 2026): una per ogni nota, e si salva; la lavagna è gratis (Classico), la
   conversione in LaTeX è nei piani a pagamento. Si comincia dalla lavagna base, senza AI, ma solo
   quando lo dice lo studente. Vedi «La lavagna».
-- **Le cose dell'AI aspettano** (5 ottobre 2026): quello che riguarda l'AI (la conversione della
-  lavagna, le spiegazioni, il tutor, con quale chiave) resta salvato qui e si decide dopo la
-  discussione sulla chiave API, che lo studente spiegherà.
+- **I modelli e le chiavi** (5 ottobre 2026): nei piani a pagamento l'AI è inclusa, la paga Glifo
+  con la sua chiave, che resta sul server e non si dà a nessuno; la propria chiave è facoltativa e
+  può essere di qualsiasi servizio (si parte da Anthropic e da quelli che parlano la «lingua» di
+  OpenAI: Gemini, OpenRouter, Ollama); un modello aperto piccolo su Cloudflare Workers AI fa
+  l'assaggio gratuito e le cose facili. Vedi «I modelli e le chiavi API».
+- **Niente spese finché Glifo è in sviluppo** (5 ottobre 2026): quello che costerebbe è in
+  [COSTI.md](COSTI.md) e si attiva solo quando lo dice lo studente.
 
 ## Com'è andata la discussione
 
@@ -61,6 +65,10 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
 10. **I modelli e le chiavi** (5 ottobre 2026). Lo studente propone un piccolo modello aperto (come
     Qwen), le chiavi di qualsiasi servizio e chiede chi paga le chiavi. Claude dà il suo parere:
     vedi «I modelli e le chiavi API».
+11. **Va bene, ma senza spendere** (5 ottobre 2026). Lo studente approva la divisione, Cloudflare
+    Workers AI per il modello piccolo e i servizi da cui partire per la propria chiave. Finché Glifo
+    è in sviluppo non vuole spendere: le cose che costano vanno in un file a parte, da cui si
+    comincerà a pagare quando lo dirà lui. È [COSTI.md](COSTI.md).
 
 ## La proposta dello studente (4 ottobre 2026)
 
@@ -453,12 +461,14 @@ provandoli sugli esercizi veri.
 più il motore di Glifo e, più avanti, un modello aperto addestrato apposta per i compiti di Glifo
 (con i dati solo di chi dà il consenso).
 
-### Da decidere
+### Deciso (5 ottobre 2026)
 
-- se questa divisione va bene;
-- dove far girare il modello piccolo (proposta: Cloudflare Workers AI);
-- quali servizi accettare all'inizio per la propria chiave (proposta: Anthropic e quelli che parlano
-  la «lingua» di OpenAI, provando Gemini, OpenRouter e Ollama).
+- La divisione va bene: l'AI inclusa nei piani a pagamento, la propria chiave facoltativa.
+- Il modello piccolo gira su Cloudflare Workers AI.
+- Per la propria chiave si parte da Anthropic e dai servizi che parlano la «lingua» di OpenAI,
+  provando Gemini, OpenRouter e Ollama.
+- Finché Glifo è in sviluppo non si spende niente: le cose che costano sono in
+  [COSTI.md](COSTI.md).
 
 ## Quanto costano a Glifo le cose a pagamento
 
@@ -532,7 +542,8 @@ dominio (10-20 € l'anno). Li copre una decina di abbonati a Relativistico.
 4. **Le regole.** Termini di servizio, informativa aggiornata (il servizio di pagamento, poi quelli
    di trascrizione e grammatica) e, dal 19 giugno 2026, il «pulsante di recesso» obbligatorio per i
    contratti online, abbonamenti compresi.
-5. **I costi fissi** (vedi sopra): con chi paga serve Supabase Pro.
+5. **I costi fissi** (vedi sopra): con chi paga serve Supabase Pro. Tutte le spese, da attivare solo
+   quando lo dice lo studente, sono in [COSTI.md](COSTI.md).
 
 ## Note tecniche
 
@@ -577,8 +588,6 @@ ricerca, i piani per università e dipartimenti.
 - **La lavagna base**: si costruisce quando lo dice lo studente (vedi «La lavagna»).
 - **Un'idea dello studente** (5 ottobre 2026): forse è quella del modello aperto piccolo, da
   confermare.
-- **La chiave API**: in discussione dal 5 ottobre 2026 (vedi «I modelli e le chiavi API»). Le cose
-  dell'AI aspettano questa discussione.
 - **Le spiegazioni**: da quale argomento partire (vedi «Le spiegazioni, come funzionano», in
   fondo). In sospeso dal 5 ottobre 2026: si riprende più avanti.
 - **L'SQL**: in Relativistico, come nella proposta, o resta gratis?

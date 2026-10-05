@@ -254,7 +254,8 @@ delle tabelle per più database. Tutto è descritto nel README. Se serviranno:
 Se ne parla dal 4 ottobre 2026 in [ABBONAMENTI.md](ABBONAMENTI.md): la proposta dello studente
 (Classico gratis, Relativistico, Quantistico), cosa far pagare piano per piano e perché, i prezzi, i costi
 dell'AI e della trascrizione, cosa serve prima di incassare (partita IVA, *merchant of record*,
-hosting, regole). Niente è ancora deciso.
+hosting, regole). Quello che è deciso è scritto lì, in «Deciso». Quello che costerebbe, e che si
+attiva solo quando lo dice lo studente, è in [COSTI.md](COSTI.md).
 
 ### Trascrizione delle lezioni in appunti
 
