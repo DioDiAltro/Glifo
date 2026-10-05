@@ -229,7 +229,8 @@ delle tabelle per più database. Tutto è descritto nel README. Se serviranno:
 - **i diagrammi di flusso trasformati in codice** (lo studente, 5 ottobre 2026): come oggi le
   tabelle danno l'SQL, un diagramma di flusso fatto con le forme di sempre (inizio e fine,
   istruzioni, decisioni con sì e no, ingresso e uscita) si scarica come codice nel linguaggio scelto:
-  C, C++, Java, Python e JavaScript (proposto da Claude: è il linguaggio del web). Le decisioni che
+  C, C++, Java, Python, JavaScript (il linguaggio del web) e lo pseudocodice che si usa a scuola
+  (proposti da Claude, approvati dallo studente il 5 ottobre 2026). Le decisioni che
   tornano indietro diventano cicli; un diagramma che non si può scrivere con if e cicli lo dice.
   Come l'SQL, solo nei piani a pagamento, perché scrivere il codice a mano fa bene (vedi
   [ABBONAMENTI.md](ABBONAMENTI.md), «Deciso»);
@@ -242,7 +243,8 @@ delle tabelle per più database. Tutto è descritto nel README. Se serviranno:
   - l'ottimizzazione dei flussi: lo studio dei processi per automatizzarli o gestirli con un
     gestionale (ERP).
 
-  La proposta di Claude, da confermare con lo studente: una tabella con le celle e le formule come in
+  Approvato dallo studente il 5 ottobre 2026 («sì a tutto»), gratis come i calcoli e i grafici: una
+  tabella con le celle e le formule come in
   Excel (=B2*C2, SOMMA, MEDIA, SE…), con i numeri in euro e in percentuale, che si apre a tutto schermo
   come gli schemi; i conti li fa il motore di Glifo. Insieme: il grafico del punto di pareggio (costi
   totali e ricavi che si incontrano) con il blocco grafico, il diagramma di Gantt per pianificare

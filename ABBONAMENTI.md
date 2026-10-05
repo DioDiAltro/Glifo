@@ -34,9 +34,12 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
   [COSTI.md](COSTI.md) e si attiva solo quando lo dice lo studente.
 - **L'SQL e il codice dagli schemi sono a pagamento**, da Relativistico (5 ottobre 2026): oltre
   all'SQL dalle tabelle, il codice dai diagrammi di flusso, nei linguaggi principali (C, C++, Java,
-  Python; Claude propone di aggiungere JavaScript). Lo studente: «fa bene scrivere codice a mano
+  Python, e anche JavaScript e lo pseudocodice, come ha proposto Claude). Lo studente: «fa bene scrivere codice a mano
   invece che copiarlo». Oggi l'SQL si scarica ancora gratis: si toglie prima di aprire l'account a
   tutti (vedi «Come si decide cosa far pagare»).
+- **Le tabelle come in Excel negli schemi sono gratis** (5 ottobre 2026), come i calcoli e i grafici:
+  sono conti, non un lavoro fatto al posto di chi studia. Con il grafico del punto di pareggio, il
+  diagramma di Gantt e i flussi con le corsie (vedi la ROADMAP).
 
 ## Com'è andata la discussione
 
@@ -95,6 +98,9 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
     G.E.S.P. (Gestione Economica e Servizi Produttivi): la pianificazione della produzione, i costi
     fissi e variabili con il prezzo e il punto di pareggio, i flussi dei processi (vedi la ROADMAP).
     Decide che il codice, come l'SQL, è nei piani a pagamento (vedi «Deciso»).
+16. **Sì a tutto** (5 ottobre 2026). Lo studente approva la proposta delle tabelle (con il Gantt e le
+    corsie) e le vuole gratis; il codice dai diagrammi anche in pseudocodice. Si comincia dagli
+    strumenti della lavagna, sul ramo `prova`.
 
 ## La proposta dello studente (4 ottobre 2026)
 
@@ -626,8 +632,6 @@ ricerca, i piani per università e dipartimenti.
   confermare.
 - **Le spiegazioni**: da quale argomento partire (vedi «Le spiegazioni, come funzionano», in
   fondo). In sospeso dal 5 ottobre 2026: si riprende più avanti.
-- **Le tabelle come in Excel** negli schemi (5 ottobre 2026): gratis, come i calcoli e i grafici
-  (la proposta di Claude: sono conti, non un lavoro fatto al posto di chi studia), o a pagamento?
 - **L'assaggio** nel gratuito: 7 giorni di Relativistico o poche domande al mese?
 - **I prezzi e i tetti**: da verificare con gli studenti e con l'uso vero.
 
