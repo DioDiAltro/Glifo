@@ -85,6 +85,47 @@ describe('i risultati dopo «=»', () => {
   })
 })
 
+describe('il controllo dei risultati scritti (✓/✗)', () => {
+  it('nell\'anteprima: ✓ dopo la formula giusta, ✗ con il valore giusto dopo quella sbagliata', () => {
+    const host = preview(r`Il conto $\int_0^1 x^2 \, dx = \frac{1}{3}$ torna.` + '\n\n' + r`$$\int_0^1 x^2 \, dx = \frac{1}{2}$$`)
+    const ok = host.querySelector<HTMLElement>('p .calc-check')!
+    expect(ok.classList.contains('is-ok')).toBe(true)
+    expect(ok.textContent).toBe('✓')
+    expect(ok.title).toContain('Giusto')
+    const block = host.querySelector<HTMLElement>('.math-block')!
+    expect(block.classList.contains('has-check')).toBe(true)
+    const wrong = block.querySelector<HTMLElement>('.calc-check.is-wrong')!
+    expect(wrong.textContent).toContain('✗ fa')
+    expect(wrong.querySelector('.katex')).not.toBeNull()
+    expect(wrong.title).toBe('Sbagliato secondo Glifo: il valore giusto è 1/3')
+    // Le definizioni e le equazioni non hanno il segno.
+    expect(preview('$a = 2$ e $x^2 - 5x + 6 = 0$').querySelector('.calc-check')).toBeNull()
+  })
+
+  it('nell\'editor: dopo Tab il risultato scritto ha il ✓', () => {
+    const doc = r`$a = 2$ e $a^{10} =$ fine`
+    const v = makeView(doc, doc.indexOf('=$') + 1)
+    expect(v.dom.querySelector('.cm-calc-check')).toBeNull()
+    expect(acceptCalcResult(v)).toBe(true)
+    const check = v.dom.querySelector<HTMLElement>('.cm-calc-check')!
+    expect(check.classList.contains('is-ok')).toBe(true)
+    expect(check.textContent).toBe('✓')
+  })
+
+  it('nell\'editor il ✗ aspetta che il cursore esca dalla formula', () => {
+    const doc = '$2 + 2 = 5$ e poi'
+    const v = makeView(doc, doc.indexOf('5'))
+    expect(v.dom.querySelector('.cm-calc-check')).toBeNull()
+    v.dispatch({ selection: { anchor: doc.length } })
+    const check = v.dom.querySelector<HTMLElement>('.cm-calc-check.is-wrong')!
+    expect(check.textContent).toBe('✗ fa 4')
+    expect(check.title).toBe('Sbagliato secondo Glifo: il valore giusto è 4')
+    // Il ✓ invece si vede subito, anche con il cursore dentro.
+    v.dispatch({ changes: { from: doc.indexOf('5'), to: doc.indexOf('5') + 1, insert: '4' }, selection: { anchor: doc.indexOf('5') + 1 } })
+    expect(v.dom.querySelector('.cm-calc-check')?.textContent).toBe('✓')
+  })
+})
+
 describe('i grafici nell\'anteprima', () => {
   it('il blocco ```grafico lascia il posto al disegno, con le definizioni della nota che usa', () => {
     const host = preview('Sia $a = 2$, $c = 5$ e $f(x) = a x^2$.\n\n```grafico\ny = f(x)\n```\n\nDopo $a = 7$.')

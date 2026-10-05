@@ -1641,6 +1641,52 @@ kbd {
   opacity: 0.7;
 }
 
+/* Il controllo del risultato scritto (src/render/check.ts): ✓ giusto, ✗ sbagliato con il valore giusto. */
+.cm-calc-check,
+.markdown-body .calc-check {
+  margin-left: 0.35em;
+  padding: 0 0.4em;
+  border-radius: 6px;
+  font-family: var(--font-ui);
+  font-size: 0.85em;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.cm-calc-check.is-ok,
+.markdown-body .calc-check.is-ok {
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+}
+
+.cm-calc-check.is-wrong,
+.markdown-body .calc-check.is-wrong {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.cm-calc-check .katex,
+.markdown-body .calc-check .katex {
+  font-size: 1.1em;
+}
+
+/* Una formula a sé con il controllo: il segno a destra, la formula al centro dello spazio che resta. */
+.markdown-body .math-block.has-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.markdown-body .math-block.has-check > .katex-display {
+  flex: 1;
+  min-width: 0;
+}
+
+.markdown-body .math-block.has-check > .calc-check {
+  flex: none;
+}
+
 .panel-body {
   flex: 1;
   min-height: 0;
@@ -3991,6 +4037,11 @@ kbd {
   .markdown-body table,
   .graph-block {
     break-inside: avoid;
+  }
+
+  /* Sulla carta resta la nota: i segni del controllo (✓, ✗) servono mentre si scrive. */
+  .calc-check {
+    display: none !important;
   }
 
   .graph-tools,

@@ -34,7 +34,7 @@ export const TUTORIAL_PAGES: readonly TutorialPage[] = [
   {
     id: 'calcoli',
     title: 'Calcoli e grafici',
-    text: 'Una formula che finisce con `=` mostra il risultato: con Tab lo scrivi nella nota. Il pulsante con gli assi disegna la funzione su cui c\'è il cursore, così controlli che sia giusta.',
+    text: 'Una formula che finisce con `=` mostra il risultato: con Tab lo scrivi nella nota. Se il risultato lo scrivi tu, Glifo lo controlla: ✓ se è giusto, ✗ se no. Il pulsante con gli assi disegna la funzione su cui c\'è il cursore.',
   },
   {
     id: 'barra',

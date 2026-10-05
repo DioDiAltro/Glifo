@@ -179,7 +179,13 @@ prossimi passi sono in «In programma» nella ROADMAP.
   `sheet.ts` è il
   «foglio» della nota: le formule dall'alto in basso, `$a = 2$` e `$f(x) = …$` definiscono, una formula
   che finisce con `=` ha il risultato (nell'editor `src/editor/calcResults.ts`, Tab lo scrive;
-  nell'anteprima colorato, classe `calc-result`). `\log` è il logaritmo naturale.
+  nell'anteprima colorato, classe `calc-result`). Con il risultato scritto
+  (`$\int_0^1 x^2 \, dx = \frac{1}{3}$`) c'è il controllo (`Sheet.read`, `check`): la domanda è la prima
+  parte che si sa calcolare (`resultOf`), le altre valgono quanto lei (con le lettere per tre scelte di
+  numeri, i decimali arrotondati o troncati con `writtenSlack`, la primitiva tra gli estremi
+  `\left[…\right]_a^b` con `bracketValue`); definizioni, equazioni e formule con ⇒ no. Il segno ✓/✗ è in
+  `src/render/check.ts` (nell'editor il ✗ aspetta che il cursore esca dalla formula); i controlli fatti
+  li ricorda `checks`, con l'impronta delle definizioni (`state`). `\log` è il logaritmo naturale.
 - `src/graph/`: i blocchi ```grafico (una riga per funzione, curva, punto, vettore, area di un integrale; `spec.ts`), il campionamento
   con salti e asintoti e la finestra scelta da sola (`plot.ts`), il disegno SVG (`svg.ts`, colori
   validati con la skill dataviz), l'anteprima interattiva (`preview.ts`) e i file .md (`file.ts`, come

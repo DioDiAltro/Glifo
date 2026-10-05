@@ -1104,7 +1104,14 @@ try {
   )
   await gp.keyboard.press('Tab')
   const calcLine = await gp.locator('.cm-line', { hasText: 'Poi' }).innerText()
-  check(calcLine.endsWith('$f(4) = 13$') && (await gp.locator('.cm-calc-result').count()) === 0, `Tab scrive il risultato nella formula (${JSON.stringify(calcLine)})`)
+  // Dopo la formula c'è il segno del controllo (✓), che non è nel testo.
+  const calcText = calcLine.replace(/\s*✓\s*$/, '')
+  check(calcText.endsWith('$f(4) = 13$') && (await gp.locator('.cm-calc-result').count()) === 0, `Tab scrive il risultato nella formula (${JSON.stringify(calcLine)})`)
+  await gp.waitForFunction(() => document.querySelector('.markdown-body .calc-check.is-ok'), null, { timeout: 5000 })
+  check(
+    (await gp.locator('.cm-calc-check.is-ok').count()) === 1 && /✓\s*$/.test(calcLine),
+    'scritto il risultato, Glifo lo controlla: ✓ nell\'editor e nell\'anteprima',
+  )
   // Con il cursore su f(x) = x^2 - a il pannello ne mostra il grafico; «Inserisci il grafico» lo mette nella nota
   // (Ctrl+Inizio e giù: Inizio da solo, con le righe che vanno a capo, va all'inizio della riga visibile.)
   await gp.keyboard.press('Control+Home')

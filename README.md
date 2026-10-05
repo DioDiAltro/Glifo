@@ -13,7 +13,8 @@ li scrivi:
 - con **Tab** salti da un segnaposto all'altro: `\sum_{n=0}^{\infty}` si scrive in pochi tasti;
 - non ricordi il comando? Lo **cerchi a parole**: «come faccio il simbolo dell'infinito» → `\infty`;
 - le parole scritte male vengono **sottolineate in rosso** (formule e codice no): un clic e le correggi;
-- una formula che finisce con `=` ha già il **risultato**, come nelle Note matematiche dell'iPad, e un
+- una formula che finisce con `=` ha già il **risultato**, come nelle Note matematiche dell'iPad; se il
+  risultato lo scrivi tu, Glifo ti dice se è **giusto** (✓) o **sbagliato** (✗, con quello giusto); e un
   blocco `grafico` **disegna le funzioni**.
 
 Calcoli e grafici non sono lo scopo, ma un aiuto a quello che scrivi. Servono a **controllare** che sia
@@ -141,6 +142,16 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
   e nell'anteprima colorato. Con il cursore subito dopo l'uguale **Tab** (o un clic) lo scrive nella
   formula; finché non lo si scrive non è nel testo, quindi cambia da solo se cambiano i numeri.
   Per una formula che finisce con l'uguale ma non vuole il risultato basta `={}`.
+- Se il risultato lo scrivi tu (`$\int_0^1 x^2 \, dx = \frac{1}{3}$`), Glifo lo **controlla**: dopo la
+  formula compare ✓ se è giusto, ✗ con il valore giusto se è sbagliato (nell'editor il ✗ aspetta che il
+  cursore esca dalla formula, per non comparire a metà). Vale anche con le lettere
+  (`$\int_{-R}^{R} \pi (R^2 - x^2) \, dx = \frac{4}{3} \pi R^3$`), con i decimali arrotondati o troncati
+  (`$\sqrt{2} = 1{,}414$`), in ogni passaggio di una catena, anche con la primitiva tra gli estremi
+  (`$\int_0^1 x^2 \, dx = \left[\frac{x^3}{3}\right]_0^1 = \frac{1}{3}$`), per le primitive
+  (`$\int x^2 \, dx = \frac{x^3}{3} + c$`, controllata derivandola), le derivate, i limiti, le matrici,
+  i numeri complessi e gli insiemi. Le definizioni (`$a = 2$`) e le equazioni (`$x^2 - 5x + 6 = 0$`) non
+  si controllano; con `\approx` contano solo le cifre scritte. I segni non vanno nella stampa né nei
+  file .md.
 - Le formule si leggono dall'alto in basso: `$a = 2$` e `$f(x) = x^2 - a$` valgono per quelle sotto,
   e `$f(3) =$` dà 7. Anche `a := 2`, più definizioni in una formula (`$a = 2, \quad b = 3$`) e
   `$a = 3 + 4 =$` (mostra 7 e definisce a).

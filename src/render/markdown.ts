@@ -30,6 +30,7 @@ import xml from 'highlight.js/lib/languages/xml'
 import yaml from 'highlight.js/lib/languages/yaml'
 import { graphNames } from '../graph/spec'
 import { Sheet } from '../math/sheet'
+import { checkHtml } from './check'
 import { escapeHtml, renderTexOrError, renderTexWithResult } from './katex'
 import { listRule, paragraphRule } from './lists'
 import { analyzeBlockOpen, findBlockClose, matchInlineMath } from './mathDelims'
@@ -162,19 +163,23 @@ function createMarkdownIt(): MarkdownIt {
   // Le formule passano anche dal «foglio» della nota (src/math/sheet.ts), come nell'editor: le
   // definizioni ($a = 2$, $f(x) = …$) servono a quelle sotto e ai grafici, e una formula che
   // finisce con «=» si vede con il suo risultato, colorato (finché non lo si scrive con Tab).
+  // Una formula con il risultato scritto per intero ($\int_0^1 x^2 \, dx = \frac{1}{3}$) ha dopo di sé
+  // il controllo: ✓, o ✗ con il valore giusto (src/render/check.ts).
   const formula = (content: string, display: boolean, env: unknown) => {
-    const result = sheetOf(env)?.add(content)
-    return result ? renderTexWithResult(content, result.tex, display) : renderTexOrError(content, display)
+    const { result, check } = sheetOf(env)?.read(content) ?? { result: null, check: null }
+    const html = result ? renderTexWithResult(content, result.tex, display) : renderTexOrError(content, display)
+    return { html: check ? html + checkHtml(check) : html, checked: !!check }
   }
   md.renderer.rules.math_inline = (tokens, idx, _options, env) => {
     const content = stripBackticks(tokens[idx].content)
-    return formula(content, DISPLAY_ENVS.test(content), env)
+    return formula(content, DISPLAY_ENVS.test(content), env).html
   }
-  md.renderer.rules.math_inline_display = (tokens, idx, _options, env) => formula(tokens[idx].content, true, env)
+  md.renderer.rules.math_inline_display = (tokens, idx, _options, env) => formula(tokens[idx].content, true, env).html
   md.renderer.rules.math_block = (tokens, idx, _options, env) => {
     const line = tokens[idx].map?.[0]
     const attr = line === undefined ? '' : ` data-line="${line}"`
-    return `<div class="math-block"${attr}>${formula(tokens[idx].content, true, env)}</div>\n`
+    const { html, checked } = formula(tokens[idx].content, true, env)
+    return `<div class="math-block${checked ? ' has-check' : ''}"${attr}>${html}</div>\n`
   }
   // I blocchi ```math si comportano come $$ … $$ (come su GitHub); quelli ```schema e ```grafico
   // lasciano il posto al disegno, che l'anteprima fa dopo (src/schema/preview.ts, src/graph/preview.ts).

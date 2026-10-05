@@ -81,6 +81,21 @@ export interface Definition {
   uses: Set<string>
 }
 
+/** Il controllo di un'uguaglianza scritta con il risultato (\int_0^1 x^2 \, dx = \frac{1}{3}): giusta o sbagliata. */
+export interface EqualityCheck {
+  ok: boolean
+  /** Giusta con le cifre scritte (\sqrt{2} = 1{,}414): arrotondata o troncata, non esatta. */
+  rounded?: boolean
+  /** Quando è sbagliata: il valore giusto, scritto come i risultati. */
+  value?: FormattedResult
+}
+
+/** Quello che Glifo dice di una formula: il risultato dopo «=» (o ⇒) e il controllo dell'uguaglianza scritta. */
+export interface SheetLine {
+  result: FormattedResult | null
+  check: EqualityCheck | null
+}
+
 /** Una formula che finisce con «=» (o con ≈): il testo prima. */
 const TRAILING_EQUALS = /(?<![<>!:\\])(=|\\approx|≈)(?:\s|\\[,;:! ]|\\q?quad\b)*$/
 
@@ -194,7 +209,8 @@ function definitionTarget(node: MathNode): { name: string; params: string[] | nu
   if (node.k === 'name') return node.name === 'π' ? null : { name: node.name, params: null }
   if (node.k === 'apply' && !node.primes && node.args.length && node.args.every((a) => a.k === 'name')) {
     const params = node.args.map((a) => (a as { name: string }).name)
-    if (new Set(params).size !== params.length) return null
+    // f(\pi) = 0, f(i) = 0: il valore in un numero (da controllare), non una funzione con la variabile π.
+    if (new Set(params).size !== params.length || params.some((p) => p === 'π' || p === 'e' || p === 'i')) return null
     return { name: node.name, params }
   }
   return null
@@ -244,7 +260,197 @@ function limitText(value: LimitValue, style: ReturnType<typeof styleOf>, exact: 
 /** Il valore di una formula: un numero reale (anche esatto, una frazione), complesso (anche esatto) o una matrice. */
 type Value = { float: number; exact: Rational | null } | { complex: Complex; exactComplex: GaussRational | null } | { linear: LinearValue }
 
+/**
+ * Il risultato di una parte di formula: come si mostra e, se è un numero, un numero complesso o una
+ * matrice, il suo valore; `set` se è un insieme scritto elemento per elemento; `item` è la parte come
+ * è stata calcolata; `loose` se il valore viene da un metodo con meno cifre sicure (limiti, serie, Newton).
+ */
+interface Found {
+  shown: FormattedResult
+  value: Value | null
+  item: MathNode
+  set?: MathNode | null
+  loose?: boolean
+  /** Una tabella, un elenco, una descrizione (lo studio di funzione, un test): non si confronta. */
+  table?: boolean
+}
+
+/** 1,414213\ldots (come nei risultati di Glifo) o 1,414...: i puntini dopo le cifre non contano. */
+function withoutDots(tex: string): string {
+  return tex.replace(/(\d)(?:\\[lc]?dots\b|…|\.\.\.)/g, '$1')
+}
+
+/** Un numero scritto e basta (2, −0,5, \frac{1}{3}, ∞): il risultato, non un conto da fare. */
+function isLiteral(node: MathNode): boolean {
+  const n = node.k === 'neg' ? node.a : node
+  return n.k === 'num' || n.k === 'infty' || (n.k === 'bin' && n.op === '/' && n.a.k === 'num' && n.b.k === 'num')
+}
+
+/**
+ * Le cifre dopo la virgola di un numero scritto con la virgola (1{,}414 → 3; 2{,}5 \cdot 10^{-3} → 4),
+ * per accettarlo arrotondato o troncato; null se non è un numero con la virgola.
+ */
+function writtenDecimals(node: MathNode): number | null {
+  const n = node.k === 'neg' ? node.a : node
+  const decimals = (m: MathNode) => (m.k === 'num' && m.text.includes('.') ? m.text.length - m.text.indexOf('.') - 1 : null)
+  if (n.k === 'num') return decimals(n)
+  // 2{,}5 \cdot 10^{-3}
+  if (n.k === 'bin' && n.op === '*' && n.b.k === 'bin' && n.b.op === '^' && n.b.a.k === 'num' && n.b.a.v === 10) {
+    const d = decimals(n.a)
+    const e = n.b.b.k === 'num' ? n.b.b.v : n.b.b.k === 'neg' && n.b.b.a.k === 'num' ? -n.b.b.a.v : null
+    return d !== null && e !== null && Number.isInteger(e) ? d - e : null
+  }
+  return null
+}
+
+/** Una formula con una freccia (x^2 = 4 \Rightarrow x = \pm 2): un ragionamento, non un'uguaglianza da controllare. */
+const IMPLICATION = /\\(?:Rightarrow|implies|Longrightarrow|Leftarrow|impliedby|Longleftarrow|iff|Leftrightarrow|Longleftrightarrow)\b|[⇒⇐⇔]/
+
+/**
+ * Le parti di un'uguaglianza (a = b = c, anche con ≈) e i segni tra loro. Se la formula intera non
+ * si legge, le parti si leggono una per una; una parte che non si legge può essere la primitiva tra
+ * gli estremi (`bracket`, \left[\frac{x^3}{3}\right]_0^1), se no l'uguaglianza non si controlla.
+ */
+function chainOf(src: string, bracket: (part: string, variable: string | null) => MathNode | null): { items: MathNode[]; ops: ('=' | '≈')[] } | null {
+  const isChain = (n: MathNode | null): n is Extract<MathNode, { k: 'rel' }> => n?.k === 'rel' && n.ops.every((op) => op === '=' || op === '≈')
+  const node = parseCached(src)
+  if (node) return isChain(node) ? { items: node.items, ops: node.ops as ('=' | '≈')[] } : null
+  const parts = splitEquals(src)
+  if (parts.length < 2) return null
+  const read = parts.map(parseCached)
+  // La variabile della primitiva: quella dell'integrale della catena, se c'è.
+  const integral = read.find((n) => n?.k === 'int')
+  const variable = integral?.k === 'int' ? integral.v : null
+  const items: MathNode[] = []
+  const ops: ('=' | '≈')[] = []
+  for (let i = 0; i < parts.length; i++) {
+    if (items.length) ops.push('=')
+    const n = read[i] ?? bracket(parts[i], variable)
+    if (!n) return null
+    if (isChain(n)) {
+      items.push(...n.items)
+      ops.push(...(n.ops as ('=' | '≈')[]))
+    } else items.push(n)
+  }
+  return { items, ops }
+}
+
+/** Un gruppo di LaTeX: tra graffe (fino a tre livelli), un comando (\pi) o un carattere. */
+const GROUP = String.raw`(\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\}|\\[a-zA-Z]+|[^\s{}\\^_])`
+/** Gli estremi dopo la parentesi: _a^b o ^b_a, fino alla fine. */
+const LIMITS = new RegExp(String.raw`^\s*(?:_\s*${GROUP}\s*\^\s*${GROUP}|\^\s*${GROUP}\s*_\s*${GROUP})\s*$`)
+/** Le parentesi della primitiva tra gli estremi: \left[ … \right], \Big[ … \Big], \left. … \right|, [ … ], … \Big|. */
+const BRACKETS: [RegExp | null, RegExp][] = [
+  [/\\left\s*\[/, /\\right\s*\]/g],
+  [/\\left\s*\./, /\\right\s*\|/g],
+  [/\\[Bb]igg?l?\s*\[/, /\\[Bb]igg?r?\s*\]/g],
+  [/\[/, /\]/g],
+  [null, /\\(?:[Bb]igg?r?|right)\s*\|/g],
+]
+
+/**
+ * \left[\frac{x^3}{3}\right]_0^1 e gli altri modi di scriverla: la primitiva, gli estremi in basso e in
+ * alto e quello che la moltiplica davanti (\pi \left[…\right]_0^1); null se la parte non è così.
+ */
+export function bracketParts(src: string): { factor: string; body: string; from: string; to: string } | null {
+  for (const [open, close] of BRACKETS) {
+    const start = open ? open.exec(src) : null
+    if (open && !start) continue
+    let last: RegExpExecArray | null = null
+    for (const m of src.matchAll(close)) last = m as RegExpExecArray
+    if (!last || (start && last.index < start.index + start[0].length)) continue
+    const limits = LIMITS.exec(src.slice(last.index + last[0].length))
+    if (!limits) continue
+    const body = src.slice(start ? start.index + start[0].length : 0, last.index)
+    const strip = (g: string) => (g.startsWith('{') ? g.slice(1, -1) : g)
+    const [from, to] = limits[1] !== undefined ? [limits[1], limits[2]] : [limits[4], limits[3]]
+    if (body.trim()) return { factor: start ? src.slice(0, start.index) : '', body, from: strip(from), to: strip(to) }
+  }
+  return null
+}
+
+/** Due numeri uguali a meno degli errori dei conti con la virgola (`tol`, relativo). */
+function close(a: number, b: number, tol: number): boolean {
+  return Math.abs(a - b) <= tol * Math.max(1, Math.abs(a), Math.abs(b))
+}
+
+/**
+ * Il numero scritto con `decimals` cifre dopo la virgola va bene per `value`? true se è proprio
+ * quello, 'rounded' se è arrotondato o troncato lì (\sqrt{2} = 1{,}414, \pi = 3{,}1415), false se no.
+ */
+function digitsMatch(value: number, written: number, decimals: number, tol: number): boolean | 'rounded' {
+  const err = tol * Math.max(1, Math.abs(value))
+  const diff = Math.abs(value - written)
+  if (diff <= err) return true
+  const unit = 10 ** -decimals
+  if (diff <= unit / 2 + err) return 'rounded'
+  // Troncato: le cifre scritte sono le prime del valore (stesso segno, più piccolo in valore assoluto).
+  const sameSign = written === 0 || Math.sign(written) === Math.sign(value)
+  const below = Math.abs(value) - Math.abs(written)
+  return sameSign && below >= -err && below < unit + err ? 'rounded' : false
+}
+
+/**
+ * Gli elementi da confrontare uno a uno: due numeri (o formule) sono una coppia; due vettori o due
+ * matrici della stessa forma, una coppia per elemento. false se le forme sono diverse, null se non si sa.
+ */
+function pairUp(result: MathNode, written: MathNode): [MathNode, MathNode][] | false | null {
+  const shape = (n: MathNode): { cells: MathNode[]; rows: number; cols: number } | null =>
+    n.k === 'tuple' ? { cells: n.items, rows: n.items.length, cols: 1 } : n.k === 'matrix' ? { cells: n.rows.flat(), rows: n.rows.length, cols: n.rows[0]?.length ?? 0 } : null
+  const a = shape(result)
+  const b = shape(written)
+  if (!a && !b) return [[result, written]]
+  // Un vettore e un nome (= v) o un numero: non si sa.
+  if (!a || !b) return null
+  const vector = (x: { rows: number; cols: number }) => x.rows === 1 || x.cols === 1
+  const same = (a.rows === b.rows && a.cols === b.cols) || (vector(a) && vector(b) && a.cells.length === b.cells.length)
+  return same ? a.cells.map((c, i) => [c, b.cells[i]]) : false
+}
+
+/** Due matrici (o due numeri) uguali con le frazioni. */
+function sameExactLinear(a: LinearValue, b: LinearValue): boolean {
+  const [x, y] = [a.exact, b.exact]
+  if (x?.k === 'scalar' && y?.k === 'scalar') return x.v.cmp(y.v) === 0
+  return x?.k === 'matrix' && y?.k === 'matrix' && x.m.length === y.m.length && x.m.every((row, i) => row.length === y.m[i].length && row.every((v, j) => v.cmp(y.m[i][j]) === 0))
+}
+
+/**
+ * Gli elementi di due matrici (o vettori, o numeri) da confrontare uno a uno; false se hanno forme
+ * diverse, null se non si sa (un sottospazio, l'identità, un vettore riga e uno colonna).
+ */
+function linearCells(a: LinearValue, b: LinearValue): [number[], number[]] | false | null {
+  const [x, y] = [a.float, b.float]
+  if (x.k === 'scalar' && y.k === 'scalar') return [[x.v], [y.v]]
+  if (x.k !== 'matrix' || y.k !== 'matrix') return null
+  if (x.m.length === y.m.length && (x.m[0]?.length ?? 0) === (y.m[0]?.length ?? 0)) return [x.m.flat(), y.m.flat()]
+  const vector = (m: Mat<number>) => m.length === 1 || m[0]?.length === 1
+  return vector(x.m) && vector(y.m) && x.m.flat().length === y.m.flat().length ? null : false
+}
+
+/** Un'impronta corta di un testo (cyrb53): per riconoscere lo stesso stato del foglio. */
+function fingerprint(text: string): string {
+  let h1 = 0xdeadbeef
+  let h2 = 0x41c6ce57
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i)
+    h1 = Math.imul(h1 ^ c, 2654435761)
+    h2 = Math.imul(h2 ^ c, 1597334677)
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909)
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909)
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36)
+}
+
+/**
+ * I controlli già fatti, per non rifarli a ogni tasto (l'editor rilegge la nota a ogni modifica, e un
+ * integrale triplo può chiedere un decimo di secondo): dipendono dalla formula e da quello che la
+ * nota ha definito prima (`Sheet.state`).
+ */
+const checks = new Map<string, EqualityCheck | null>()
+
 export class Sheet {
+  /** L'impronta di quello che la nota ha definito fin qui: cambia a ogni definizione. */
+  private state = ''
   private consts = new Map<string, number>()
   private exactConsts = new Map<string, Rational | null>()
   private fns = new Map<string, UserFunction>()
@@ -282,7 +488,14 @@ export class Sheet {
    * `fixed`: i numeri con un valore diverso da quello scritto (gli slider dei grafici). Valgono in
    * tutto il foglio: quello che li usa (b = 2a, f(x) = a x^2) segue.
    */
-  constructor(private readonly fixed?: ReadonlyMap<string, number>) {}
+  constructor(private readonly fixed?: ReadonlyMap<string, number>) {
+    if (fixed?.size) this.touch(JSON.stringify([...fixed]))
+  }
+
+  /** Una definizione nuova (o cambiata): l'impronta dello stato cambia. */
+  private touch(text: string): void {
+    this.state = fingerprint(`${this.state}\u0000${text}`)
+  }
 
   /** Lo stato di adesso, per calcolare un'espressione con le definizioni fatte fin qui. */
   scope(): Scope {
@@ -344,19 +557,33 @@ export class Sheet {
    * restituisce il risultato (null se non si sa calcolare).
    */
   add(tex: string): FormattedResult | null {
+    return this.read(tex).result
+  }
+
+  /**
+   * Come `add`, e in più il controllo delle uguaglianze scritte per intero: in
+   * `\int_0^1 x^2 \, dx = \frac{1}{3}` Glifo calcola l'integrale e dice se il risultato scritto è
+   * giusto (✓) o sbagliato (✗, con quello giusto). Una definizione ($a = 2$) non si controlla.
+   */
+  read(tex: string): SheetLine {
     // x^2 - 5x + 6 = 0 \Rightarrow: le soluzioni.
     const equations = solveRequest(tex)
-    if (equations !== null) return this.solveAll(equations)
-    if (!tex.includes('=') && !tex.includes('≈') && !tex.includes('\\approx') && !tex.includes('\\coloneq') && !/\\sim\b|∼/.test(tex)) return null
+    if (equations !== null) return { result: this.solveAll(equations), check: null }
+    if (!tex.includes('=') && !tex.includes('≈') && !tex.includes('\\approx') && !tex.includes('\\coloneq') && !/\\sim\b|∼/.test(tex)) return { result: null, check: null }
+    let check: EqualityCheck | null = null
     try {
       const request = calculationRequest(tex)
       const pieces = splitPieces(request ?? tex)
       const last = request === null ? null : pieces.pop() ?? null
-      for (const piece of pieces) this.define(piece)
-      return last === null ? null : this.calculate(last)
+      for (const piece of pieces) {
+        const found = this.defineOrCheck(piece)
+        // Con più uguaglianze (f(1) = 2, \quad f(2) = 5) conta la prima sbagliata.
+        if (found && (!check || (check.ok && (!found.ok || found.rounded)))) check = found
+      }
+      return { result: last === null ? null : this.calculate(last), check }
     } catch {
       // Una formula che non si riesce a calcolare (troppo grande, troppo annidata) non ha risultato.
-      return null
+      return { result: null, check }
     }
   }
 
@@ -422,10 +649,20 @@ export class Sheet {
       for (const piece of pieces) this.define(piece)
       return
     }
-    const node = parseCached(src)
-    if (!node) return
-    if (this.lastFunction && this.attachDomain(node, src)) return
-    if (this.lastOde && this.attachInitial(node, src)) return
+    const node = parseCached(src) ?? parseCached(withoutDots(src))
+    if (node) this.defineNode(node, src)
+  }
+
+  /** Ricorda la definizione (o la condizione su una curva, un'equazione differenziale) scritta in `node`: false se non lo è. */
+  private defineNode(node: MathNode, src: string): boolean {
+    const defined = this.defineHere(node, src)
+    if (defined) this.touch(src)
+    return defined
+  }
+
+  private defineHere(node: MathNode, src: string): boolean {
+    if (this.lastFunction && this.attachDomain(node, src)) return true
+    if (this.lastOde && this.attachInitial(node, src)) return true
     // y' = x - y, y'' + y = 0: un'equazione differenziale; con le condizioni iniziali y diventa una funzione.
     const ode = odeOf(node, (name) => this.fns.has(name) || this.vfns.has(name))
     if (ode) {
@@ -434,18 +671,344 @@ export class Sheet {
       this.definitions.push(definition)
       this.lastOde = { ode, definition, x0: null, Y0: Array(ode.order).fill(undefined) }
       this.lastFunction = null
-      return
+      return true
     }
     // X \sim B(10, 0{,}3): una variabile aleatoria.
     if (node.k === 'dist') {
       this.defineRandom(node, src)
-      return
+      return true
     }
-    if (node.k !== 'rel' || node.ops.length !== 1 || node.ops[0] !== '=') return
+    // a = 2, f(x) = x^2; anche in una catena: in a = 3 + 4 = 7 (il risultato scritto con Tab) a è 3 + 4.
+    if (node.k !== 'rel' || node.ops[0] !== '=' || !node.ops.every((op) => op === '=' || op === '≈')) return false
     const target = definitionTarget(node.items[0])
-    if (!target) return
-    const value = node.items[1]
-    this.record(target, value, src)
+    if (!target) return false
+    this.record(target, node.items[1], src)
+    return true
+  }
+
+  /**
+   * Una parte di una formula senza «=» in fondo: una definizione, o un'uguaglianza con il risultato
+   * scritto da controllare (✓/✗). In una catena con un nome davanti (V = \int … = \frac{4}{3}\pi R^3)
+   * il nome si definisce e il resto si controlla.
+   */
+  private defineOrCheck(piece: string): EqualityCheck | null {
+    const src = withoutDots(piece)
+    const node = parseCached(src)
+    const defined = !!node && this.defineNode(node, src)
+    if (defined && !(node.k === 'rel' && node.items.length > 2)) return null
+    if (!defined && IMPLICATION.test(src)) return null
+    const key = `${this.state}\u0001${src}`
+    const known = checks.get(key)
+    if (known !== undefined) return known
+    let check: EqualityCheck | null
+    try {
+      check = this.checkPiece(src, node, defined)
+    } catch {
+      check = null
+    }
+    if (checks.size > 3000) checks.delete(checks.keys().next().value!)
+    checks.set(key, check)
+    return check
+  }
+
+  /** Il controllo di una parte (vedi defineOrCheck): `defined` se è una catena con un nome davanti, già definito. */
+  private checkPiece(src: string, node: MathNode | null, defined: boolean): EqualityCheck | null {
+    if (defined && node?.k === 'rel') return this.checkChain(node.items.slice(1), (node.ops as ('=' | '≈')[]).slice(1))
+    const chain = chainOf(src, (part, variable) => this.bracketValue(part, variable))
+    if (!chain) return null
+    // V = \left[…\right]_0^1 = …: il nome davanti non è un conto (la definizione non si legge per intero).
+    if (definitionTarget(chain.items[0]) && chain.ops[0] === '=') return this.checkChain(chain.items.slice(1), chain.ops.slice(1))
+    return this.checkChain(chain.items, chain.ops)
+  }
+
+  /**
+   * \left[\frac{x^3}{3}\right]_0^1: la primitiva calcolata negli estremi, F(1) − F(0), come formula. La
+   * variabile è l'unica lettera di F, o quella dell'integrale della catena (`variable`), o x.
+   */
+  private bracketValue(part: string, variable: string | null): MathNode | null {
+    const parts = bracketParts(part)
+    if (!parts) return null
+    const F = parseCached(parts.body)
+    const a = parseCached(parts.from)
+    const b = parseCached(parts.to)
+    const factor = parts.factor.trim() ? parseCached(parts.factor) : null
+    if (!F || !a || !b || (parts.factor.trim() && !factor)) return null
+    const letters = this.freeNames(F)
+    const v = letters.length === 1 ? letters[0] : variable && letters.includes(variable) ? variable : letters.includes('x') ? 'x' : null
+    if (!v) return null
+    const at = (to: MathNode): MathNode => {
+      const visit = (n: MathNode): MathNode => (n.k === 'name' && n.name === v ? to : mapNode(n, visit))
+      return visit(F)
+    }
+    const difference: MathNode = { k: 'bin', op: '-', a: at(b), b: at(a) }
+    return factor ? { k: 'bin', op: '*', a: factor, b: difference } : difference
+  }
+
+  /**
+   * Il controllo di una catena a = b = c: la domanda è la prima parte che Glifo sa calcolare e che non
+   * è un numero scritto e basta (\int_0^1 x^2 \, dx); le altre devono valere quanto lei. Null se non
+   * c'è niente da confrontare (x^2 - 5x + 6 = 0 è un'equazione, non un conto).
+   */
+  private checkChain(items: (MathNode | null)[], ops: ('=' | '≈')[]): EqualityCheck | null {
+    if (items.length < 2) return null
+    // 1 = 2 in una dimostrazione per assurdo: non c'è un conto da controllare.
+    const integer = (n: MathNode | null) => {
+      const m = n?.k === 'neg' ? n.a : n
+      return !m || (m.k === 'num' && !m.text.includes('.'))
+    }
+    if (items.every(integer)) return null
+    const order = [...items.keys()].filter((i) => items[i]).sort((a, b) => Number(isLiteral(items[a]!)) - Number(isLiteral(items[b]!)) || a - b)
+    let q = -1
+    let found: Found | null = null
+    for (const i of order) {
+      try {
+        found = this.resultOf(items[i]!)
+      } catch {
+        found = null
+      }
+      if (found) {
+        q = i
+        break
+      }
+    }
+    if (!found) return null
+    let compared = false
+    let rounded = false
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      if (i === q || !item) continue
+      // Con ≈ si controllano solo le cifre scritte (\pi \approx 3{,}14), non un'altra approssimazione (22/7).
+      const approx = (i > q ? ops[i - 1] : ops[i]) === '≈'
+      let same: boolean | 'rounded' | null
+      try {
+        same = this.sameAs(found, items[q]!, item, approx)
+      } catch {
+        same = null
+      }
+      if (same === null) continue
+      if (!same) return { ok: false, value: found.shown }
+      compared = true
+      if (same === 'rounded') rounded = true
+    }
+    return compared ? { ok: true, ...(rounded && { rounded: true }) } : null
+  }
+
+  /**
+   * La parte scritta vale quanto la domanda (`question`, calcolata in `found`)? true, 'rounded' (con
+   * le cifre scritte), false, o null se non si sa confrontare. Con le lettere (il volume della sfera,
+   * 4πR³/3) si confrontano i valori per tre scelte di numeri positivi, come in `checked`.
+   */
+  private sameAs(found: Found, question: MathNode, written: MathNode, approx: boolean): boolean | 'rounded' | null {
+    if (written.k === 'rel' || written.k === 'and' || written.k === 'or' || written.k === 'cases' || (written.k === 'set' && !found.set)) return null
+    const tol = found.loose ? 1e-7 : 1e-9
+    // +∞ e −∞ (un limite, un integrale improprio che diverge).
+    const infinite = found.shown.tex === '+\\infty' ? 1 : found.shown.tex === '-\\infty' ? -1 : 0
+    if (infinite) {
+      const sign = written.k === 'infty' ? 1 : written.k === 'neg' && written.a.k === 'infty' ? -1 : 0
+      return approx ? null : sign === infinite
+    }
+    const value = found.value
+    if (value) {
+      // Il valore giusto e quello scritto, numero per numero: un numero, le due parti di un numero
+      // complesso, gli elementi di una matrice.
+      let target: number[]
+      let read: (n: MathNode) => number[] | null
+      if ('float' in value) {
+        const w = this.evaluate(written) ?? this.realOf(written)
+        if (!w) return null
+        if (value.exact && w.exact && value.exact.cmp(w.exact) === 0) return true
+        const decimals = writtenDecimals(written)
+        if (decimals !== null) return digitsMatch(value.float, w.float, decimals, tol)
+        target = [value.float]
+        read = (n) => {
+          const r = this.evaluate(n) ?? this.realOf(n)
+          return r && [r.float]
+        }
+      } else if ('complex' in value) {
+        const w = this.evaluateComplex(written)
+        if (!w) return null
+        const [a, b] = [value.exactComplex, w.exactComplex]
+        if (a && b && a.re.cmp(b.re) === 0 && a.im.cmp(b.im) === 0) return true
+        target = [value.complex.re, value.complex.im]
+        read = (n) => {
+          const r = this.evaluateComplex(n)
+          return r && [r.complex.re, r.complex.im]
+        }
+      } else {
+        const w = this.evaluateLinear(written)
+        if (!w) return null
+        if (sameExactLinear(value.linear, w)) return true
+        const cells = linearCells(value.linear, w)
+        if (!cells) return cells
+        target = cells[0]
+        read = (n) => {
+          const r = this.evaluateLinear(n)
+          const c = r && linearCells(value.linear, r)
+          return c ? c[1] : null
+        }
+      }
+      const got = read(written)
+      if (!got || got.length !== target.length) return null
+      const slack = this.writtenSlack(written, read, got)
+      // Con ≈ si controllano solo le cifre scritte.
+      if (approx && !slack) return null
+      let rounded = false
+      for (let i = 0; i < target.length; i++) {
+        const diff = target[i] - got[i]
+        if (Math.abs(diff) <= tol * Math.max(1, Math.abs(target[i]), Math.abs(got[i]))) continue
+        if (!slack || diff < slack[i][0] || diff > slack[i][1]) return false
+        rounded = true
+      }
+      return rounded ? 'rounded' : true
+    }
+    // Senza un valore: un insieme, una primitiva o un risultato con le lettere (4πR³/3, 2x, 1/s²).
+    if (approx || found.table) return null
+    if (found.set) {
+      const w = finiteValue(written, this.finiteContext())
+      return w && 'set' in w ? w.shown.text === found.shown.text : null
+    }
+    if (question.k === 'prim') return this.samePrimitive(question, written)
+    return this.sameFormula(found.shown, written, tol)
+  }
+
+  /** Il valore reale di una parte che `evaluate` non sa fare (un limite, una probabilità), con il resto di Glifo. */
+  private realOf(node: MathNode): { float: number; exact: Rational | null } | null {
+    if (isLiteral(node)) return null
+    const found = this.resultOf(node)
+    if (found?.value && 'float' in found.value) return found.value
+    if (found?.value && 'complex' in found.value && Math.abs(found.value.complex.im) <= 1e-12 * Math.max(1, Math.abs(found.value.complex.re))) {
+      return { float: found.value.complex.re, exact: found.value.exactComplex?.isReal ? found.value.exactComplex.re : null }
+    }
+    return null
+  }
+
+  /**
+   * Quanto può differire il valore vero da quello della parte scritta per le ultime cifre dei suoi numeri
+   * con la virgola (arrotondati o troncati, come 1{,}414213\ldots): per ogni numero, le cifre che mancano
+   * valgono tra −½ e 1 unità dell'ultima scritta, e si vede di quanto cambia il valore (in
+   * \sqrt{10}\,e^{-i\,0{,}321750554} un errore nell'angolo pesa √10 volte). Per ogni numero del valore,
+   * la differenza ammessa [da, a]; null se non ci sono numeri con la virgola.
+   */
+  private writtenSlack(written: MathNode, read: (n: MathNode) => number[] | null, got: number[]): [number, number][] | null {
+    const literals: Extract<MathNode, { k: 'num' }>[] = []
+    walk(written, (n) => {
+      if (n.k === 'num' && n.text.includes('.')) literals.push(n)
+    })
+    if (!literals.length || literals.length > 12) return null
+    const range = got.map((): [number, number] => [0, 0])
+    for (const lit of literals) {
+      const unit = 10 ** -(lit.text.length - lit.text.indexOf('.') - 1)
+      const visit = (n: MathNode): MathNode => (n === lit ? { ...lit, v: lit.v + unit, text: String(lit.v + unit) } : mapNode(n, visit))
+      const moved = read(visit(written))
+      if (!moved || moved.length !== got.length) return null
+      moved.forEach((m, i) => {
+        // Quanto cambia il valore per un'unità in più nell'ultima cifra; con un po' di margine (non è una retta).
+        const step = m - got[i]
+        const margin = 0.02 * Math.abs(step)
+        range[i][0] += Math.min(-0.5 * step, step) - margin
+        range[i][1] += Math.max(-0.5 * step, step) + margin
+      })
+    }
+    return range
+  }
+
+  /** La formula compilata con le `letters` come variabili (con le derivate già fatte), o null. */
+  private compileWith(node: MathNode, letters: string[]): ((vars: Record<string, number>) => number) | null {
+    const scope = scopeWith(this.scope(), letters)
+    try {
+      return compile(this.prepare(node), scope, { calc: true })
+    } catch {
+      try {
+        return compile(toNode(exOf(node, this.symbolScope())), scope, { calc: true })
+      } catch {
+        return null
+      }
+    }
+  }
+
+  /** Se la parte usa una funzione che la nota non definisce (f(x)) e che non è una delle `letters` (x(x + 1) è un prodotto). */
+  private callsUnknown(node: MathNode, letters: readonly string[]): boolean {
+    let unknown = false
+    walk(node, (n) => {
+      if (n.k === 'apply' && !this.fns.has(n.name) && !this.vfns.has(n.name) && !this.bodies.has(n.name) && !letters.includes(n.name)) unknown = true
+    })
+    return unknown
+  }
+
+  /** Una primitiva scritta (\int x^2 \, dx = \frac{x^3}{3} + c) è giusta se la sua derivata, fatta con i numeri, è la funzione. */
+  private samePrimitive(question: Extract<MathNode, { k: 'prim' }>, written: MathNode): boolean | null {
+    const v = question.v
+    const own = [...new Set([v, ...this.freeNames(question.body)])]
+    if (this.callsUnknown(written, own)) return null
+    const letters = [...new Set([...own, ...this.freeNames(written)])]
+    const f = this.compileWith(question.body, letters)
+    const F = this.compileWith(written, letters)
+    if (!f || !F) return null
+    const derivative = (vars: Record<string, number>) => {
+      const x = vars[v]
+      const h = 1e-4 * Math.max(1, Math.abs(x))
+      return (F({ ...vars, [v]: x + h }) - F({ ...vars, [v]: x - h })) / (2 * h)
+    }
+    return this.samplesAgree(letters, f, derivative, 1e-5)
+  }
+
+  /**
+   * Il risultato di Glifo, scritto come formula (`shown`: 4πR³/3, 2x, (2x, 2y), φ(12) = 4), e la parte
+   * scritta valgono lo stesso? Con le lettere, per tre scelte di numeri positivi al posto delle lettere;
+   * i vettori e le matrici elemento per elemento. Null se il risultato non è una formula (una tabella).
+   */
+  private sameFormula(shown: FormattedResult, written: MathNode, tol: number): boolean | null {
+    if (/\\(?:text|quad|qquad|nexists|;)/.test(shown.tex)) return null
+    const result = parseCached(shown.tex)
+    if (!result || result.k === 'rel' || result.k === 'and' || result.k === 'or' || result.k === 'set' || result.k === 'cases') return null
+    const pairs = pairUp(result, written)
+    if (!pairs) return pairs
+    let all = true
+    for (const [r, w] of pairs) {
+      const same = this.sameScalar(r, w, tol)
+      if (same === false) return false
+      if (same === null) all = false
+    }
+    return all ? true : null
+  }
+
+  /** Un elemento del risultato di Glifo (`result`) e quello scritto: uguali, diversi o null se non si sa. */
+  private sameScalar(result: MathNode, written: MathNode, tol: number): boolean | null {
+    const own = this.freeNames(result)
+    if (this.callsUnknown(written, own)) return null
+    const letters = [...new Set([...own, ...this.freeNames(written)])]
+    if (!letters.length) {
+      const a = this.evaluate(result)
+      const b = this.evaluate(written)
+      if (!a || !b) return null
+      if (a.exact && b.exact) return a.exact.cmp(b.exact) === 0
+      const decimals = writtenDecimals(written)
+      return decimals === null ? close(a.float, b.float, tol) : !!digitsMatch(a.float, b.float, decimals, tol)
+    }
+    const a = this.compileWith(result, letters)
+    const b = this.compileWith(written, letters)
+    return a && b ? this.samplesAgree(letters, a, b, 1e-7) : null
+  }
+
+  /** Le due funzioni delle lettere valgono lo stesso nelle tre scelte di `CHECK_VALUES`? Null se non si calcolano mai. */
+  private samplesAgree(letters: string[], a: (vars: Record<string, number>) => number, b: (vars: Record<string, number>) => number, tol: number): boolean | null {
+    let compared = false
+    for (const sample of CHECK_VALUES) {
+      const vars: Record<string, number> = {}
+      letters.forEach((name, i) => (vars[name] = sample(i, letters.length)))
+      let x = NaN
+      let y = NaN
+      try {
+        x = withWorkLimit(WORK, () => a(vars))
+        y = withWorkLimit(WORK, () => b(vars))
+      } catch {
+        // Non si calcola in questo punto: si prova il prossimo.
+      }
+      if (!Number.isFinite(x) || !Number.isFinite(y)) continue
+      if (!close(x, y, tol)) return false
+      compared = true
+    }
+    return compared ? true : null
   }
 
   /** y(0) = 1 dopo y' = …: la soluzione, con Runge–Kutta, come funzione (y(2) = …). */
@@ -545,6 +1108,7 @@ export class Sheet {
   }
 
   private record(target: { name: string; params: string[] | null }, value: MathNode, source: string, known?: Value): void {
+    this.touch(source)
     const { name, params } = target
     const uses = namesIn(value, new Set(), new Set(params ?? []))
     const definition = { name, params, source: source.trim(), value, uses }
@@ -802,7 +1366,6 @@ export class Sheet {
     return shown ? { shown, value } : null
   }
 
-  /** Il risultato di «… =»: dell'ultima parte che si sa calcolare (in a = 3 + 4 = anche a diventa 7). */
   /** La formula con le matrici con un parametro scritte al posto del loro nome. */
   private inline(node: MathNode): MathNode {
     if (!this.symbolicNodes.size) return node
@@ -810,6 +1373,7 @@ export class Sheet {
     return visit(node)
   }
 
+  /** Il risultato di «… =»: dell'ultima parte che si sa calcolare (in a = 3 + 4 = anche a diventa 7). */
   private calculate(src: string): FormattedResult | null {
     // Una formula della logica (p \land q \Rightarrow p, \operatorname{verità}(…)): la tavola di verità.
     const logic = logicShown(src)
@@ -821,149 +1385,138 @@ export class Sheet {
     else items = splitEquals(src).map(parseCached)
     const target = items.length > 1 && items[0] ? definitionTarget(items[0]) : null
     for (let i = items.length - 1; i >= (target ? 1 : 0); i--) {
-      let item = items[i]
+      const item = items[i]
       if (!item) continue
-      item = this.inline(item)
-      const style = styleOf(item)
-      // Un limite o una serie: il valore (riconosciuto, se si può), l'infinito o «non esiste».
-      const limitShown = this.showLimit(item, style)
-      if (limitShown) {
-        if (target && !target.params && limitShown.value) this.record(target, item, `${target.name} = ${src.slice(src.indexOf('=') + 1)}`, limitShown.value)
-        return limitShown.shown
-      }
-      // Gli insiemi scritti elemento per elemento: unione, intersezione, parti, quanti elementi, P(A) con Ω.
-      const finite = this.showFinite(item, style)
-      if (finite) {
-        if (target && !target.params) {
-          const source = `${target.name} = ${src.slice(src.indexOf('=') + 1)}`
-          if (finite.set) this.record(target, finite.set, source)
-          else if (finite.value) this.record(target, item, source, finite.value)
-        }
-        return finite.shown
-      }
-      // L'aritmetica e i polinomi: i fattori primi, i divisori, la divisione con il resto, Ruffini, le basi…
-      // (\varphi(n), se φ non è una funzione della nota, è la funzione di Eulero).
-      const totient = item.k === 'apply' && item.name === 'φ' && item.args.length === 1 && !item.primes && !this.fns.has('φ') ? item.args : null
-      const arithmetic = this.showArithmetic(totient ? { k: 'fn', name: 'totient', args: totient } : item)
-      if (arithmetic) return arithmetic
-      // La statistica inferenziale: gli intervalli di confidenza e i test d'ipotesi.
-      if (item.k === 'fn' && INFERENCE.has(item.name) && !item.pow) {
-        const node = item
-        try {
-          const ctx = this.inferenceContext()
-          const shown =
-            node.name === 'ci'
-              ? confidenceShown(node.args, ctx)
-              : node.name === 'civar'
-                ? varianceConfidenceShown(node.args, ctx)
-                : testShown(node.name === 'chisq' ? chiSquareTest(node.args, ctx) : hypothesisTest(node.args, ctx))
-          if (shown) return shown
-        } catch {
-          // Gli argomenti non vanno.
-        }
-        continue
-      }
-      // Il calcolo numerico: la tabella dei passi, il polinomio interpolante, le matrici LU, Jacobi…
-      if (item.k === 'fn' && NUMERICAL.has(item.name) && !item.pow) {
-        const node = item
-        try {
-          const shown = withWorkLimit(WORK, () => numericalShown(node, this.numericContext(style)))
-          if (shown) return shown
-        } catch {
-          // Non si fa (gli argomenti non vanno).
-        }
-        continue
-      }
-      // La trasformata di Laplace e l'antitrasformata.
-      if (item.k === 'fn' && (item.name === 'laplace' || item.name === 'ilaplace') && item.args.length >= 1 && item.args.length <= 2 && !item.pow) {
-        const args = item.args
-        const inverse = item.name === 'ilaplace'
-        try {
-          const shown = withWorkLimit(WORK, () => (inverse ? inverseLaplaceShown(args, this.symbolScope()) : laplaceShown(args, this.symbolScope())))
-          if (shown) return shown
-        } catch {
-          // Non è nella tabella.
-        }
-        continue
-      }
-      // La serie di Fourier: i coefficienti con le lettere e la serie.
-      if (item.k === 'fn' && item.name === 'fourier' && item.args.length >= 1 && item.args.length <= 2 && !item.pow) {
-        const args = item.args
-        try {
-          const shown = withWorkLimit(WORK, () => {
-            const problem = fourierProblem(args, this.symbolScope(), this.scope())
-            return problem && fourierShown(problem)
-          })
-          if (shown) return shown
-        } catch {
-          // Non è una funzione di cui si fa la serie.
-        }
-        continue
-      }
-      // Le coniche e le quadriche: il tipo, la forma canonica, gli elementi.
-      if (item.k === 'fn' && (item.name === 'conic' || item.name === 'quadric') && item.args.length === 1) {
-        const [equation] = item.args
-        const conic = item.name === 'conic'
-        try {
-          const shown = withWorkLimit(WORK, () => (conic ? conicOf(equation, this.symbolScope())?.shown : quadricOf(equation, this.symbolScope())))
-          if (shown) return shown
-        } catch {
-          // Non è un'equazione di secondo grado.
-        }
-        continue
-      }
-      // In più variabili: i punti critici, gli estremi vincolati (Lagrange) e assoluti su un insieme.
-      const several = this.showSeveral(item, style)
-      if (several) {
-        if (target && !target.params && several.value !== null) this.record(target, item, `${target.name} = ${src.slice(src.indexOf('=') + 1)}`, { float: several.value, exact: null })
-        return several.shown
-      }
-      // Lo studio di funzione (\operatorname{studio}(f)), o una sua parte.
-      if (item.k === 'fn' && STUDY.has(item.name) && item.args.length === 1) {
-        const shown = this.showStudy(item, style)
-        if (shown) return shown
-        continue
-      }
-      // L'algebra lineare: diagonalizzare, Gram–Schmidt, la segnatura, il rango con un parametro…
-      const spaces = this.showSpaces(item, style)
-      if (spaces) return spaces
-      // La probabilità, il valore atteso, la varianza di una variabile aleatoria; la statistica dei dati.
-      const chance = this.showRandom(item, style) ?? this.showStatistics(item, style)
-      if (chance) {
-        if (target && !target.params && chance.value) this.record(target, item, `${target.name} = ${src.slice(src.indexOf('=') + 1)}`, chance.value)
-        return chance.shown
-      }
-      // Un integrale definito con la primitiva: il valore esatto, gli impropri, la funzione integrale;
-      // uno dentro l'altro, dentro un'espressione e con le lettere (il volume della sfera, 4πR³/3).
-      const integral = this.showIntegral(item, style) ?? this.showDefinite(item, style)
-      if (integral) {
-        if (target && !target.params && integral.value) this.record(target, item, `${target.name} = ${src.slice(src.indexOf('=') + 1)}`, integral.value)
-        return integral.shown
-      }
-      // Le derivate e gli operatori dei campi con le lettere: se restano variabili, il risultato è una formula.
-      if (needsSymbols(item, this.symbolScope())) {
-        const decimal = style.decimal || this.usesDecimals(item)
-        // Una derivata, un gradiente, un polinomio di Taylor, una primitiva da soli: già scritti come vanno.
-        const indefinite = item.k === 'prim' ? item : null
-        const single = item.k === 'diff' || item.k === 'fn' || item.k === 'prim' || (item.k === 'apply' && item.primes > 0)
-        item = this.prepare(item, [], decimal)
-        if (this.freeNames(item).length) {
-          const shown = single ? this.showSymbolic(item, decimal, false) : this.showSymbolic(item, decimal)
-          // \int f(x) \, dx: la primitiva più la costante.
-          if (shown && indefinite) return this.plusConstant(shown, indefinite)
-          if (shown) return shown
-          continue
-        }
-      }
-      const result = this.evaluate(item)
-      const real = result && (result.exact ? formatRational(result.exact, style) : formatNumber(result.float, { ...style, decimal: true }))
-      // Senza un valore reale: con i numeri complessi (1 + 2i, \sqrt{-4}, \ln(-1)), o con vettori e matrici.
-      const found = real ? { shown: real, value: result } : this.showComplex(item, style) ?? this.showLinear(item, style)
+      const found = this.resultOf(item)
       if (!found) continue
-      if (target && !target.params && found.value) this.record(target, item, `${target.name} = ${src.slice(src.indexOf('=') + 1)}`, found.value)
+      if (target && !target.params && (found.set || found.value)) {
+        const source = `${target.name} = ${src.slice(src.indexOf('=') + 1)}`
+        if (found.set) this.record(target, found.set, source)
+        else this.record(target, found.item, source, found.value!)
+      }
       return found.shown
     }
     return null
+  }
+
+  /** Il risultato di una parte di formula (vedi `Found`), o null se Glifo non lo sa calcolare. */
+  private resultOf(node: MathNode): Found | null {
+    let item = this.inline(node)
+    const style = styleOf(item)
+    // Un limite o una serie: il valore (riconosciuto, se si può), l'infinito o «non esiste».
+    const limitShown = this.showLimit(item, style)
+    if (limitShown) return { shown: limitShown.shown, value: limitShown.value, item, loose: true }
+    // Gli insiemi scritti elemento per elemento: unione, intersezione, parti, quanti elementi, P(A) con Ω.
+    const finite = this.showFinite(item, style)
+    if (finite) return { shown: finite.shown, value: finite.value, set: finite.set, item }
+    // L'aritmetica e i polinomi: i fattori primi, i divisori, la divisione con il resto, Ruffini, le basi…
+    // (\varphi(n), se φ non è una funzione della nota, è la funzione di Eulero).
+    const totient = item.k === 'apply' && item.name === 'φ' && item.args.length === 1 && !item.primes && !this.fns.has('φ') ? item.args : null
+    const arithmetic = this.showArithmetic(totient ? { k: 'fn', name: 'totient', args: totient } : item)
+    if (arithmetic) return { shown: arithmetic, value: null, item }
+    // La statistica inferenziale: gli intervalli di confidenza e i test d'ipotesi.
+    if (item.k === 'fn' && INFERENCE.has(item.name) && !item.pow) {
+      const node = item
+      try {
+        const ctx = this.inferenceContext()
+        const shown =
+          node.name === 'ci'
+            ? confidenceShown(node.args, ctx)
+            : node.name === 'civar'
+              ? varianceConfidenceShown(node.args, ctx)
+              : testShown(node.name === 'chisq' ? chiSquareTest(node.args, ctx) : hypothesisTest(node.args, ctx))
+        if (shown) return { shown, value: null, item, table: true }
+      } catch {
+        // Gli argomenti non vanno.
+      }
+      return null
+    }
+    // Il calcolo numerico: la tabella dei passi, il polinomio interpolante, le matrici LU, Jacobi…
+    if (item.k === 'fn' && NUMERICAL.has(item.name) && !item.pow) {
+      const node = item
+      try {
+        const shown = withWorkLimit(WORK, () => numericalShown(node, this.numericContext(style)))
+        if (shown) return { shown, value: null, item, table: true }
+      } catch {
+        // Non si fa (gli argomenti non vanno).
+      }
+      return null
+    }
+    // La trasformata di Laplace e l'antitrasformata.
+    if (item.k === 'fn' && (item.name === 'laplace' || item.name === 'ilaplace') && item.args.length >= 1 && item.args.length <= 2 && !item.pow) {
+      const args = item.args
+      const inverse = item.name === 'ilaplace'
+      try {
+        const shown = withWorkLimit(WORK, () => (inverse ? inverseLaplaceShown(args, this.symbolScope()) : laplaceShown(args, this.symbolScope())))
+        if (shown) return { shown, value: null, item }
+      } catch {
+        // Non è nella tabella.
+      }
+      return null
+    }
+    // La serie di Fourier: i coefficienti con le lettere e la serie.
+    if (item.k === 'fn' && item.name === 'fourier' && item.args.length >= 1 && item.args.length <= 2 && !item.pow) {
+      const args = item.args
+      try {
+        const shown = withWorkLimit(WORK, () => {
+          const problem = fourierProblem(args, this.symbolScope(), this.scope())
+          return problem && fourierShown(problem)
+        })
+        if (shown) return { shown, value: null, item, table: true }
+      } catch {
+        // Non è una funzione di cui si fa la serie.
+      }
+      return null
+    }
+    // Le coniche e le quadriche: il tipo, la forma canonica, gli elementi.
+    if (item.k === 'fn' && (item.name === 'conic' || item.name === 'quadric') && item.args.length === 1) {
+      const [equation] = item.args
+      const conic = item.name === 'conic'
+      try {
+        const shown = withWorkLimit(WORK, () => (conic ? conicOf(equation, this.symbolScope())?.shown : quadricOf(equation, this.symbolScope())))
+        if (shown) return { shown, value: null, item, table: true }
+      } catch {
+        // Non è un'equazione di secondo grado.
+      }
+      return null
+    }
+    // In più variabili: i punti critici, gli estremi vincolati (Lagrange) e assoluti su un insieme.
+    const several = this.showSeveral(item, style)
+    if (several) return several.value === null ? { shown: several.shown, value: null, item, table: true } : { shown: several.shown, value: { float: several.value, exact: null }, item, loose: true }
+    // Lo studio di funzione (\operatorname{studio}(f)), o una sua parte.
+    if (item.k === 'fn' && STUDY.has(item.name) && item.args.length === 1) {
+      const shown = this.showStudy(item, style)
+      return shown ? { shown, value: null, item, table: true } : null
+    }
+    // L'algebra lineare: diagonalizzare, Gram–Schmidt, la segnatura, il rango con un parametro…
+    const spaces = this.showSpaces(item, style)
+    if (spaces) return { shown: spaces, value: null, item, table: true }
+    // La probabilità, il valore atteso, la varianza di una variabile aleatoria; la statistica dei dati.
+    const chance = this.showRandom(item, style) ?? this.showStatistics(item, style)
+    if (chance) return { shown: chance.shown, value: chance.value, item, ...(!chance.value && { table: true }) }
+    // Un integrale definito con la primitiva: il valore esatto, gli impropri, la funzione integrale;
+    // uno dentro l'altro, dentro un'espressione e con le lettere (il volume della sfera, 4πR³/3).
+    const integral = this.showIntegral(item, style) ?? this.showDefinite(item, style)
+    if (integral) return { shown: integral.shown, value: integral.value, item }
+    // Le derivate e gli operatori dei campi con le lettere: se restano variabili, il risultato è una formula.
+    if (needsSymbols(item, this.symbolScope())) {
+      const decimal = style.decimal || this.usesDecimals(item)
+      // Una derivata, un gradiente, un polinomio di Taylor, una primitiva da soli: già scritti come vanno.
+      const indefinite = item.k === 'prim' ? item : null
+      const single = item.k === 'diff' || item.k === 'fn' || item.k === 'prim' || (item.k === 'apply' && item.primes > 0)
+      item = this.prepare(item, [], decimal)
+      if (this.freeNames(item).length) {
+        const shown = single ? this.showSymbolic(item, decimal, false) : this.showSymbolic(item, decimal)
+        // \int f(x) \, dx: la primitiva più la costante.
+        if (shown && indefinite) return { shown: this.plusConstant(shown, indefinite), value: null, item }
+        return shown ? { shown, value: null, item } : null
+      }
+    }
+    const result = this.evaluate(item)
+    const real = result && (result.exact ? formatRational(result.exact, style) : formatNumber(result.float, { ...style, decimal: true }))
+    // Senza un valore reale: con i numeri complessi (1 + 2i, \sqrt{-4}, \ln(-1)), o con vettori e matrici.
+    const found = real ? { shown: real, value: result } : this.showComplex(item, style) ?? this.showLinear(item, style)
+    return found ? { shown: found.shown, value: found.value, item } : null
   }
 
   /** Se la nota definisce il nome (un numero, una funzione, un vettore, una variabile aleatoria). */
