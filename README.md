@@ -613,6 +613,12 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
   la vista Lavagna prende già tutto il posto del testo. Su iPad e iPhone la lavagna copre la
   finestra senza lo schermo intero del browser: lì Safari ne usciva mentre si scriveva, perché
   prendeva i tocchi della penna per una tastiera.
+- **Registro dei tocchi** (nelle impostazioni): serve a capire un problema su un dispositivo che
+  non si ha sotto mano, come l'iPad con la penna. Acceso, annota quello che fanno penna e dita
+  sulla lavagna, che cosa ne decide Glifo (per esempio «è la mano») e quello che fa il browser
+  (selezione, fuoco, tastiera, schermo intero, pagina nascosta, errori), senza il testo delle note.
+  Un pallino rosso sulla lavagna lo apre: si scrive cosa è successo e lo si copia, scarica o
+  condivide per mandarlo. Resta nel browser finché non lo si manda.
 - **Una lavagna per ogni nota**, salvata su quel dispositivo (nel browser, in IndexedDB), non
   nella nota né nell'account: niente esce dal dispositivo. Eliminando la nota si elimina anche
   la sua lavagna; il backup la porta con sé. Con Glifo aperto in due schede, quello che si
@@ -779,7 +785,8 @@ src/
     lists.ts              elenchi con tutti i marcatori e rientri comodi nell'anteprima
     katex.ts              disegno delle formule, messaggi di errore in italiano
   ui/                     pannello dei simboli, anteprima, elenco appunti, finestre,
-                          bordi da trascinare tra le sezioni (resize.ts), il simbolo ∮ (logo.ts)
+                          bordi da trascinare tra le sezioni (resize.ts), il simbolo ∮ (logo.ts),
+                          il registro dei tocchi nelle impostazioni (touchLogPanel.ts)
   store/                  salvataggio nel browser, file .md, impostazioni, misure delle sezioni (layout.ts)
   ai/assistant.ts         assistente AI: Anthropic con l'SDK, gli altri servizi nella «lingua» di OpenAI
   ai/services.ts          i servizi per la propria chiave: Anthropic, Gemini, OpenRouter, Ollama, altri
@@ -796,6 +803,7 @@ src/
     store.ts              le lavagne in IndexedDB, un tratto per record, e le altre schede avvisate
     board.ts              penna, dita, mouse e palmo; gomma, colori, annulla, spostare e ingrandire
     device.ts             iPad e iPhone, dove lo schermo intero del browser non va bene per scrivere
+    touchlog.ts           il registro dei tocchi: penna, dita, decisioni della lavagna e browser
   share/                  le note condivise con un link (una fotografia della nota)
     link.ts               il link (nota.html#codice) e la lettura della nota, anche senza account
     dialog.ts             la finestra «Condividi»

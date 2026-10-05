@@ -243,7 +243,12 @@ prossimi passi sono in «In programma» nella ROADMAP.
   conta, nemmeno sui pulsanti), dita, mouse, gomma, annulla e ripeti, schermo intero (su iPad e iPhone
   senza quello del browser, `device.ts`: Safari ne usciva prendendo la penna per una tastiera; sotto,
   il resto dell'app è nascosto con `.board-full`). Sulla lavagna touchstart, touchmove e touchend
-  sono annullati: sull'iPad selezionavano le parole e facevano partire Scribble. In `main.ts`
+  sono annullati: sull'iPad selezionavano le parole e facevano partire Scribble. `touchlog.ts` è il
+  registro dei tocchi (`glifo.registro.v1`, acceso nelle impostazioni da `src/ui/touchLogPanel.ts`):
+  penna, dita e mouse (i movimenti uniti in una riga), le decisioni della lavagna (le righe con «→»,
+  scritte da board.ts) e il browser (tocchi presi dal sistema, selezione, fuoco, scrittura, tastiera,
+  schermo intero, pagina nascosta, errori), mai il testo delle note (`where`); il pallino rosso sulla
+  lavagna lo apre, e lo studente lo copia o lo scarica per mandarlo nella chat. In `main.ts`
   la lavagna si toglie con la nota, segue la nota che cambia id con l'account (`replaced`,
   `adoptGuestNotes`) e uscendo dall'account si toglie, con l'avviso. Per le prove nel browser lo stato
   è in `data-strokes`, `data-note` e `data-loaded` sulla `.board-pane`.
@@ -285,10 +290,11 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
   2026, fatto il link, lo studente ha chiesto di tenerlo per dopo e di sistemare prima la
   grafica: le idee sono al passo 5 di ROADMAP.md.
 - Provare la lavagna sull'iPad con la Apple Pencil, quando l'avrà di nuovo: le correzioni del 5
-  ottobre 2026 sono già online. Scrivendo non si deve selezionare niente, a tutto schermo la lavagna
-  non si deve chiudere e la mano appoggiata non deve spostarla né premere i pulsanti; per spostarla
-  servono due dita. Poi dire com'è andata (se qualcosa non va: in Safari o nell'app sulla schermata
-  Home, a tutto schermo o no, e che messaggio compare).
+  ottobre 2026 sono già online. Prima accendere il registro dei tocchi (Impostazioni, in fondo).
+  Scrivendo non si deve selezionare niente, a tutto schermo la lavagna non si deve chiudere e la
+  mano appoggiata non deve spostarla né premere i pulsanti; per spostarla servono due dita. Poi dire
+  com'è andata e, se qualcosa non va, premere il pallino rosso sulla lavagna, scrivere cosa è
+  successo e mandare il registro nella chat (Copia, oppure Scarica o Condividi e allegarlo).
 
 ## Regole
 

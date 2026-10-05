@@ -13,7 +13,11 @@ export default defineConfig({
   // Percorsi relativi: il sito funziona anche da una sottocartella
   // (es. GitHub Pages su /glifo/) o aprendo la build da un altro host.
   base: './',
-  define: { __GLIFO_DEMO__: JSON.stringify(forClaude) },
+  define: {
+    __GLIFO_DEMO__: JSON.stringify(forClaude),
+    // Nel registro dei tocchi (src/ui/touchLogPanel.ts): quale Glifo si stava provando.
+    __GLIFO_VERSION__: JSON.stringify(`${(process.env.GITHUB_SHA ?? '').slice(0, 7) || 'locale'}, ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`),
+  },
   build: {
     target: 'es2022',
     chunkSizeWarningLimit: 1500,

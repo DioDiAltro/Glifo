@@ -3,6 +3,7 @@ import { AI_SERVICES, aiService } from '../ai/services'
 import { AI_MODELS, SPELL_LANGUAGES, type Settings, type SpellLanguages, type Theme } from '../store/settings'
 import { ICONS, h, icon } from './dom'
 import { privacyLink } from './links'
+import { touchLogFieldset } from './touchLogPanel'
 
 export interface SettingsDialogDeps {
   settings: Settings
@@ -333,8 +334,14 @@ export function openSettingsDialog(deps: SettingsDialogDeps): void {
       ),
       h('p', { class: 'field-help' }, 'Come trattiamo i tuoi dati: ', privacyLink(), '.'),
     ),
+    touchLogFieldset(),
   ]
   dialogShell('Impostazioni', body, 'dialog-settings').showModal()
+}
+
+/** Il registro dei tocchi, dal pallino rosso sulla lavagna (anche a tutto schermo). */
+export function openTouchLogDialog(): void {
+  dialogShell('Registro dei tocchi', [touchLogFieldset()], 'dialog-touch-log').showModal()
 }
 
 /** Conferma dentro la pagina (i `confirm()` del browser non sempre sono disponibili). */

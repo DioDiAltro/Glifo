@@ -1997,6 +1997,89 @@ try {
       `sull'iPad «Schermo intero» copre la finestra senza lo schermo intero del browser, e nasconde quello che c'è sotto (${JSON.stringify({ ipadFull, ipadBack })})`,
     )
     await ipadContext.close()
+    // Il registro dei tocchi: si accende nelle impostazioni, annota penna, dita, la mano e quello che
+    // fa il browser (senza il testo delle note); il pallino rosso sulla lavagna lo apre, con «Copia»
+    // e «Scarica» per mandarlo a Claude. Resta acceso ricaricando la pagina.
+    const logContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, hasTouch: true, acceptDownloads: true })
+    await logContext.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(url).origin })
+    const rp = await logContext.newPage()
+    rp.on('pageerror', (e) => errors.push(e.message))
+    await rp.goto(url)
+    await rp.waitForSelector('.cm-editor')
+    await rp.locator('.notes-head button[aria-label="Nuova nota"]').click()
+    await rp.keyboard.type('Teorema segretissimo')
+    await rp.locator('.view-button[aria-label="Lavagna"]').click()
+    await rp.waitForSelector('.board-pane[data-loaded="true"]')
+    const logDot = rp.locator('.board-button[aria-label="Registro dei tocchi"]')
+    const dotBefore = await logDot.isVisible()
+    await rp.locator('.side-profile button[aria-label="Impostazioni"]').click()
+    await rp.locator('dialog .touch-log label.check').click()
+    const settingsStatus = await rp.locator('dialog .touch-log-status').textContent()
+    await rp.keyboard.press('Escape')
+    const dotAfter = await logDot.isVisible()
+    const rstage = await rp.locator('.board-stage').boundingBox()
+    const rcdp = await logContext.newCDPSession(rp)
+    const rtouch = (type, points) => rcdp.send('Input.dispatchTouchEvent', { type, touchPoints: points.map(([x, y], i) => ({ x, y, id: i + 1 })) })
+    const rpen = (type, x, y, force = 0.5) =>
+      rcdp.send('Input.dispatchMouseEvent', { type, x: rstage.x + x, y: rstage.y + y, button: 'left', buttons: type === 'mouseReleased' ? 0 : 1, clickCount: 1, pointerType: 'pen', force })
+    // La penna scrive; intanto la mano si appoggia sulla lavagna e tocca «Ingrandisci».
+    const zoomBox = await rp.locator('.board-zoom .board-button[aria-label="Ingrandisci"]').boundingBox()
+    await rpen('mousePressed', 60, 200, 0.3)
+    for (let i = 1; i <= 8; i++) await rpen('mouseMoved', 60 + i * 15, 200 + (i % 2) * 4, 0.3 + i * 0.05)
+    await rtouch('touchStart', [[rstage.x + 260, rstage.y + 330]])
+    await rtouch('touchEnd', [])
+    await rtouch('touchStart', [[zoomBox.x + zoomBox.width / 2, zoomBox.y + zoomBox.height / 2]])
+    await rtouch('touchEnd', [])
+    await rpen('mouseReleased', 180, 200, 0)
+    // Poi si scrive nel testo e si seleziona: nel registro solo dove e quanto, non il testo.
+    await rp.locator('.view-button[aria-label="Diviso"]').click()
+    await rp.locator('.cm-content').click()
+    await rp.keyboard.press('Control+End')
+    await rp.keyboard.type(' riservato')
+    await rp.keyboard.press('Control+a')
+    await rp.waitForTimeout(400)
+    await rp.locator('.view-button[aria-label="Lavagna"]').click()
+    await rp.waitForSelector('.board-pane[data-loaded="true"]')
+    await logDot.click()
+    await rp.locator('dialog.dialog-touch-log textarea').fill('la mano ha toccato Ingrandisci')
+    await rp.locator('dialog.dialog-touch-log button', { hasText: 'Copia' }).click()
+    const copied = await rp.evaluate(() => navigator.clipboard.readText())
+    const [logFile] = await Promise.all([rp.waitForEvent('download'), rp.locator('dialog.dialog-touch-log button', { hasText: 'Scarica' }).click()])
+    const logName = logFile.suggestedFilename()
+    const logText = readFileSync(await logFile.path(), 'utf8')
+    const has = (s) => copied.includes(s)
+    const logOk = {
+      dot: !dotBefore && dotAfter,
+      status: settingsStatus,
+      head: copied.startsWith('Registro dei tocchi di Glifo\nCopiato: ') && has('Dispositivo: ') && has('Cosa è successo: la mano ha toccato Ingrandisci'),
+      pen: /penna \d+ giù \(\d+,\d+\) p 0\.30 · lavagna/.test(copied) && /penna \d+ muove ×\d+ .* p 0\.\d\d–0\.\d\d/.test(copied) && has('→ penna: scrive') && /tratto: \d+ punti, pressione/.test(copied),
+      palm: /dito \d+ giù .* · lavagna/.test(copied) && has('→ mano (la penna sta scrivendo)') && has('→ clic della mano ignorato · strumenti della lavagna: «Ingrandisci»'),
+      browser: has('touchstart') && has('· annullato') && has("vista dell'app: Diviso") && has('fuoco: editor') && /scrittura: insertText ×\d+, \d+ caratteri · editor/.test(copied) && /selezione: \d+ caratteri · editor/.test(copied),
+      mark: has('segno: premuto il pallino del registro'),
+      secret: !/segretissimo|riservato|Teorema/.test(copied),
+      file: /^glifo-registro-\d{4}-\d{2}-\d{2}-\d{4}\.txt$/.test(logName) && logText.startsWith('Registro dei tocchi di Glifo') && logText.includes('→ mano'),
+    }
+    check(
+      Object.values(logOk).every((v) => v === true || typeof v === 'string') && logOk.status.startsWith('Sta registrando'),
+      `il registro dei tocchi annota penna, mano e browser senza il testo delle note, e si copia e si scarica (${JSON.stringify(logOk)})`,
+    )
+    if (!logOk.pen || !logOk.palm || !logOk.browser) console.log(copied.split('\n').slice(0, 80).join('\n'))
+    // Ricaricando resta acceso; «Svuota» lo ricomincia, e spento il pallino sparisce.
+    await rp.keyboard.press('Escape')
+    await rp.reload()
+    await rp.waitForSelector('.board-pane[data-loaded="true"]')
+    const afterReload = { dot: await logDot.isVisible(), resumed: await rp.evaluate(() => JSON.parse(localStorage.getItem('glifo.registro.v1')).lines.some((l) => l.includes('pagina aperta: il registro riprende'))) }
+    await logDot.click()
+    await rp.locator('dialog.dialog-touch-log button', { hasText: 'Svuota' }).click()
+    const emptied = await rp.evaluate(() => JSON.parse(localStorage.getItem('glifo.registro.v1')).lines.length)
+    await rp.locator('dialog.dialog-touch-log label.check').click()
+    await rp.keyboard.press('Escape')
+    const off = { dot: await logDot.isVisible(), saved: await rp.evaluate(() => JSON.parse(localStorage.getItem('glifo.registro.v1')).on) }
+    check(
+      afterReload.dot && afterReload.resumed && emptied <= 3 && !off.dot && off.saved === false,
+      `il registro resta acceso ricaricando la pagina, «Svuota» lo ricomincia e spento il pallino sparisce (${JSON.stringify({ afterReload, emptied, off })})`,
+    )
+    await logContext.close()
     // Sul telefono la lavagna prende il posto del testo, e un dito scrive (finché non si usa una penna).
     const phoneBoard = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
     const pb = await phoneBoard.newPage()

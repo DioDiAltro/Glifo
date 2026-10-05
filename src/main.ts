@@ -27,7 +27,7 @@ import { parseSchema, SchemaError, serializeSchema, type Schema } from './schema
 import { loadPaneSizes, savePaneSizes } from './store/layout'
 import { migrateKeyPrefix, storageAvailable } from './store/storage'
 import { ICONS, h, icon } from './ui/dom'
-import { confirmDialog, openHelpDialog, openSettingsDialog, promptDialog } from './ui/dialogs'
+import { confirmDialog, openHelpDialog, openSettingsDialog, openTouchLogDialog, promptDialog } from './ui/dialogs'
 import { inClaudeViewer } from './host'
 import { SpellClient } from './spell/client'
 import type { SpellLanguage } from './spell/engine'
@@ -69,6 +69,7 @@ import { leaveNotice, takeNotice } from './ui/notice'
 import { createToolbar } from './ui/toolbar'
 import { openTutorial, showTutorialHint, tutorialSeen } from './ui/tutorial'
 import { Board } from './board/board'
+import { touchLog } from './board/touchlog'
 import { BoardStore } from './board/store'
 import { newStrokeId } from './board/strokes'
 
@@ -131,6 +132,8 @@ function saveState(state: 'salvato' | 'da-salvare' | 'non-salvato'): void {
 saveState('salvato')
 
 const viewButtons = new Map<ViewMode, HTMLButtonElement>()
+/** Le viste a parole, per il registro dei tocchi. */
+const VIEW_NAMES: Record<ViewMode, string> = { editor: 'Editor', split: 'Diviso', preview: 'Anteprima', board: 'Lavagna' }
 const viewSwitch = h(
   'div',
   { class: 'view-switch', attrs: { role: 'radiogroup', 'aria-label': 'Vista' } },
@@ -233,6 +236,7 @@ const board = new Board({
       confirmLabel: 'Pulisci',
       danger: true,
     }),
+  openLog: () => openTouchLogDialog(),
   warn: (message) => toast(message, 'error'),
 })
 
@@ -445,6 +449,7 @@ function updateSettings(next: Partial<Settings>, fromAccount = false): void {
 }
 
 function setView(mode: ViewMode, focus = true): void {
+  touchLog.add(`vista dell'app: ${VIEW_NAMES[mode]}`)
   updateSettings({ view: mode })
   app.dataset.view = mode
   for (const [m, b] of viewButtons) b.setAttribute('aria-checked', String(m === mode))

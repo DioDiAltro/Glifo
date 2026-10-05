@@ -196,23 +196,28 @@ lavagna» e poi, vista sul ramo `prova`, «va bene, pubblicala»). È descritta 
 `src/board/`: la vista «Lavagna» accanto al testo (sul telefono al suo posto, e a tutto schermo con
 un pulsante), penna con la pressione, gomma che taglia i tratti, quattro colori, annulla e ripeti,
 due dita per spostare e ingrandire, il palmo che non scrive; una lavagna per nota, salvata su quel
-dispositivo (IndexedDB), che va nel backup e non nell'account. La discussione è in
-[ABBONAMENTI.md](ABBONAMENTI.md), «La lavagna». Se servirà:
+dispositivo (IndexedDB), che va nel backup e non nell'account. C'è anche il registro dei tocchi
+(fatto il 5 ottobre 2026, chiesto dallo studente per la prova sull'iPad): acceso nelle impostazioni,
+annota penna, dita, le decisioni della lavagna e quello che fa il browser, e si manda nella chat
+con Claude. La discussione è in [ABBONAMENTI.md](ABBONAMENTI.md), «La lavagna». Se servirà:
 
 - con l'AI e nei piani a pagamento, le formule scritte a mano convertite in LaTeX e aggiunte alla
   nota se si vuole («Aggiungi alla nota»): aspetta la discussione sulla chiave API;
-- lo spessore della penna da scegliere, l'evidenziatore, scaricare la lavagna come immagine;
+- **una lavagna completa di tutto** (lo studente, 5 ottobre 2026: «deve essere una lavagna completa
+  di tutto», come Microsoft Whiteboard):
+  - la grandezza dello strumento scelto: lo spessore della penna, dell'evidenziatore e della gomma
+    (da chiarire se intende anche scegliere un pezzo di lavagna e cambiarne la grandezza);
+  - gli evidenziatori, di più colori, che si vedono sotto la scrittura;
+  - la gomma con due modi: «a tratto», che cancella dove passa e diventa più grande quando la si
+    muove veloce, e «a linea intera», che toccando anche un solo punto di una linea la cancella tutta;
+  - scaricare la lavagna come immagine;
 - la lavagna sugli altri dispositivi, con l'account;
 - sull'iPad la prima prova (5 ottobre 2026) ha trovato quattro problemi, corretti subito: le parole
   che si selezionavano, la lavagna che si chiudeva e l'iPad che la prendeva per una tastiera (era lo
   schermo intero di Safari, che lì non si usa più), e la mano appoggiata (con la penna un dito solo
   non fa niente). Le correzioni sono online ma vanno ancora provate sull'iPad, che lo studente per
-  ora non ha. Se resta qualcosa, o con la tavoletta grafica senza schermo, si sistema;
-- **il registro dei tocchi** (chiesto dallo studente il 5 ottobre 2026: «tieni presente di
-  aggiungere il registro dei tocchi»): a richiesta la lavagna annota quello che le arriva da penna e
-  dita (tipo, pressione, tempi, i tocchi presi per la mano) e lo si copia per mandarlo a Claude,
-  così si capisce cosa fa l'iPad senza averlo qui. Il registro resta sul dispositivo finché non lo
-  si copia. Meglio farlo prima della prossima prova sull'iPad.
+  ora non ha: con il registro dei tocchi acceso, così se qualcosa non va lo si manda a Claude. Se
+  resta qualcosa, o con la tavoletta grafica senza schermo, si sistema.
 
 ### Schemi: idee in più
 
@@ -221,6 +226,16 @@ al posto del vero draw.io incorporato perché funziona offline e non manda nient
 le figure delle basi di dati (E-R come nell'Atzeni, tabelle con PK, FK e tipi) e il codice SQL
 delle tabelle per più database. Tutto è descritto nel README. Se serviranno:
 
+- **i diagrammi di flusso trasformati in codice** (lo studente, 5 ottobre 2026): come oggi le
+  tabelle danno l'SQL, un diagramma di flusso fatto con le forme di sempre (inizio e fine,
+  istruzioni, decisioni con sì e no, ingresso e uscita) si scarica come codice nel linguaggio scelto:
+  C, C++, Java, Python e JavaScript (proposto da Claude: è il linguaggio del web). Le decisioni che
+  tornano indietro diventano cicli; un diagramma che non si può scrivere con if e cicli lo dice.
+  Come l'SQL, solo nei piani a pagamento, perché scrivere il codice a mano fa bene (vedi
+  [ABBONAMENTI.md](ABBONAMENTI.md), «Deciso»);
+- **tabelle come in Excel** negli schemi (lo studente, 5 ottobre 2026): le usava alle superiori in
+  G.E.S.P. (Gestione Economica e Servizi Produttivi); il racconto si è interrotto, da completare con
+  lui prima di cominciare;
 - il contrario dell'SQL: da un file SQL alle tabelle disegnate; e il passaggio dallo schema E-R
   alle tabelle (la progettazione logica);
 - stampare con i colori del tema chiaro anche se si usa quello scuro;

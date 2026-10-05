@@ -32,6 +32,11 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
   l'assaggio gratuito e le cose facili. Vedi «I modelli e le chiavi API».
 - **Niente spese finché Glifo è in sviluppo** (5 ottobre 2026): quello che costerebbe è in
   [COSTI.md](COSTI.md) e si attiva solo quando lo dice lo studente.
+- **L'SQL e il codice dagli schemi sono a pagamento**, da Relativistico (5 ottobre 2026): oltre
+  all'SQL dalle tabelle, il codice dai diagrammi di flusso, nei linguaggi principali (C, C++, Java,
+  Python; Claude propone di aggiungere JavaScript). Lo studente: «fa bene scrivere codice a mano
+  invece che copiarlo». Oggi l'SQL si scarica ancora gratis: si toglie prima di aprire l'account a
+  tutti (vedi «Come si decide cosa far pagare»).
 
 ## Com'è andata la discussione
 
@@ -82,6 +87,13 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
     e non fanno partire Scribble, e con la penna un dito solo non fa niente: la mano appoggiata non
     sposta la lavagna e non preme i pulsanti. Le correzioni sono online; lo studente per ora non ha
     l'iPad e le proverà quando ce l'avrà di nuovo.
+15. **Il registro dei tocchi, una lavagna completa, il codice dai diagrammi** (5 ottobre 2026).
+    Per la prossima prova sull'iPad Claude fa il registro dei tocchi, da mandare nella chat. Lo
+    studente vuole poi una lavagna «completa di tutto», come Microsoft Whiteboard (la grandezza degli
+    strumenti, gli evidenziatori, la gomma a tratto e a linea intera: vedi la ROADMAP), i diagrammi di
+    flusso trasformati in codice e negli schemi le tabelle come in Excel, che usava alle superiori in
+    G.E.S.P. (Gestione Economica e Servizi Produttivi): il racconto si è interrotto, da completare.
+    Decide che il codice, come l'SQL, è nei piani a pagamento (vedi «Deciso»).
 
 ## La proposta dello studente (4 ottobre 2026)
 
@@ -195,7 +207,7 @@ fa al posto tuo.**
 | **Le spiegazioni passo passo**: i passaggi del motore di Glifo (le regole usate, perché il risultato è quello), come Wolfram\|Alpha Pro; dove il motore non arriva, l'AI spiega e il motore controlla (vedi «Le spiegazioni, come funzionano») | È quello per cui gli studenti pagano già altrove, e costa molto lavoro costruirle, argomento per argomento. Quello che il motore mostra già oggi (Euclide, Bézout, Ruffini, le tabelle del calcolo numerico, le righe dello studio di funzione) resta gratis |
 | **Il tutor** (la voce «Aiuto con gli esercizi» della ROADMAP): chiede cosa hai provato, dà un indizio alla volta, controlla i tuoi passaggi; con un tetto al mese (per esempio 100 domande) | Ogni domanda costa a Glifo circa 2 centesimi: con il tetto il piano resta in attivo anche con chi lo usa molto. Un indizio alla volta è il «non semplificare troppo» |
 | **La trascrizione delle lezioni**: poche ore al mese (per esempio 3) e pacchetti di ore per chi ne vuole di più | Costa 20-40 centesimi per ora di lezione: chi registra tutte le lezioni (80 ore al mese) costerebbe 15-30 €. Se un giorno la trascrizione girerà nel browser (sul computer), quella non avrà tetto |
-| **L'SQL e il codice dagli schemi**: oggi l'SQL per più database; poi dallo schema E-R alle tabelle, dall'SQL allo schema, il codice da altri diagrammi | Fa un lavoro al posto tuo, serve a un gruppo preciso con una scadenza (l'esame di basi di dati) e non è il motivo per scegliere Glifo. Nella proposta era già fuori dal gratuito. Gira nel browser, quindi si blocca solo sulla fiducia, e va bene così |
+| **L'SQL e il codice dagli schemi**: oggi l'SQL per più database; poi dallo schema E-R alle tabelle, dall'SQL allo schema, il codice dai diagrammi di flusso (C, C++, Java, Python, JavaScript) | Fa un lavoro al posto tuo, serve a un gruppo preciso con una scadenza (l'esame di basi di dati, di programmazione) e non è il motivo per scegliere Glifo; e, come dice lo studente, scrivere il codice a mano fa bene (deciso il 5 ottobre 2026). Nella proposta era già fuori dal gratuito. Gira nel browser, quindi si blocca solo sulla fiducia, e va bene così |
 | **La conversione della lavagna**: le formule scritte a mano diventano LaTeX, da aggiungere alla nota se si vuole (vedi «La lavagna») | Usa l'AI, che costa (poco) a ogni formula; la lavagna invece è gratis (deciso il 5 ottobre 2026) |
 | **Un gruppo di studio**: una cartella condivisa con pochi compagni (per esempio fino a 5), anche se loro hanno Classico | Chi è invitato entra gratis: ogni abbonato porta compagni su Glifo |
 | **Più spazio** (servirà con immagini e allegati) e la **cronologia delle versioni** di 30 giorni | Lo spazio costa |
@@ -613,7 +625,8 @@ ricerca, i piani per università e dipartimenti.
   confermare.
 - **Le spiegazioni**: da quale argomento partire (vedi «Le spiegazioni, come funzionano», in
   fondo). In sospeso dal 5 ottobre 2026: si riprende più avanti.
-- **L'SQL**: in Relativistico, come nella proposta, o resta gratis?
+- **Le tabelle come in Excel** negli schemi: lo studente stava raccontando come le usava alle
+  superiori (G.E.S.P.) quando il messaggio si è interrotto (5 ottobre 2026).
 - **L'assaggio** nel gratuito: 7 giorni di Relativistico o poche domande al mese?
 - **I prezzi e i tetti**: da verificare con gli studenti e con l'uso vero.
 
