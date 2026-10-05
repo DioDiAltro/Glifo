@@ -76,6 +76,9 @@ import { newStrokeId } from './board/strokes'
 /** La build per claude.ai (`GLIFO_NO_PWA=1`, vedi vite.config.ts): l'account è spento. */
 declare const __GLIFO_DEMO__: boolean
 
+// Il registro dei tocchi della lavagna, se era acceso, riprende da qui (src/board/touchlog.ts).
+touchLog.resume()
+
 // Il progetto si chiamava Matherdown: recupera gli appunti salvati con il vecchio nome.
 migrateKeyPrefix('matherdown.', 'glifo.')
 

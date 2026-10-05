@@ -497,6 +497,8 @@ function watchBrowser(log: TouchLog): () => void {
   }
 }
 
-/** Il registro di questa pagina. */
+/**
+ * Il registro di questa pagina. Riprende (`resume`) solo nell'app, da main.ts: questo modulo finisce
+ * anche nel pezzo di codice che usa la pagina delle note condivise.
+ */
 export const touchLog = new TouchLog()
-if (typeof window !== 'undefined') touchLog.resume()

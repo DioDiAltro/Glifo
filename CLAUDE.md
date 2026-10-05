@@ -244,7 +244,8 @@ prossimi passi sono in «In programma» nella ROADMAP.
   senza quello del browser, `device.ts`: Safari ne usciva prendendo la penna per una tastiera; sotto,
   il resto dell'app è nascosto con `.board-full`). Sulla lavagna touchstart, touchmove e touchend
   sono annullati: sull'iPad selezionavano le parole e facevano partire Scribble. `touchlog.ts` è il
-  registro dei tocchi (`glifo.registro.v1`, acceso nelle impostazioni da `src/ui/touchLogPanel.ts`):
+  registro dei tocchi (`glifo.registro.v1`, acceso nelle impostazioni da `src/ui/touchLogPanel.ts`;
+  riprende all'avvio con `touchLog.resume()` in main.ts, perché il modulo finisce anche in nota.html):
   penna, dita e mouse (i movimenti uniti in una riga), le decisioni della lavagna (le righe con «→»,
   scritte da board.ts) e il browser (tocchi presi dal sistema, selezione, fuoco, scrittura, tastiera,
   schermo intero, pagina nascosta, errori), mai il testo delle note (`where`); il pallino rosso sulla
