@@ -204,9 +204,10 @@ con Claude. La discussione è in [ABBONAMENTI.md](ABBONAMENTI.md), «La lavagna�
 - con l'AI e nei piani a pagamento, le formule scritte a mano convertite in LaTeX e aggiunte alla
   nota se si vuole («Aggiungi alla nota»): aspetta la discussione sulla chiave API;
 - **una lavagna completa di tutto** (lo studente, 5 ottobre 2026: «deve essere una lavagna completa
-  di tutto», come Microsoft Whiteboard). I primi quattro punti sono fatti e pubblicati (5 ottobre
+  di tutto», come Microsoft Whiteboard). I primi cinque punti sono fatti e pubblicati (5 ottobre
   2026, «sì a tutto, comincia dagli strumenti della lavagna», poi «sì, parti con le linee e le
-  figure»; viste sul ramo `prova`, il 6 ottobre «va bene, pubblicala»):
+  figure»; viste sul ramo `prova`, il 6 ottobre «va bene, pubblicala»; la selezione lo stesso
+  giorno, vista sul ramo `prova` e poi «va bene, pubblicala»):
   - fatto: la grandezza dello strumento scelto, cioè lo spessore della penna,
     dell'evidenziatore e della gomma (tre misure, dal menu che si apre premendo di nuovo lo
     strumento o il pulsante con il pallino);
@@ -220,8 +221,8 @@ con Claude. La discussione è in [ABBONAMENTI.md](ABBONAMENTI.md), «La lavagna�
     tratto: linea, freccia, spezzata, triangolo, rettangolo, quadrato, rombo, pentagono, esagono,
     ellisse, cerchio, raddrizzati; con la penna ancora giù la si regola. Nel menu della penna
     l'interruttore «Forme automatiche». Annulla riporta il tratto a mano;
-  - fatto, sul ramo `prova` (6 ottobre 2026), da vedere: **selezionare come in Note di Apple** (lo
-    studente: «nella lavagna dobbiamo aggiungere il poter selezionare stile note di apple»). Il
+  - fatto: **selezionare come in Note di Apple** (lo studente, 6 ottobre 2026: «nella lavagna
+    dobbiamo aggiungere il poter selezionare stile note di apple»). Il
     lazo, nella barra, prende quello che ci si disegna intorno (o la linea toccata); poi lo si
     trascina, lo si ingrandisce con il pallino nell'angolo e dal menu lo si taglia, copia,
     duplica, elimina o gli si cambia colore; «Incolla» toccando un punto vuoto o dalla barra,
