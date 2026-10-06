@@ -1,7 +1,7 @@
 import type { Token } from 'markdown-it'
 
 /**
- * Spostare uno schema o un grafico nella nota, come le celle di Colab: le frecce ↑ ↓ dell'anteprima lo
+ * Spostare uno schema, un grafico o una tabella nella nota, come le celle di Colab: le frecce ↑ ↓ dell'anteprima lo
  * fanno saltare oltre il blocco vicino (paragrafo, titolo, elenco intero, tabella, formula $$, altro
  * blocco di codice…), nello stesso contenitore: la nota o la stessa voce d'elenco. Qui i conti, sui
  * token dei blocchi di markdown-it (lo stesso parser dell'anteprima, vedi `parseBlocks` in markdown.ts):
@@ -10,7 +10,7 @@ import type { Token } from 'markdown-it'
  */
 
 export type MoveDir = 'up' | 'down'
-export type BlockKind = 'grafico' | 'schema'
+export type BlockKind = 'grafico' | 'schema' | 'tabella'
 
 /** Le frecce di un blocco: verso dove si può spostare, e se sta in una voce d'elenco (per i titoli). */
 export interface MoveHint {
@@ -19,7 +19,7 @@ export interface MoveHint {
   inItem: boolean
 }
 
-const MOVABLE = new Set(['grafico', 'schema'])
+const MOVABLE = new Set<string>(['grafico', 'schema', 'tabella'])
 
 /** Il nome del blocco di codice: la prima parola dopo ```, in minuscolo (come nel renderer). */
 export function fenceName(t: Token): string {
@@ -181,7 +181,7 @@ function walk(tokens: Token[], visit: (t: Token, i: number, ancestors: readonly 
 
 /**
  * Regola di markdown-it subito dopo i blocchi (prima che spariscano i riferimenti e le note, così
- * vede gli stessi token di `moveFencedBlock`): in `meta.move` di ogni schema e grafico le sue frecce
+ * vede gli stessi token di `moveFencedBlock`): in `meta.move` di ogni schema, grafico e tabella le sue frecce
  * (null: non si sposta, niente frecce).
  */
 export function markMoves(tokens: Token[]): void {

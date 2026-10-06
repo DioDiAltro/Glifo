@@ -4733,6 +4733,476 @@ kbd {
 
 /* ——— Stampa / PDF: solo l'anteprima ——— */
 
+/* ——— Tabelle con le formule, come Excel (src/spreadsheet): nell'anteprima e nell'editor ——— */
+
+/* Nell'anteprima: la tabella con i risultati (i numeri a destra), «Modifica» e le frecce passandoci sopra. */
+.sheet-block {
+  position: relative;
+  margin: 0 0 1em;
+}
+
+.markdown-body .sheet-table {
+  margin: 0;
+}
+
+.sheet-table .sheet-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sheet-table .sheet-bool,
+.sheet-table .sheet-error {
+  text-align: center;
+}
+
+.sheet-table .sheet-error {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.sheet-table .sheet-left {
+  text-align: left;
+}
+
+.sheet-table .sheet-center {
+  text-align: center;
+}
+
+.sheet-table .sheet-right {
+  text-align: right;
+}
+
+.sheet-empty {
+  margin: 0;
+  padding: 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.sheet-block:hover .schema-preview-tools,
+.sheet-block.just-moved .schema-preview-tools {
+  opacity: 1;
+}
+
+/* L'editor a tutto schermo (src/spreadsheet/editor.ts), con la barra come quella degli schemi. */
+.sheet-editor {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.sheet-editor[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.sheet-editor::backdrop {
+  background: transparent;
+}
+
+.sheet-tool {
+  flex: none;
+  min-width: 34px;
+  height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font: 600 13.5px var(--font-ui);
+  white-space: nowrap;
+}
+
+.sheet-tool:hover {
+  background: var(--surface-2);
+}
+
+.sheet-tools .icon-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.sheet-sigma {
+  font-size: 18px;
+}
+
+.sheet-toggle[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.sheet-menu-button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+}
+
+.sheet-formula-bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.sheet-address,
+.sheet-formula {
+  height: 32px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.sheet-address {
+  flex: none;
+  width: 92px;
+  padding: 0 8px;
+  font: 600 13px var(--font-mono);
+  text-align: center;
+}
+
+.sheet-fx {
+  color: var(--muted);
+  font: italic 600 15px Georgia, 'Times New Roman', serif;
+}
+
+.sheet-formula {
+  flex: 1;
+  min-width: 0;
+  padding: 0 10px;
+  font: 14px var(--font-mono);
+}
+
+.sheet-address:focus,
+.sheet-formula:focus {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+}
+
+.sheet-hint {
+  flex: none;
+  min-height: 28px;
+  padding: 5px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sheet-hint strong {
+  color: var(--text);
+  font: 600 12.5px var(--font-mono);
+}
+
+.sheet-hint .sheet-hint-error {
+  color: var(--danger);
+}
+
+.sheet-grid-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--surface);
+  outline: none;
+  touch-action: pan-x pan-y;
+}
+
+.sheet-canvas {
+  position: relative;
+  width: max-content;
+  min-width: 100%;
+}
+
+.sheet-grid {
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  color: var(--text);
+  font: 14px var(--font-ui);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.sheet-grid col.sheet-col-head {
+  width: 44px;
+}
+
+.sheet-grid th,
+.sheet-grid td {
+  height: 30px;
+  padding: 0 8px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.sheet-grid thead th,
+.sheet-grid .sheet-rowhead {
+  background: var(--frame);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: center;
+  cursor: default;
+}
+
+.sheet-grid thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.sheet-grid .sheet-rowhead {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+.sheet-grid .sheet-corner {
+  left: 0;
+  z-index: 3;
+}
+
+.sheet-grid th.is-in {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.sheet-grid td {
+  cursor: cell;
+}
+
+.sheet-grid td.is-header {
+  background: var(--surface-2);
+  font-weight: 600;
+}
+
+.sheet-grid td.is-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.sheet-grid td.is-bool,
+.sheet-grid td.is-error {
+  text-align: center;
+}
+
+.sheet-grid td.is-error {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.sheet-grid td.is-bold {
+  font-weight: 700;
+}
+
+.sheet-grid td.is-left {
+  text-align: left;
+}
+
+.sheet-grid td.is-center {
+  text-align: center;
+}
+
+.sheet-grid td.is-right {
+  text-align: right;
+}
+
+.sheet-grid td.is-selected {
+  background: var(--accent-soft);
+}
+
+.sheet-grid td.is-active {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.sheet-grid td.is-fill {
+  outline: 1px dashed var(--accent);
+  outline-offset: -3px;
+}
+
+/* Le celle usate dalla formula che si sta scrivendo, ognuna del suo colore (come in Excel). */
+.sheet-grid td[data-ref='0'] {
+  box-shadow: inset 0 0 0 2px #2563eb;
+}
+
+.sheet-grid td[data-ref='1'] {
+  box-shadow: inset 0 0 0 2px #dc2626;
+}
+
+.sheet-grid td[data-ref='2'] {
+  box-shadow: inset 0 0 0 2px #9333ea;
+}
+
+.sheet-grid td[data-ref='3'] {
+  box-shadow: inset 0 0 0 2px #16a34a;
+}
+
+.sheet-grid td[data-ref='4'] {
+  box-shadow: inset 0 0 0 2px #ea580c;
+}
+
+.sheet-grid td[data-ref='5'] {
+  box-shadow: inset 0 0 0 2px #0891b2;
+}
+
+.sheet-handle {
+  position: absolute;
+  z-index: 1;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--surface);
+  background: var(--accent);
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.sheet-handle[hidden] {
+  display: none;
+}
+
+.sheet-cell-input {
+  position: absolute;
+  z-index: 4;
+  box-sizing: border-box;
+  padding: 0 7px;
+  border: 2px solid var(--accent);
+  border-radius: 0;
+  outline: none;
+  background: var(--surface);
+  color: var(--text);
+  font: 14px var(--font-ui);
+  box-shadow: var(--shadow);
+}
+
+.sheet-cell-input[hidden] {
+  display: none;
+}
+
+.sheet-suggest {
+  position: absolute;
+  z-index: 10;
+  width: min(360px, calc(100vw - 16px));
+  max-height: 290px;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.sheet-suggest[hidden] {
+  display: none;
+}
+
+.sheet-suggest-item {
+  display: grid;
+  gap: 1px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.sheet-suggest-item strong {
+  font: 600 13px var(--font-mono);
+}
+
+.sheet-suggest-item span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.sheet-suggest-item[aria-selected='true'] {
+  background: var(--accent-soft);
+}
+
+.sheet-menu {
+  position: absolute;
+  z-index: 10;
+  display: grid;
+  min-width: 240px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.sheet-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font: 13.5px var(--font-ui);
+  text-align: left;
+}
+
+.sheet-menu-item:hover,
+.sheet-menu-item:focus-visible {
+  background: var(--surface-2);
+  outline: none;
+}
+
+.sheet-menu-item:disabled {
+  opacity: 0.45;
+}
+
+.sheet-menu-item kbd {
+  color: var(--muted);
+  font: 12px var(--font-ui);
+}
+
+/* Sul telefono la barra va su due righe: gli strumenti sotto, da far scorrere. */
+@media (max-width: 760px) {
+  .sheet-bar {
+    flex-wrap: wrap;
+    height: auto;
+    row-gap: 4px;
+    padding: 6px 8px;
+  }
+
+  .sheet-bar .schema-title,
+  .sheet-bar .schema-status {
+    display: none;
+  }
+
+  .sheet-tools {
+    order: 3;
+    width: 100%;
+  }
+
+  .sheet-hint {
+    white-space: normal;
+  }
+}
+
 @media print {
   body {
     overflow: visible;

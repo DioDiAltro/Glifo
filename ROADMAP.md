@@ -261,13 +261,21 @@ grafici. Tutto è descritto nel README. Se serviranno:
   - l'ottimizzazione dei flussi: lo studio dei processi per automatizzarli o gestirli con un
     gestionale (ERP).
 
-  Approvato dallo studente il 5 ottobre 2026 («sì a tutto»), gratis come i calcoli e i grafici: una
-  tabella con le celle e le formule come in
-  Excel (=B2*C2, SOMMA, MEDIA, SE…), con i numeri in euro e in percentuale, che si apre a tutto schermo
-  come gli schemi; i conti li fa il motore di Glifo. Insieme: il grafico del punto di pareggio (costi
-  totali e ricavi che si incontrano) con il blocco grafico, il diagramma di Gantt per pianificare
-  (attività, durate, chi le fa, il percorso critico), i flussi con le corsie (chi fa cosa) e i file di
-  Excel (.xlsx) e .csv da aprire e scaricare;
+  Approvato dallo studente il 5 ottobre 2026 («sì a tutto»), gratis come i calcoli e i grafici. Si fa
+  un pezzo alla volta:
+  - fatto, sul ramo `prova` (6 ottobre 2026, lo studente: «sì, parti dalla tabella con le formule»;
+    da vedere prima di pubblicarla): **la tabella con le formule**, non dentro gli schemi ma un blocco
+    ```tabella a parte, che si apre a tutto schermo come gli schemi in un editor fatto come Excel:
+    celle e formule all'italiana (=B2*C2, SOMMA, SE, CERCA.VERT, RATA, VAN…, con i nomi dell'Excel
+    italiano), numeri in euro e in percentuale, i tasti di Excel, copia e incolla anche con Excel, la
+    maniglia per riempire, i modelli pronti (fattura con l'IVA, punto di pareggio, conto economico,
+    piano di ammortamento); nella nota la tabella con i risultati, nei file .md una tabella di
+    Markdown con i risultati. I conti li fa Glifo (`src/spreadsheet`). Descritta nel README;
+  - il grafico del punto di pareggio (costi totali e ricavi che si incontrano) con il blocco grafico,
+    dai numeri della tabella;
+  - il diagramma di Gantt per pianificare (attività, durate, chi le fa, il percorso critico);
+  - i flussi con le corsie (chi fa cosa);
+  - i file di Excel (.xlsx) e .csv da aprire e scaricare;
 - il contrario dell'SQL: da un file SQL alle tabelle disegnate; e il passaggio dallo schema E-R
   alle tabelle (la progettazione logica);
 - stampare con i colori del tema chiaro anche se si usa quello scuro;

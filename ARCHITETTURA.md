@@ -18,8 +18,8 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   può essere di un'altra persona (link condiviso, la copia salvata da lì, un .md): `renderMarkdown`
   toglie script, moduli, pulsanti e stili (`FORBIDDEN_TAGS`; con `untrusted` le caselle non si
   cliccano) e `.markdown-body` ha `contain: paint`, così niente esce dal riquadro della nota.
-  Schemi e grafici si spostano nella nota con le frecce ↑ ↓ dell'anteprima, come le celle di Colab
-  (6 ottobre 2026): `blockMove.ts` fa i conti sui token dei blocchi di markdown-it (`parseBlocks` in
+  Schemi, grafici e tabelle si spostano nella nota con le frecce ↑ ↓ dell'anteprima, come le celle di Colab
+  (6 ottobre 2026; i nomi e le classi dei tre blocchi sono in `BLOCK_NAMES` di `src/ui/moveButtons.ts`): `blockMove.ts` fa i conti sui token dei blocchi di markdown-it (`parseBlocks` in
   `markdown.ts`, lo stesso parser dell'anteprima). La regola `block_moves`, subito dopo i blocchi,
   scrive `data-hash` (l'impronta del contenuto: il testo di `data-graph` DOMPurify lo accorcia) e
   `data-move` (le frecce accese; senza, niente frecce: citazioni, note a piè di pagina, blocchi aperti,
@@ -36,7 +36,7 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   blocco spostato non si vede (in un `<details>` chiuso, dopo un commento aperto) si annulla con l'avviso;
   i `<details>` aperti restano aperti. Gli slider hanno nella chiave la nota e la riga: `remapGraphLines`
   li sposta con i blocchi (da `onBlockMoved`), `renameGraphScope` quando la nota cambia id; il contenitore
-  dei pulsanti degli schemi è `.schema-preview-tools` (`.schema-tools` è la barra dell'editor degli schemi).
+  dei pulsanti degli schemi (e delle tabelle) è `.schema-preview-tools` (`.schema-tools` è la barra dell'editor degli schemi).
 - `src/ui/`: interfaccia (`resize.ts`: i bordi da trascinare tra le sezioni). Non c'è una barra in
   alto: la barra laterale è l'elenco degli appunti (`notesPanel.ts`) con sopra il logo (niente
   titolo della nota) e in fondo la riga `foot` con «Apri .md» e «Salva .md» (icona e testo, larghi
@@ -61,7 +61,8 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   blocchi ```schema con un JSON (`model.ts`: formato, controlli, colori dei due temi);
   `editor.ts` è l'editor a tutto schermo, `preview.ts` li disegna nell'anteprima,
   `src/editor/schemaBlocks.ts` li mostra nel testo come una riga con «Modifica» e ne protegge le
-  righe ``` (quello che si scrive o arriva dai pulsanti sul bordo dello schema va su una riga sua). Il testo delle
+  righe ``` (quello che si scrive o arriva dai pulsanti sul bordo dello schema va su una riga sua);
+  lo stesso fa con le tabelle ```tabella (`findWidgetBlocks`, `WidgetKind`). Il testo delle
   forme passa sempre da `label.ts` (escape + KaTeX): maxGraph lo inserisce come HTML.
   Nei file .md (`file.ts`, usato da «Salva .md» e «Apri .md») ogni schema diventa un'immagine
   SVG, che VS Code mostra, più il JSON in un commento HTML; aprendo il file torna un blocco.
@@ -73,6 +74,31 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   ogni database (i test lo eseguono in PGlite e in SQLite). I modelli pronti sono in `templates.ts`, allinea e
   distribuisci in `arrange.ts`, PNG e «Copia come immagine» in `image.ts`. Menu e messaggi
   dentro l'editor vanno messi nella sua finestra (è modale: fuori restano sotto).
+- `src/spreadsheet/`: le tabelle con le formule, come Excel (6 ottobre 2026, sul ramo `prova`). Nella
+  nota sono blocchi ```tabella con una riga di testo per riga della tabella (`model.ts`: le celle tra
+  |, `\|` per la barra; la riga con i trattini dopo la prima dice che c'è l'intestazione e non conta
+  tra le righe: come in Excel la riga 1 è quella dei titoli; il grassetto `**…**`; il formato tra
+  graffe in fondo alla cella, `{0,0%}`, solo quando non si capisce già dal contenuto). Le formule
+  all'italiana in `formula.ts` (`tokenize`, `parseFormula`; `shiftFormula` per copiare, `adjustFormula`
+  per righe e colonne aggiunte o tolte, `normalizeFormula` per i nomi in maiuscolo e in italiano,
+  `formulaRefs` per colorarle); le funzioni in `functions.ts` (i nomi dell'Excel italiano con gli
+  alias inglesi, una riga di aiuto ciascuna; come in Excel i testi negli intervalli si saltano e un
+  errore ferma la funzione, `Stop`); i conti in `evaluate.ts` (`SheetEvaluator`: ogni cella una
+  volta, i riferimenti circolari sono #RIF!, la prima volta tutte dall'alto così le catene restano
+  corte, `MAX_DEPTH`); in `format.ts` i numeri all'italiana e i formati: i risultati prendono il
+  formato da quello che usano, come le unità di misura (`addFormat`, `mulFormat`, `divFormat`,
+  `withCents`). L'anteprima la calcola subito nel Markdown (`sheetHtml` in `render.ts`, dal renderer
+  dei fence di `src/render/markdown.ts`): il testo delle celle passa da `md.renderInline` e poi da
+  DOMPurify come il resto, i testi che escono dalle formule si scappano; `preview.ts` aggiunge
+  «Modifica» e le frecce (`hydrateSheets`, solo nella propria nota). `main.ts` apre l'editor
+  (`openSheet`, caricato solo quando serve) e rimette il blocco con `saveSheetBlock`, ritrovandolo
+  dal testo o dall'impronta dell'anteprima (`findSheetBlock`, `findSheetBySource` in `blocks.ts`). Nei
+  file .md (`file.ts`) la tabella di Markdown con i risultati (`sheetMarkdown`) e il blocco in un
+  commento `glifo-tabella` (& e > scappati). L'editor (`editor.ts`) lavora su una copia della
+  tabella (le modifiche in `ops.ts`, `cloneSheet` per Annulla); menu, suggerimenti e messaggi stanno
+  dentro la sua finestra (è modale). Nella barra il pulsante della tabella è un menu (`tableMenu` in
+  `src/ui/toolbar.ts`): con le formule o di testo, perché la barra deve stare in una riga. Per le
+  prove nel browser le celle della griglia hanno l'id `sheet-<riga>-<colonna>` (da 0).
 - `src/math/`: le espressioni delle formule (LaTeX o da calcolatrice): `parse.ts` le legge, `evaluate.ts`
   le calcola (`exact.ts` con le frazioni, `format.ts` scrive i risultati all'italiana; `domain.ts` i
   domini degli integrali doppi e tripli `\iint_D`: un «margine» positivo dentro, le condizioni una per

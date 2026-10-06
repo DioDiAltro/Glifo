@@ -31,6 +31,7 @@ import yaml from 'highlight.js/lib/languages/yaml'
 import { graphNames } from '../graph/spec'
 import { markMoves, moveAttrs } from './blockMove'
 import { Sheet } from '../math/sheet'
+import { sheetHtml } from '../spreadsheet/render'
 import { checkHtml } from './check'
 import { escapeHtml, renderTexOrError, renderTexWithResult } from './katex'
 import { listRule, paragraphRule } from './lists'
@@ -190,6 +191,8 @@ function createMarkdownIt(): MarkdownIt {
   }
   // I blocchi ```math si comportano come $$ … $$ (come su GitHub); quelli ```schema e ```grafico
   // lasciano il posto al disegno, che l'anteprima fa dopo (src/schema/preview.ts, src/graph/preview.ts).
+  // Le tabelle ```tabella si calcolano subito (src/spreadsheet): i testi delle celle hanno il loro
+  // Markdown, con le formule $…$ che passano dal foglio della nota come le altre.
   const fence = md.renderer.rules.fence!
   md.renderer.rules.fence = (tokens, idx, options, env, self) => {
     const token = tokens[idx]
@@ -205,6 +208,9 @@ function createMarkdownIt(): MarkdownIt {
     if (info === 'grafico') {
       const defs = sheetOf(env)?.definitionsFor(graphNames(token.content)) ?? []
       return `<div class="graph-block"${attr}${moveAttrs(token)} data-graph="${escapeHtml(token.content)}" data-defs="${escapeHtml(JSON.stringify(defs))}"></div>\n`
+    }
+    if (info === 'tabella') {
+      return `<div class="sheet-block"${attr}${moveAttrs(token)}>${sheetHtml(token.content, (text) => md.renderInline(text, env))}</div>\n`
     }
     return fence(tokens, idx, options, env, self)
   }

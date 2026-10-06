@@ -3,7 +3,9 @@ import type { BlockKind, MoveDir } from '../render/blockMove'
 import { renderMarkdown } from '../render/markdown'
 import type { Theme } from '../schema/model'
 import { hydrateSchemas } from '../schema/preview'
+import { hydrateSheets } from '../spreadsheet/preview'
 import { h } from './dom'
+import { BLOCK_NAMES, blockKindOf, MOVABLE_BLOCKS } from './moveButtons'
 import { toast } from './toast'
 
 export interface PreviewCallbacks {
@@ -13,6 +15,8 @@ export interface PreviewCallbacks {
   onJumpToLine(line: number): void
   /** «Modifica» (o doppio clic) su uno schema: la riga (0-based) del suo blocco e il suo testo. */
   onEditSchema(line: number, source: string): void
+  /** «Modifica» (o doppio clic) su una tabella: la riga (0-based) del suo blocco e l'impronta del suo testo. */
+  onEditSheet?(line: number, hash: string): void
   /** «Aggiungi lo slider per k» sotto un grafico: la riga (0-based) del suo blocco e le righe da aggiungere (k = 1). */
   onAddToGraph(line: number, text: string): void
   /** «Titolo e nomi degli assi…» di un grafico: la riga (0-based) del suo blocco e i testi da scrivere. */
@@ -83,6 +87,8 @@ export class Preview {
       }
       const block = (ev.target as HTMLElement).closest('.schema-edit')?.closest<HTMLElement>('.schema-block')
       if (block) this.cb.onEditSchema(Number(block.dataset.line), block.dataset.schema ?? '')
+      const sheet = (ev.target as HTMLElement).closest('.sheet-edit')?.closest<HTMLElement>('.sheet-block')
+      if (sheet) this.cb.onEditSheet?.(Number(sheet.dataset.line), sheet.dataset.hash ?? '')
       const add = (ev.target as HTMLElement).closest<HTMLElement>('.graph-add-slider')
       const graph = add?.closest<HTMLElement>('.graph-block')
       if (add && graph) this.cb.onAddToGraph(Number(graph.dataset.line), add.dataset.add ?? '')
@@ -99,6 +105,7 @@ export class Preview {
       const target = (ev.target as HTMLElement).closest<HTMLElement>('[data-line]')
       if (!target) return
       if (target.classList.contains('schema-block')) this.cb.onEditSchema(Number(target.dataset.line), target.dataset.schema ?? '')
+      else if (target.classList.contains('sheet-block')) this.cb.onEditSheet?.(Number(target.dataset.line), target.dataset.hash ?? '')
       else this.cb.onJumpToLine(Number(target.dataset.line))
     })
     // Annulla e Ripeti anche da qui (nella vista Anteprima l'editor non si vede): dopo le frecce il fuoco è su una freccia.
@@ -157,6 +164,7 @@ export class Preview {
       if (details.length === open.length) details.forEach((d, i) => (d.open = open[i]))
       const surface = getComputedStyle(this.el).backgroundColor
       hydrateSchemas(this.content, { theme: this.theme, surface, editable: true })
+      hydrateSheets(this.content)
       hydrateGraphs(this.content, { theme: this.theme, surface, editable: true, scope: this.cb.scope?.() })
       this.el.scrollTop = scroll
       this.anchors = [...this.content.querySelectorAll<HTMLElement>('[data-line]')]
@@ -216,9 +224,9 @@ export class Preview {
       this.flush()
       return
     }
-    const block = button.closest<HTMLElement>('.graph-block, .schema-block')
+    const block = button.closest<HTMLElement>(MOVABLE_BLOCKS)
     if (!block) return
-    const kind: BlockKind = block.classList.contains('graph-block') ? 'grafico' : 'schema'
+    const kind = blockKindOf(block)
     const dir = button.dataset.dir === 'up' ? 'up' : 'down'
     const top = { button: button.getBoundingClientRect().top, block: block.getBoundingClientRect().top }
     const defs = block.dataset.defs
@@ -232,7 +240,7 @@ export class Preview {
       // nasconde quello che c'è dopo o dentro. Lo spostamento si annulla.
       this.cb.onUndo(false)
       this.flush()
-      toast(`${kind === 'grafico' ? 'Il grafico' : 'Lo schema'} lì non si vedrebbe: lo nasconde l'HTML scritto nella nota (per esempio un commento «<!--» senza la fine, o un <details> chiuso).`, 'error')
+      toast(`${BLOCK_NAMES[kind].The} lì non si vedrebbe: lo nasconde l'HTML scritto nella nota (per esempio un commento «<!--» senza la fine, o un <details> chiuso).`, 'error')
       return
     }
     const arrow = moved.querySelector<HTMLElement>(`.block-move[data-dir="${dir}"]`)
@@ -246,25 +254,25 @@ export class Preview {
     requestAnimationFrame(keep)
     arrow?.focus({ preventScroll: true })
     this.markMoved(moved)
-    this.announce(`${kind === 'grafico' ? 'Grafico' : 'Schema'} spostato più ${dir === 'up' ? 'su' : 'giù'}`)
+    this.announce(`${BLOCK_NAMES[kind].name} ${kind === 'tabella' ? 'spostata' : 'spostato'} più ${dir === 'up' ? 'su' : 'giù'}`)
     if (kind === 'grafico') this.warnLostDefinitions(defs, moved.dataset.defs)
   }
 
   private findBlock(kind: BlockKind, line: number): HTMLElement | null {
-    return this.content.querySelector<HTMLElement>(`.${kind === 'grafico' ? 'graph' : 'schema'}-block[data-line="${line}"]`)
+    return this.content.querySelector<HTMLElement>(`.${BLOCK_NAMES[kind].className}[data-line="${line}"]`)
   }
 
   /** Annulla o Ripeti dall'anteprima; se il fuoco era su una freccia, torna sulla freccia dello stesso blocco. */
   private undo(redo: boolean, target: HTMLElement): void {
     const arrow = target.closest<HTMLElement>('.block-move')
-    const block = arrow?.closest<HTMLElement>('.graph-block, .schema-block')
+    const block = arrow?.closest<HTMLElement>(MOVABLE_BLOCKS)
     this.cb.onUndo(redo)
     this.held = true
     this.flush()
     if (!arrow || !block) return
     // Lo stesso blocco: la stessa impronta, il più vicino alla riga di prima.
     const line = Number(block.dataset.line)
-    const same = [...this.content.querySelectorAll<HTMLElement>(`.${block.classList.contains('graph-block') ? 'graph' : 'schema'}-block`)]
+    const same = [...this.content.querySelectorAll<HTMLElement>(`.${BLOCK_NAMES[blockKindOf(block)].className}`)]
       .filter((b) => b.dataset.hash === block.dataset.hash)
       .sort((a, b) => Math.abs(Number(a.dataset.line) - line) - Math.abs(Number(b.dataset.line) - line))[0]
     const next = same?.querySelector<HTMLElement>(`.block-move[data-dir="${arrow.dataset.dir}"]`)

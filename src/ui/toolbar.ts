@@ -10,23 +10,30 @@ function listStyle(label: string): ListStyle {
   return LIST_STYLES.find((s) => s.label === label)!.style
 }
 
-/** Menu con tutti i tipi di elenco (1), a), A), i), es), –, •, cose da fare) e i rientri. */
-function listMenu(editor: MarkdownEditor): HTMLElement {
+interface MenuItem {
+  example: string
+  label: string
+  run: () => void
+  keys?: string
+}
+
+/** Un pulsante della barra che apre un menu (le voci con un esempio a sinistra), come quello degli elenchi. */
+function toolMenu(editor: MarkdownEditor, opts: { icon: keyof typeof ICONS; title: string; label: string; items: (MenuItem | 'sep')[] }): HTMLElement {
   const items: HTMLButtonElement[] = []
-  const menu = h('div', { class: 'tool-menu', attrs: { role: 'menu', 'aria-label': 'Tipi di elenco', hidden: true } })
+  const menu = h('div', { class: 'tool-menu', attrs: { role: 'menu', 'aria-label': opts.label, hidden: true } })
   const button = h(
     'button',
     {
       class: 'tool tool-more',
-      title: 'Tutti i tipi di elenco e i rientri',
-      attrs: { type: 'button', 'aria-label': 'Tutti i tipi di elenco', 'aria-haspopup': 'menu', 'aria-expanded': 'false' },
+      title: opts.title,
+      attrs: { type: 'button', 'aria-label': opts.label, 'aria-haspopup': 'menu', 'aria-expanded': 'false' },
       on: {
         mousedown: (ev) => ev.preventDefault(),
         // detail 0: aperto da tastiera (Invio o spazio sul pulsante)
         click: (ev) => (menu.hidden ? open(ev.detail === 0) : close()),
       },
     },
-    icon(ICONS.listOrdered, 17),
+    icon(ICONS[opts.icon], 17),
     icon(ICONS.chevronDown, 12),
   )
   const wrap = h('div', { class: 'tool-menu-wrap' }, button, menu)
@@ -51,7 +58,11 @@ function listMenu(editor: MarkdownEditor): HTMLElement {
     window.removeEventListener('resize', close)
   }
 
-  const add = (example: string, label: string, run: () => void, keys?: string) => {
+  for (const entry of opts.items) {
+    if (entry === 'sep') {
+      menu.append(h('div', { class: 'tool-menu-sep', attrs: { role: 'separator' } }))
+      continue
+    }
     const item = h(
       'button',
       {
@@ -61,22 +72,18 @@ function listMenu(editor: MarkdownEditor): HTMLElement {
           mousedown: (ev) => ev.preventDefault(),
           click: () => {
             close()
-            run()
+            entry.run()
             editor.focus()
           },
         },
       },
-      h('span', { class: 'tool-menu-example' }, example),
-      h('span', { class: 'tool-menu-label' }, label),
-      keys ? h('kbd', {}, keys) : null,
+      h('span', { class: 'tool-menu-example' }, entry.example),
+      h('span', { class: 'tool-menu-label' }, entry.label),
+      entry.keys ? h('kbd', {}, entry.keys) : null,
     )
     items.push(item)
     menu.append(item)
   }
-  for (const s of LIST_STYLES) add(s.example, s.label, () => applyListStyle(editor.view, s.style))
-  menu.append(h('div', { class: 'tool-menu-sep', attrs: { role: 'separator' } }))
-  add('→', 'Rientra', () => indentListItems(editor.view), 'Tab')
-  add('←', 'Riduci rientro', () => outdentListItems(editor.view), 'Maiusc+Tab')
 
   menu.addEventListener('keydown', (ev) => {
     const i = items.indexOf(document.activeElement as HTMLButtonElement)
@@ -90,6 +97,41 @@ function listMenu(editor: MarkdownEditor): HTMLElement {
     }
   })
   return wrap
+}
+
+/** Menu con tutti i tipi di elenco (1), a), A), i), es), –, •, cose da fare) e i rientri. */
+function listMenu(editor: MarkdownEditor): HTMLElement {
+  return toolMenu(editor, {
+    icon: 'listOrdered',
+    title: 'Tutti i tipi di elenco e i rientri',
+    label: 'Tutti i tipi di elenco',
+    items: [
+      ...LIST_STYLES.map((s) => ({ example: s.example, label: s.label, run: () => applyListStyle(editor.view, s.style) })),
+      'sep',
+      { example: '→', label: 'Rientra', run: () => indentListItems(editor.view), keys: 'Tab' },
+      { example: '←', label: 'Riduci rientro', run: () => outdentListItems(editor.view), keys: 'Maiusc+Tab' },
+    ],
+  })
+}
+
+/**
+ * Le due tabelle in un pulsante solo (la barra deve stare in una riga): quella con le formule, come
+ * Excel, che si scrive nel suo editor, e quella di testo di Markdown, che si scrive nella nota.
+ */
+function tableMenu(editor: MarkdownEditor, more: ToolbarActions): HTMLElement {
+  return toolMenu(editor, {
+    icon: 'sheet',
+    title: 'Tabella: con le formule, come in Excel, o di testo',
+    label: 'Tabella',
+    items: [
+      { example: '=B2*C2', label: 'Tabella con le formule, come in Excel', run: () => more.onSheet() },
+      {
+        example: '| a | b |',
+        label: 'Tabella di testo (Markdown)',
+        run: () => insertBlock(editor.view, '| Colonna 1 | Colonna 2 |\n| --- | --- |\n|  |  |', '| Colonna 1 | Colonna 2 |\n| --- | --- |\n| '.length),
+      },
+    ],
+  })
 }
 
 function insertLink(editor: MarkdownEditor): void {
@@ -121,13 +163,15 @@ function insertCode(editor: MarkdownEditor): void {
 export interface ToolbarActions {
   /** Apre l'editor per uno schema nuovo. */
   onSchema(): void
+  /** Apre l'editor per una tabella nuova, con le formule come in Excel. */
+  onSheet(): void
   /** Mette nella nota un grafico di funzione. */
   onGraph(): void
 }
 
 /**
  * I pulsanti sopra l'editor, in due gruppi: per formattare (titolo, grassetto, elenchi, citazione)
- * e per inserire (codice, link, tabella, schema, grafico, formule). Stanno nella riga sopra il
+ * e per inserire (codice, link, tabella, tabella con le formule, schema, grafico, formule). Stanno nella riga sopra il
  * testo, ai due lati delle viste (vedi `fitBar` in main.ts).
  */
 export function createToolbar(editor: MarkdownEditor, more: ToolbarActions): { format: HTMLElement; insert: HTMLElement } {
@@ -147,11 +191,7 @@ export function createToolbar(editor: MarkdownEditor, more: ToolbarActions): { f
   const insert: Action[] = [
     { icon: 'code', title: 'Codice', run: () => insertCode(editor) },
     { icon: 'link', title: 'Link', run: () => insertLink(editor) },
-    {
-      icon: 'table',
-      title: 'Tabella',
-      run: () => insertBlock(v(), '| Colonna 1 | Colonna 2 |\n| --- | --- |\n|  |  |', '| Colonna 1 | Colonna 2 |\n| --- | --- |\n| '.length),
-    },
+    tableMenu(editor, more),
     { icon: 'schema', title: 'Schema: forme e frecce, come in draw.io', run: () => more.onSchema() },
     { icon: 'graph', title: 'Grafico di una funzione (con il cursore su una formula come y = x^2, disegna quella)', run: () => more.onGraph() },
     'sep',

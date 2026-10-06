@@ -35,6 +35,8 @@ export interface EditorCallbacks {
   onFocusSearch(): void
   /** «Modifica» su uno schema nel testo: la riga (0-based) del suo blocco e il suo testo. */
   onEditSchema(line: number, source: string): void
+  /** «Modifica» (o doppio clic) sulla riga di una tabella: la riga (0-based) del blocco e il suo testo. */
+  onEditSheet?(line: number, source: string): void
   /** Uno schema o un grafico si è spostato (anche con Annulla o Ripeti): la riga nuova di ogni riga di prima. */
   onBlockMoved?(map: (line: number) => number): void
 }
@@ -193,7 +195,7 @@ export class MarkdownEditor {
       mathHighlighter,
       // Dopo «=» in una formula, il risultato (src/editor/calcResults.ts).
       calcPlugin,
-      schemaBlocks((line, source) => this.cb.onEditSchema(line, source)),
+      schemaBlocks((kind, line, source) => (kind === 'tabella' ? this.cb.onEditSheet?.(line, source) : this.cb.onEditSchema(line, source))),
       blockMoves((map) => this.cb.onBlockMoved?.(map)),
       placeholderField,
       suggestionKeys,

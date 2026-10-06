@@ -88,6 +88,8 @@ export const ICONS = {
   share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>',
   table: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M3 15h18M9 5v14M15 5v14"/>',
   schema: '<rect x="3" y="4" width="7" height="5" rx="1"/><rect x="14" y="15" width="7" height="5" rx="1"/><path d="M6.5 9v4.5a2 2 0 0 0 2 2H14"/>',
+  /** La tabella con le formule: le righe e le colonne dei titoli, e un = nelle celle. */
+  sheet: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16M12.5 13h5M12.5 16.5h5"/>',
   graph: '<path d="M4 3v17h17"/><path d="M7 16c2-7 4.5-9 6.5-4.5S17.5 13 20 5"/>',
   image: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5-5-8 8"/>',
   chevron: '<path d="M9 6l6 6-6 6"/>',

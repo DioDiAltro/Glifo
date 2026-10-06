@@ -1849,6 +1849,198 @@ try {
     await narrow.close()
   }
 
+  // Le tabelle con le formule, come Excel: il pulsante apre l'editor, si scrive con Tab e Invio, le
+  // formule fanno i conti all'italiana (euro, SOMMA), il suggerimento scrive la funzione e il clic
+  // sulle celle il loro nome; «Fatto» mette nella nota un blocco ```tabella, che nel testo è una riga
+  // con «Modifica» e nell'anteprima la tabella con i risultati; si riapre dall'anteprima, Ctrl+Z
+  // annulla, le frecce la spostano, e nel file .md è una tabella con i risultati (le formule restano
+  // nascoste) che riaprendo il file torna un blocco. Tutto in un blocco: i nomi restano qui.
+  {
+    const tp = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+    tp.on('pageerror', (e) => errors.push(e.message))
+    await tp.goto(url)
+    await tp.waitForSelector('.cm-editor')
+    await tp.locator('.notes-head button[aria-label="Nuova nota"]').click()
+    await tp.keyboard.press('Control+a')
+    await tp.keyboard.type('# Tabelle\n\nLa spesa:\n')
+    const sheetEditor = tp.locator('dialog.sheet-editor[open]')
+    // Le due tabelle sono in un pulsante solo, con il menu: con le formule o di testo.
+    const newSheet = async () => {
+      await tp.locator('.editor-toolbar button[aria-label="Tabella"]').click()
+      await tp.locator('.tool-menu-item', { hasText: 'Tabella con le formule' }).click()
+      await sheetEditor.waitFor()
+    }
+    await newSheet()
+    // Playwright scrive il tabulatore come testo: Tab e Invio vanno premuti.
+    const typeRow = async (cells) => {
+      for (let i = 0; i < cells.length; i++) {
+        if (cells[i]) await tp.keyboard.type(cells[i])
+        await tp.keyboard.press(i < cells.length - 1 ? 'Tab' : 'Enter')
+      }
+    }
+    await typeRow(['Prodotto', 'Quantità', 'Prezzo', 'Totale'])
+    await typeRow(['Penne', '10', '1,50 €', '=b2*c2'])
+    await typeRow(['Quaderni', '5', '2,40 €', '=B3*C3'])
+    await tp.keyboard.type('Totale')
+    for (let i = 0; i < 3; i++) await tp.keyboard.press('Tab')
+    await tp.keyboard.type('=som')
+    const suggested = await tp.locator('.sheet-suggest-item strong').allTextContents()
+    await tp.keyboard.press('Tab')
+    const d2 = await tp.locator('#sheet-1-3').boundingBox()
+    const d3 = await tp.locator('#sheet-2-3').boundingBox()
+    await tp.mouse.move(d2.x + d2.width / 2, d2.y + d2.height / 2)
+    await tp.mouse.down()
+    await tp.mouse.move(d3.x + d3.width / 2, d3.y + d3.height / 2, { steps: 4 })
+    await tp.mouse.up()
+    const pointed = await tp.locator('.sheet-cell-input').inputValue()
+    const colored = await tp.locator('.sheet-grid td[data-ref]').count()
+    await tp.keyboard.type(')')
+    await tp.keyboard.press('Enter')
+    const grid = await tp.evaluate(() =>
+      [0, 1, 2, 3].map((r) => [0, 1, 2, 3].map((c) => document.querySelector(`#sheet-${r}-${c}`)?.textContent)),
+    )
+    check(
+      JSON.stringify(grid) ===
+        JSON.stringify([
+          ['Prodotto', 'Quantità', 'Prezzo', 'Totale'],
+          ['Penne', '10', '1,50 €', '15,00 €'],
+          ['Quaderni', '5', '2,40 €', '12,00 €'],
+          ['Totale', '', '', '27,00 €'],
+        ]) &&
+        suggested[0] === 'SOMMA' &&
+        pointed === '=SOMMA(D2:D3' &&
+        colored === 2,
+      `nella tabella si scrive come in Excel: Tab, Invio, le formule in euro, il suggerimento SOMMA e le celle scelte con il mouse (${JSON.stringify({ grid, suggested, pointed, colored })})`,
+    )
+    await tp.locator('#sheet-3-3').click()
+    const formula = await tp.locator('.sheet-formula').inputValue()
+    const address = await tp.locator('.sheet-address').inputValue()
+    // Un errore spiega cosa è successo; Ctrl+Z lo toglie.
+    await tp.locator('#sheet-1-4').click()
+    await tp.keyboard.type('=D2/B5')
+    await tp.keyboard.press('Enter')
+    await tp.locator('#sheet-1-4').click()
+    const errorHint = await tp.locator('.sheet-hint').textContent()
+    await tp.keyboard.press('Control+z')
+    const undone = await tp.locator('#sheet-1-4').textContent()
+    check(
+      formula === '=SOMMA(D2:D3)' && address === 'D4' && errorHint.includes('#DIV/0!') && errorHint.includes('Divisione per zero') && undone === '',
+      `la barra mostra la formula, un errore dice cosa non va e Ctrl+Z lo toglie (${JSON.stringify({ formula, address, errorHint, undone })})`,
+    )
+    await tp.locator('.sheet-bar button', { hasText: 'Fatto' }).click()
+    await sheetEditor.waitFor({ state: 'detached' })
+    await tp.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
+    const tableNote = () =>
+      tp.evaluate(() => {
+        for (let i = 0; i < localStorage.length; i++) {
+          const value = localStorage.getItem(localStorage.key(i))
+          if (value?.startsWith('# Tabelle')) return value
+        }
+        return ''
+      })
+    const block = [
+      '```tabella',
+      '| Prodotto | Quantità | Prezzo | Totale |',
+      '| --- | --- | --- | --- |',
+      '| Penne | 10 | 1,50 € | =B2*C2 |',
+      '| Quaderni | 5 | 2,40 € | =B3*C3 |',
+      '| Totale |  |  | =SOMMA(D2:D3) |',
+      '```',
+    ].join('\n')
+    const saved = await tableNote()
+    const widget = await tp.locator('.cm-schema[data-kind="tabella"]').textContent()
+    const previewCells = await tp.locator('.sheet-block td').allTextContents()
+    const previewHead = await tp.locator('.sheet-block th').allTextContents()
+    check(
+      saved.includes(`La spesa:\n${block}`) &&
+        widget.includes('Tabella · 4 righe, 4 colonne · Prodotto, Quantità, Prezzo, Totale') &&
+        previewHead.join('|') === 'Prodotto|Quantità|Prezzo|Totale' &&
+        previewCells.includes('27,00 €'),
+      `«Fatto» mette nella nota il blocco \`\`\`tabella, nel testo una riga con «Modifica» e nell'anteprima la tabella con i risultati (${JSON.stringify({ saved, widget, previewCells })})`,
+    )
+    // Dall'anteprima si riapre; cambiato un numero, i conti si rifanno; Ctrl+Z nel testo torna indietro.
+    await tp.locator('.sheet-block').hover()
+    await tp.locator('.sheet-block .sheet-edit').click()
+    await sheetEditor.waitFor()
+    await tp.locator('#sheet-1-1').click()
+    await tp.keyboard.type('20')
+    await tp.keyboard.press('Enter')
+    await tp.locator('.sheet-bar button', { hasText: 'Fatto' }).click()
+    await sheetEditor.waitFor({ state: 'detached' })
+    const cellsShown = (text) => tp.waitForFunction((t) => [...document.querySelectorAll('.sheet-block td')].some((td) => td.textContent === t), text, { timeout: 3000 }).catch(() => {})
+    await cellsShown('42,00 €')
+    const changed = await tp.locator('.sheet-block td').allTextContents()
+    await tp.keyboard.press('Control+z')
+    await cellsShown('27,00 €')
+    const back = await tp.locator('.sheet-block td').allTextContents()
+    check(
+      changed.includes('42,00 €') && changed.includes('20') && back.includes('27,00 €'),
+      `riaperta dall'anteprima la tabella si cambia e si ricalcola, e Ctrl+Z la riporta com'era (${JSON.stringify({ changed, back })})`,
+    )
+    // Le frecce la spostano sopra il paragrafo
+    await tp.locator('.sheet-block').hover()
+    await tp.locator('.sheet-block .block-move[data-dir="up"]').click()
+    await tp.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
+    const movedNote = await tableNote()
+    check(movedNote.indexOf('```tabella') < movedNote.indexOf('La spesa:'), 'le frecce spostano la tabella nella nota')
+    await tp.keyboard.press('Control+z')
+    // Nel file .md la tabella con i risultati; aprendolo torna il blocco con le formule
+    await tp.evaluate(() => {
+      window.showSaveFilePicker = async () => ({
+        name: 'tabelle.md',
+        createWritable: async () => ({ write: async (text) => (window.savedFile = text), close: async () => {} }),
+      })
+    })
+    await tp.locator('button', { hasText: 'Salva .md' }).click()
+    await tp.waitForFunction(() => typeof window.savedFile === 'string', null, { timeout: 10000 })
+    const sheetFile = await tp.evaluate(() => window.savedFile)
+    const vscode = await browser.newPage()
+    await vscode.setContent(new MarkdownIt({ html: true }).render(sheetFile))
+    const shown = await vscode.evaluate(() => ({ cells: [...document.querySelectorAll('td')].map((td) => td.textContent), text: document.body.innerText }))
+    await vscode.close()
+    check(
+      !sheetFile.includes('```tabella') && sheetFile.includes('<!-- glifo-tabella') && shown.cells.includes('15,00 €') && !shown.text.includes('=B2*C2'),
+      `nel file .md la tabella ha i risultati, che si vedono anche fuori da Glifo, e le formule restano nascoste (${JSON.stringify(shown.cells)})`,
+    )
+    await tp.evaluate((text) => {
+      window.showOpenFilePicker = async () => [{ getFile: async () => new File([text], 'tabelle.md') }]
+    }, sheetFile)
+    await tp.locator('button', { hasText: 'Apri .md' }).click()
+    await tp.waitForFunction(
+      (text) => [...Array(localStorage.length).keys()].map((i) => localStorage.getItem(localStorage.key(i))).filter((v) => v?.includes(text)).length >= 2,
+      block,
+      { timeout: 5000 },
+    )
+    check(true, 'aprendo il file .md la tabella torna un blocco ```tabella con le formule')
+    // I modelli pronti: il piano di ammortamento si azzera all'ultimo anno; chiudendo senza salvare la nota non cambia
+    await newSheet()
+    await tp.locator('.sheet-bar button', { hasText: 'Modelli' }).click()
+    await tp.locator('.sheet-menu-item', { hasText: 'Piano di ammortamento' }).click()
+    const rata = await tp.locator('#sheet-3-1').textContent()
+    const residuo = await tp.locator('#sheet-10-3').textContent()
+    await tp.locator('.sheet-bar button', { hasText: 'Chiudi' }).click()
+    await tp.locator('dialog[open] button', { hasText: 'Chiudi senza salvare' }).click()
+    await sheetEditor.waitFor({ state: 'detached' })
+    check(rata === '2.373,96 €' && residuo === '0,00 €', `il modello «Piano di ammortamento» fa i conti con RATA (${rata}, ${residuo})`)
+    await tp.close()
+    // Sul telefono: un tocco sceglie la cella, un altro ci scrive
+    const phoneSheet = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+    phoneSheet.on('pageerror', (e) => errors.push(e.message))
+    await phoneSheet.goto(url)
+    await phoneSheet.waitForSelector('.cm-editor')
+    await phoneSheet.locator('.cm-content').click()
+    await phoneSheet.keyboard.press('Control+a')
+    await phoneSheet.keyboard.insertText(`# Telefono\n\n${block}\n`)
+    await phoneSheet.locator('.cm-schema button', { hasText: 'Modifica' }).tap()
+    await phoneSheet.locator('dialog.sheet-editor[open]').waitFor()
+    await phoneSheet.locator('#sheet-1-1').tap()
+    await phoneSheet.locator('#sheet-1-1').tap()
+    const editing = await phoneSheet.evaluate(() => document.activeElement?.classList.contains('sheet-cell-input'))
+    const fits = await phoneSheet.evaluate(() => document.querySelector('.sheet-bar').scrollWidth <= window.innerWidth + 1)
+    check(editing && fits, `sul telefono la barra sta nello schermo e un secondo tocco sulla cella comincia a scriverci (${JSON.stringify({ editing, fits })})`)
+    await phoneSheet.close()
+  }
+
   // La lavagna: accanto al testo al posto dell'anteprima, una per nota, salvata su questo
   // dispositivo. Penna e dita sono simulate come le manda il browser (Chrome DevTools Protocol):
   // pointerType «pen» con la pressione, e i tocchi delle dita. Tutto in un blocco: i nomi restano qui.

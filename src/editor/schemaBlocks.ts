@@ -1,13 +1,23 @@
 import { ChangeSet, EditorSelection, EditorState, StateField, Transaction, type Extension, type TransactionSpec } from '@codemirror/state'
 import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view'
-import { findSchemaBlocks } from '../schema/blocks'
+import { findFencedBlocks, type SchemaBlock } from '../schema/blocks'
 import { parseSchema } from '../schema/model'
+import { readInput } from '../spreadsheet/format'
+import { parseSheet, sheetSize } from '../spreadsheet/model'
+import { ICONS } from '../ui/dom'
 
-const SCHEMA_ICON =
-  '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="7" height="5" rx="1"/><rect x="14" y="15" width="7" height="5" rx="1"/><path d="M6.5 9v4.5a2 2 0 0 0 2 2H14"/></svg>'
+/** I blocchi che nel testo diventano una riga con «Modifica»: gli schemi e le tabelle. */
+export type WidgetKind = 'schema' | 'tabella'
+
+export interface WidgetBlock extends SchemaBlock {
+  kind: WidgetKind
+}
+
+const svg = (paths: string) =>
+  `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`
 
 /** Quante forme e frecce ci sono, per la riga al posto del blocco. */
-function summary(source: string): string {
+function schemaSummary(source: string): string {
   try {
     const { nodes, edges } = parseSchema(source)
     const shapes = nodes.length === 1 ? '1 forma' : `${nodes.length} forme`
@@ -18,35 +28,63 @@ function summary(source: string): string {
   }
 }
 
-class SchemaWidget extends WidgetType {
+/** Quante righe e colonne, e i testi della prima riga per riconoscerla. */
+function sheetSummary(source: string): string {
+  const model = parseSheet(source)
+  const { rows, cols } = sheetSize(model)
+  if (!rows) return 'vuota'
+  const size = `${rows} ${rows === 1 ? 'riga' : 'righe'}, ${cols} ${cols === 1 ? 'colonna' : 'colonne'}`
+  // Solo i testi: i numeri e le formule non dicono di cosa parla la tabella.
+  const names = (model.cells[0] ?? [])
+    .map((c) => c?.input.trim() ?? '')
+    .filter((s) => s && !s.startsWith('=') && typeof readInput(s).value === 'string')
+    .join(', ')
+  return names ? `${size} · ${names.length > 60 ? `${names.slice(0, 59)}…` : names}` : size
+}
+
+const KINDS: Record<WidgetKind, { title: string; icon: string; summary(source: string): string }> = {
+  schema: { title: 'Schema', icon: svg(ICONS.schema), summary: schemaSummary },
+  tabella: { title: 'Tabella', icon: svg(ICONS.sheet), summary: sheetSummary },
+}
+
+/** Gli schemi e le tabelle chiusi del testo, in ordine. */
+export function findWidgetBlocks(text: string): WidgetBlock[] {
+  const blocks = (['schema', 'tabella'] as const).flatMap((kind) => findFencedBlocks(text, kind).map((b) => ({ ...b, kind })))
+  return blocks.filter((b) => b.closed).sort((a, b) => a.from - b.from)
+}
+
+class BlockWidget extends WidgetType {
   constructor(
+    readonly kind: WidgetKind,
     readonly source: string,
-    private readonly onEdit: (line: number, source: string) => void,
+    private readonly onEdit: (kind: WidgetKind, line: number, source: string) => void,
   ) {
     super()
   }
 
-  override eq(other: SchemaWidget): boolean {
-    return other.source === this.source
+  override eq(other: BlockWidget): boolean {
+    return other.kind === this.kind && other.source === this.source
   }
 
   toDOM(view: EditorView): HTMLElement {
+    const kind = KINDS[this.kind]
     const wrap = document.createElement('div')
     wrap.className = 'cm-schema'
+    wrap.dataset.kind = this.kind
     const info = document.createElement('span')
     info.className = 'cm-schema-info'
     const title = document.createElement('strong')
-    title.textContent = 'Schema'
-    info.append(title, ` · ${summary(this.source)}`)
+    title.textContent = kind.title
+    info.append(title, ` · ${kind.summary(this.source)}`)
     const button = document.createElement('button')
     button.type = 'button'
     button.className = 'btn btn-small'
     button.textContent = 'Modifica'
     // La riga del blocco si calcola al momento: intanto il testo prima può essere cambiato.
-    const edit = () => this.onEdit(view.state.doc.lineAt(view.posAtDOM(wrap)).number - 1, this.source)
+    const edit = () => this.onEdit(this.kind, view.state.doc.lineAt(view.posAtDOM(wrap)).number - 1, this.source)
     button.addEventListener('click', edit)
     wrap.addEventListener('dblclick', edit)
-    wrap.insertAdjacentHTML('afterbegin', SCHEMA_ICON)
+    wrap.insertAdjacentHTML('afterbegin', kind.icon)
     wrap.append(info, button)
     return wrap
   }
@@ -57,15 +95,13 @@ class SchemaWidget extends WidgetType {
 }
 
 /**
- * Nell'editor i blocchi ```schema (chiusi) diventano una riga con «Modifica»: il JSON non si
- * vede e si salta, si copia o si cancella tutto insieme (e Ctrl+Z lo riporta).
+ * Nell'editor i blocchi ```schema e ```tabella (chiusi) diventano una riga con «Modifica»: il testo
+ * del blocco non si vede e si salta, si copia o si cancella tutto insieme (e Ctrl+Z lo riporta).
  */
-export function schemaBlocks(onEdit: (line: number, source: string) => void): Extension {
+export function schemaBlocks(onEdit: (kind: WidgetKind, line: number, source: string) => void): Extension {
   const build = (state: EditorState): DecorationSet =>
     Decoration.set(
-      findSchemaBlocks(state.doc.toString())
-        .filter((b) => b.closed)
-        .map((b) => Decoration.replace({ widget: new SchemaWidget(b.source, onEdit), block: true }).range(b.from, b.to)),
+      findWidgetBlocks(state.doc.toString()).map((b) => Decoration.replace({ widget: new BlockWidget(b.kind, b.source, onEdit), block: true }).range(b.from, b.to)),
     )
 
   const field = StateField.define<DecorationSet>({
@@ -89,11 +125,9 @@ export function schemaBlocks(onEdit: (line: number, source: string) => void): Ex
   return [field, guardBlocks(field)]
 }
 
-/** Dove sono gli schemi chiusi (le righe «Schema»), dall'inizio della riga ```schema alla fine di quella che chiude. */
+/** Dove sono gli schemi e le tabelle chiusi (le righe con «Modifica»), dall'inizio della riga ``` alla fine di quella che chiude. */
 export function schemaBlockRanges(state: EditorState): { from: number; to: number }[] {
-  return findSchemaBlocks(state.doc.toString())
-    .filter((b) => b.closed)
-    .map(({ from, to }) => ({ from, to }))
+  return findWidgetBlocks(state.doc.toString()).map(({ from, to }) => ({ from, to }))
 }
 
 /**
@@ -143,7 +177,7 @@ function guardBlocks(field: StateField<DecorationSet>): Extension {
     const changes = fix ? tr.changes.compose(fix) : tr.changes
 
     // Ogni schema che non si toglie tutto deve restare uno schema, al suo posto.
-    const after = findSchemaBlocks((fix ? fix.apply(tr.newDoc) : tr.newDoc).toString()).filter((b) => b.closed)
+    const after = findWidgetBlocks((fix ? fix.apply(tr.newDoc) : tr.newDoc).toString())
     let broken = false
     for (const b of blocks) {
       let whole = false

@@ -28,6 +28,10 @@ import { graphImagesFor, graphsForFile, graphsFromFile } from './graph/file'
 import { remapGraphLines, renameGraphScope } from './graph/preview'
 import { schemasForFile, schemasFromFile } from './schema/file'
 import { parseSchema, SchemaError, serializeSchema, type Schema } from './schema/model'
+import { findSheetBlock, findSheetBySource } from './spreadsheet/blocks'
+import { sheetsForFile, sheetsFromFile } from './spreadsheet/file'
+import { emptySheet, parseSheet, serializeSheet, sheetBlockText, type SheetModel } from './spreadsheet/model'
+import { BLOCK_NAMES } from './ui/moveButtons'
 import { loadPaneSizes, savePaneSizes } from './store/layout'
 import { migrateKeyPrefix, storageAvailable } from './store/storage'
 import { ICONS, h, icon } from './ui/dom'
@@ -226,6 +230,7 @@ const preview = new Preview({
   onToggleTask: (line) => toggleTask(line),
   onJumpToLine: (line) => jumpToLine(line),
   onEditSchema: (line, source) => void openSchema(line, source),
+  onEditSheet: (line, hash) => void openSheet(line, { hash }),
   onAddToGraph: (line, text) => addToGraphBlock(editor.view, line, text),
   onGraphLabels: (line, labels) => setGraphLabels(editor.view, line, labels),
   onMoveBlock: (kind, line, hash, dir) => moveBlockInNote(kind, line, hash, dir),
@@ -262,6 +267,7 @@ const editor = new MarkdownEditor(editorHost, active.content, {
   onSave: () => void saveToFile(),
   onFocusSearch: () => focusSymbolSearch(),
   onEditSchema: (line, source) => void openSchema(line, source),
+  onEditSheet: (line, source) => void openSheet(line, { source }),
   // Spostato uno schema o un grafico (anche con Annulla o Ripeti): gli slider dei grafici lo seguono, e
   // l'anteprima si ridisegna subito (uno slider che si muove da solo scriverebbe ancora alla riga di prima).
   onBlockMoved: (map) => {
@@ -348,7 +354,7 @@ const editorPane = h('section', { class: 'editor-pane', attrs: { id: 'editor-pan
 // Una riga sola sopra il testo, con i pulsanti volanti: a sinistra la barra laterale (quando è
 // chiusa) e la formattazione, al centro le viste, a destra gli inserimenti e i simboli, vicino al
 // loro pannello. Quanto ci sta lo decide `fitBar`.
-const tools = createToolbar(editor, { onSchema: () => void openSchema(null), onGraph: () => insertGraph() })
+const tools = createToolbar(editor, { onSchema: () => void openSchema(null), onSheet: () => void openSheet(null), onGraph: () => insertGraph() })
 const floatTools = h('div', { class: 'float-tools' }, tools.format)
 const floatRight = h(
   'div',
@@ -837,7 +843,7 @@ function insertGraph(): void {
 function moveBlockInNote(kind: BlockKind, line: number, hash: string, dir: MoveDir): number | null {
   const result = blockMoveTransaction(editor.view.state, line, hash, dir)
   if (!result.ok) {
-    const what = kind === 'grafico' ? 'Il grafico' : 'Lo schema'
+    const what = BLOCK_NAMES[kind].The
     if (result.reason === 'structure') toast(`${what} non si può spostare da qui senza cambiare il resto della nota (per esempio due elenchi diventerebbero uno solo).`)
     else if (result.reason === 'guard') toast('Lo spostamento non è riuscito: la nota è rimasta com\'era.', 'error')
     // 'edge' e 'stale': niente da dire (in cima, in fondo, o l'anteprima si sta ridisegnando).
@@ -931,6 +937,84 @@ function saveSchemaBlock(block: { source: string; from: number } | null, near: n
   return { source: json, from: from + prefix.length }
 }
 
+// ——— Tabelle con le formule (come Excel) ———
+
+let sheetOpen = false
+
+/**
+ * Apre l'editor delle tabelle: per una nuova (dal pulsante della barra) o per quella del blocco alla
+ * riga `line`, con quel testo o quell'impronta (se intanto il testo prima è cambiato, la si cerca
+ * vicino). L'editor si carica solo adesso.
+ */
+async function openSheet(line: number | null, match?: { source?: string; hash?: string }): Promise<void> {
+  if (sheetOpen) return
+  // Una tabella nuova ha l'intestazione: la prima riga con i titoli delle colonne.
+  let sheet: SheetModel = { ...emptySheet(), header: true }
+  /** Il blocco nella nota: si ritrova dal suo testo, vicino a dove era. */
+  let block: { source: string; from: number } | null = null
+  let near = editor.view.state.selection.main.head
+  if (line !== null) {
+    const found = findSheetBlock(editor.getDoc(), line, match)
+    if (!found) return
+    sheet = parseSheet(found.source)
+    block = { source: found.source, from: found.from }
+    near = found.from
+  }
+  sheetOpen = true
+  try {
+    const { openSheetEditor } = await import('./spreadsheet/editor')
+    await openSheetEditor({
+      sheet,
+      onSave: (next) => {
+        block = saveSheetBlock(block, near, next)
+        if (block) near = block.from
+      },
+    })
+  } catch {
+    toast('L\'editor delle tabelle non si è aperto: riprova.', 'error')
+  } finally {
+    sheetOpen = false
+  }
+  editor.focus()
+}
+
+/**
+ * Mette la tabella nella nota: al posto del suo blocco o, se è nuova, su righe sue dopo quella del
+ * cursore. Una tabella nuova vuota non si mette; svuotata, il blocco resta (la riga «Tabella · vuota»
+ * si cancella come le altre). È una modifica come le altre: Ctrl+Z nel testo la annulla.
+ */
+function saveSheetBlock(block: { source: string; from: number } | null, near: number, sheet: SheetModel): { source: string; from: number } | null {
+  const view = editor.view
+  const doc = view.state.doc.toString()
+  const source = serializeSheet(sheet)
+  const current = block ? findSheetBySource(doc, block.source, block.from) : null
+  if (current) {
+    // Nella voce di un elenco le righe del blocco hanno il rientro della riga ```.
+    const indent = /^[ \t]*/.exec(doc.slice(current.from))![0]
+    const text = indent && source ? source.split('\n').map((l) => indent + l).join('\n') : source
+    if (current.source !== text) {
+      // Il blocco vuoto non ha righe dentro: si aggiunge anche l'a capo, e svuotandolo lo si toglie.
+      const empty = current.contentFrom === current.contentTo
+      const changes = empty
+        ? { from: current.contentFrom, insert: text ? `${text}\n` : '' }
+        : { from: current.contentFrom, to: text ? current.contentTo : current.contentTo + 1, insert: text }
+      view.dispatch({ changes, userEvent: 'input' })
+      const updated = findSheetBySource(view.state.doc.toString(), text, current.from)
+      return updated ? { source: updated.source, from: updated.from } : null
+    }
+    return { source: current.source, from: current.from }
+  }
+  if (!source) return null
+  const line = view.state.doc.lineAt(Math.min(near, view.state.doc.length))
+  const atEmptyLine = !line.text.trim()
+  const from = atEmptyLine ? line.from : line.to
+  const prefix = atEmptyLine ? '' : '\n\n'
+  const insert = `${prefix}${sheetBlockText(source)}\n`
+  view.dispatch({ changes: { from, insert }, selection: EditorSelection.cursor(from + insert.length), userEvent: 'input' })
+  if (block) toast('La tabella non era più al suo posto nella nota: l\'ho rimessa qui.')
+  return { source, from: from + prefix.length }
+}
+
 // ——— File ———
 
 async function openFiles(): Promise<void> {
@@ -940,8 +1024,9 @@ async function openFiles(): Promise<void> {
   let last: Note | null = null
   const folderId = currentFolderId()
   for (const f of files) {
-    // Gli schemi e i grafici salvati come immagini (vedi saveToFile) tornano blocchi da modificare.
-    last = store.create(graphsFromFile(schemasFromFile(f.content)), folderId)
+    // Gli schemi e i grafici salvati come immagini e le tabelle salvate con i risultati (vedi
+    // saveToFile) tornano blocchi da modificare.
+    last = store.create(sheetsFromFile(graphsFromFile(schemasFromFile(f.content))), folderId)
     if (f.handle) fileHandles.set(last.id, f.handle)
   }
   changedHere()
@@ -950,12 +1035,14 @@ async function openFiles(): Promise<void> {
 }
 
 /**
- * Il testo per il file .md: ogni schema e ogni grafico diventa un'immagine, così si vede anche in
- * VS Code e negli altri programmi (il suo testo resta nel file, nascosto). Se qualcosa non si
- * riesce a disegnare (o maxGraph non si carica), il file si salva lo stesso, con i blocchi di codice.
+ * Il testo per il file .md: ogni tabella diventa una tabella di Markdown con i risultati, ogni schema
+ * e ogni grafico un'immagine, così si vedono anche in VS Code e negli altri programmi (il loro testo
+ * resta nel file, nascosto). Se qualcosa non si riesce a disegnare (o maxGraph non si carica), il
+ * file si salva lo stesso, con i blocchi di codice.
  */
 async function markdownForFile(text: string): Promise<string> {
-  let out = text
+  // Le tabelle diventano tabelle di Markdown con i risultati (le formule restano nascoste nel file).
+  let out = findFencedBlocks(text, 'tabella').length ? sheetsForFile(text) : text
   if (findFencedBlocks(out, 'grafico').length) {
     try {
       out = graphsForFile(out, graphImagesFor(out))

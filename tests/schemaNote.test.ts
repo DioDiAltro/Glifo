@@ -58,7 +58,7 @@ describe('gli schemi nell\'editor del testo', () => {
     const row = view.dom.querySelector<HTMLElement>('.cm-schema')!
     expect(row.textContent).toContain('Schema · 1 forma, 0 frecce')
     row.querySelector('button')!.click()
-    expect(onEdit).toHaveBeenCalledWith(4, schema)
+    expect(onEdit).toHaveBeenCalledWith('schema', 4, schema)
   })
 
   it('si cancella tutto insieme e si aggiorna quando cambia; quello non chiuso resta testo', () => {

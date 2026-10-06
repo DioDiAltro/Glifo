@@ -102,7 +102,8 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
 
 **Editor**
 - Markdown completo: titoli, grassetto, corsivo, elenchi, liste di cose da fare, tabelle,
-  citazioni, codice con evidenziazione, link, note a piè di pagina.
+  citazioni, codice con evidenziazione, link, note a piè di pagina. E le **tabelle con le formule**,
+  come Excel (vedi sotto).
 - Formule in linea `$ … $` e a blocco `$$ … $$` riconosciute con **le stesse regole
   dell'anteprima di VS Code**: i file restano compatibili (anche i blocchi ` ```math ` di GitHub).
 - Colori per il TeX dentro le formule, `$`, graffe e parentesi che si chiudono da sole.
@@ -603,6 +604,62 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
   si vede anche nell'anteprima di VS Code o in Obsidian; il suo JSON resta nel file, in un
   commento che non si vede, e riaprendo il file con **Apri .md** lo schema torna da modificare.
 
+**Tabelle con le formule, come Excel**
+- Il pulsante della tabella nella barra apre un menu: **Tabella con le formule** apre un editor a
+  tutto schermo fatto come Excel (le colonne A, B, C…, le righe 1, 2, 3…, la casella con il nome
+  della cella e la barra della formula `fx`); **Tabella di testo** mette la solita tabella di
+  Markdown. Per gli esercizi di economia aziendale (costi, ricavi, punto di pareggio, IVA,
+  ammortamenti), e per ogni tabella con dei conti.
+- Si scrive come in Excel: un numero (`1,5`, `1.200`, anche in euro `1,50 €` o in percentuale
+  `22%`), un testo, o una **formula** che comincia con `=`: `=B2*C2`, `=SOMMA(D2:D5)`,
+  `=SE(B2>=6; "promosso"; "bocciato")`. I nomi delle funzioni sono quelli dell'**Excel italiano**,
+  con il punto e virgola tra gli argomenti (vanno bene anche quelli inglesi, SUM, IF…, che diventano
+  italiani). Mentre scrivi `=so` compaiono le funzioni che cominciano così, con due righe di aiuto;
+  dentro le parentesi, sotto la barra, c'è come si scrive (`SOMMA(numero1; [numero2]; …)`).
+- **Le funzioni**: SOMMA, MEDIA, MIN, MAX, PRODOTTO, ARROTONDA (anche PER.ECC e PER.DIF), TRONCA,
+  INT, ASS, RADQ, POTENZA, RESTO, PI.GRECO, EXP, LN, LOG; MEDIANA, MODA, GRANDE, PICCOLO, DEV.ST,
+  VAR; CONTA.NUMERI, CONTA.VALORI, CONTA.VUOTE, **CONTA.SE**, **SOMMA.SE**, MEDIA.SE (criteri come
+  `">=6"`, `"<>0"`, `"A*"`), SOMMA.PRODOTTO; **SE**, E, O, NON, SE.ERRORE, VAL.ERRORE, VAL.NUMERO,
+  VAL.TESTO, VAL.VUOTO; **CERCA.VERT** e CERCA.ORIZZ (esatto con FALSO, o la fascia più vicina, per
+  gli sconti), CONFRONTA, INDICE; CONCATENA (e `&`), LUNGHEZZA, MAIUSC, MINUSC, SINISTRA, DESTRA,
+  STRINGA.ESTRAI, ANNULLA.SPAZI, TESTO, VALORE; e la **matematica finanziaria**: RATA, VA, VAL.FUT,
+  INTERESSI, P.RATA, VAN, TIR.COST, AMMORT.COST (con i segni di Excel: i soldi che escono sono
+  negativi). Gli operatori `+ - * / ^ %`, `&` e i confronti `= <> < > <= >=`; `$B$2` resta fisso
+  quando si copia la formula.
+- **I formati**: il risultato prende il formato da quello che la formula usa, come le unità di
+  misura: quantità per prezzo in euro fa euro (con i centesimi), euro diviso euro è un numero. Con
+  i pulsanti **€**, **%**, **000** (punti delle migliaia) e i decimali (**←,0** e **,00→**) lo
+  scegli tu, come per la percentuale sui ricavi.
+- Gli **errori** sono quelli di Excel (#DIV/0!, #VALORE!, #RIF!, #NOME?, #N/D, #NUM!) e, scelta la
+  cella, sotto la barra c'è cosa è successo; una formula che usa il proprio risultato (anche
+  passando da altre celle) è #RIF!, una che non si legge è #ERRORE! con il motivo (per esempio
+  «Manca una parentesi chiusa»).
+- **I tasti di Excel**: Tab va a destra e Invio torna sotto la prima cella da cui sei partito con
+  Tab; le frecce (con Ctrl fino in fondo ai dati, con Maiusc per scegliere più celle), F2 per
+  cambiare la cella, Canc per svuotarla, Ctrl+Z e Ctrl+Y, Ctrl+B grassetto, Ctrl+D e Ctrl+R
+  riempiono in basso e a destra, Ctrl+A sceglie tutto, Ctrl+S salva nella nota. Mentre scrivi
+  una formula, un **clic su una cella** (o trascinando, per un intervallo) ne scrive il nome, e
+  così le frecce subito dopo un operatore; **F4** mette il `$`. Le celle usate dalla formula si
+  colorano, ognuna del suo colore.
+- **Copia e incolla** anche con Excel e Fogli Google (e le tabelle di Markdown); le formule
+  copiate si spostano con la cella. La **maniglia** nell'angolo della selezione riempie le celle
+  vicine trascinandola, e due numeri in fila continuano la serie (1, 2 → 3, 4, 5). **Σ** fa la
+  somma dei numeri sopra (o a sinistra). Con il tasto destro (o i menu «Righe» e «Colonne») si
+  aggiungono e tolgono righe e colonne, e le formule si aggiustano come in Excel.
+- **Modelli pronti** dal menu «Modelli»: fattura con l'IVA, punto di pareggio (con la tabella
+  dei costi e dei ricavi), conto economico con la percentuale sui ricavi, piano di ammortamento
+  con la rata costante. Si cambiano i numeri e i conti si rifanno.
+- Nella nota la tabella è un blocco ` ```tabella `, una riga di testo per ogni riga della tabella
+  (`| Penne | 10 | 1,50 € | =B2*C2 |`): nell'**anteprima** si vede con i risultati, i numeri
+  allineati a destra, l'intestazione e il grassetto; passando sopra una cella si legge la formula.
+  Nel testo è una riga «Tabella · 4 righe, 4 colonne · …» con «Modifica» (anche il doppio clic
+  sulla tabella nell'anteprima la riapre). Le frecce ↑ ↓ la spostano nella nota, come i grafici.
+  Le celle di testo hanno il loro Markdown, anche le formule `$…$`.
+- Con **Salva .md** la tabella finisce nel file come **tabella di Markdown con i risultati**, che
+  si legge anche in VS Code, su GitHub o in Obsidian; le formule restano nel file, in un commento
+  che non si vede, e riaprendolo con **Apri .md** la tabella torna da modificare.
+- Sul telefono un tocco sceglie la cella e un altro tocco ci scrive.
+
 **Lavagna**
 - La vista **Lavagna** (in alto, accanto a Editor, Diviso e Anteprima) apre accanto al testo,
   al posto dell'anteprima, un foglio a quadretti dove **scrivere a mano**: con la penna (Apple
@@ -845,6 +902,19 @@ src/
     link.ts               il link (nota.html#codice) e la lettura della nota, anche senza account
     dialog.ts             la finestra «Condividi»
     page.ts               la pagina nota.html: la nota in sola lettura e «Salva una copia»
+  spreadsheet/            le tabelle con le formule, come Excel (blocchi ```tabella)
+    model.ts              il formato del blocco: le righe con |, l'intestazione, il grassetto, i formati tra graffe
+    formula.ts            le formule all'italiana: lettura, riferimenti che si spostano copiando, righe aggiunte o tolte
+    functions.ts          le funzioni dell'Excel italiano (SOMMA, SE, CERCA.VERT, RATA…) con la riga di aiuto
+    evaluate.ts           i conti delle celle, i riferimenti circolari, il formato dei risultati
+    format.ts             i numeri all'italiana: leggere 1,50 € e 22%, scrivere 1.234,50 €, i codici dei formati
+    values.ts, refs.ts    i valori e gli errori (#DIV/0!…); i nomi delle celle (B2, AA10)
+    ops.ts                righe e colonne, copia e incolla (anche con Excel), riempire, la somma automatica
+    render.ts             la tabella nell'anteprima e come tabella di Markdown con i risultati
+    file.ts, blocks.ts    le tabelle nei file .md; ritrovare il blocco nella nota
+    preview.ts            «Modifica» e le frecce sulla tabella dell'anteprima
+    templates.ts          i modelli pronti (fattura, punto di pareggio, conto economico, ammortamento)
+    editor.ts             l'editor a tutto schermo: griglia, barra della formula, tasti, menu
   schema/
     model.ts              il formato degli schemi (blocchi ```schema), i controlli e i colori dei due temi
     blocks.ts             trova i blocchi ```schema nella nota
