@@ -39,7 +39,7 @@ $$
 
 Scrivi una formula che finisce con `=` e Glifo fa il conto, come le Note matematiche dell'iPad: $\frac{3}{4} + \frac{1}{6} =$ — con il cursore subito dopo l'uguale, **Tab** scrive il risultato nella formula. Valgono le definizioni scritte prima: con $a = 3$ e $f(x) = x^2 - a$, ecco $f(2) =$
 
-Per un grafico c'è il pulsante con gli assi nella barra (con il cursore su una funzione come $f(x)$ qui sopra, disegna quella), oppure un blocco `grafico` con una riga per ogni cosa da disegnare. Trascinalo per spostarlo; i pulsanti + e − lo ingrandiscono. Sotto c'è lo **slider** di $a$: muovilo, o scrivi un valore nella casella accanto, e la parabola cambia, mentre qui resta scritto 3; ▶ lo muove da solo.
+Per un grafico c'è il pulsante con gli assi nella barra (con il cursore su una funzione come $f(x)$ qui sopra, disegna quella), oppure un blocco `grafico` con una riga per ogni cosa da disegnare. Trascinalo per spostare la vista; i pulsanti + e − lo ingrandiscono, e le frecce ↑ ↓ accanto a loro lo spostano più su o più giù nella nota. Sotto c'è lo **slider** di $a$: muovilo, o scrivi un valore nella casella accanto, e la parabola cambia, mentre qui resta scritto 3; ▶ lo muove da solo.
 
 ```grafico
 f(x)

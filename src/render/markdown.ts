@@ -1,4 +1,4 @@
-import markdownit, { type MarkdownIt, type StateBlock, type StateCore, type StateInline } from 'markdown-it'
+import markdownit, { type MarkdownIt, type StateBlock, type StateCore, type StateInline, type Token } from 'markdown-it'
 import footnote from 'markdown-it-footnote'
 import DOMPurify from 'dompurify'
 import hljs from 'highlight.js/lib/core'
@@ -29,6 +29,7 @@ import x86asm from 'highlight.js/lib/languages/x86asm'
 import xml from 'highlight.js/lib/languages/xml'
 import yaml from 'highlight.js/lib/languages/yaml'
 import { graphNames } from '../graph/spec'
+import { markMoves, moveAttrs } from './blockMove'
 import { Sheet } from '../math/sheet'
 import { checkHtml } from './check'
 import { escapeHtml, renderTexOrError, renderTexWithResult } from './katex'
@@ -73,6 +74,8 @@ function mathBlockRule(state: StateBlock, startLine: number, endLine: number, si
 
   let content: string
   let next = startLine + 1
+  // Una formula senza la riga di chiusura arriva fino alla fine: non le si mette niente dopo (blockMove.ts).
+  let closed = open.kind === 'single'
   if (open.kind === 'single') {
     content = firstLine.slice(open.contentFrom, open.contentTo)
   } else {
@@ -90,6 +93,7 @@ function mathBlockRule(state: StateBlock, startLine: number, endLine: number, si
         const last = text.slice(0, close)
         if (last.trim()) lines.push(last)
         next++
+        closed = true
         break
       }
       lines.push(text)
@@ -103,6 +107,7 @@ function mathBlockRule(state: StateBlock, startLine: number, endLine: number, si
   token.content = content
   token.map = [startLine, next]
   token.markup = '$$'
+  token.meta = { closed }
   return true
 }
 
@@ -157,6 +162,8 @@ function createMarkdownIt(): MarkdownIt {
   md.disable('code')
   md.inline.ruler.after('escape', 'math_inline', mathInlineRule)
   md.block.ruler.after('blockquote', 'math_block', mathBlockRule, { alt: ['paragraph', 'reference', 'blockquote', 'list'] })
+  // Le frecce per spostare schemi e grafici: subito dopo i blocchi, come li legge parseBlocks.
+  md.core.ruler.after('block', 'block_moves', (state) => markMoves(state.tokens))
   md.core.ruler.after('inline', 'task_lists', taskListRule)
   md.core.ruler.push('source_line', sourceLineRule)
 
@@ -193,11 +200,11 @@ function createMarkdownIt(): MarkdownIt {
       return `<div class="math-block"${attr}>${renderTexOrError(token.content, true)}</div>\n`
     }
     if (info === 'schema') {
-      return `<div class="schema-block"${attr} data-schema="${escapeHtml(token.content)}"></div>\n`
+      return `<div class="schema-block"${attr}${moveAttrs(token)} data-schema="${escapeHtml(token.content)}"></div>\n`
     }
     if (info === 'grafico') {
       const defs = sheetOf(env)?.definitionsFor(graphNames(token.content)) ?? []
-      return `<div class="graph-block"${attr} data-graph="${escapeHtml(token.content)}" data-defs="${escapeHtml(JSON.stringify(defs))}"></div>\n`
+      return `<div class="graph-block"${attr}${moveAttrs(token)} data-graph="${escapeHtml(token.content)}" data-defs="${escapeHtml(JSON.stringify(defs))}"></div>\n`
     }
     return fence(tokens, idx, options, env, self)
   }
@@ -258,7 +265,7 @@ export function renderMarkdown(src: string, opts: { untrusted?: boolean } = {}):
   untrusted = !!opts.untrusted
   try {
     return DOMPurify.sanitize(html, {
-      ADD_ATTR: ['target', 'data-line', 'data-task-line', 'data-schema', 'data-graph', 'data-defs', 'aria-hidden', 'encoding'],
+      ADD_ATTR: ['target', 'data-line', 'data-task-line', 'data-schema', 'data-graph', 'data-defs', 'data-hash', 'data-move', 'data-move-in', 'aria-hidden', 'encoding'],
       ADD_TAGS: ['semantics', 'annotation'],
       FORBID_TAGS: FORBIDDEN_TAGS,
       FORBID_ATTR: ['autofocus', 'popover', 'popovertarget'],
@@ -266,6 +273,18 @@ export function renderMarkdown(src: string, opts: { untrusted?: boolean } = {}):
   } finally {
     untrusted = false
   }
+}
+
+/**
+ * I token dei blocchi della nota (senza le formule in linea e senza togliere riferimenti e note), con
+ * le stesse regole dell'anteprima: servono per spostare schemi e grafici (`moveFencedBlock`).
+ */
+export function parseBlocks(src: string): Token[] {
+  md ??= createMarkdownIt()
+  const tokens: Token[] = []
+  // Come la normalizzazione di markdown-it, che non cambia le posizioni: così le impronte coincidono.
+  md.block.parse(src.replace(/\0/g, '\uFFFD'), md, {}, tokens)
+  return tokens
 }
 
 export { escapeHtml }

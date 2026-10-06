@@ -519,7 +519,7 @@ try {
     'nel testo il blocco diventa una riga «Schema · 4 forme, 2 frecce» con «Modifica»',
   )
   // Nell'anteprima: il disegno, con i testi dentro (anche se lo schema non comincia in alto a sinistra)
-  await sp.waitForSelector('.preview-pane .schema-block svg')
+  await sp.waitForSelector('.preview-pane .schema-block > svg')
   const drawing = await sp.evaluate(() => {
     const block = document.querySelector('.preview-pane .schema-block')
     const svg = block.querySelector('svg').getBoundingClientRect()
@@ -552,10 +552,10 @@ try {
   await sp.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
   check(!(await savedNote()).includes('Quinta') && (await savedNote()).includes('"text":"Tesi"'), 'Ctrl+Z nel testo annulla l\'ultima modifica dello schema')
   // Con il tema scuro lo schema si ridisegna con i suoi colori
-  const lightFill = await sp.locator('.preview-pane .schema-block svg').innerHTML()
+  const lightFill = await sp.locator('.preview-pane .schema-block > svg').innerHTML()
   await chooseTheme(sp, 'Scuro')
   await sp.waitForFunction((before) => {
-    const svg = document.querySelector('.preview-pane .schema-block svg')
+    const svg = document.querySelector('.preview-pane .schema-block > svg')
     return svg && svg.innerHTML !== before && svg.innerHTML.includes('#1b1f2b')
   }, lightFill, { timeout: 10000 })
   check(true, 'cambiando tema lo schema si ridisegna con i colori scuri')
@@ -811,7 +811,7 @@ try {
   check(clipboardTypes.includes('image/png'), `«Copia come immagine» mette il PNG negli appunti, e il messaggio si vede sopra l'editor (${clipboardTypes})`)
   await s2.locator('dialog.schema-editor .btn-primary', { hasText: 'Fatto' }).click()
   await editor2.waitFor({ state: 'detached' })
-  await s2.waitForSelector('.preview-pane .schema-block svg')
+  await s2.waitForSelector('.preview-pane .schema-block > svg')
   const previewTexts = await s2.evaluate(() => [...document.querySelectorAll('.preview-pane .schema-block foreignObject')].map((f) => f.textContent))
   check(previewTexts.includes('Fase 4'), 'nell\'anteprima lo schema si vede con le forme nuove')
   await s2context.close()
@@ -969,7 +969,7 @@ try {
     cardinalities.length === 2 && cardinalities.every((e) => e.arrows === 'none') && dbSchema.nodes.some((n) => n.shape === 'identifier' && n.text === 'Matricola'),
     'il modello «Schema E-R» mette entità, relazione, cardinalità e attributi a pallino',
   )
-  await db.waitForSelector('.preview-pane .schema-block svg')
+  await db.waitForSelector('.preview-pane .schema-block > svg')
   const dbPreview = await db.evaluate(() => [...document.querySelectorAll('.preview-pane .schema-block foreignObject')].map((f) => f.textContent))
   await db.locator('.preview-pane .schema-block').hover()
   await db.locator('.preview-pane .schema-edit').click()
@@ -1578,6 +1578,276 @@ try {
   await gp.waitForSelector('.formula-graph:not([hidden]) svg path[data-area]', { state: 'attached', timeout: 5000 })
   check(test.includes('non si rifiuta H₀'), `un test d'ipotesi ha il p-value e la decisione, con la regione di rifiuto nel pannello (${JSON.stringify(test.slice(0, 50))})`)
   await gp.close()
+
+  // Spostare schemi e grafici con le frecce ↑ ↓ dell'anteprima, come le celle di Colab: il blocco salta
+  // quello vicino, la freccia resta sotto il puntatore con il fuoco, Ctrl+Z lo riporta (anche
+  // dall'anteprima), gli slider lo seguono, sopra una definizione che usa c'è un avviso; sul telefono
+  // le frecce si vedono sempre, in stampa no. Tutto in un blocco: i nomi restano qui.
+  {
+    const schemaJson = '{"v":1,"nodes":[{"id":"a","shape":"rect","x":0,"y":0,"w":140,"h":60,"text":"Ipotesi"},{"id":"b","shape":"rect","x":220,"y":0,"w":140,"h":60,"text":"Tesi"}],"edges":[{"id":"e","source":"a","target":"b"}]}'
+    const start = `# Spostare\n\nPrimo paragrafo.\n\n$a = 2$\n\n\`\`\`grafico\ny = a x\n\`\`\`\n\nSecondo paragrafo.\n\n\`\`\`schema\n${schemaJson}\n\`\`\`\n`
+    const setNote = async (page, text) => {
+      await page.locator('.cm-content').click()
+      await page.keyboard.press('Control+a')
+      await page.keyboard.insertText(text)
+    }
+    /** La nota salvata (dopo ogni spostamento si aspetta il salvataggio). */
+    const savedNote = async (page) => {
+      await page.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
+      return page.evaluate(() => {
+        for (let i = 0; i < localStorage.length; i++) {
+          const value = localStorage.getItem(localStorage.key(i)) ?? ''
+          if (value.startsWith('# Spostare')) return value
+        }
+        return ''
+      })
+    }
+    const focusedArrow = (page) =>
+      page.evaluate(() => {
+        const a = document.activeElement
+        return a?.classList.contains('block-move') ? `${a.closest('[data-line]')?.dataset.line} ${a.dataset.dir}${a.getAttribute('aria-disabled') === 'true' ? ' spenta' : ''}` : String(a?.className)
+      })
+    const mv = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+    mv.on('pageerror', (e) => errors.push(e.message))
+    await mv.goto(url)
+    await mv.waitForSelector('.cm-editor')
+    await mv.locator('.notes-head button[aria-label="Nuova nota"]').click()
+    await setNote(mv, start)
+    await mv.waitForSelector('.preview-pane .graph-block svg.graph-svg', { timeout: 5000 })
+    await mv.waitForSelector('.preview-pane .schema-block .schema-preview-tools .block-move', { timeout: 10000 })
+    const graphArrow = (dir) => mv.locator(`.preview-pane .graph-block .block-move[data-dir="${dir}"]`)
+    const toolsOpacity = () => mv.evaluate(() => getComputedStyle(document.querySelector('.preview-pane .graph-tools')).opacity)
+    check((await toolsOpacity()) === '0', 'le frecce del grafico si vedono solo passandoci sopra')
+    // Lo slider di a portato a 3,5: dopo lo spostamento resta così.
+    await mv.locator('.preview-pane .graph-slider-value').click()
+    await mv.keyboard.type('3,5')
+    await mv.keyboard.press('Enter')
+    await mv.locator('.preview-pane .graph-block .graph-stage').hover()
+    await mv.waitForFunction(() => getComputedStyle(document.querySelector('.preview-pane .graph-tools')).opacity === '1', null, { timeout: 5000 })
+    const y0 = (await graphArrow('down').boundingBox()).y
+    await graphArrow('down').click()
+    const once = await savedNote(mv)
+    const y1 = (await graphArrow('down').boundingBox()).y
+    check(
+      once === start.replace('```grafico\ny = a x\n```\n\nSecondo paragrafo.', 'Secondo paragrafo.\n\n```grafico\ny = a x\n```'),
+      `↓ porta il grafico dopo il paragrafo che lo segue (${JSON.stringify(once.slice(0, 90))})`,
+    )
+    const afterOnce = await focusedArrow(mv)
+    check(Math.abs(y1 - y0) < 2 && afterOnce === '8 down', `la freccia resta sotto il puntatore, con il fuoco (${JSON.stringify({ y0, y1, afterOnce })})`)
+    const slid = await mv.locator('.preview-pane .graph-slider-value').inputValue()
+    check(slid === '3,5', `lo slider segue il grafico spostato (${slid})`)
+    await graphArrow('down').click()
+    const twice = await savedNote(mv)
+    const afterTwice = await focusedArrow(mv)
+    check(twice.endsWith('```\n\n```grafico\ny = a x\n```\n') && afterTwice === '12 down spenta', `di nuovo ↓: il grafico va sotto lo schema, in fondo, e la freccia si spegne tenendo il fuoco (${afterTwice})`)
+    // Due clic veloci su ↑ dello schema: due spostamenti, e il doppio clic non apre lo schema.
+    await mv.locator('.preview-pane .schema-block').hover()
+    await mv.locator('.preview-pane .schema-block .block-move[data-dir="up"]').dblclick()
+    const schemaUp = await savedNote(mv)
+    check(
+      schemaUp.indexOf('```schema') < schemaUp.indexOf('$a = 2$') &&
+        (await mv.locator('dialog.schema-editor[open]').count()) === 0 &&
+        (await mv.evaluate(() => document.querySelector('.app').dataset.view)) === 'split',
+      'due clic sulla ↑ dello schema lo portano su di due blocchi, senza aprirlo',
+    )
+    // Ctrl+Z con il fuoco sulla freccia (dall'anteprima), poi nell'editor: uno spostamento alla volta.
+    await mv.keyboard.press('Control+z')
+    const undoPreview = await savedNote(mv)
+    const oneUp = `# Spostare\n\nPrimo paragrafo.\n\n$a = 2$\n\n\`\`\`schema\n${schemaJson}\n\`\`\`\n\nSecondo paragrafo.\n\n\`\`\`grafico\ny = a x\n\`\`\`\n`
+    const afterUndo = await focusedArrow(mv)
+    check(undoPreview === oneUp && afterUndo === '6 up', `Ctrl+Z dall'anteprima annulla l'ultimo spostamento, e il fuoco resta sulla freccia (${afterUndo})`)
+    await mv.locator('.cm-content').click()
+    for (let i = 0; i < 3; i++) await mv.keyboard.press('Control+z')
+    check((await savedNote(mv)) === start, 'Ctrl+Z nell\'editor riporta tutto com\'era, uno spostamento alla volta')
+    // Portato sopra $a = 2$, il grafico non ha più a: c'è l'avviso.
+    await mv.locator('.preview-pane .graph-block .graph-stage').hover()
+    await graphArrow('up').click()
+    check(
+      await mv.waitForFunction(() => [...document.querySelectorAll('.toast')].some((t) => t.textContent.includes('sopra la definizione di a')), null, { timeout: 5000 }).then(() => true, () => false),
+      'portato sopra la definizione che usa, il grafico avvisa',
+    )
+    // Due elenchi che diventerebbero uno: la nota resta com'è, con l'avviso.
+    const lists = '# Spostare\n\n1) a\n2) b\n\n```grafico\ny = x\n```\n\n3) c\n'
+    await setNote(mv, lists)
+    // Il grafico della nota nuova (prima c'è ancora quello di prima, alla riga 6).
+    await mv.waitForSelector('.preview-pane .graph-block[data-line="5"] .block-move', { timeout: 5000 })
+    await mv.locator('.preview-pane .graph-block .graph-stage').hover()
+    await graphArrow('up').click()
+    check(
+      (await mv.waitForFunction(() => [...document.querySelectorAll('.toast')].some((t) => t.textContent.includes('due elenchi diventerebbero uno')), null, { timeout: 5000 }).then(() => true, () => false)) &&
+        (await savedNote(mv)) === lists,
+      'se due elenchi diventerebbero uno solo il grafico non si sposta, e lo dice',
+    )
+    // In stampa niente frecce né «Modifica».
+    await setNote(mv, start)
+    await mv.waitForSelector('.preview-pane .schema-block .schema-preview-tools .block-move', { timeout: 10000 })
+    await mv.emulateMedia({ media: 'print' })
+    const printed = await mv.evaluate(() => [...document.querySelectorAll('.preview-pane .block-move-group, .preview-pane .schema-preview-tools')].map((el) => getComputedStyle(el).display))
+    check(printed.length === 3 && printed.every((d) => d === 'none'), `in stampa le frecce e «Modifica» non ci sono (${printed})`)
+    await mv.emulateMedia({ media: 'screen' })
+    // Nella vista Anteprima l'anteprima non torna dov'è l'editor quando si ridisegna (prima una casella
+    // spuntata in fondo la riportava in cima).
+    const long = `# Spostare\n\n${Array.from({ length: 60 }, (_, i) => `Riga ${i + 1} della nota, con un po' di testo.`).join('\n\n')}\n\n- [ ] da fare\n`
+    await setNote(mv, long)
+    await mv.keyboard.press('Control+Home')
+    await mv.waitForTimeout(200)
+    await mv.locator('.view-button[aria-label="Anteprima"]').click()
+    await mv.waitForSelector('.preview-pane .task-checkbox')
+    await mv.evaluate(() => (document.querySelector('.preview-pane').scrollTop = 1e6))
+    const bottom = await mv.evaluate(() => document.querySelector('.preview-pane').scrollTop)
+    await mv.locator('.preview-pane .task-checkbox').click()
+    await mv.waitForFunction(() => document.querySelector('.preview-pane .task-checkbox')?.checked, null, { timeout: 5000 })
+    await mv.waitForTimeout(300)
+    const kept = await mv.evaluate(() => document.querySelector('.preview-pane').scrollTop)
+    check(bottom > 500 && Math.abs(kept - bottom) < 5, `nella vista Anteprima, spuntata una casella, l'anteprima resta dov'è (${bottom} → ${kept})`)
+    // Due grafici con lo stesso slider: dopo ↓ e Ctrl+Z ognuno ha il suo valore (prima l'altro prendeva il 5).
+    const twin = '# Spostare\n\n$a = 2$\n\n```grafico\ny = a x\n```\n\n```grafico\ny = a x^2\n```\n'
+    await mv.locator('.view-button[aria-label="Diviso"]').click()
+    await setNote(mv, twin)
+    await mv.waitForSelector('.preview-pane .graph-block[data-line="8"] .graph-slider-value', { timeout: 5000 })
+    const sliders = () => mv.evaluate(() => [...document.querySelectorAll('.preview-pane .graph-block')].map((b) => `${b.dataset.graph}: ${b.querySelector('.graph-slider-value')?.value}`).join(' | '))
+    await mv.locator('.preview-pane .graph-block[data-line="4"] .graph-slider-value').click()
+    await mv.keyboard.press('Control+a')
+    await mv.keyboard.type('5')
+    await mv.keyboard.press('Enter')
+    await mv.locator('.preview-pane .graph-block[data-line="4"] .graph-stage').hover()
+    await mv.locator('.preview-pane .graph-block[data-line="4"] .block-move[data-dir="down"]').click()
+    await savedNote(mv)
+    const twinMoved = await sliders()
+    await mv.keyboard.press('Control+z')
+    await savedNote(mv)
+    const twinBack = await sliders()
+    check(
+      twinMoved === 'y = a x^2: 2 | y = a x: 5' && twinBack === 'y = a x: 5 | y = a x^2: 2',
+      `lo slider segue il grafico anche con Ctrl+Z, e non passa all'altro (${twinMoved} → ${twinBack})`,
+    )
+    // Lo slider spostato resta alla sua nota: spostando un grafico in un'altra nota non cambia.
+    await mv.locator('.notes-head button[aria-label="Nuova nota"]').click()
+    await setNote(mv, `# Altra\n\n\`\`\`grafico\ny = x\n\`\`\`\n\n${Array.from({ length: 40 }, (_, i) => `Riga ${i + 1} dell'altra nota.`).join('\n\n')}\n`)
+    await mv.waitForSelector('.preview-pane .graph-block[data-line="2"] .block-move', { timeout: 5000 })
+    await mv.locator('.preview-pane .graph-block .graph-stage').hover()
+    await mv.locator('.preview-pane .graph-block .block-move[data-dir="down"]').click()
+    await mv.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
+    await mv.locator('.note-item', { hasText: 'Spostare' }).first().locator('.note-open').click()
+    await mv.waitForSelector('.preview-pane .graph-block[data-line="4"] .graph-slider-value', { timeout: 5000 })
+    check((await sliders()) === 'y = a x: 5 | y = a x^2: 2', `gli slider di una nota non cambiano spostando un grafico in un'altra (${await sliders()})`)
+    // Dopo uno spostamento, aperta un'altra nota l'anteprima torna a seguire l'editor e la mostra dall'inizio.
+    const longNote = (title) => `# ${title}\n\n${Array.from({ length: 40 }, (_, i) => `Paragrafo ${i + 1} con un po' di testo.`).join('\n\n')}\n\n- [ ] casella\n\n\`\`\`grafico\ny = x\n\`\`\`\n`
+    await setNote(mv, longNote('Spostare lunga'))
+    await mv.waitForSelector('.preview-pane .graph-block[data-line="84"] .block-move', { timeout: 5000 })
+    await mv.locator('.cm-content').press('Control+Home')
+    await mv.locator('.preview-pane .graph-block .graph-stage').scrollIntoViewIfNeeded()
+    await mv.locator('.preview-pane .graph-block .graph-stage').hover()
+    await mv.locator('.preview-pane .graph-block .block-move[data-dir="up"]').click()
+    await mv.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
+    // Dopo lo spostamento l'anteprima resta lì anche se si ridisegna (una casella spuntata), finché non si torna all'editor.
+    const stayed = await mv.evaluate(() => document.querySelector('.preview-pane').scrollTop)
+    await mv.locator('.preview-pane .task-checkbox').click()
+    await mv.waitForFunction(() => document.querySelector('.preview-pane .task-checkbox')?.checked, null, { timeout: 5000 })
+    await mv.waitForTimeout(300)
+    const still = await mv.evaluate(() => document.querySelector('.preview-pane').scrollTop)
+    check(stayed > 1000 && Math.abs(still - stayed) < 5, `dopo lo spostamento l'anteprima resta ferma, anche ridisegnandosi, e non torna dov'è l'editor (${stayed} → ${still})`)
+    await mv.locator('.note-item', { hasText: 'Altra' }).first().locator('.note-open').click()
+    await mv.waitForTimeout(400)
+    const followed = await mv.evaluate(() => document.querySelector('.preview-pane').scrollTop)
+    check(followed < 100, `aperta un'altra nota, l'anteprima segue di nuovo l'editor dall'inizio (${followed})`)
+    // Il segno per il lettore di schermo non allunga la pagina: un link a una nota a piè di pagina scorre solo
+    // l'anteprima, e l'app resta ferma (prima saliva tutta e non tornava giù).
+    await setNote(mv, `# Spostare\n\nVedi la nota[^1].\n\n${Array.from({ length: 80 }, (_, i) => `Paragrafo ${i + 1}.`).join('\n\n')}\n\n[^1]: La nota a piè di pagina.\n`)
+    await mv.waitForSelector('.preview-pane .footnote-ref a', { timeout: 5000 })
+    await mv.locator('.preview-pane .footnote-ref a').first().click()
+    await mv.waitForTimeout(300)
+    const pageScroll = await mv.evaluate(() => [document.scrollingElement.scrollTop, document.scrollingElement.scrollHeight - innerHeight])
+    check(pageScroll[0] === 0 && pageScroll[1] <= 1, `un link interno dell'anteprima non fa salire l'app (${pageScroll})`)
+    // Un grafico che si muove da solo, spostato e poi riportato con Ctrl+Z nell'editor: l'altro grafico resta fermo.
+    await setNote(mv, twin)
+    await mv.waitForSelector('.preview-pane .graph-block[data-line="8"] .graph-slider-value', { timeout: 5000 })
+    await mv.locator('.preview-pane .graph-block[data-line="4"] [data-action="play"]').click()
+    await mv.locator('.preview-pane .graph-block[data-line="4"] .graph-stage').hover()
+    await mv.locator('.preview-pane .graph-block[data-line="4"] .block-move[data-dir="down"]').click()
+    await savedNote(mv)
+    await mv.locator('.cm-content').click()
+    await mv.keyboard.press('Control+z')
+    await savedNote(mv)
+    await mv.waitForTimeout(700)
+    const playing = await mv.evaluate(() =>
+      [...document.querySelectorAll('.preview-pane .graph-block')].map((b) => `${b.dataset.graph}: ${b.querySelector('[data-action="play"]')?.getAttribute('aria-label')?.startsWith('Ferma') ? 'si muove' : b.querySelector('.graph-slider-value')?.value}`).join(' | '),
+    )
+    check(playing.startsWith('y = a x: si muove') && playing.endsWith('y = a x^2: 2'), `Ctrl+Z nell'editor riporta lo slider che si muove al suo grafico, e l'altro resta fermo (${playing})`)
+    await mv.locator('.preview-pane .graph-block[data-line="4"] [data-action="play"]').click()
+    // In cima alla nota, nella vista Anteprima, due clic veloci sulla ↑ non aprono lo schema (lì il blocco non può restare fermo).
+    await mv.locator('.view-button[aria-label="Diviso"]').click()
+    await setNote(mv, `# Spostare\n\nPrimo.\n\nSecondo.\n\n\`\`\`schema\n${schemaJson}\n\`\`\`\n`)
+    await mv.waitForSelector('.preview-pane .schema-block[data-line="6"] .block-move', { timeout: 10000 })
+    await mv.locator('.view-button[aria-label="Anteprima"]').click()
+    await mv.locator('.preview-pane .schema-block').hover()
+    await mv.locator('.preview-pane .schema-block .block-move[data-dir="up"]').dblclick()
+    await mv.waitForTimeout(400)
+    check(
+      (await mv.locator('dialog.schema-editor[open]').count()) === 0 && (await mv.evaluate(() => document.querySelector('.app').dataset.view)) === 'preview',
+      'in cima alla nota un doppio clic sulla ↑ non apre lo schema e resta nella vista Anteprima',
+    )
+    await mv.locator('.view-button[aria-label="Diviso"]').click()
+    // L'editor degli schemi a tutto schermo ha ancora la sua barra (Annulla, zoom, Griglia), visibile.
+    await mv.locator('.preview-pane .schema-block').hover()
+    await mv.locator('.preview-pane .schema-edit').click()
+    await mv.waitForSelector('dialog.schema-editor[open]')
+    const editorBar = await mv.evaluate(() => {
+      const bar = document.querySelector('dialog.schema-editor .schema-tools')
+      return `${getComputedStyle(bar).opacity} ${getComputedStyle(bar).position}`
+    })
+    await mv.locator('dialog.schema-editor .btn-primary', { hasText: 'Fatto' }).click()
+    await mv.waitForSelector('dialog.schema-editor[open]', { state: 'detached', timeout: 5000 }).catch(() => {})
+    check(editorBar.startsWith('1 ') && !editorBar.endsWith('absolute') && (await mv.locator('dialog.schema-editor[open]').count()) === 0, `l'editor degli schemi ha la sua barra e «Fatto» lo chiude (${editorBar})`)
+    await mv.close()
+
+    // Sul telefono le frecce si vedono sempre, sotto il disegno, e un tocco sposta.
+    const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+    const mp = await phone.newPage()
+    mp.on('pageerror', (e) => errors.push(e.message))
+    await mp.goto(url)
+    await mp.waitForSelector('.cm-editor')
+    await setNote(mp, start)
+    await mp.locator('.view-button[aria-label="Anteprima"]').click()
+    await mp.waitForSelector('.preview-pane .schema-block .schema-preview-tools .block-move', { timeout: 10000 })
+    const phoneTools = await mp.evaluate(() => {
+      const out = []
+      for (const sel of ['.graph-block', '.schema-block']) {
+        const block = document.querySelector(`.preview-pane ${sel}`)
+        const tools = block.querySelector('.graph-tools, .schema-preview-tools')
+        const arrow = block.querySelector('.block-move[data-dir="down"]').getBoundingClientRect()
+        const drawing = block.querySelector('svg').getBoundingClientRect()
+        out.push(getComputedStyle(tools).opacity === '1' && arrow.top >= drawing.bottom - 1)
+      }
+      return out
+    })
+    check(phoneTools.every(Boolean), `sul telefono le frecce si vedono sempre, sotto il grafico e sotto lo schema (${phoneTools})`)
+    await mp.locator('.preview-pane .graph-block .block-move[data-dir="down"]').tap()
+    const tapped = await savedNote(mp)
+    check(tapped.indexOf('Secondo paragrafo.') < tapped.indexOf('```grafico'), 'e un tocco sulla ↓ sposta il grafico')
+    await phone.close()
+    // Con l'anteprima più stretta che l'app permette, i pulsanti del grafico (frecce comprese) restano dentro.
+    const narrow = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+    await narrow.addInitScript(() => localStorage.setItem('glifo.layout.v1', JSON.stringify({ editorShare: 0.85 })))
+    const np = await narrow.newPage()
+    np.on('pageerror', (e) => errors.push(e.message))
+    await np.goto(url)
+    await np.waitForSelector('.cm-editor')
+    await setNote(np, start)
+    // Il grafico della nota scritta adesso (prima c'è ancora quello della nota di benvenuto).
+    await np.waitForSelector('.preview-pane .graph-block[data-line="6"] .block-move', { timeout: 5000 })
+    await np.locator('.preview-pane .graph-block[data-line="6"] .graph-stage').hover()
+    await np.waitForFunction(() => getComputedStyle(document.querySelector('.preview-pane .graph-tools')).opacity === '1', null, { timeout: 5000 })
+    const inside = await np.evaluate(() => {
+      const box = document.querySelector('.preview-pane .markdown-body').getBoundingClientRect()
+      return [...document.querySelectorAll('.preview-pane .graph-tools button:not([hidden])')].every((b) => {
+        const r = b.getBoundingClientRect()
+        return r.left >= box.left && r.right <= box.right && document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest('button') === b
+      })
+    })
+    check(inside, 'con l\'anteprima stretta i pulsanti del grafico restano dentro e si possono premere')
+    await narrow.close()
+  }
 
   // La lavagna: accanto al testo al posto dell'anteprima, una per nota, salvata su questo
   // dispositivo. Penna e dita sono simulate come le manda il browser (Chrome DevTools Protocol):

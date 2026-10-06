@@ -241,7 +241,8 @@ con Claude. La discussione è in [ABBONAMENTI.md](ABBONAMENTI.md), «La lavagna�
 Gli schemi sono fatti, con lo studente (ottobre 2026): editor stile draw.io con maxGraph (scelto
 al posto del vero draw.io incorporato perché funziona offline e non manda niente a nessuno); forme, frecce curve, modelli pronti, allinea e distribuisci, immagini PNG e SVG;
 le figure delle basi di dati (E-R come nell'Atzeni, tabelle con PK, FK e tipi) e il codice SQL
-delle tabelle per più database. Tutto è descritto nel README. Se serviranno:
+delle tabelle per più database; dal 6 ottobre 2026 si spostano nella nota con le frecce ↑ ↓, come i
+grafici. Tutto è descritto nel README. Se serviranno:
 
 - **i diagrammi di flusso trasformati in codice** (lo studente, 5 ottobre 2026): come oggi le
   tabelle danno l'SQL, un diagramma di flusso fatto con le forme di sempre (inizio e fine,
@@ -303,8 +304,10 @@ le definizioni della nota, blocchi ```grafico con funzioni, curve, punti, asinto
 ingrandire, grafici nei file .md come immagini, gli **slider** per i numeri (in `y = a x^2`,
 trascinare `a`, o scriverne il valore accanto, e vedere il grafico cambiare, come in GeoGebra e nelle
 Note matematiche) e l'**area degli integrali** (`\int_0^2 x^2 \, dx` colora l'area sotto la curva, con
-il valore nella legenda). Tutto è descritto nel README. Quello che serve per i corsi di matematica
-è nella voce dopo. Se serviranno anche:
+il valore nella legenda). Il 6 ottobre 2026 grafici e schemi si **spostano nella nota** con le frecce
+↑ ↓ dell'anteprima, come le celle di Google Colab (lo studente: «fai che gli schemi e i grafici si
+possano spostare nel documento; stile google colab», da fare subito sul ramo principale). Tutto è
+descritto nel README. Quello che serve per i corsi di matematica è nella voce dopo. Se serviranno anche:
 
 - l'area tra due curve (`\int_0^1 (f(x) - g(x)) \, dx` oggi colora quella sotto la differenza);
 - nelle aree degli integrali, le parti sotto l'asse x di un altro aspetto (oggi hanno lo stesso

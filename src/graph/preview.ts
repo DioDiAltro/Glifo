@@ -27,6 +27,7 @@ import { downloadBlob, downloadText, fileNameFor } from '../store/files'
 import { dialogShell } from '../ui/dialogs'
 import { h } from '../ui/dom'
 import { openMenu } from '../ui/menu'
+import { moveButtonsHtml } from '../ui/moveButtons'
 import { toast } from '../ui/toast'
 import { FIGURE_PALETTE, graphFigure } from './file'
 import { labelHtml, labelPlain } from './labels'
@@ -42,6 +43,8 @@ export interface GraphLook {
   surface: string
   /** La nota si può cambiare (non una nota condivisa): c'è «Titolo e nomi degli assi…». */
   editable?: boolean
+  /** La nota mostrata (il suo id): gli slider spostati restano suoi. */
+  scope?: string
 }
 
 /** Il titolo e i nomi degli assi da scrivere nel blocco (vuoto: la riga si toglie). */
@@ -92,6 +95,48 @@ interface SliderState {
 }
 /** Gli slider spostati (o che si muovono da soli): restano mentre l'anteprima si ridisegna. */
 const sliderStates = new Map<string, SliderState>()
+
+/**
+ * Le chiavi della nota `scope` (`${nota}\u0000${riga}\u0000…`) passano alla riga nuova: prima si
+ * tolgono tutte quelle che cambiano, poi si rimettono, così due grafici che si scambiano di posto non si
+ * pestano. Le chiavi delle altre note restano.
+ */
+export function remapLineKeys<T>(states: Map<string, T>, scope: string, map: (line: number) => number): void {
+  const prefix = `${scope}\u0000`
+  const moved: [string, T][] = []
+  for (const [key, state] of states) {
+    if (!key.startsWith(prefix)) continue
+    const cut = key.indexOf('\u0000', prefix.length)
+    const line = cut > prefix.length ? Number(key.slice(prefix.length, cut)) : NaN
+    if (!Number.isInteger(line) || map(line) === line) continue
+    states.delete(key)
+    moved.push([`${prefix}${map(line)}${key.slice(cut)}`, state])
+  }
+  for (const [key, state] of moved) states.set(key, state)
+}
+
+/** La nota ha cambiato id (con l'account, o in un conflitto chi scrive resta sulla sua copia): gli slider la seguono. */
+export function renameGraphScope(from: string, to: string): void {
+  renameScopeKeys(sliderStates, from, to)
+}
+
+/** Le chiavi della nota `from` passano alla nota `to`. */
+export function renameScopeKeys<T>(states: Map<string, T>, from: string, to: string): void {
+  const prefix = `${from}\u0000`
+  for (const [key, state] of [...states]) {
+    if (!key.startsWith(prefix)) continue
+    states.delete(key)
+    states.set(`${to}\u0000${key.slice(prefix.length)}`, state)
+  }
+}
+
+/**
+ * Uno schema o un grafico si è spostato nella nota `scope` (src/render/blockMove.ts), anche con Annulla
+ * o Ripeti: gli slider seguono i grafici.
+ */
+export function remapGraphLines(scope: string, map: (line: number) => number): void {
+  remapLineKeys(sliderStates, scope, map)
+}
 /** Quanto ci mette uno slider che si muove da solo ad andare da un estremo all'altro (secondi). */
 const SWEEP = 5
 /** Si sta stampando: i grafici con i valori scritti nella nota. */
@@ -308,12 +353,15 @@ class GraphView {
   private fineTimer = 0
 
   private readonly editable: boolean
+  /** La nota del grafico: gli slider di una nota non passano a un'altra. */
+  private readonly scope: string
 
   constructor(
     private readonly block: HTMLElement,
     look: GraphLook,
   ) {
     this.editable = !!look.editable
+    this.scope = look.scope ?? ''
     this.source = block.dataset.graph ?? ''
     this.defs = readDefs(block)
     this.key = `${this.source}\n\u0000${this.defs.join('\n')}`
@@ -337,7 +385,7 @@ class GraphView {
 
     // I pulsanti stanno sopra il disegno (e si vedono passandoci sopra); sui telefoni sotto, sempre.
     const title = this.written.title ? `<div class="graph-title" style="max-width:${this.width}px">${labelHtml(this.written.title)}</div>` : ''
-    block.innerHTML = `${title}<div class="graph-stage" style="max-width:${this.width}px"><div class="graph-frame"><div class="graph-canvas"></div><div class="graph-dot" hidden></div><div class="graph-tip" hidden></div></div><div class="graph-tools">${toolButton('Ingrandisci', ICON.plus, 'in')}${toolButton('Rimpicciolisci', ICON.minus, 'out')}${toolButton('Torna alla vista di partenza', ICON.reset, 'reset')}${toolButton('Scarica il grafico come immagine', ICON.download, 'image')}</div></div>${this.slidersHtml()}<div class="graph-notes"></div>`
+    block.innerHTML = `${title}<div class="graph-stage" style="max-width:${this.width}px"><div class="graph-frame"><div class="graph-canvas"></div><div class="graph-dot" hidden></div><div class="graph-tip" hidden></div></div><div class="graph-tools">${toolButton('Ingrandisci', ICON.plus, 'in')}${toolButton('Rimpicciolisci', ICON.minus, 'out')}${toolButton('Torna alla vista di partenza', ICON.reset, 'reset')}${toolButton('Scarica il grafico come immagine', ICON.download, 'image')}${this.editable && block.dataset.move !== undefined ? moveButtonsHtml('grafico', block.dataset.move, block.dataset.moveIn === 'voce') : ''}</div></div>${this.slidersHtml()}<div class="graph-notes"></div>`
     const frame = block.querySelector<HTMLElement>('.graph-stage')!
     this.frameEl = frame
     this.canvas = block.querySelector<HTMLElement>('.graph-canvas')!
@@ -393,7 +441,7 @@ class GraphView {
     const line = this.block.dataset.line ?? ''
     this.written.sliders.forEach((slider, i) => {
       const row = el.querySelector<HTMLElement>(`.graph-slider[data-index="${i}"]`)!
-      const key = `${line}\u0000${slider.name}\u0000${slider.value}\u0000${slider.range.join(' ')}\u0000${slider.step}`
+      const key = `${this.scope}\u0000${line}\u0000${slider.name}\u0000${slider.value}\u0000${slider.range.join(' ')}\u0000${slider.step}`
       const state = sliderStates.get(key) ?? { value: slider.value, playing: false, pos: slider.value, dir: 1 }
       this.rows.push({
         slider,

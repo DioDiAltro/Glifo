@@ -404,7 +404,7 @@ describe('gli slider sotto il grafico', () => {
 
   it('a un nome che manca, «Aggiungi lo slider per k» scrive k = 1 nel blocco', () => {
     const added: [number, string][] = []
-    const p = new Preview({ onToggleTask: () => {}, onJumpToLine: () => {}, onEditSchema: () => {}, onAddToGraph: (line, text) => added.push([line, text]), onGraphLabels: () => {} })
+    const p = new Preview({ onToggleTask: () => {}, onJumpToLine: () => {}, onEditSchema: () => {}, onAddToGraph: (line, text) => added.push([line, text]), onGraphLabels: () => {}, onMoveBlock: () => null, onUndo: () => {} })
     document.body.append(p.el)
     p.update('Testo\n\n```grafico\ny = a x^2 + b x\n```\n', true)
     const button = p.el.querySelector<HTMLButtonElement>('.graph-add-slider')!
@@ -587,7 +587,7 @@ describe('i grafici da mostrare: titolo, nomi degli assi e immagini', () => {
 
   it('dall\'anteprima i nomi arrivano alla nota con l\'evento graph-labels', () => {
     const got: [number, unknown][] = []
-    const p = new Preview({ onToggleTask: () => {}, onJumpToLine: () => {}, onEditSchema: () => {}, onAddToGraph: () => {}, onGraphLabels: (line, labels) => got.push([line, labels]) })
+    const p = new Preview({ onToggleTask: () => {}, onJumpToLine: () => {}, onEditSchema: () => {}, onAddToGraph: () => {}, onGraphLabels: (line, labels) => got.push([line, labels]), onMoveBlock: () => null, onUndo: () => {} })
     document.body.append(p.el)
     p.update('Testo\n\n```grafico\ny = x^2\n```\n', true)
     const block = p.el.querySelector<HTMLElement>('.graph-block')!

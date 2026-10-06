@@ -1,9 +1,12 @@
 import 'katex/dist/katex.min.css'
 import './styles/app.css'
+import { redo, undo } from '@codemirror/commands'
 import { EditorSelection } from '@codemirror/state'
 import welcomeNote from './welcome.md?raw'
 import { MarkdownEditor } from './editor/editor'
 import { addToGraphBlock, formulaAtCursor, insertGraphBlock, setGraphLabels } from './editor/graphInsert'
+import { blockMoveTransaction } from './editor/moveBlock'
+import type { BlockKind, MoveDir } from './render/blockMove'
 import { deriveTitle, noteIdsInBrowser, NotesStore, type Note } from './store/notes'
 import { cleanFolderName, FOLDER_NAME_MAX, FoldersStore } from './store/folders'
 import { addPersonalWord, DICTIONARY_KEY, loadPersonalWords, savePersonalWords } from './store/dictionary'
@@ -22,6 +25,7 @@ import {
 import { downloadText, fileNameFor, openMarkdownFiles, saveMarkdownFile } from './store/files'
 import { findFencedBlocks, findSchemaBlock, findSchemaBlocks, schemaBlockAtLine, schemaBlockText } from './schema/blocks'
 import { graphImagesFor, graphsForFile, graphsFromFile } from './graph/file'
+import { remapGraphLines, renameGraphScope } from './graph/preview'
 import { schemasForFile, schemasFromFile } from './schema/file'
 import { parseSchema, SchemaError, serializeSchema, type Schema } from './schema/model'
 import { loadPaneSizes, savePaneSizes } from './store/layout'
@@ -224,6 +228,9 @@ const preview = new Preview({
   onEditSchema: (line, source) => void openSchema(line, source),
   onAddToGraph: (line, text) => addToGraphBlock(editor.view, line, text),
   onGraphLabels: (line, labels) => setGraphLabels(editor.view, line, labels),
+  onMoveBlock: (kind, line, hash, dir) => moveBlockInNote(kind, line, hash, dir),
+  onUndo: (again) => void (again ? redo : undo)(editor.view),
+  scope: () => active.id,
 })
 
 // La lavagna di ogni nota (src/board), per scrivere a mano: accanto al testo al posto
@@ -255,8 +262,18 @@ const editor = new MarkdownEditor(editorHost, active.content, {
   onSave: () => void saveToFile(),
   onFocusSearch: () => focusSymbolSearch(),
   onEditSchema: (line, source) => void openSchema(line, source),
+  // Spostato uno schema o un grafico (anche con Annulla o Ripeti): gli slider dei grafici lo seguono, e
+  // l'anteprima si ridisegna subito (uno slider che si muove da solo scriverebbe ancora alla riga di prima).
+  onBlockMoved: (map) => {
+    remapGraphLines(active.id, map)
+    preview.update(editor.getDoc(), true)
+  },
 })
 editor.setAutoWrap(settings.autoWrap)
+// Dopo le frecce di schemi e grafici l'anteprima resta ferma; tornando all'editor lo segue di nuovo.
+for (const type of ['pointerdown', 'wheel', 'keydown', 'touchstart'] as const) {
+  editorHost.addEventListener(type, () => preview.release(), { capture: true, passive: true })
+}
 
 // ——— Controllo ortografico ———
 
@@ -460,6 +477,9 @@ function setView(mode: ViewMode, focus = true): void {
   resizer.refresh()
   if (mode === 'board') board.show(active.id)
   else board.hide()
+  // Nella vista divisa l'anteprima segue l'editor che scorre; nella vista Anteprima resta dov'è.
+  preview.setFollow(mode === 'split')
+  preview.release()
   if (mode === 'split' || mode === 'preview') preview.update(editor.getDoc(), true)
   if (mode === 'preview') (document.activeElement as HTMLElement | null)?.blur()
   // Sulla lavagna si scrive a mano: il fuoco va lì, e su tablet e telefono non si apre la tastiera.
@@ -591,6 +611,8 @@ function loadNote(id: string, focus = true): void {
   active = note
   store.activeId = id
   editor.setDoc(note.content)
+  // Un'altra nota: l'anteprima torna a seguire l'editor (dopo le frecce era rimasta ferma).
+  preview.release()
   preview.update(note.content, true)
   if (settings.view === 'board') board.show(id)
   document.title = `${note.title} · Glifo`
@@ -804,6 +826,25 @@ function jumpToLine(line: number): void {
 function insertGraph(): void {
   const formula = formulaAtCursor(editor.view)
   insertGraphBlock(editor.view, formula?.tex ?? null, formula?.to)
+}
+
+// ——— Spostare schemi e grafici (le frecce ↑ ↓ dell'anteprima, come le celle di Colab) ———
+
+/**
+ * Sposta lo schema o il grafico alla riga `line` (con l'impronta `hash`) oltre il blocco vicino: una
+ * modifica del testo come le altre, che Ctrl+Z annulla in un passo. La riga dove è finito, o null.
+ */
+function moveBlockInNote(kind: BlockKind, line: number, hash: string, dir: MoveDir): number | null {
+  const result = blockMoveTransaction(editor.view.state, line, hash, dir)
+  if (!result.ok) {
+    const what = kind === 'grafico' ? 'Il grafico' : 'Lo schema'
+    if (result.reason === 'structure') toast(`${what} non si può spostare da qui senza cambiare il resto della nota (per esempio due elenchi diventerebbero uno solo).`)
+    else if (result.reason === 'guard') toast('Lo spostamento non è riuscito: la nota è rimasta com\'era.', 'error')
+    // 'edge' e 'stale': niente da dire (in cima, in fondo, o l'anteprima si sta ridisegnando).
+    return null
+  }
+  if (result.tr) editor.view.dispatch(result.tr)
+  return result.move.line
 }
 
 // ——— Schemi (stile draw.io) ———
@@ -1025,6 +1066,8 @@ function applyAccountChange(change: LocalChange): void {
   for (const r of change.replaced) {
     // La lavagna segue la nota che ha cambiato id; dopo un conflitto ce l'hanno tutte e due le versioni.
     void (r.conflict ? boards.copy(r.from, r.to) : boards.move(r.from, r.to)).catch(() => {})
+    // Gli slider spostati vanno con chi scrive (in un conflitto, con la sua copia).
+    renameGraphScope(r.from, r.to)
     const handle = fileHandles.get(r.from)
     if (handle) {
       fileHandles.set(r.to, handle)
@@ -1036,6 +1079,7 @@ function applyAccountChange(change: LocalChange): void {
       if (note) {
         active = note
         store.activeId = note.id
+        preview.rescope()
       }
     }
     if (r.conflict) {

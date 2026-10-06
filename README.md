@@ -500,6 +500,14 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
   con la virgola, l'origine O, la legenda con le formule e, per le righe sbagliate, il perché.
 - Nell'anteprima il grafico si **trascina**, si ingrandisce con + e − (o con Ctrl e la rotellina,
   o con due dita) e, passandoci sopra con il mouse, dice le **coordinate** del punto della curva.
+- **Spostare** il grafico nella nota, come le celle di Google Colab: le frecce ↑ ↓ dopo «Scarica» (in
+  alto a destra passandoci sopra; sul tablet e sul telefono sotto il disegno, sempre visibili) lo
+  portano sopra o sotto il blocco vicino, cioè un paragrafo, un
+  titolo, una formula, un elenco intero, una tabella, un altro grafico o schema. Dentro una voce
+  d'elenco resta nella voce. La freccia resta sotto il puntatore, così si preme di nuovo; Ctrl+Z lo
+  riporta dov'era. Le definizioni valgono per quello che viene dopo: portato sopra `$a = 2$`, il
+  grafico avvisa che non vede più a. Se lì non si vedrebbe (dell'HTML scritto nella nota, come un
+  commento non chiuso o un `<details>` chiuso, lo nasconderebbe) non si sposta e lo dice.
 - Ogni numero scritto con le cifre che il grafico usa (`$a = 2$` nella nota o `a = 2` nel blocco,
   anche attraverso una funzione come `$f(x) = a x^2$`; non `b = 2a`, che segue a) ha uno **slider**
   sotto il grafico: trascinandolo il grafico cambia subito, ▶ lo muove da solo avanti e indietro, la
@@ -587,7 +595,8 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
   `$ … $` (si finisce con Esc o con un clic sul foglio; Ctrl+S salva anche mentre si scrive); colori, forma, dimensione del testo, frecce dritte, ad angolo o **curve**, con o senza
   punte, tratteggiate, con il testo all'inizio, a metà o alla fine (per le cardinalità). Annulla/Ripeti, copia e incolla, zoom, griglia, selezione a rettangolo.
 - Lo schema va nella nota come blocco ` ```schema ` (un JSON corto, una forma per riga):
-  nell'anteprima si vede il disegno, nel testo una riga con «Modifica». I colori seguono il
+  nell'anteprima si vede il disegno, nel testo una riga con «Modifica». Nell'anteprima, accanto a
+  «Modifica», le frecce ↑ ↓ lo spostano nella nota, come i grafici. I colori seguono il
   tema chiaro o scuro. Funziona anche offline: è fatto con [maxGraph](https://github.com/maxGraph/maxGraph),
   il motore di draw.io, che si carica solo quando serve.
 - Con **Salva .md** ogni schema finisce nel file come **immagine** (SVG, chiara su bianco), così
@@ -796,6 +805,7 @@ src/
     spellcheck.ts         sottolineatura delle parole sbagliate e correzioni
     calcResults.ts        i risultati dopo «=» nell'editor (Tab li scrive)
     graphInsert.ts        il pulsante «Grafico»: la funzione sotto il cursore in un blocco ```grafico
+    moveBlock.ts          lo spostamento di uno schema o di un grafico come una modifica (un passo di Annulla)
     editor.ts             configurazione di CodeMirror
   spell/
     words.ts              divide il testo in parole (salta indirizzi, codice, sigle…)
@@ -805,11 +815,13 @@ src/
   render/
     mathDelims.ts         regole dei delimitatori (condivise da editor e anteprima)
     markdown.ts           Markdown → HTML sicuro (niente script, moduli, pulsanti o stili)
+    blockMove.ts          spostare schemi e grafici oltre il blocco vicino (le frecce ↑ ↓, come in Colab)
     lists.ts              elenchi con tutti i marcatori e rientri comodi nell'anteprima
     katex.ts              disegno delle formule, messaggi di errore in italiano
   ui/                     pannello dei simboli, anteprima, elenco appunti, finestre,
                           bordi da trascinare tra le sezioni (resize.ts), il simbolo ∮ (logo.ts),
-                          il registro dei tocchi nelle impostazioni (touchLogPanel.ts)
+                          il registro dei tocchi nelle impostazioni (touchLogPanel.ts), le frecce
+                          ↑ ↓ di schemi e grafici (moveButtons.ts)
   store/                  salvataggio nel browser, file .md, impostazioni, misure delle sezioni (layout.ts)
   ai/assistant.ts         assistente AI: Anthropic con l'SDK, gli altri servizi nella «lingua» di OpenAI
   ai/services.ts          i servizi per la propria chiave: Anthropic, Gemini, OpenRouter, Ollama, altri

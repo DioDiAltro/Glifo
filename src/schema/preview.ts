@@ -4,12 +4,15 @@
  * schema; i disegni restano in memoria, così mentre si scrive non si rifanno ogni volta.
  */
 import { escapeHtml } from '../render/katex'
+import { moveButtonsHtml } from '../ui/moveButtons'
 import { parseSchema, SchemaError, type Theme } from './model'
 
 export interface PreviewLook {
   theme: Theme
   /** Lo sfondo dell'anteprima, dietro il testo delle frecce. */
   surface: string
+  /** La nota è di chi la guarda: ci sono le frecce per spostare lo schema (non nella pagina condivisa). */
+  editable?: boolean
 }
 
 const MAX_CACHE = 60
@@ -49,13 +52,16 @@ function drawCached(key: string, source: string, look: PreviewLook): Promise<str
   return job
 }
 
-function fill(block: HTMLElement, html: string): void {
+function fill(block: HTMLElement, html: string, look: PreviewLook): void {
   block.dataset.drawn = ''
   block.classList.remove('is-loading')
   block.classList.toggle('is-empty', !html)
   // Il disegno è fatto da Glifo: i testi sono già passati da escapeHtml o da KaTeX.
   block.innerHTML = html
-  block.append(
+  // In alto a destra: «Modifica» e, come nelle celle di Colab, le frecce per spostarlo nella nota.
+  const tools = document.createElement('div')
+  tools.className = 'schema-preview-tools'
+  tools.append(
     Object.assign(document.createElement('button'), {
       type: 'button',
       className: 'btn btn-small schema-edit',
@@ -63,6 +69,10 @@ function fill(block: HTMLElement, html: string): void {
       title: 'Modifica lo schema (anche con un doppio clic)',
     }),
   )
+  if (look.editable && block.dataset.move !== undefined) {
+    tools.insertAdjacentHTML('beforeend', moveButtonsHtml('schema', block.dataset.move, block.dataset.moveIn === 'voce'))
+  }
+  block.append(tools)
 }
 
 /** Disegna gli schemi dell'anteprima: quelli già pronti subito, gli altri appena possibile. */
@@ -72,12 +82,12 @@ export function hydrateSchemas(root: HTMLElement, look: PreviewLook): void {
     const key = `${look.theme}\n${look.surface}\n${source}`
     const html = drawn.get(key)
     if (html !== undefined) {
-      fill(block, html)
+      fill(block, html, look)
       continue
     }
     block.classList.add('is-loading')
     void drawCached(key, source, look).then((result) => {
-      if (block.isConnected && !('drawn' in block.dataset)) fill(block, result)
+      if (block.isConnected && !('drawn' in block.dataset)) fill(block, result, look)
     })
   }
 }

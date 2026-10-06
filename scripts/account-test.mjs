@@ -493,12 +493,14 @@ try {
     return {
       stolen: window.__rubato ?? null,
       forms: document.querySelectorAll('.shared-body form, .shared-body button:not(.graph-tool):not(.btn), .shared-body style, .shared-body textarea').length,
+      arrows: document.querySelectorAll('.shared-body .block-move').length,
       headerVisible: top.height > 0 && getComputedStyle(document.querySelector('.shared-top')).display !== 'none',
       headerOnTop: !!atTop?.closest('.shared-top'),
     }
   })
   check(evil.stolen === null, `la nota non esegue codice in chi la apre (${evil.stolen})`)
   check(evil.forms === 0, 'moduli, pulsanti e stili della nota non arrivano nella pagina')
+  check(evil.arrows === 0, 'nella nota condivisa niente frecce per spostare grafici e schemi: si legge soltanto')
   check(evil.headerVisible && evil.headerOnTop, 'e la nota non copre la barra di Glifo')
   await viewer.locator('a', { hasText: 'link' }).first().click({ modifiers: [] }).catch(() => {})
   await viewer.waitForTimeout(300)

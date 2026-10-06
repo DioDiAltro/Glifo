@@ -23,6 +23,7 @@ import { mathContextAt, mathRegionAt, type EditorMathContext } from './mathConte
 import { mathHighlighter } from './mathHighlight'
 import { mathDelimTag, mathMarkdown, mathTag } from './mathSyntax'
 import { clearAllPlaceholders, jumpPlaceholder, placeholderField } from './placeholders'
+import { blockMoves } from './moveBlock'
 import { schemaBlocks } from './schemaBlocks'
 import { spellcheck, type SpellcheckOptions } from './spellcheck'
 import { SuggestionController } from './suggestions'
@@ -34,6 +35,8 @@ export interface EditorCallbacks {
   onFocusSearch(): void
   /** «Modifica» su uno schema nel testo: la riga (0-based) del suo blocco e il suo testo. */
   onEditSchema(line: number, source: string): void
+  /** Uno schema o un grafico si è spostato (anche con Annulla o Ripeti): la riga nuova di ogni riga di prima. */
+  onBlockMoved?(map: (line: number) => number): void
 }
 
 const highlight = HighlightStyle.define([
@@ -191,6 +194,7 @@ export class MarkdownEditor {
       // Dopo «=» in una formula, il risultato (src/editor/calcResults.ts).
       calcPlugin,
       schemaBlocks((line, source) => this.cb.onEditSchema(line, source)),
+      blockMoves((map) => this.cb.onBlockMoved?.(map)),
       placeholderField,
       suggestionKeys,
       editingKeys,

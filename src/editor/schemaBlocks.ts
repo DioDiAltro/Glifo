@@ -118,6 +118,9 @@ export function besideSchema(state: EditorState, text: string): TransactionSpec 
 function guardBlocks(field: StateField<DecorationSet>): Extension {
   return EditorState.transactionFilter.of((tr) => {
     if (!tr.docChanged || !(tr.isUserEvent('input') || tr.isUserEvent('delete') || tr.isUserEvent('move'))) return tr
+    // Le frecce dell'anteprima spostano blocchi interi, e la nota è già stata riletta (src/render/blockMove.ts):
+    // qui si sbaglierebbe, perché findSchemaBlocks non vede i blocchi sulla riga del marcatore («- ```py»).
+    if (tr.isUserEvent('move.block')) return tr
     const blocks: { from: number; to: number }[] = []
     tr.startState.field(field).between(0, tr.startState.doc.length, (from, to) => {
       blocks.push({ from, to })

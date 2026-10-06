@@ -2684,7 +2684,7 @@ kbd {
 
 /* ——— Schemi (stile draw.io): nell'anteprima, nell'editor del testo e l'editor a tutto schermo ——— */
 
-/* Nell'anteprima: lo schema disegnato (src/schema/preview.ts), con il pulsante per modificarlo. */
+/* Nell'anteprima: lo schema disegnato (src/schema/preview.ts), con i pulsanti per modificarlo e spostarlo. */
 .schema-block {
   position: relative;
   margin: 0 0 16px;
@@ -2692,7 +2692,7 @@ kbd {
   overflow-x: auto;
 }
 
-.schema-block svg {
+.schema-block > svg {
   display: block;
   max-width: 100%;
   height: auto;
@@ -2714,21 +2714,34 @@ kbd {
   content: 'Schema vuoto';
 }
 
-.schema-edit {
+/* «Modifica» e le frecce per spostarlo (src/ui/moveButtons.ts): in alto a destra, passandoci sopra. */
+.schema-preview-tools {
   position: absolute;
+  z-index: 1;
   top: 4px;
   right: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: calc(100% - 8px);
+  align-items: center;
+  gap: 4px;
   opacity: 0;
   transition: opacity 0.15s;
 }
 
-.schema-block:hover .schema-edit,
-.schema-edit:focus-visible {
+.schema-block:hover .schema-preview-tools,
+.schema-preview-tools:focus-within,
+.schema-block.just-moved .schema-preview-tools {
   opacity: 1;
 }
 
+/* Sui telefoni e i tablet sempre visibili: sotto lo schema, per non coprirlo. */
 @media (hover: none) {
-  .schema-edit {
+  .schema-preview-tools {
+    position: static;
+    justify-content: flex-end;
+    margin-top: 6px;
     opacity: 1;
   }
 }
@@ -3478,6 +3491,10 @@ kbd {
   top: 6px;
   right: 6px;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  /* Sui grafici stretti le frecce vanno su un'altra riga invece di uscire a sinistra. */
+  max-width: calc(100% - 12px);
   gap: 4px;
   opacity: 0;
   transition: opacity 0.15s;
@@ -3485,7 +3502,8 @@ kbd {
 
 .graph-stage:hover .graph-tools,
 .graph-tools:focus-within,
-.graph-block.is-moved .graph-tools {
+.graph-block.is-moved .graph-tools,
+.graph-block.just-moved .graph-tools {
   opacity: 1;
 }
 
@@ -3499,7 +3517,8 @@ kbd {
   }
 }
 
-.graph-tool {
+.graph-tool,
+.block-move {
   width: 28px;
   height: 28px;
   border: 1px solid var(--border);
@@ -3509,6 +3528,78 @@ kbd {
 
 .graph-tool[hidden] {
   display: none;
+}
+
+/* ——— Le frecce ↑ ↓ di schemi e grafici, come le celle di Colab (src/ui/moveButtons.ts) ——— */
+
+.block-move-group {
+  display: flex;
+  gap: 4px;
+}
+
+/* Tra «Scarica» (o «Modifica») e le frecce: così ↓ non si confonde con ⤓. */
+.block-move-sep {
+  align-self: center;
+  width: 1px;
+  height: 20px;
+  margin: 0 2px;
+  background: var(--border);
+}
+
+/* Due tocchi veloci sull'iPad non ingrandiscono la pagina. */
+.block-move {
+  touch-action: manipulation;
+}
+
+/* Spente (in cima o in fondo), ma ancora con il fuoco. */
+.block-move[aria-disabled='true'] {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.block-move[aria-disabled='true']:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+/* Il blocco appena spostato, come la cella scelta in Colab: un contorno che svanisce. */
+.just-moved {
+  border-radius: 10px;
+  outline: 2px solid transparent;
+  outline-offset: 4px;
+  animation: block-moved 1.2s ease-out;
+}
+
+@keyframes block-moved {
+  from {
+    outline-color: var(--accent);
+  }
+  to {
+    outline-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .just-moved {
+    animation: none;
+    outline-color: var(--accent);
+  }
+}
+
+/* Si legge con un lettore di schermo ma non si vede. In alto a sinistra: dove starebbe da sola, in fondo
+   alla nota, allungherebbe la pagina (e un link interno farebbe salire tutta l'app). */
+.visually-hidden {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .graph-tip {
@@ -4699,6 +4790,9 @@ kbd {
   .graph-tip,
   .graph-dot,
   .graph-add-slider,
+  .schema-preview-tools,
+  .block-move-group,
+  .block-move-sep,
   .graph-slider .graph-tool,
   .graph-slider-input,
   .graph-slider-end {
@@ -4902,7 +4996,9 @@ body.shared-page {
 }
 
 .shared-body .schema-edit,
-.shared-body .graph-add-slider {
+.shared-body .graph-add-slider,
+.shared-body .block-move-group,
+.shared-body .block-move-sep {
   display: none !important;
 }
 

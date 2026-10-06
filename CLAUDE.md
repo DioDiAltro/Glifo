@@ -67,6 +67,25 @@ prossimi passi sono in «In programma» nella ROADMAP.
   può essere di un'altra persona (link condiviso, la copia salvata da lì, un .md): `renderMarkdown`
   toglie script, moduli, pulsanti e stili (`FORBIDDEN_TAGS`; con `untrusted` le caselle non si
   cliccano) e `.markdown-body` ha `contain: paint`, così niente esce dal riquadro della nota.
+  Schemi e grafici si spostano nella nota con le frecce ↑ ↓ dell'anteprima, come le celle di Colab
+  (6 ottobre 2026): `blockMove.ts` fa i conti sui token dei blocchi di markdown-it (`parseBlocks` in
+  `markdown.ts`, lo stesso parser dell'anteprima). La regola `block_moves`, subito dopo i blocchi,
+  scrive `data-hash` (l'impronta del contenuto: il testo di `data-graph` DOMPurify lo accorcia) e
+  `data-move` (le frecce accese; senza, niente frecce: citazioni, note a piè di pagina, blocchi aperti,
+  «- ```grafico»); `moveFencedBlock` fa saltare il blocco oltre il fratello visibile (nella nota o nella
+  stessa voce d'elenco; riferimenti, note e commenti restano attaccati al blocco prima), aggiunge righe
+  vuote solo se servono e rilegge il testo: se la nota cambierebbe in altro, 'structure' e non si fa.
+  Non si scavalca HTML che il browser non chiude (`swallows`: un «<!--» o uno <script> aperti nascondono il
+  resto). `src/editor/moveBlock.ts` ne fa una modifica (un passo di Annulla, `move.block` con
+  `isolateHistory`; guardBlocks la lascia passare; cursore e selezioni vanno con le loro righe) e con
+  `blockMoves` (`invertedEffects`) dice le righe nuove anche con Annulla e Ripeti; `src/ui/moveButtons.ts`
+  le frecce (`aria-disabled` ai bordi, così il fuoco resta). Nell'anteprima (`src/ui/preview.ts`) il clic
+  ridisegna subito (`flush`), la freccia resta sotto il puntatore con il fuoco, `held` la tiene ferma finché
+  non si torna all'editor o si cambia nota, `follow` le fa seguire l'editor solo nella vista divisa; se il
+  blocco spostato non si vede (in un `<details>` chiuso, dopo un commento aperto) si annulla con l'avviso;
+  i `<details>` aperti restano aperti. Gli slider hanno nella chiave la nota e la riga: `remapGraphLines`
+  li sposta con i blocchi (da `onBlockMoved`), `renameGraphScope` quando la nota cambia id; il contenitore
+  dei pulsanti degli schemi è `.schema-preview-tools` (`.schema-tools` è la barra dell'editor degli schemi).
 - `src/ui/`: interfaccia (`resize.ts`: i bordi da trascinare tra le sezioni). Non c'è una barra in
   alto: la barra laterale è l'elenco degli appunti (`notesPanel.ts`) con sopra il logo (niente
   titolo della nota) e in fondo la riga `foot` con «Apri .md» e «Salva .md» (icona e testo, larghi
