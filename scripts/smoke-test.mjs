@@ -1688,8 +1688,10 @@ try {
     await penStroke(Array.from({ length: 8 }, (_, i) => [stage.x + 120, stage.y + 110 + i * 15, 0.5]), { pointerType: 'mouse' })
     const afterErase = await strokeCount()
     await lp.locator('.board-button[aria-label="Penna"]').click()
-    // La penna col tasto laterale cancella, anche con la penna scelta.
-    await penStroke(Array.from({ length: 8 }, (_, i) => [stage.x + 240, stage.y + 230 + i * 8, 0.5]), { button: 'right' })
+    // La penna col tasto laterale cancella, anche con la penna scelta. Parte a 40 pixel dalla riga di
+    // sopra: la gomma «Dove passa» veloce si allarga fino a tre volte (33 pixel), e i movimenti di
+    // questa prova a volte arrivano quasi insieme, cioè velocissimi; da 30 pixel a volte la tagliava.
+    await penStroke(Array.from({ length: 8 }, (_, i) => [stage.x + 240, stage.y + 240 + i * 8, 0.5]), { button: 'right' })
     const colors = (await savedStrokes(lp, note1)).map((s) => s.color).sort()
     check(
       afterErase === 5 &&
