@@ -1,7 +1,7 @@
 # Graph Report - matherdown  (2026-10-06)
 
 ## Corpus Check
-- 250 files · ~483,943 words
+- 250 files · ~483,993 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 5 file(s) not represented in the graph (top: (none) 4, .css 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `fb9e9f1a`
+- Built from commit: `35a6bfab`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -155,12 +155,12 @@
   README.md → src/math/numerical.ts
 - `Come viene pubblicata` --references--> `dist()`  [INFERRED]
   README.md → src/board/shapes.ts
-- `Dove sono le cose` --references--> `adoptGuestNotes()`  [INFERRED]
-  ARCHITETTURA.md → src/account/space.ts
-- `Dove sono le cose` --references--> `sharedLinks()`  [INFERRED]
-  ARCHITETTURA.md → src/account/supabase.ts
-- `Dove sono le cose` --references--> `shareNote()`  [INFERRED]
-  ARCHITETTURA.md → src/account/supabase.ts
+- `Attenzione a` --references--> `where()`  [INFERRED]
+  CLAUDE.md → src/board/touchlog.ts
+- `Attenzione a` --references--> `renderMarkdown()`  [INFERRED]
+  CLAUDE.md → src/render/markdown.ts
+- `graphify` --references--> `path()`  [INFERRED]
+  CLAUDE.md → src/graph/svg.ts
 
 ## Import Cycles
 - 3-file cycle: `src/math/complex.ts -> src/math/evaluate.ts -> src/math/limits.ts -> src/math/complex.ts`
@@ -623,11 +623,11 @@ Nodes (7): EXACT, FLOAT, A, B, q(), result(), text()
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Dove sono le cose` connect `Dove sono le cose` to `touchlog.ts`, `parse.ts`, `main.ts`, `odesolve.ts`, `spec.ts`, `logo.ts`, `num`, `graph/preview.ts`, `several.ts`, `complex.ts`, `svg.ts`, `Rational`, `toNode`, `compile`, `numerical.ts`, `Board`, `IdbBoards`, `MathError`, `toLatex`, `assistant.ts`, `h`, `graph.ts`, `Pt`, `graph/space.ts`, `distributions.ts`, `logic.ts`, `arithmetic.ts`, `namesIn`, `study.ts`, `editor/editor.ts`, `account/space.ts`, `limits.ts`, `board/shapes.ts`, `linsys.ts`, `graphInsert.ts`, `finite.ts`, `supabase.ts`, `ui/preview.ts`, `MathNode`, `dialogs.ts`, `markdown.ts`, `symbolic.ts`, `schema/editor.ts`, `board.ts`, `BoardStore`, `schemaTools.test.ts`, `.constructor`, `graph/file.ts`, `.solveAll`?**
-  _High betweenness centrality (0.124) - this node is a cross-community bridge._
+  _High betweenness centrality (0.120) - this node is a cross-community bridge._
 - **Why does `vitest` connect `vitest` to `touchlog.ts`, `main.ts`, `logo.ts`, `linear.test.ts`, `num`, `editor/lists.ts`, `svg.ts`, `Rational`, `compile`, `IdbBoards`, `assistant.ts`, `h`, `graph/space.ts`, `resize.ts`, `editor/editor.ts`, `notes.ts`, `account/space.ts`, `board/shapes.ts`, `linsys.ts`, `search.ts`, `toolbar.ts`, `supabase.ts`, `ui/preview.ts`, `parseSchema`, `dialogs.ts`, `Dove sono le cose`, `markdown.ts`, `board.ts`, `editor.test.ts`, `schemaTools.test.ts`, `package.json`, `Sheet`, `page.ts`, `sidePanel.ts`, `.constructor`, `graph/file.ts`, `sync.test.ts`, `spell.test.ts`, `sql.ts`?**
-  _High betweenness centrality (0.112) - this node is a cross-community bridge._
-- **Why does `Board` connect `Board` to `main.ts`, `Dove sono le cose`, `.constructor`, `board.ts`, `Pt`?**
-  _High betweenness centrality (0.034) - this node is a cross-community bridge._
+  _High betweenness centrality (0.104) - this node is a cross-community bridge._
+- **Why does `h()` connect `h` to `main.ts`, `logo.ts`, `graph/preview.ts`, `editor/lists.ts`, `SchemaEditor`, `Board`, `graph.ts`, `resize.ts`, `notes.ts`, `.constructor`, `toolbar.ts`, `ui/preview.ts`, `dialogs.ts`, `schema/editor.ts`, `board.ts`, `.folderItem`, `toast`, `page.ts`, `sidePanel.ts`, `spell.test.ts`, `SidePanel`?**
+  _High betweenness centrality (0.048) - this node is a cross-community bridge._
 - **Are the 143 inferred relationships involving `Dove sono le cose` (e.g. with `adoptGuestNotes()` and `sharedLinks()`) actually correct?**
   _`Dove sono le cose` has 143 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `Comandi`, `Promemoria per lo studente`, `Regole` to the rest of the system?**

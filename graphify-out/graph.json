@@ -39330,7 +39330,7 @@
       "node_kind": "heading",
       "norm_label": "attenzione a",
       "source_file": "CLAUDE.md",
-      "source_location": "L77"
+      "source_location": "L82"
     },
     {
       "id": "claude_comandi",
@@ -39354,7 +39354,7 @@
       "node_kind": "heading",
       "norm_label": "come controllare il lavoro",
       "source_file": "CLAUDE.md",
-      "source_location": "L142"
+      "source_location": "L147"
     },
     {
       "id": "claude_dove_sono_le_cose",
@@ -39390,7 +39390,7 @@
       "node_kind": "heading",
       "norm_label": "graphify",
       "source_file": "CLAUDE.md",
-      "source_location": "L158"
+      "source_location": "L163"
     },
     {
       "id": "claude_promemoria_per_lo_studente",
@@ -39402,7 +39402,7 @@
       "node_kind": "heading",
       "norm_label": "promemoria per lo studente",
       "source_file": "CLAUDE.md",
-      "source_location": "L98"
+      "source_location": "L103"
     },
     {
       "id": "claude_regole",
@@ -39414,7 +39414,7 @@
       "node_kind": "heading",
       "norm_label": "regole",
       "source_file": "CLAUDE.md",
-      "source_location": "L117"
+      "source_location": "L122"
     },
     {
       "id": "src_editor_lists",
@@ -176762,7 +176762,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L77",
+      "source_location": "L82",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_glifo_note_per_claude",
+      "target": "claude_promemoria_per_lo_studente",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CLAUDE.md",
+      "source_location": "L103",
       "weight": 1.0
     },
     {
@@ -176773,7 +176784,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L117",
+      "source_location": "L122",
       "weight": 1.0
     },
     {
@@ -176784,7 +176795,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L142",
+      "source_location": "L147",
       "weight": 1.0
     },
     {
@@ -176795,7 +176806,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L158",
+      "source_location": "L163",
       "weight": 1.0
     },
     {
@@ -176818,17 +176829,6 @@
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
       "source_location": "L55",
-      "weight": 1.0
-    },
-    {
-      "source": "claude_glifo_note_per_claude",
-      "target": "claude_promemoria_per_lo_studente",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "CLAUDE.md",
-      "source_location": "L98",
       "weight": 1.0
     },
     {
@@ -216015,7 +216015,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L137",
+      "source_location": "L142",
       "weight": 1.0
     },
     {
@@ -220711,7 +220711,7 @@
       "confidence_score": 0.95,
       "context": "path",
       "source_file": "CLAUDE.md",
-      "source_location": "L160",
+      "source_location": "L165",
       "weight": 1.0
     },
     {
@@ -220843,7 +220843,7 @@
       "confidence_score": 0.95,
       "context": "renderMarkdown",
       "source_file": "CLAUDE.md",
-      "source_location": "L81",
+      "source_location": "L86",
       "weight": 1.0
     },
     {
@@ -221167,7 +221167,7 @@
       "confidence_score": 0.95,
       "context": "sqlite()",
       "source_file": "CLAUDE.md",
-      "source_location": "L152",
+      "source_location": "L157",
       "weight": 1.0
     },
     {
@@ -221419,7 +221419,7 @@
       "confidence_score": 0.95,
       "context": "where",
       "source_file": "CLAUDE.md",
-      "source_location": "L94",
+      "source_location": "L99",
       "weight": 1.0
     },
     {
@@ -221472,5 +221472,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "fb9e9f1a2b04b803476915e1f4cc1488c2034231"
+  "built_at_commit": "35a6bfabbd862ad85e9b7cb062275b99fc09698f"
 }
