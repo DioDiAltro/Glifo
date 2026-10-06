@@ -2038,6 +2038,17 @@ try {
     const editing = await phoneSheet.evaluate(() => document.activeElement?.classList.contains('sheet-cell-input'))
     const fits = await phoneSheet.evaluate(() => document.querySelector('.sheet-bar').scrollWidth <= window.innerWidth + 1)
     check(editing && fits, `sul telefono la barra sta nello schermo e un secondo tocco sulla cella comincia a scriverci (${JSON.stringify({ editing, fits })})`)
+    // La tastiera che si apre accorcia la finestra: prima la scrittura si chiudeva, e la tastiera con lei.
+    await phoneSheet.setViewportSize({ width: 390, height: 460 })
+    await phoneSheet.waitForTimeout(100)
+    const typing = await phoneSheet.evaluate(() => {
+      const input = document.querySelector('.sheet-cell-input')
+      return document.activeElement === input && !input.hidden && getComputedStyle(input).fontSize
+    })
+    await phoneSheet.keyboard.insertText('0')
+    await phoneSheet.keyboard.press('Enter')
+    const total = await phoneSheet.locator('#sheet-1-3').textContent()
+    check(typing === '16px' && total === '150,00 €', `sul telefono si scrive nella cella anche dopo che la tastiera si è aperta, con i caratteri da 16px che l'iPhone non ingrandisce (${JSON.stringify({ typing, total })})`)
     await phoneSheet.close()
   }
 

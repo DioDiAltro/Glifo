@@ -96,7 +96,12 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   file .md (`file.ts`) la tabella di Markdown con i risultati (`sheetMarkdown`) e il blocco in un
   commento `glifo-tabella` (& e > scappati). L'editor (`editor.ts`) lavora su una copia della
   tabella (le modifiche in `ops.ts`, `cloneSheet` per Annulla); menu, suggerimenti e messaggi stanno
-  dentro la sua finestra (è modale). Nella barra il pulsante della tabella è un menu (`tableMenu` in
+  dentro la sua finestra (è modale). Col tocco si comincia a scrivere nella cella già scelta alla fine
+  del tocco (`click`, `tapEdit`): i clic finti che il telefono manda dopo il tocco porterebbero via il
+  fuoco dalla casella. Quando la finestra cambia misura (sul telefono anche perché si apre la
+  tastiera) la scrittura resta aperta e la casella torna sopra la sua cella (`placeCellInput`):
+  chiuderla chiudeva subito anche la tastiera. Col tocco le caselle in cui si scrive hanno i caratteri
+  da 16px, se no l'iPhone ingrandisce la pagina. Nella barra il pulsante della tabella è un menu (`tableMenu` in
   `src/ui/toolbar.ts`): con le formule o di testo, perché la barra deve stare in una riga. Per le
   prove nel browser le celle della griglia hanno l'id `sheet-<riga>-<colonna>` (da 0).
 - `src/math/`: le espressioni delle formule (LaTeX o da calcolatrice): `parse.ts` le legge, `evaluate.ts`

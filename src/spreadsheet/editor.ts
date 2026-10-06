@@ -114,6 +114,8 @@ class SheetEditor {
   /** Dove si è cominciato a andare avanti con Tab: Invio torna lì, una riga sotto (come Excel). */
   private tabColumn: number | null = null
   private measure: CanvasRenderingContext2D | null = null
+  /** Il tocco sulla cella già scelta: ci si comincia a scrivere alla fine del tocco (`click`). */
+  private tapEdit: { row: number; col: number } | null = null
   private readonly cleanups: (() => void)[] = []
 
   private readonly dialog: HTMLDialogElement
@@ -644,16 +646,9 @@ class SheetEditor {
     const value = initial ?? this.cell(row, col)?.input ?? ''
     this.cellInput.value = value
     this.bar.value = value
-    const box = this.td(row, col)
-    if (box && !inBar) {
-      const base = this.canvas.getBoundingClientRect()
-      const rect = box.getBoundingClientRect()
-      this.cellInput.style.left = `${rect.left - base.left}px`
-      this.cellInput.style.top = `${rect.top - base.top}px`
-      this.cellInput.style.minWidth = `${rect.width}px`
-      this.cellInput.style.height = `${rect.height}px`
+    if (this.td(row, col) && !inBar) {
       this.cellInput.hidden = false
-      this.fitCellInput()
+      this.placeCellInput()
       this.cellInput.focus({ preventScroll: true })
       this.cellInput.setSelectionRange(value.length, value.length)
     } else {
@@ -662,6 +657,19 @@ class SheetEditor {
     }
     this.paint()
     this.afterTyping()
+  }
+
+  /** Mette la casella della scrittura sopra la cella in cui si scrive. */
+  private placeCellInput(): void {
+    const box = this.editing && this.td(this.editing.row, this.editing.col)
+    if (!box) return
+    const base = this.canvas.getBoundingClientRect()
+    const rect = box.getBoundingClientRect()
+    this.cellInput.style.left = `${rect.left - base.left}px`
+    this.cellInput.style.top = `${rect.top - base.top}px`
+    this.cellInput.style.minWidth = `${rect.width}px`
+    this.cellInput.style.height = `${rect.height}px`
+    this.fitCellInput()
   }
 
   /** La casella della cella si allarga con quello che si scrive (misurato con il suo carattere). */
@@ -1124,6 +1132,14 @@ class SheetEditor {
     this.address.addEventListener('blur', () => this.updateBar())
 
     this.table.addEventListener('pointerdown', (ev) => this.pointerDown(ev))
+    // Il tocco sulla cella già scelta, finito senza far scorrere la tabella: si comincia a scriverci.
+    this.table.addEventListener('click', (ev) => {
+      const tap = this.tapEdit
+      this.tapEdit = null
+      const td = (ev.target as HTMLElement).closest<HTMLElement>('td[data-r]')
+      if (tap && td && !this.editing && Number(td.dataset.r) === tap.row && Number(td.dataset.c) === tap.col) this.startEdit()
+    })
+    this.table.addEventListener('pointercancel', () => (this.tapEdit = null))
     this.table.addEventListener('dblclick', (ev) => {
       const td = (ev.target as HTMLElement).closest<HTMLElement>('td[data-r]')
       if (!td || this.editing) return
@@ -1153,8 +1169,10 @@ class SheetEditor {
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
     window.addEventListener('pointercancel', up)
+    // Sul telefono la finestra cambia misura anche quando si apre la tastiera: la scrittura resta
+    // aperta e la casella torna sopra la sua cella (chiuderla chiudeva subito anche la tastiera).
     const resize = () => {
-      if (this.editing) this.cancelEdit()
+      if (this.editing && !this.cellInput.hidden) this.placeCellInput()
       this.placeHandle()
     }
     window.addEventListener('resize', resize)
@@ -1195,6 +1213,7 @@ class SheetEditor {
 
   private pointerDown(ev: PointerEvent): void {
     if (ev.button !== 0) return
+    this.tapEdit = null
     const target = ev.target as HTMLElement
     this.closeMenu()
     const td = target.closest<HTMLElement>('td[data-r]')
@@ -1217,11 +1236,12 @@ class SheetEditor {
       } else if (this.editing) {
         return
       }
-      // Sul telefono un tocco sulla cella già scelta comincia a scriverci.
+      // Sul telefono un tocco sulla cella già scelta comincia a scriverci, ma alla fine del tocco
+      // (`click`): i clic del mouse che il telefono manda dopo il tocco porterebbero via il fuoco dalla
+      // casella, e la tastiera appena aperta si richiuderebbe.
       if (touch && row === this.active.row && col === this.active.col && this.anchor.row === row && this.anchor.col === col) {
-        // Senza i clic del mouse che seguono il tocco: porterebbero il fuoco via dalla casella.
         ev.preventDefault()
-        this.startEdit()
+        this.tapEdit = { row, col }
         return
       }
       ev.preventDefault()

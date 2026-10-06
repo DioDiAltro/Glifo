@@ -5209,6 +5209,15 @@ kbd {
   }
 }
 
+/* Col tocco le caselle in cui si scrive hanno almeno 16px: con meno l'iPhone ingrandisce la pagina. */
+@media (pointer: coarse) {
+  .sheet-cell-input,
+  .sheet-address,
+  .sheet-formula {
+    font-size: 16px;
+  }
+}
+
 @media print {
   body {
     overflow: visible;
