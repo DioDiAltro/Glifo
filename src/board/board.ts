@@ -396,6 +396,8 @@ export class Board {
   private selMenuAt: Pt | null = null
   /** L'ultimo spostamento con le frecce: quelli subito dopo si uniscono a lui in un passo solo. */
   private nudge: { step: Step; at: number } | null = null
+  /** Dove si disegnano gli aloni della selezione, prima di metterli sulla lavagna (drawHalos). */
+  private haloCanvas: HTMLCanvasElement | null = null
 
   constructor(private readonly opts: BoardOptions) {
     const prefs = loadPrefs()
@@ -2160,21 +2162,49 @@ export class Board {
     for (const s of shown) if (!s.highlight) this.drawStroke(ctx, s, this.pathOf(s), palette.ink[s.color as InkColor])
   }
 
-  /** Intorno ai tratti selezionati un alone del colore della selezione, sotto la scrittura (come in Note di Apple). */
+  /**
+   * Intorno ai tratti selezionati un alone del colore della selezione, come in Note di Apple. Si
+   * disegna a parte e tutto insieme: dove gli aloni si sovrappongono non diventa più scuro, e dentro
+   * i tratti non c'è (l'evidenziatore resta giallo).
+   */
   private drawHalos(ctx: CanvasRenderingContext2D, shown: Stroke[]): void {
     const sel = this.selection!
-    const palette = BOARD_PALETTES[this.theme]
-    const halo = 5 / this.view.zoom
-    ctx.save()
-    ctx.globalAlpha = palette.haloAlpha
-    ctx.strokeStyle = palette.selection
-    ctx.lineCap = 'round'
-    ctx.lineJoin = 'round'
-    for (const s of shown) {
-      if (!sel.ids.has(s.id)) continue
-      ctx.lineWidth = s.shape ? s.size + 2 * halo : 2 * halo
-      ctx.stroke(this.pathOf(s))
+    const list = shown.filter((s) => sel.ids.has(s.id))
+    if (!list.length) return
+    const c = (this.haloCanvas ??= document.createElement('canvas'))
+    if (c.width !== this.canvas.width || c.height !== this.canvas.height) {
+      c.width = this.canvas.width
+      c.height = this.canvas.height
     }
+    const h = c.getContext('2d')
+    if (!h) return
+    const palette = BOARD_PALETTES[this.theme]
+    const halo = 4 / this.view.zoom
+    h.setTransform(1, 0, 0, 1, 0, 0)
+    h.clearRect(0, 0, c.width, c.height)
+    this.applyView(h)
+    h.strokeStyle = h.fillStyle = palette.selection
+    h.lineCap = 'round'
+    h.lineJoin = 'round'
+    for (const s of list) {
+      const path = this.pathOf(s)
+      h.lineWidth = s.shape ? s.size + 2 * halo : 2 * halo
+      h.stroke(path)
+      if (!s.shape) h.fill(path)
+    }
+    h.globalCompositeOperation = 'destination-out'
+    for (const s of list) {
+      const path = this.pathOf(s)
+      if (s.shape) {
+        h.lineWidth = s.size
+        h.stroke(path)
+      } else h.fill(path)
+    }
+    h.globalCompositeOperation = 'source-over'
+    ctx.save()
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.globalAlpha = palette.haloAlpha
+    ctx.drawImage(c, 0, 0)
     ctx.restore()
   }
 
