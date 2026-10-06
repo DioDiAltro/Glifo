@@ -4745,6 +4745,12 @@ kbd {
   margin: 0;
 }
 
+/* Come in un foglio di calcolo ogni riga sta su una riga: se la tabella è larga, scorre. */
+.sheet-table th,
+.sheet-table td {
+  white-space: nowrap;
+}
+
 .sheet-table .sheet-num {
   text-align: right;
   font-variant-numeric: tabular-nums;

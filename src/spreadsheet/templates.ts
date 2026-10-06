@@ -59,8 +59,8 @@ export const TEMPLATES: SheetTemplate[] = [
       '| **Reddito operativo** | **=B4-B5-B6-B7** | =B8/B$2 {0,0%} |',
       '| Oneri finanziari | 5.000 € | =B9/B$2 {0,0%} |',
       '| **Utile prima delle imposte** | **=B8-B9** | =B10/B$2 {0,0%} |',
-      '| Imposte (24%) | =B10*24% | =B11/B$2 {0,0%} |',
-      '| **Utile netto** | **=B10-B11** | =B12/B$2 {0,0%} |',
+      '| Imposte (24%) | =B10*24% {0 €} | =B11/B$2 {0,0%} |',
+      '| **Utile netto** | **=B10-B11** {0 €} | =B12/B$2 {0,0%} |',
     ].join('\n'),
   },
   {

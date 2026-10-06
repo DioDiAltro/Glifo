@@ -113,6 +113,7 @@ class SheetEditor {
   private menu: HTMLElement | null = null
   /** Dove si è cominciato a andare avanti con Tab: Invio torna lì, una riga sotto (come Excel). */
   private tabColumn: number | null = null
+  private measure: CanvasRenderingContext2D | null = null
   private readonly cleanups: (() => void)[] = []
 
   private readonly dialog: HTMLDialogElement
@@ -663,9 +664,16 @@ class SheetEditor {
     this.afterTyping()
   }
 
+  /** La casella della cella si allarga con quello che si scrive (misurato con il suo carattere). */
   private fitCellInput(): void {
-    const chars = this.cellInput.value.length
-    this.cellInput.style.width = `${Math.max(parseFloat(this.cellInput.style.minWidth) || 80, 24 + chars * 8.4)}px`
+    const input = this.cellInput
+    const ctx = (this.measure ??= document.createElement('canvas').getContext('2d'))
+    let width = input.value.length * 8.6
+    if (ctx) {
+      ctx.font = getComputedStyle(input).font
+      width = ctx.measureText(input.value).width
+    }
+    input.style.width = `${Math.max(parseFloat(input.style.minWidth) || 80, Math.ceil(width) + 26)}px`
   }
 
   /** Conferma quello che si è scritto e (con `move`) passa alla cella vicina. */
