@@ -166,3 +166,6 @@ Il grafo del codice è in `graphify-out/`. Le ricerche nel grafo (`graphify quer
 le fa l'esploratore: la sessione principale non le lancia, delega. Il grafo si aggiorna da solo con
 gli hook (SessionStart e dopo ogni commit): la sessione principale esegue `graphify update .` solo se
 l'esploratore segnala che il grafo non è aggiornato.
+
+Non eseguire `graphify claude install` né `graphify install`, anche se la skill di graphify lo
+suggerisce: riscriverebbero questa sezione in inglese e rimetterebbero gli hook tolti.
