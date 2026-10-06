@@ -204,17 +204,17 @@ con Claude. La discussione è in [ABBONAMENTI.md](ABBONAMENTI.md), «La lavagna�
 - con l'AI e nei piani a pagamento, le formule scritte a mano convertite in LaTeX e aggiunte alla
   nota se si vuole («Aggiungi alla nota»): aspetta la discussione sulla chiave API;
 - **una lavagna completa di tutto** (lo studente, 5 ottobre 2026: «deve essere una lavagna completa
-  di tutto», come Microsoft Whiteboard). I primi quattro punti sono fatti sul ramo `prova` (5 ottobre
+  di tutto», come Microsoft Whiteboard). I primi quattro punti sono fatti e pubblicati (5 ottobre
   2026, «sì a tutto, comincia dagli strumenti della lavagna», poi «sì, parti con le linee e le
-  figure») e aspettano il «va bene» dello studente per andare online:
-  - fatto su `prova`: la grandezza dello strumento scelto, cioè lo spessore della penna,
+  figure»; viste sul ramo `prova`, il 6 ottobre «va bene, pubblicala»):
+  - fatto: la grandezza dello strumento scelto, cioè lo spessore della penna,
     dell'evidenziatore e della gomma (tre misure, dal menu che si apre premendo di nuovo lo
     strumento o il pulsante con il pallino);
-  - fatto su `prova`: gli evidenziatori, in quattro colori, trasparenti e sempre sotto la scrittura;
-  - fatto su `prova`: la gomma con due modi, «Dove passa», che cancella dove passa e diventa più
+  - fatto: gli evidenziatori, in quattro colori, trasparenti e sempre sotto la scrittura;
+  - fatto: la gomma con due modi, «Dove passa», che cancella dove passa e diventa più
     grande quando la si muove veloce, e «Linea intera», che toccando anche un solo punto di una
     linea la cancella tutta;
-  - fatto su `prova`: **linee e figure precise** (lo studente, 5 ottobre 2026: «se fai una linea e
+  - fatto: **linee e figure precise** (lo studente, 5 ottobre 2026: «se fai una linea e
     tieni premuto te l'allinea da sola; anche le altre figure», e un pulsante perché «le figure che
     si disegnano si aggiustano da sole», come in Whiteboard). Tenendo ferma la penna alla fine del
     tratto: linea, freccia, spezzata, triangolo, rettangolo, quadrato, rombo, pentagono, esagono,
