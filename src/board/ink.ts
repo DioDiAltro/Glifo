@@ -18,6 +18,9 @@ export interface BoardPalette {
   /** Gli evidenziatori, disegnati trasparenti (`highlightAlpha`) sotto la scrittura. */
   highlight: Record<HighlightColor, string>
   highlightAlpha: number
+  /** La selezione: il lazo, il riquadro, il pallino e l'alone (trasparente, `haloAlpha`) dei tratti presi. */
+  selection: string
+  haloAlpha: number
 }
 
 /**
@@ -32,6 +35,8 @@ export const BOARD_PALETTES: Record<BoardTheme, BoardPalette> = {
     ink: { ink: '#1c2030', blue: '#2453d4', red: '#cf2337', green: '#15803d' },
     highlight: { yellow: '#fcc419', green: '#51cf66', pink: '#f06595', blue: '#4dabf7' },
     highlightAlpha: 0.45,
+    selection: '#4f46e5',
+    haloAlpha: 0.3,
   },
   dark: {
     paper: '#181b24',
@@ -39,6 +44,8 @@ export const BOARD_PALETTES: Record<BoardTheme, BoardPalette> = {
     ink: { ink: '#e8eaf1', blue: '#86aaff', red: '#ff8a8f', green: '#5fd38c' },
     highlight: { yellow: '#ffe066', green: '#63e6be', pink: '#faa2c1', blue: '#a5d8ff' },
     highlightAlpha: 0.3,
+    selection: '#8b8cf8',
+    haloAlpha: 0.45,
   },
 }
 

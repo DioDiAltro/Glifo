@@ -2,6 +2,21 @@ import { readJson, writeJson } from '../store/storage'
 import { h, icon, ICONS } from '../ui/dom'
 import { appleTouch } from './device'
 import { BOARD_PALETTES, highlightName, inkName, outlineSvg, shapeSvg, strokeOutline, TOOL_SIZES, type BoardTheme, type SizeChoice } from './ink'
+import {
+  centerOn,
+  copyStrokes,
+  handleScale,
+  IDENTITY,
+  keepInside,
+  lassoed,
+  MAX_SIZE,
+  moveBox,
+  recolor,
+  selectionBox,
+  strokeAt,
+  transformStrokes,
+  type Transform,
+} from './selection'
 import { adjustShape, recognize, SHAPE_NAMES, shapePoints, type Shape } from './shapes'
 import type { BoardChange, BoardStore, BoardView } from './store'
 import { touchLog, where } from './touchlog'
@@ -34,6 +49,9 @@ import {
  * - Figure precise (shapes.ts): tenendo ferma la penna alla fine del tratto, la linea o la figura
  *   diventa precisa e, finché la penna è giù, la si regola; con le «Forme automatiche» succede da
  *   solo. Annulla riporta il tratto fatto a mano.
+ * - Selezione, come in Note di Apple (selection.ts): con il lazo si disegna intorno a quello che si
+ *   vuole prendere, o si tocca una linea; poi lo si trascina, lo si ingrandisce con il pallino
+ *   nell'angolo e dal menu lo si taglia, copia, duplica, elimina o gli si cambia colore.
  * - Penna: lo spessore segue la pressione. Appena si usa una penna, Glifo se lo ricorda: da lì un
  *   dito solo non fa niente (è quasi sempre la mano appoggiata), due dita spostano e ingrandiscono.
  *   La mano che tocca mentre si scrive, o appena dopo, non conta: né sulla lavagna né sui pulsanti.
@@ -52,7 +70,9 @@ export interface BoardOptions {
   openLog?(): void
 }
 
-type Tool = 'pen' | 'highlight' | 'eraser'
+type Tool = 'pen' | 'highlight' | 'eraser' | 'lasso'
+/** Gli strumenti con tre misure (il lazo non ne ha). */
+type SizedTool = Exclude<Tool, 'lasso'>
 /** La gomma cancella dove passa («area») o tutta la linea che tocca («stroke»). */
 type EraserMode = 'area' | 'stroke'
 
@@ -62,6 +82,8 @@ interface Step {
   added: Stroke[]
   /** Ha messo la figura precisa al posto del tratto a mano del passo prima. */
   pair?: true
+  /** I tratti selezionati prima e dopo (gli id): annullando o ripetendo, la selezione torna com'era. */
+  selection?: { before: string[]; after: string[] }
 }
 
 interface DrawAction {
@@ -117,10 +139,49 @@ interface PinchAction {
   moving: boolean
 }
 
-type Action = DrawAction | EraseAction | PanAction | PinchAction
+/** Il lazo che si sta disegnando intorno a quello da selezionare. */
+interface LassoAction {
+  kind: 'lasso'
+  pointer: number
+  type: string
+  /** Il giro del lazo, sulla lavagna. */
+  points: Pt[]
+  /** Dov'era sullo schermo e quanta strada ha fatto: poca, ed era un tocco. */
+  last: Pt
+  travel: number
+  /** Toccando fuori ha tolto la selezione di prima: un tocco così non apre il menu per incollare. */
+  cleared: boolean
+}
+
+/** La selezione trascinata (`move`) o ingrandita tirando il pallino nell'angolo (`scale`). */
+interface MoveAction {
+  kind: 'move'
+  pointer: number
+  type: string
+  mode: 'move' | 'scale'
+  /** Dove ha toccato, sulla lavagna e sullo schermo. */
+  from: Pt
+  screen: Pt
+  /** Si è mosso abbastanza da non essere un tocco: i tratti si disegnano sopra, dove sono adesso. */
+  moved: boolean
+  transform: Transform
+  /** Quanto la si può rimpicciolire e ingrandire. */
+  limits: [number, number]
+  /** Il menu della selezione era aperto: un tocco lo chiude, se no lo apre. */
+  menuWasOpen: boolean
+}
+
+type Action = DrawAction | EraseAction | PanAction | PinchAction | LassoAction | MoveAction
 
 /** Le azioni, a parole: per il registro dei tocchi. */
-const ACTION_NAMES: Record<Action['kind'], string> = { draw: 'un tratto', erase: 'la gomma', pan: 'uno spostamento', pinch: 'un gesto con due dita' }
+const ACTION_NAMES: Record<Action['kind'], string> = {
+  draw: 'un tratto',
+  erase: 'la gomma',
+  pan: 'uno spostamento',
+  pinch: 'un gesto con due dita',
+  lasso: 'il lazo',
+  move: 'la selezione che si sposta',
+}
 
 interface Finger extends Pt {
   /** Un dito (o il palmo) da non considerare finché non si alza: c'era la penna. */
@@ -141,6 +202,19 @@ const SLOP = 8
 /** La punta ferma (entro `HOLD_SLOP` pixel) per tanto così alla fine di un tratto: diventa una figura precisa. */
 const HOLD_MS = 550
 const HOLD_SLOP = 6
+/** Il lazo (o la selezione) mosso meno di così, in pixel, è un tocco. */
+const TAP_PX = 6
+/** Toccando col lazo si prende la linea a meno di tanti pixel (dal bordo); col mouse si mira meglio. */
+const TAP_REACH = { touch: 12, mouse: 6 }
+/** Il pallino nell'angolo della selezione: quanto è grande e da quanto lontano lo si prende (pixel). */
+const HANDLE_R = 7
+const HANDLE_REACH = { touch: 22, mouse: 11 }
+/** Lo spazio tra i tratti selezionati e il riquadro tratteggiato (pixel). */
+const SELECT_PAD = 6
+/** Duplica e Incolla spostano la copia di tanto (pixel), così si vede che è un'altra. */
+const COPY_SHIFT = 20
+/** Le frecce spostano la selezione; quelle premute una dopo l'altra sono un passo solo da annullare. */
+const NUDGE_MS = 1200
 /** Su questo dispositivo: se si è usata una penna e l'ultimo colore. */
 const PREFS_KEY = 'glifo.lavagna.v1'
 const START: BoardView = { x: 0, y: 0, zoom: 1 }
@@ -155,6 +229,9 @@ const ICON = {
   minus: '<path d="M5 12h14"/>',
   highlight: '<path d="M13.5 3.5l7 7-6 6-7-7z"/><path d="M7.5 9.5l-3 6.5 3.5 3.5 6.5-3"/><path d="M3 21h9"/>',
   rec: '<circle cx="12" cy="12" r="6" fill="currentColor" stroke="none"/>',
+  lasso: '<ellipse cx="12.5" cy="9.5" rx="8.5" ry="5.5" stroke-dasharray="3 2.4"/><path d="M7.4 14.3c-1.9 1-2.3 2.4-1.2 3.4 1 .9.9 2.2-.4 3.3"/>',
+  all: '<rect x="4" y="4" width="16" height="16" rx="2.5" stroke-dasharray="3 2.6"/>',
+  paste: '<rect x="5" y="4.5" width="14" height="16.5" rx="2"/><path d="M9 4.5V3h6v1.5M9 10h6M9 14h4"/>',
 }
 
 const clampZoom = (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z))
@@ -201,7 +278,7 @@ interface Prefs {
   /** Il colore dell'evidenziatore. */
   highlight?: HighlightColor
   /** La misura scelta per ogni strumento (0, 1 o 2: vedi TOOL_SIZES). */
-  sizes?: Partial<Record<Tool, SizeChoice>>
+  sizes?: Partial<Record<SizedTool, SizeChoice>>
   eraser?: EraserMode
   /** Forme automatiche: i tratti della penna che somigliano a una figura diventano precisi da soli. */
   shapes?: boolean
@@ -215,15 +292,21 @@ function loadPrefs(): Prefs {
 const sizeChoice = (v: unknown): SizeChoice => (v === 0 || v === 1 || v === 2 ? v : 1)
 
 /** Le misure a parole: spessori per penna ed evidenziatore, grandezze per la gomma. */
-const SIZE_NAMES: Record<Tool, readonly string[]> = {
+const SIZE_NAMES: Record<SizedTool, readonly string[]> = {
   pen: ['fine', 'media', 'spessa'],
   highlight: ['fine', 'medio', 'largo'],
   eraser: ['piccola', 'media', 'grande'],
 }
-const TOOL_NAMES: Record<Tool, string> = { pen: 'penna', highlight: 'evidenziatore', eraser: 'gomma' }
+const TOOL_NAMES: Record<Tool, string> = { pen: 'penna', highlight: 'evidenziatore', eraser: 'gomma', lasso: 'selezione' }
 const MODE_NAMES: Record<EraserMode, string> = { area: 'Dove passa', stroke: 'Linea intera' }
 /** Il pallino delle tre misure (in px), nel pulsante e nel menu. */
 const DOT_SIZES = [7, 11, 16] as const
+
+/**
+ * Gli appunti della lavagna (Copia e Taglia): restano finché la pagina è aperta, anche cambiando nota.
+ * `shift`: di quanto spostare la prossima copia incollata (dopo Taglia la prima va dov'era).
+ */
+let clipboard: { strokes: Stroke[]; box: Box; shift: number } | null = null
 
 export class Board {
   readonly el: HTMLElement
@@ -244,6 +327,11 @@ export class Board {
   private readonly modeButton: HTMLButtonElement
   /** La misura dello strumento: un pallino grande come il tratto; apre il menu. */
   private readonly sizeButton: HTMLButtonElement
+  /** Con il lazo, al posto dei colori e della misura: «Tutto» (seleziona tutto) e «Incolla». */
+  private readonly lassoGroup: HTMLElement
+  private readonly allButton: HTMLButtonElement
+  private readonly pasteButton: HTMLButtonElement
+  private readonly toolsBar: HTMLElement
   /** Il menu aperto (misure, modo della gomma), se c'è. */
   private menu: HTMLElement | null = null
   /** Il pulsante sotto cui è aperto il menu. */
@@ -270,7 +358,7 @@ export class Board {
   private tool: Tool = 'pen'
   private color: InkColor
   private highlightColor: HighlightColor
-  private readonly sizes: Record<Tool, SizeChoice>
+  private readonly sizes: Record<SizedTool, SizeChoice>
   private eraserMode: EraserMode
   private autoShapes: boolean
   private penMode: boolean
@@ -300,6 +388,14 @@ export class Board {
   private readonly palmTaps = new Set<number>()
   /** Fino a quando un clic viene dalla mano appena alzata da un pulsante, e non vale. */
   private palmClickUntil = 0
+  /** I tratti selezionati (con il lazo o toccandoli) e il loro riquadro, sulla lavagna. */
+  private selection: { ids: Set<string>; box: Box } | null = null
+  /** Il menu della selezione (Taglia, Copia…) o quello per incollare, se è aperto. */
+  private selMenu: HTMLElement | null = null
+  /** Dove si è toccato per incollare (sulla lavagna): il menu sta lì. */
+  private selMenuAt: Pt | null = null
+  /** L'ultimo spostamento con le frecce: quelli subito dopo si uniscono a lui in un passo solo. */
+  private nudge: { step: Step; at: number } | null = null
 
   constructor(private readonly opts: BoardOptions) {
     const prefs = loadPrefs()
@@ -376,9 +472,16 @@ export class Board {
       h('span', { class: 'board-size-dot' }),
       icon(ICONS.chevronDown, 14),
     )
+    // Con il lazo: seleziona tutto e incolla (senza tastiera, sull'iPad).
+    const chip = (cls: string, label: string, title: string, paths: string, onClick: () => void) =>
+      h('button', { class: `board-chip ${cls}`, title, attrs: { type: 'button', 'aria-label': title }, on: { click: onClick } }, icon(paths, 16), h('span', {}, label))
+    this.allButton = chip('board-all', 'Tutto', 'Seleziona tutto (Ctrl+A)', ICON.all, () => (this.selectAll(), this.focus()))
+    this.pasteButton = chip('board-paste', 'Incolla', 'Incolla (Ctrl+V)', ICON.paste, () => (this.paste(), this.focus()))
+    this.lassoGroup = h('div', { class: 'board-lasso', attrs: { role: 'group', 'aria-label': 'Selezione' } }, this.allButton, this.pasteButton)
     // Uno sopra l'altro, larghi quanto il più largo: cambiando strumento la barra resta uguale e i
-    // pulsanti non si spostano sotto la penna (la barra sta al centro).
-    const options = h('div', { class: 'board-options' }, this.inkGroup, this.highlightGroup, this.modeButton)
+    // pulsanti non si spostano sotto la penna (la barra sta al centro). La misura ha la sua colonna;
+    // i pulsanti del lazo prendono il posto di tutte e due.
+    const options = h('div', { class: 'board-options' }, this.inkGroup, this.highlightGroup, this.modeButton, this.lassoGroup, this.sizeButton)
     // Il pulsante premuto si spegne quando non c'è più niente da annullare: il fuoco torna alla
     // lavagna, così Ctrl+Z e Ctrl+Y continuano a funzionare.
     this.undoButton = button('Annulla', ICON.undo, () => (this.undo(), this.focus()), 'Annulla (Ctrl+Z)')
@@ -404,14 +507,15 @@ export class Board {
       toolButton('pen', 'Penna', ICON.pen, 'Penna (premuta di nuovo: lo spessore e le forme automatiche)'),
       toolButton('highlight', 'Evidenziatore', ICON.highlight, 'Evidenziatore: trasparente, sotto la scrittura'),
       toolButton('eraser', 'Gomma', ICON.eraser, 'Gomma (premuta di nuovo: come cancella e quanto è grande)'),
+      toolButton('lasso', 'Selezione', ICON.lasso, 'Selezione: disegna intorno a quello che vuoi prendere (premuta di nuovo: come si usa)'),
       sep(),
       options,
-      this.sizeButton,
       sep(),
       this.clearButton,
       this.fullButton,
       this.logButton,
     )
+    this.toolsBar = tools
     // In basso a sinistra annulla e ripeti, a destra l'ingrandimento: in alto c'è posto anche
     // quando la lavagna è stretta, e sul telefono si arriva col pollice.
     const history = h('div', { class: 'board-history', attrs: { role: 'group', 'aria-label': 'Annulla e ripeti' } }, this.undoButton, this.redoButton)
@@ -434,7 +538,7 @@ export class Board {
     )
     this.el = h(
       'section',
-      { class: 'board-pane', attrs: { id: 'board-pane', 'aria-label': 'Lavagna' }, data: { strokes: '0', tool: 'pen' } },
+      { class: 'board-pane', attrs: { id: 'board-pane', 'aria-label': 'Lavagna' }, data: { strokes: '0', tool: 'pen', selected: '0' } },
       this.stage,
       tools,
       history,
@@ -509,11 +613,14 @@ export class Board {
     })
     void opts.store.persistent().then((p) => (this.persistent = p))
 
-    // Il menu delle misure si chiude toccando fuori, con Esc o scegliendo.
+    // Il menu delle misure si chiude toccando fuori, con Esc o scegliendo. Quello della selezione
+    // anche, ma toccando la lavagna decide lei (toccare la selezione lo apre e lo chiude).
     document.addEventListener(
       'pointerdown',
       (ev) => {
-        if (this.menu && !this.menu.contains(ev.target as Node) && !(ev.target as Element).closest?.('.board-chip, .board-tools .board-button[aria-pressed="true"]')) this.closeMenu()
+        const target = ev.target as Node
+        if (this.menu && !this.menu.contains(target) && !(ev.target as Element).closest?.('.board-chip, .board-tools .board-button[aria-pressed="true"]')) this.closeMenu()
+        if (this.selMenu && !this.selMenu.contains(target) && !stage.contains(target)) this.closeSelMenu()
       },
       true,
     )
@@ -538,6 +645,7 @@ export class Board {
       return
     }
     this.cancelAction()
+    this.clearSelection()
     this.note = note
     this.el.dataset.note = note
     this.strokes = new Map()
@@ -563,6 +671,7 @@ export class Board {
     if (this.shown) touchLog.add('lavagna nascosta')
     this.shown = false
     this.cancelAction()
+    this.clearSelection()
     this.setFull(false)
   }
 
@@ -631,6 +740,9 @@ export class Board {
     this.el.dataset.tool = tool
     for (const [t, b] of this.toolButtons) b.setAttribute('aria-pressed', String(t === tool))
     if (tool !== 'eraser') this.cursor = null
+    // Come in Note di Apple: prendendo un altro strumento la selezione si toglie.
+    if (tool !== 'lasso') this.clearSelection()
+    this.closeSelMenu()
     this.closeMenu()
     this.updateToolUi()
     this.scheduleLive()
@@ -658,7 +770,7 @@ export class Board {
     this.updateToolUi()
   }
 
-  private setSize(tool: Tool, choice: SizeChoice): void {
+  private setSize(tool: SizedTool, choice: SizeChoice): void {
     touchLog.add(`misura ${TOOL_NAMES[tool] === 'gomma' ? 'della gomma' : `dell${tool === 'pen' ? 'a penna' : "'evidenziatore"}`}: ${SIZE_NAMES[tool][choice]}`)
     this.sizes[tool] = choice
     this.savePrefs({ sizes: { ...this.sizes } })
@@ -692,9 +804,16 @@ export class Board {
     this.inkGroup.classList.toggle('is-off', tool !== 'pen')
     this.highlightGroup.classList.toggle('is-off', tool !== 'highlight')
     this.modeButton.classList.toggle('is-off', tool !== 'eraser')
+    this.lassoGroup.classList.toggle('is-off', tool !== 'lasso')
+    this.sizeButton.classList.toggle('is-off', tool === 'lasso')
     this.modeButton.querySelector('.board-mode-label')!.textContent = MODE_NAMES[this.eraserMode]
     this.modeButton.title = `Gomma: ${MODE_NAMES[this.eraserMode].toLowerCase()} (cambia come cancella)`
     this.modeButton.setAttribute('aria-label', this.modeButton.title)
+    // Il lazo non ha misure: il pulsante (nascosto) resta com'era, così la barra non cambia.
+    if (tool === 'lasso') {
+      if (this.menu && this.menuAnchor) this.openMenu(this.menuAnchor)
+      return
+    }
     const name = SIZE_NAMES[tool][this.sizes[tool]]
     const label = tool === 'eraser' ? `Grandezza della gomma: ${name}` : `Spessore ${tool === 'pen' ? 'della penna' : "dell'evidenziatore"}: ${name}`
     this.sizeButton.title = label
@@ -727,6 +846,7 @@ export class Board {
   private openMenu(anchor: HTMLElement): void {
     this.menu?.remove()
     const tool = this.tool
+    if (tool === 'lasso') return this.openLassoHelp(anchor)
     const modes = tool === 'eraser' && anchor !== this.sizeButton
     const sizesToo = anchor !== this.modeButton
     const option = (label: string, pressed: boolean, pick: () => void, extra: Node | null = null, help = '') =>
@@ -788,16 +908,35 @@ export class Board {
     }
     const menu = h('div', { class: `board-menu${tool === 'eraser' ? ' is-eraser' : ''}`, attrs: { role: 'group', 'aria-label': tool === 'eraser' ? 'Gomma' : tool === 'pen' ? 'Penna' : 'Evidenziatore' } }, parts)
     menu.style.setProperty('--swatch', this.sizeButton.style.getPropertyValue('--swatch'))
+    this.showMenu(menu, anchor)
+  }
+
+  /** Il menu sotto il pulsante, dentro la lavagna (che lo posiziona dal bordo della parte dove si scrive). */
+  private showMenu(menu: HTMLElement, anchor: HTMLElement): void {
     this.el.append(menu)
     this.menu = menu
     this.menuAnchor = anchor
-    // Sotto il pulsante, dentro la lavagna.
-    const pane = this.el.getBoundingClientRect()
+    const pane = this.stage.getBoundingClientRect()
     const at = anchor.getBoundingClientRect()
     const width = menu.offsetWidth
     const left = Math.max(8, Math.min(pane.width - width - 8, at.left + at.width / 2 - pane.left - width / 2))
     menu.style.left = `${left}px`
     menu.style.top = `${at.bottom - pane.top + 8}px`
+  }
+
+  /** Il lazo premuto di nuovo: come si usa. */
+  private openLassoHelp(anchor: HTMLElement): void {
+    const menu = h(
+      'div',
+      { class: 'board-menu', attrs: { role: 'group', 'aria-label': 'Selezione' } },
+      h('p', { class: 'board-menu-title' }, 'Selezione'),
+      h(
+        'p',
+        { class: 'board-menu-hint' },
+        'Disegna intorno a quello che vuoi prendere, o tocca una linea. Poi trascinalo per spostarlo, tira il pallino nell\'angolo per ingrandirlo e toccalo per il menu: taglia, copia, duplica, elimina e colore.',
+      ),
+    )
+    this.showMenu(menu, anchor)
   }
 
   private savePrefs(changes: Prefs): void {
@@ -806,6 +945,7 @@ export class Board {
 
   /** Che cosa fa lo strumento, per il registro dei tocchi. */
   private verb(tool: Tool): string {
+    if (tool === 'lasso') return this.selection ? 'seleziona (c\'è una selezione)' : 'seleziona'
     return tool === 'pen' ? 'scrive' : tool === 'highlight' ? 'evidenzia' : `cancella (${MODE_NAMES[this.eraserMode].toLowerCase()})`
   }
 
@@ -908,6 +1048,8 @@ export class Board {
       if (a?.kind === 'draw') this.finishDraw(a, !young)
       else if (a?.kind === 'erase') this.finishErase(a)
       else if (a?.kind === 'pan') this.finishPan()
+      // Il lazo o la selezione appena presa col primo dito: era l'inizio del gesto.
+      else if (a?.kind === 'lasso' || a?.kind === 'move') this.cancelAction()
       this.capture(ev)
       this.startPinch(active as [number, number])
     } else {
@@ -939,6 +1081,11 @@ export class Board {
       for (const e of coalesced(ev)) this.eraseTo(a, this.local(e, rect), e.timeStamp)
       this.cursor = this.local(ev, rect)
       this.scheduleLive()
+    } else if (a.kind === 'lasso') {
+      for (const e of coalesced(ev)) this.lassoTo(a, this.local(e, rect))
+      this.scheduleLive()
+    } else if (a.kind === 'move') {
+      this.moveTo(a, this.local(ev, rect))
     } else {
       const pos = this.local(ev)
       this.moveView((a.last.x - pos.x) / this.view.zoom, (a.last.y - pos.y) / this.view.zoom)
@@ -946,9 +1093,15 @@ export class Board {
     }
   }
 
-  /** Con il mouse o la penna sospesa sopra: il cerchio della gomma segue il puntatore. */
+  /**
+   * Con il mouse o la penna sospesa sopra: il cerchio della gomma segue il puntatore e, sopra la
+   * selezione, la freccia dice che la si sposta (o, sul pallino, che la si ingrandisce).
+   */
   private hover(ev: PointerEvent): void {
     if (ev.pointerType === 'touch') return
+    const over = this.selection && !this.action ? this.selectionHit(this.local(ev), ev.pointerType) : null
+    this.stage.classList.toggle('is-move', over === 'inside')
+    this.stage.classList.toggle('is-resize', over === 'handle')
     const next = this.tool === 'eraser' ? this.local(ev) : null
     if (!next && !this.cursor) return
     this.cursor = next
@@ -979,6 +1132,8 @@ export class Board {
     if (dropped && a.kind !== 'draw') this.cancelAction()
     else if (a.kind === 'draw') this.finishDraw(a, !dropped)
     else if (a.kind === 'erase') this.finishErase(a)
+    else if (a.kind === 'lasso') this.finishLasso(a)
+    else if (a.kind === 'move') this.finishMove(a)
     else this.finishPan()
   }
 
@@ -1011,6 +1166,10 @@ export class Board {
     } else if (a.kind === 'pan' || a.kind === 'pinch') {
       this.setView(a.before, false)
       this.stage.classList.remove('is-panning')
+    } else if (a.kind === 'move') {
+      // La selezione torna dov'era (i tratti non sono ancora cambiati: si vedevano solo spostati).
+      if (a.moved) this.render()
+      if (a.menuWasOpen) this.openSelMenu()
     }
     this.cursor = null
     this.renderLive()
@@ -1021,6 +1180,8 @@ export class Board {
 
   private startTool(ev: PointerEvent, pos: Pt, tool: Tool): void {
     this.closeMenu()
+    if (tool === 'lasso') return this.startSelect(ev, pos)
+    this.closeSelMenu()
     const w = this.world(pos)
     if (tool === 'eraser') {
       const radius = TOOL_SIZES.eraser[this.sizes.eraser]
@@ -1183,9 +1344,402 @@ export class Board {
     if (removed.length || added.length) {
       this.record({ removed, added })
       this.persist({ put: added, remove: removed.map((s) => s.id) })
+      // La gomma della penna con il lazo: di quello che era selezionato resta quello che c'è ancora.
+      this.pruneSelection()
     }
     this.renderLive()
     this.ended()
+  }
+
+  // ——— Selezionare (il lazo), spostare, ingrandire, copiare ———
+
+  /** I tratti selezionati, nell'ordine in cui si disegnano. */
+  private selected(): Stroke[] {
+    const sel = this.selection
+    return sel ? this.sorted().filter((s) => sel.ids.has(s.id)) : []
+  }
+
+  /** La parte della lavagna che si vede. */
+  private visibleBox(): Box {
+    const { x, y, zoom } = this.view
+    return { minX: x, minY: y, maxX: x + this.size.w / zoom, maxY: y + this.size.h / zoom }
+  }
+
+  /** Il riquadro della selezione sullo schermo, con lo spazio intorno; com'è o spostato da `t`. */
+  private screenBox(box: Box, t: Transform = IDENTITY): Box {
+    const b = moveBox(box, t)
+    const { x, y, zoom } = this.view
+    return {
+      minX: (b.minX - x) * zoom - SELECT_PAD,
+      minY: (b.minY - y) * zoom - SELECT_PAD,
+      maxX: (b.maxX - x) * zoom + SELECT_PAD,
+      maxY: (b.maxY - y) * zoom + SELECT_PAD,
+    }
+  }
+
+  /** Dove tocca il puntatore (sullo schermo): sul pallino dell'angolo, dentro la selezione o fuori. */
+  private selectionHit(pos: Pt, type: string): 'handle' | 'inside' | null {
+    const sel = this.selection
+    if (!sel) return null
+    const b = this.screenBox(sel.box)
+    if (Math.hypot(pos.x - b.maxX, pos.y - b.maxY) <= (type === 'mouse' ? HANDLE_REACH.mouse : HANDLE_REACH.touch)) return 'handle'
+    return pos.x >= b.minX && pos.x <= b.maxX && pos.y >= b.minY && pos.y <= b.maxY ? 'inside' : null
+  }
+
+  /** Seleziona questi tratti (nessuno: la selezione si toglie); `menu`: apre anche il menu, come dopo il lazo. */
+  private select(list: Stroke[], menu = true): void {
+    if (!list.length) return this.clearSelection()
+    this.selection = { ids: new Set(list.map((s) => s.id)), box: selectionBox(list)! }
+    this.el.dataset.selected = String(list.length)
+    this.render()
+    this.renderLive()
+    if (menu) this.openSelMenu()
+    else this.closeSelMenu()
+  }
+
+  private clearSelection(): void {
+    this.closeSelMenu()
+    if (!this.selection) return
+    this.selection = null
+    this.el.dataset.selected = '0'
+    this.stage.classList.remove('is-move', 'is-resize')
+    this.render()
+    this.renderLive()
+  }
+
+  /** Dopo la gomma, Annulla o un'altra scheda: restano selezionati i tratti che ci sono ancora. */
+  private pruneSelection(): void {
+    const sel = this.selection
+    if (!sel) return
+    const list = [...sel.ids].map((id) => this.strokes.get(id)).filter((s): s is Stroke => !!s)
+    if (list.length !== sel.ids.size) this.select(list, !!this.selMenu)
+  }
+
+  /**
+   * Il lazo tocca la lavagna: sulla selezione la prende, per spostarla o (dal pallino nell'angolo)
+   * ingrandirla; fuori la toglie e comincia un lazo nuovo.
+   */
+  private startSelect(ev: PointerEvent, pos: Pt): void {
+    const sel = this.selection
+    const hit = this.selectionHit(pos, ev.pointerType)
+    if (sel && hit) {
+      const menuWasOpen = this.selMenu?.dataset.kind === 'selection'
+      this.closeSelMenu()
+      // Ingrandendo: non più piccola di 16 pixel, e nessuno spessore oltre quello che si salva.
+      const side = Math.max(sel.box.maxX - sel.box.minX, sel.box.maxY - sel.box.minY) * this.view.zoom
+      const thickest = Math.max(...this.selected().map((s) => s.size))
+      this.action = {
+        kind: 'move',
+        pointer: ev.pointerId,
+        type: ev.pointerType,
+        mode: hit === 'handle' ? 'scale' : 'move',
+        from: this.world(pos),
+        screen: pos,
+        moved: false,
+        transform: { ...IDENTITY, origin: { x: sel.box.minX, y: sel.box.minY } },
+        limits: [Math.min(1, 16 / Math.max(1, side)), Math.max(1, Math.min(20, MAX_SIZE / thickest))],
+        menuWasOpen,
+      }
+      touchLog.add(hit === 'handle' ? '→ sul pallino della selezione: la ingrandisce' : '→ sulla selezione: la sposta (o, toccandola, il menu)')
+      return
+    }
+    const cleared = !!sel
+    if (sel) touchLog.add('→ fuori dalla selezione: la toglie')
+    this.clearSelection()
+    this.action = { kind: 'lasso', pointer: ev.pointerId, type: ev.pointerType, points: [this.world(pos)], last: pos, travel: 0, cleared }
+    this.scheduleLive()
+  }
+
+  private lassoTo(a: LassoAction, pos: Pt): void {
+    const d = Math.hypot(pos.x - a.last.x, pos.y - a.last.y)
+    if (d < 2) return
+    a.travel += d
+    a.last = pos
+    a.points.push(this.world(pos))
+  }
+
+  private finishLasso(a: LassoAction): void {
+    this.action = null
+    if (a.travel < TAP_PX) {
+      // Un tocco: la linea toccata; dove non c'è niente, «Incolla» (se si è copiato qualcosa).
+      const p = a.points[0]
+      const reach = (a.type === 'mouse' ? TAP_REACH.mouse : TAP_REACH.touch) / this.view.zoom
+      const hit = strokeAt(this.sorted(), p, reach, (s) => this.boxOf(s))
+      if (hit) {
+        touchLog.add('lazo: toccata una linea, selezionata')
+        this.select([hit])
+      } else if (clipboard && !a.cleared) {
+        touchLog.add('lazo: toccato un punto vuoto, il menu per incollare')
+        this.openPasteMenu(p)
+      } else touchLog.add('lazo: toccato un punto vuoto')
+    } else {
+      const got = lassoed(this.sorted(), a.points, (s) => this.boxOf(s))
+      touchLog.add(`lazo: ${got.length ? `${got.length} ${got.length === 1 ? 'tratto preso' : 'tratti presi'}` : 'niente dentro'}`)
+      this.select(got)
+    }
+    this.renderLive()
+    this.ended()
+  }
+
+  /** La selezione segue il puntatore: spostata o, dal pallino, ingrandita (l'angolo opposto sta fermo). */
+  private moveTo(a: MoveAction, pos: Pt): void {
+    const sel = this.selection
+    if (!sel) return
+    if (!a.moved) {
+      if (Math.hypot(pos.x - a.screen.x, pos.y - a.screen.y) < TAP_PX) return
+      a.moved = true
+      // Da qui i tratti presi si disegnano sopra, dove sono adesso (vedi render e renderLive).
+      this.render()
+    }
+    const w = this.world(pos)
+    const dx = w.x - a.from.x
+    const dy = w.y - a.from.y
+    if (a.mode === 'move') a.transform = { ...a.transform, dx, dy }
+    else {
+      const b = sel.box
+      const corner = { x: b.maxX, y: b.maxY }
+      const scale = handleScale(a.transform.origin, corner, { x: corner.x + dx, y: corner.y + dy }, a.limits[0], a.limits[1])
+      a.transform = { ...a.transform, scale }
+    }
+    this.scheduleLive()
+  }
+
+  private finishMove(a: MoveAction): void {
+    this.action = null
+    const t = a.transform
+    if (!a.moved || (!t.dx && !t.dy && t.scale === 1)) {
+      // Un tocco sulla selezione: apre o chiude il menu.
+      if (a.moved) this.render()
+      else touchLog.add(`selezione: toccata, menu ${a.menuWasOpen ? 'chiuso' : 'aperto'}`)
+      if (!a.menuWasOpen || a.moved) this.openSelMenu()
+      this.renderLive()
+      return this.ended()
+    }
+    const before = this.selected()
+    touchLog.add(a.mode === 'move' ? `selezione: spostata di ${Math.round(t.dx)}, ${Math.round(t.dy)}` : `selezione: ingrandita al ${Math.round(t.scale * 100)}%`)
+    this.replaceSelected(before, transformStrokes(before, t))
+    this.ended()
+  }
+
+  /**
+   * I tratti selezionati `before` diventano `after` (spostati, ingranditi, d'altro colore; `keep`: quelli
+   * selezionati che restano com'erano): un passo da annullare, e la selezione resta.
+   */
+  private replaceSelected(before: Stroke[], after: Stroke[], keep: Stroke[] = []): void {
+    const ids = (list: Stroke[]) => list.map((s) => s.id)
+    const next = [...keep, ...after]
+    this.record({ removed: before, added: after, selection: { before: ids(this.selected()), after: ids(next) } })
+    this.removeStrokes(ids(before))
+    this.addStrokes(after)
+    this.persist({ put: after, remove: ids(before) })
+    this.select(next)
+  }
+
+  private deleteSelection(verb = 'eliminata'): void {
+    const list = this.selected()
+    if (!list.length || this.action) return
+    const ids = list.map((s) => s.id)
+    touchLog.add(`selezione: ${verb} (${list.length} ${list.length === 1 ? 'tratto' : 'tratti'})`)
+    this.record({ removed: list, added: [], selection: { before: ids, after: [] } })
+    this.removeStrokes(ids)
+    this.persist({ remove: ids })
+    this.clearSelection()
+  }
+
+  /** Copia (o taglia) la selezione negli appunti della lavagna. */
+  private copySelection(cut = false): void {
+    const list = this.selected()
+    if (!list.length || this.action || !this.selection) return
+    // Dopo Taglia la prima copia incollata va dov'era; dopo Copia un po' spostata, per vederla.
+    clipboard = { strokes: list.map((s) => ({ ...s, points: s.points.slice() })), box: this.selection.box, shift: cut ? 0 : 1 }
+    if (cut) this.deleteSelection('tagliata')
+    else {
+      touchLog.add(`selezione: copiata (${list.length} ${list.length === 1 ? 'tratto' : 'tratti'})`)
+      this.closeSelMenu()
+    }
+    this.updateState()
+  }
+
+  /**
+   * Incolla gli appunti della lavagna: dove si è toccato (`at`), se no accanto all'originale (se si
+   * vede, un po' più in là a ogni volta) o in mezzo alla vista. Quello incollato resta selezionato.
+   */
+  private paste(at?: Pt): void {
+    const clip = clipboard
+    if (!clip || this.action || !this.note) return
+    const v = this.visibleBox()
+    let move = at ? centerOn(clip.box, at) : null
+    if (!move) {
+      const d = (COPY_SHIFT * clip.shift) / this.view.zoom
+      const cx = (clip.box.minX + clip.box.maxX) / 2 + d
+      const cy = (clip.box.minY + clip.box.maxY) / 2 + d
+      move = cx > v.minX && cx < v.maxX && cy > v.minY && cy < v.maxY ? { dx: d, dy: d } : centerOn(clip.box, { x: (v.minX + v.maxX) / 2, y: (v.minY + v.maxY) / 2 })
+      clip.shift++
+    }
+    // Tutto dentro la vista, se ci sta.
+    const fix = keepInside(moveBox(clip.box, { ...IDENTITY, ...move }), v, 8 / this.view.zoom)
+    const copies = copyStrokes(clip.strokes, move.dx + fix.dx, move.dy + fix.dy, Date.now())
+    touchLog.add(`incollati ${copies.length} ${copies.length === 1 ? 'tratto' : 'tratti'}`)
+    this.addCopies(copies)
+  }
+
+  private duplicate(): void {
+    const list = this.selected()
+    if (!list.length || this.action) return
+    const d = COPY_SHIFT / this.view.zoom
+    touchLog.add(`selezione: duplicata (${list.length} ${list.length === 1 ? 'tratto' : 'tratti'})`)
+    this.addCopies(copyStrokes(list, d, d, Date.now()))
+  }
+
+  /** Le copie (Incolla, Duplica) vanno sulla lavagna e diventano la selezione, con il lazo. */
+  private addCopies(copies: Stroke[]): void {
+    const before = this.selected().map((s) => s.id)
+    if (this.tool !== 'lasso') this.setTool('lasso')
+    this.record({ removed: [], added: copies, selection: { before, after: copies.map((s) => s.id) } })
+    this.addStrokes(copies)
+    this.persist({ put: copies })
+    this.select(copies)
+  }
+
+  /** Un colore nuovo alla selezione: della penna alla scrittura, dell'evidenziatore agli evidenziatori. */
+  private recolorSelection(color: InkColor | HighlightColor, highlight: boolean): void {
+    const list = this.selected()
+    if (!list.length || this.action) return
+    const { before, after } = recolor(list, color, highlight)
+    if (!before.length) return
+    touchLog.add(`selezione: colore ${(highlight ? highlightName(color as HighlightColor) : inkName(color as InkColor, this.theme)).toLowerCase()} a ${before.length} ${before.length === 1 ? 'tratto' : 'tratti'}`)
+    this.replaceSelected(before, after, list.filter((s) => !before.includes(s)))
+  }
+
+  private selectAll(): void {
+    if (this.action || !this.strokes.size) return
+    if (this.tool !== 'lasso') this.setTool('lasso')
+    touchLog.add(`selezione: tutto (${this.strokes.size} tratti)`)
+    this.select(this.sorted())
+  }
+
+  /** Le frecce spostano la selezione di un pixel (con Maiusc di dieci); quelle di seguito sono un passo solo. */
+  private nudgeSelection(dx: number, dy: number): void {
+    const list = this.selected()
+    if (!list.length || this.action) return
+    const ids = (l: Stroke[]) => l.map((s) => s.id)
+    const after = transformStrokes(list, { ...IDENTITY, dx: dx / this.view.zoom, dy: dy / this.view.zoom })
+    const top = this.undoStack[this.undoStack.length - 1]
+    const merge = !!this.nudge && top === this.nudge.step && performance.now() - this.nudge.at < NUDGE_MS
+    // Unito al passo prima: toglie gli originali e mette questi.
+    const step: Step = merge
+      ? { removed: top.removed, added: after, selection: { before: top.selection?.before ?? ids(list), after: ids(after) } }
+      : { removed: list, added: after, selection: { before: ids(list), after: ids(after) } }
+    if (merge) this.undoStack.pop()
+    this.record(step)
+    this.removeStrokes(ids(list))
+    this.addStrokes(after)
+    this.persist({ put: after, remove: ids(list) })
+    this.nudge = { step, at: performance.now() }
+    this.select(after, !!this.selMenu)
+  }
+
+  /** Il menu della selezione, sopra i tratti presi: Taglia, Copia, Duplica, Elimina e i colori. */
+  private openSelMenu(): void {
+    this.closeSelMenu()
+    const list = this.selected()
+    if (!list.length) return
+    const run = (action: () => void) => () => {
+      action()
+      this.focus()
+    }
+    const item = (label: string, title: string, action: () => void, cls = '') =>
+      h('button', { class: `board-sel-item${cls}`, title, attrs: { type: 'button' }, on: { click: run(action) } }, label)
+    // I colori della penna se c'è scrittura (cambiano quella), se no quelli dell'evidenziatore.
+    const highlight = list.every((s) => s.highlight)
+    const kind = list.filter((s) => !!s.highlight === highlight)
+    const current = kind.every((s) => s.color === kind[0].color) ? kind[0].color : null
+    const palette = BOARD_PALETTES[this.theme]
+    const colors = (highlight ? HIGHLIGHT_COLORS : INK_COLORS).map((c) => {
+      const name = highlight ? highlightName(c as HighlightColor) : inkName(c as InkColor, this.theme)
+      const b = h(
+        'button',
+        {
+          class: `board-color${highlight ? ' is-highlight' : ''}`,
+          title: name,
+          attrs: { type: 'button', 'aria-label': `Colore: ${name.toLowerCase()}`, 'aria-pressed': String(c === current) },
+          data: { recolor: c },
+          on: { click: run(() => this.recolorSelection(c, highlight)) },
+        },
+        h('span', { class: 'board-swatch' }),
+      )
+      b.style.setProperty('--swatch', highlight ? palette.highlight[c as HighlightColor] : palette.ink[c as InkColor])
+      return b
+    })
+    const menu = h(
+      'div',
+      { class: 'board-sel-menu', attrs: { role: 'toolbar', 'aria-label': `Selezione: ${list.length} ${list.length === 1 ? 'tratto' : 'tratti'}` }, data: { kind: 'selection' } },
+      item('Taglia', 'Taglia (Ctrl+X)', () => this.copySelection(true)),
+      item('Copia', 'Copia (Ctrl+C)', () => this.copySelection()),
+      item('Duplica', 'Duplica (Ctrl+D)', () => this.duplicate()),
+      item('Elimina', 'Elimina (Canc)', () => this.deleteSelection(), ' is-danger'),
+      h('div', { class: 'board-sel-colors', attrs: { role: 'group', 'aria-label': 'Colore' } }, colors),
+    )
+    this.el.append(menu)
+    this.selMenu = menu
+    this.placeSelMenu()
+  }
+
+  /** Toccando col lazo dove non c'è niente: «Incolla» lì, come in Note di Apple. */
+  private openPasteMenu(at: Pt): void {
+    this.closeSelMenu()
+    const button = h(
+      'button',
+      {
+        class: 'board-sel-item',
+        title: 'Incolla qui',
+        attrs: { type: 'button' },
+        on: {
+          click: () => {
+            this.closeSelMenu()
+            this.paste(at)
+            this.focus()
+          },
+        },
+      },
+      'Incolla',
+    )
+    const menu = h('div', { class: 'board-sel-menu', attrs: { role: 'toolbar', 'aria-label': 'Incolla' }, data: { kind: 'paste' } }, button)
+    this.el.append(menu)
+    this.selMenu = menu
+    this.selMenuAt = at
+    this.placeSelMenu()
+  }
+
+  private closeSelMenu(): void {
+    this.selMenu?.remove()
+    this.selMenu = null
+    this.selMenuAt = null
+  }
+
+  /** Il menu sopra la selezione (sotto, se sopra c'è la barra; dentro, se non c'è posto): segue la vista. */
+  private placeSelMenu(): void {
+    const menu = this.selMenu
+    if (!menu) return
+    const at = this.selMenuAt
+    let b: Box
+    if (at) {
+      const x = (at.x - this.view.x) * this.view.zoom
+      const y = (at.y - this.view.y) * this.view.zoom
+      b = { minX: x, minY: y, maxX: x, maxY: y }
+    } else if (this.selection) b = this.screenBox(this.selection.box)
+    else return this.closeSelMenu()
+    const stage = this.stage.getBoundingClientRect()
+    const top0 = this.toolsBar.getBoundingClientRect().bottom - stage.top + 8
+    // In basso ci sono annulla, ripeti e l'ingrandimento.
+    const bottom0 = this.size.h - 56
+    const w = menu.offsetWidth
+    const hgt = menu.offsetHeight
+    let top = b.minY - hgt - 12
+    if (top < top0) top = b.maxY + (at ? 12 : HANDLE_R + 10)
+    if (top + hgt > bottom0) top = Math.max(top0, Math.min(bottom0 - hgt, b.minY + 8))
+    menu.style.left = `${Math.max(8, Math.min(this.size.w - w - 8, (b.minX + b.maxX) / 2 - w / 2))}px`
+    menu.style.top = `${top}px`
   }
 
   // ——— Spostare e ingrandire ———
@@ -1273,6 +1827,8 @@ export class Board {
     this.viewMoved = true
     this.updateZoom()
     this.scheduleRender()
+    // Il riquadro della selezione e il suo menu seguono la vista.
+    if (this.selection || this.selMenu) this.scheduleLive()
     if (save) this.saveViewSoon()
   }
 
@@ -1306,6 +1862,25 @@ export class Board {
       anchor?.focus()
       return
     }
+    // Esc toglie la selezione (o il menu per incollare), prima dello schermo intero.
+    if (ev.key === 'Escape' && (this.selection || this.selMenu) && !this.action) {
+      ev.preventDefault()
+      this.clearSelection()
+      this.focus()
+      return
+    }
+    // Copia, taglia, incolla, duplica, seleziona tutto: solo se c'è da farlo (se no fa il browser).
+    if (mod && !ev.altKey && !ev.shiftKey && 'cxvda'.includes(key) && key.length === 1 && !this.action) {
+      const can = key === 'v' ? !!clipboard : key === 'a' ? this.strokes.size > 0 : !!this.selection
+      if (!can) return
+      ev.preventDefault()
+      if (key === 'c') this.copySelection()
+      else if (key === 'x') this.copySelection(true)
+      else if (key === 'v') this.paste()
+      else if (key === 'd') this.duplicate()
+      else this.selectAll()
+      return
+    }
     if (mod && !ev.altKey && key === 'z') {
       ev.preventDefault()
       if (ev.shiftKey) this.redo()
@@ -1336,6 +1911,14 @@ export class Board {
     } else if (ev.key === '0') {
       ev.preventDefault()
       this.setView({ ...START })
+    } else if ((ev.key === 'Delete' || ev.key === 'Backspace') && this.selection) {
+      ev.preventDefault()
+      this.deleteSelection()
+    } else if (ev.key.startsWith('Arrow') && this.selection) {
+      ev.preventDefault()
+      const d = ev.shiftKey ? 10 : 1
+      const [dx, dy] = { ArrowLeft: [-d, 0], ArrowRight: [d, 0], ArrowUp: [0, -d], ArrowDown: [0, d] }[ev.key] ?? [0, 0]
+      this.nudgeSelection(dx, dy)
     }
   }
 
@@ -1405,6 +1988,7 @@ export class Board {
     touchLog.add('annulla')
     this.redoStack.push(step)
     this.apply(step.added, step.removed)
+    this.afterHistory(step.selection?.before)
   }
 
   redo(): void {
@@ -1414,6 +1998,16 @@ export class Board {
     touchLog.add('ripeti')
     this.undoStack.push(step)
     this.apply(step.removed, step.added)
+    this.afterHistory(step.selection?.after)
+  }
+
+  /**
+   * Dopo Annulla o Ripeti: se il passo era della selezione (spostata, copiata…), con il lazo torna
+   * selezionato quello che lo era in quel momento; se no restano selezionati i tratti che ci sono ancora.
+   */
+  private afterHistory(ids: string[] | undefined): void {
+    if (ids && this.tool === 'lasso') this.select(ids.map((id) => this.strokes.get(id)).filter((s): s is Stroke => !!s), false)
+    else this.pruneSelection()
   }
 
   /** Toglie i tratti `remove` e mette `put`, qui e nel salvato. */
@@ -1433,6 +2027,7 @@ export class Board {
     touchLog.add(`pulisci: ${removed.length} tratti tolti`)
     this.record({ removed, added: [] })
     this.apply(removed, [])
+    this.clearSelection()
     this.focus()
   }
 
@@ -1441,6 +2036,8 @@ export class Board {
     this.undoButton.disabled = !this.undoStack.length
     this.redoButton.disabled = !this.redoStack.length
     this.clearButton.disabled = !this.strokes.size
+    this.allButton.disabled = !this.strokes.size
+    this.pasteButton.disabled = !clipboard
   }
 
   // ——— Salvare e leggere ———
@@ -1498,6 +2095,7 @@ export class Board {
         }
         this.el.dataset.loaded = 'true'
         this.updateState()
+        this.pruneSelection()
         this.render()
       })
       .catch(() => {
@@ -1549,14 +2147,35 @@ export class Board {
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
     this.drawGrid(palette.grid)
     this.applyView(ctx)
-    const { x, y, zoom } = this.view
-    const visible: Box = { minX: x, minY: y, maxX: x + this.size.w / zoom, maxY: y + this.size.h / zoom }
-    const shown = this.sorted().filter((s) => boxesTouch(this.boxOf(s), visible))
+    const visible = this.visibleBox()
+    // La selezione che si sta spostando si disegna sopra, dove è adesso (renderLive).
+    const a = this.action
+    const moving = a?.kind === 'move' && a.moved ? this.selection?.ids : undefined
+    const shown = this.sorted().filter((s) => !moving?.has(s.id) && boxesTouch(this.boxOf(s), visible))
     // Prima gli evidenziatori, trasparenti: la scrittura resta sopra, anche quella fatta prima.
     ctx.globalAlpha = palette.highlightAlpha
     for (const s of shown) if (s.highlight) this.drawStroke(ctx, s, this.pathOf(s), palette.highlight[s.color as HighlightColor])
     ctx.globalAlpha = 1
+    if (this.selection && !moving) this.drawHalos(ctx, shown)
     for (const s of shown) if (!s.highlight) this.drawStroke(ctx, s, this.pathOf(s), palette.ink[s.color as InkColor])
+  }
+
+  /** Intorno ai tratti selezionati un alone del colore della selezione, sotto la scrittura (come in Note di Apple). */
+  private drawHalos(ctx: CanvasRenderingContext2D, shown: Stroke[]): void {
+    const sel = this.selection!
+    const palette = BOARD_PALETTES[this.theme]
+    const halo = 5 / this.view.zoom
+    ctx.save()
+    ctx.globalAlpha = palette.haloAlpha
+    ctx.strokeStyle = palette.selection
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    for (const s of shown) {
+      if (!sel.ids.has(s.id)) continue
+      ctx.lineWidth = s.shape ? s.size + 2 * halo : 2 * halo
+      ctx.stroke(this.pathOf(s))
+    }
+    ctx.restore()
   }
 
   /** Un tratto appena finito, sopra gli altri: non serve ridisegnare tutto (l'evidenziatore va sotto, quindi sì). */
@@ -1611,6 +2230,45 @@ export class Board {
         ctx.globalAlpha = 1
       }
     }
+    if (a?.kind === 'lasso' && a.points.length > 1) {
+      // Il lazo, tratteggiato, con dentro appena colorato quello che prende.
+      this.applyView(ctx)
+      const zoom = this.view.zoom
+      const path = new Path2D()
+      path.moveTo(a.points[0].x, a.points[0].y)
+      for (const p of a.points) path.lineTo(p.x, p.y)
+      ctx.globalAlpha = 0.07
+      ctx.fillStyle = palette.selection
+      ctx.fill(path)
+      ctx.globalAlpha = 1
+      ctx.lineWidth = 1.5 / zoom
+      ctx.lineJoin = 'round'
+      ctx.setLineDash([6 / zoom, 5 / zoom])
+      ctx.strokeStyle = palette.selection
+      ctx.stroke(path)
+      ctx.setLineDash([])
+    }
+    const sel = this.selection
+    if (sel) {
+      const t = a?.kind === 'move' ? a.transform : IDENTITY
+      if (a?.kind === 'move' && a.moved) this.drawMoving(ctx, t)
+      // Il riquadro tratteggiato e, nell'angolo in basso a destra, il pallino per ingrandire.
+      const b = this.screenBox(sel.box, t)
+      ctx.setTransform(this.size.dpr, 0, 0, this.size.dpr, 0, 0)
+      ctx.lineWidth = 1.25
+      ctx.strokeStyle = palette.selection
+      ctx.setLineDash([5, 4])
+      ctx.strokeRect(b.minX, b.minY, b.maxX - b.minX, b.maxY - b.minY)
+      ctx.setLineDash([])
+      ctx.beginPath()
+      ctx.arc(b.maxX, b.maxY, HANDLE_R, 0, 2 * Math.PI)
+      ctx.fillStyle = palette.selection
+      ctx.fill()
+      ctx.lineWidth = 2
+      ctx.strokeStyle = palette.paper
+      ctx.stroke()
+    }
+    this.placeSelMenu()
     if (this.cursor) {
       // Il cerchio della gomma, grande com'è adesso; tratteggiato quando cancella le linee intere.
       const radius = a?.kind === 'erase' ? a.radius : TOOL_SIZES.eraser[this.sizes.eraser]
@@ -1625,5 +2283,18 @@ export class Board {
       ctx.stroke()
       ctx.setLineDash([])
     }
+  }
+
+  /** I tratti selezionati mentre si spostano o si ingrandiscono: sopra gli altri, con la trasformazione del canvas. */
+  private drawMoving(ctx: CanvasRenderingContext2D, t: Transform): void {
+    const palette = BOARD_PALETTES[this.theme]
+    const z = this.view.zoom * this.size.dpr
+    const k = t.scale
+    ctx.setTransform(k * z, 0, 0, k * z, (t.origin.x * (1 - k) + t.dx - this.view.x) * z, (t.origin.y * (1 - k) + t.dy - this.view.y) * z)
+    const list = this.selected()
+    ctx.globalAlpha = palette.highlightAlpha
+    for (const s of list) if (s.highlight) this.drawStroke(ctx, s, this.pathOf(s), palette.highlight[s.color as HighlightColor])
+    ctx.globalAlpha = 1
+    for (const s of list) if (!s.highlight) this.drawStroke(ctx, s, this.pathOf(s), palette.ink[s.color as InkColor])
   }
 }

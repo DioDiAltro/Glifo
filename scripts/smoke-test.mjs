@@ -2081,7 +2081,8 @@ try {
     )
     await logContext.close()
     // Sul telefono la lavagna prende il posto del testo, e un dito scrive (finché non si usa una penna).
-    const phoneBoard = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+    // Largo 360 pixel, come tanti Android: la barra della lavagna ci sta tutta, anche con il lazo.
+    const phoneBoard = await browser.newContext({ viewport: { width: 360, height: 780 }, isMobile: true, hasTouch: true })
     const pb = await phoneBoard.newPage()
     pb.on('pageerror', (e) => errors.push(e.message))
     await pb.goto(url)
@@ -2112,6 +2113,31 @@ try {
     check(
       phoneLayout.full && phoneLayout.noEditor && phoneLayout.noFormat && phoneLayout.fits && phoneLayout.strokes === '1' && phoneLayout.scroll,
       `sul telefono la lavagna prende il posto del testo, gli strumenti stanno nello schermo e il dito scrive (${JSON.stringify(phoneLayout)})`,
+    )
+    // Il lazo col dito (senza penna il dito scrive, e con il lazo seleziona): prende la riga, e il menu
+    // della selezione sta nello schermo, su due righe (le azioni sopra, i colori sotto).
+    await pb.locator('.board-button[aria-label="Selezione"]').tap()
+    const loopAround = Array.from({ length: 30 }, (_, i) => [160 + 150 * Math.cos((i / 28) * 2 * Math.PI), 325 + 70 * Math.sin((i / 28) * 2 * Math.PI)])
+    await ptouch('touchStart', [loopAround[0]])
+    for (const q of loopAround.slice(1)) await ptouch('touchMove', [q])
+    await ptouch('touchEnd', [])
+    await pb.waitForTimeout(100)
+    const phoneSelection = await pb.evaluate(() => {
+      const menu = document.querySelector('.board-sel-menu')
+      if (!menu) return { selected: document.querySelector('.board-pane').dataset.selected, menu: false }
+      const r = menu.getBoundingClientRect()
+      const items = [...menu.querySelectorAll('.board-sel-item')].map((b) => b.getBoundingClientRect())
+      const colors = menu.querySelector('.board-sel-colors').getBoundingClientRect()
+      return {
+        selected: document.querySelector('.board-pane').dataset.selected,
+        inside: r.left >= 0 && r.right <= innerWidth,
+        oneRow: items.every((b) => Math.abs(b.top - items[0].top) < 1),
+        colorsBelow: colors.top >= items[0].bottom - 1,
+      }
+    })
+    check(
+      phoneSelection.selected === '1' && phoneSelection.inside && phoneSelection.oneRow && phoneSelection.colorsBelow,
+      `sul telefono il lazo col dito prende la riga, e il menu della selezione sta nello schermo con i colori sotto (${JSON.stringify(phoneSelection)})`,
     )
     await phoneBoard.close()
     // Gli strumenti: l'evidenziatore (trasparente, sempre sotto la scrittura), lo spessore della penna,
@@ -2210,6 +2236,9 @@ try {
     await tp.locator('.board-button[aria-label="Penna"]').click()
     await tp.locator('.board-size').click()
     const penMenu = await tp.locator('.board-menu').textContent()
+    // Subito sotto la barra: accanto al testo la lavagna ha sopra la fascia dei pulsanti volanti, e il
+    // menu finiva 48 pixel più giù.
+    const menuGap = await tp.evaluate(() => document.querySelector('.board-menu').getBoundingClientRect().top - document.querySelector('.board-tools').getBoundingClientRect().bottom)
     await tp.locator('.board-menu-option', { hasText: 'spessa' }).click()
     const menuClosed = (await tp.locator('.board-menu').count()) === 0
     await tstroke(across(265))
@@ -2220,8 +2249,8 @@ try {
     const [thickLine, thinLine] = [await thickness(265), await thickness(320)]
     const penSizes = (await tsaved(tnote)).filter((s) => !s.highlight).map((s) => s.size).sort((a, b) => a - b)
     check(
-      penMenu.startsWith('Spessore') && menuClosed && thickLine > thinLine * 1.8 && thinLine > 0 && penSizes.join() === '2,3.2,5.5',
-      `lo spessore della penna si sceglie dal menu: fine, media, spessa (${JSON.stringify({ penMenu, thickLine, thinLine, penSizes })})`,
+      penMenu.startsWith('Spessore') && menuGap >= 0 && menuGap <= 12 && menuClosed && thickLine > thinLine * 1.8 && thinLine > 0 && penSizes.join() === '2,3.2,5.5',
+      `lo spessore della penna si sceglie dal menu, che si apre subito sotto la barra: fine, media, spessa (${JSON.stringify({ penMenu, menuGap, thickLine, thinLine, penSizes })})`,
     )
     // La gomma «Linea intera»: il pulsante del modo apre solo i modi, quello della misura solo le
     // grandezze, la gomma premuta di nuovo tutti e due. Poi toccando un punto va via tutta la riga spessa.
@@ -2271,8 +2300,11 @@ try {
       slowGap > 8 && fastGap > slowGap * 1.8,
       `la gomma «Dove passa» cancella dove passa e, mossa veloce, si allarga (${JSON.stringify({ slowGap, fastGap })})`,
     )
-    // Cambiando strumento la barra resta ferma; ricaricando la pagina restano lo spessore, il colore
-    // dell'evidenziatore e il modo della gomma.
+    // Cambiando strumento la barra resta ferma (anche con il lazo, che al posto dei colori ha «Tutto» e
+    // «Incolla»); ricaricando la pagina restano lo spessore, il colore dell'evidenziatore e il modo della gomma.
+    await tp.locator('.board-button[aria-label="Selezione"]').click()
+    toolsAt.lasso = await gommaX()
+    await tp.locator('.board-button[aria-label="Gomma"]').click()
     await tp.locator('.board-mode').click()
     await tp.locator('.board-menu-option', { hasText: 'Linea intera' }).click()
     await tp.locator('.board-button[aria-label="Penna"]').click()
@@ -2287,7 +2319,7 @@ try {
       strokes: await tcount(),
     }
     check(
-      toolsAt.pen === toolsAt.highlight && toolsAt.pen === toolsAt.eraser &&
+      toolsAt.pen === toolsAt.highlight && toolsAt.pen === toolsAt.eraser && toolsAt.pen === toolsAt.lasso &&
         kept.size === 'Spessore della penna: fine' && kept.eraser === 'stroke' && kept.green === 'true' && kept.strokes > 0,
       `cambiando strumento la barra non si sposta, e ricaricando restano spessore, colore e modo della gomma (${JSON.stringify({ toolsAt, kept })})`,
     )
@@ -2385,6 +2417,144 @@ try {
     await penHold(wobbly(60, 330, 520), 800)
     const marker = (await fsaved()).find((s) => s.highlight)
     check(marker?.shape === true && marker.points[1] === marker.points[4], `l'evidenziatore tenuto fermo diventa una linea dritta (${JSON.stringify(marker?.points)})`)
+    // La selezione, come in Note di Apple. In una nota nuova, con le forme automatiche spente (le righe
+    // dritte diventerebbero linee precise): tre righe scritte con la penna (spessore fine, 2).
+    await tp.locator('.notes-head button[aria-label="Nuova nota"]').click()
+    await tp.keyboard.type('Selezione')
+    await tp.waitForSelector('.board-pane[data-loaded="true"][data-strokes="0"]')
+    await tp.locator('.board-button[aria-label="Penna"]').click()
+    await tp.locator('.board-button[aria-label="Penna"]').click()
+    await tp.locator('.board-menu-switch').click()
+    await tp.keyboard.press('Escape')
+    const snote = await tpane.getAttribute('data-note')
+    /** I tratti salvati della nota: colore, spessore e il primo punto, dall'alto in basso. */
+    const ssaved = () =>
+      tp.evaluate(
+        (note) =>
+          new Promise((resolve, reject) => {
+            const open = indexedDB.open('glifo-lavagne')
+            open.onerror = () => reject(open.error)
+            open.onsuccess = () => {
+              const db = open.result
+              const req = db.transaction('strokes', 'readonly').objectStore('strokes').getAll(IDBKeyRange.bound([note], [note, []]))
+              req.onerror = () => reject(req.error)
+              req.onsuccess = () => {
+                db.close()
+                resolve(req.result.map((r) => ({ color: r.color, size: r.size, x: Math.round(r.points[0]), y: Math.round(r.points[1]) })).sort((a, b) => a.y - b.y || a.x - b.x))
+              }
+            }
+          }),
+        snote,
+      )
+    const selectedNow = async () => Number(await tpane.getAttribute('data-selected'))
+    const firstPoints = async () => (await ssaved()).map((s) => [s.x, s.y])
+    for (const y of [150, 200, 320]) await tstroke(across(y, 40, 300))
+    // Il lazo intorno alle prime due: prese, con l'alone, il riquadro e il menu (sotto la barra).
+    await tp.locator('.board-button[aria-label="Selezione"]').click()
+    const ring = (cx, cy, rx, ry) => Array.from({ length: 36 }, (_, i) => [cx + rx * Math.cos((i / 34) * 2 * Math.PI), cy + ry * Math.sin((i / 34) * 2 * Math.PI)])
+    const haloBefore = await rgbAt(185, 154)
+    await tstroke(ring(170, 175, 175, 55))
+    await painted()
+    const lassoTaken = {
+      shapes: await tpane.getAttribute('data-shapes'),
+      selected: await selectedNow(),
+      halo: await rgbAt(185, 154),
+      haloBefore,
+      menu: await tp.locator('.board-sel-menu[data-kind="selection"]').textContent().catch(() => ''),
+      menuFree: await tp.evaluate(() => document.querySelector('.board-sel-menu').getBoundingClientRect().top >= document.querySelector('.board-tools').getBoundingClientRect().bottom),
+    }
+    check(
+      lassoTaken.shapes === 'hold' && lassoTaken.selected === 2 &&
+        lassoTaken.haloBefore.every((c) => c > 230) && lassoTaken.halo[2] - lassoTaken.halo[0] > 25 &&
+        ['Taglia', 'Copia', 'Duplica', 'Elimina'].every((w) => lassoTaken.menu.includes(w)) && lassoTaken.menuFree,
+      `il lazo intorno a due righe le prende: l'alone colorato e il menu con Taglia, Copia, Duplica ed Elimina, sotto la barra (${JSON.stringify(lassoTaken)})`,
+    )
+    // Trascinata si sposta (di 60 e 100); Annulla la rimette dov'era e resta selezionata, Ripeti la risposta.
+    const rows = await firstPoints()
+    await tstroke([[170, 175], [176, 181], [200, 220], [230, 275]], { pause: 16 })
+    await painted()
+    const dragged = { points: await firstPoints(), selected: await selectedNow(), oldPlace: await sum(185, 150), newPlace: await sum(245, 250) }
+    await tp.keyboard.press('Control+Z')
+    const undoneMove = { points: await firstPoints(), selected: await selectedNow() }
+    await tp.keyboard.press('Control+Y')
+    const redoneMove = { points: await firstPoints(), selected: await selectedNow() }
+    // Il pallino nell'angolo in basso a destra (le righe vanno da 100 a 360, a 250 e 300; il riquadro
+    // arriva 1,5 più in là e il pallino è a 6 pixel): tirato di metà diagonale, una volta e mezza.
+    await tstroke([[366, 306], [380, 309], [430, 320], [497.5, 332.5]], { pause: 16 })
+    const scaled = await ssaved()
+    check(
+      JSON.stringify(rows) === '[[40,150],[40,200],[40,320]]' &&
+        JSON.stringify(dragged.points) === '[[100,250],[100,300],[40,320]]' && dragged.selected === 2 && dragged.oldPlace > 600 && dragged.newPlace < 400 &&
+        JSON.stringify(undoneMove.points) === JSON.stringify(rows) && undoneMove.selected === 2 &&
+        JSON.stringify(redoneMove.points) === JSON.stringify(dragged.points) && redoneMove.selected === 2 &&
+        scaled.filter((s) => s.size === 3).length === 2 && scaled.some((s) => s.size === 2 && s.y === 320) && scaled.some((s) => s.size === 3 && s.y === 326),
+      `trascinata la selezione si sposta, Annulla e Ripeti la tengono selezionata, il pallino nell'angolo la ingrandisce con lo spessore (${JSON.stringify({ rows, dragged, undoneMove, redoneMove, scaled })})`,
+    )
+    // Dal menu il colore; un tocco sulla selezione chiude il menu, un altro lo riapre; Copia e, toccando
+    // un punto vuoto, «Incolla» lì (tutto dentro la vista: le righe sono larghe e il punto è vicino al
+    // bordo); un tocco su una riga la prende; Duplica la copia un po' più in là; Taglia e «Incolla»
+    // della barra la rimettono dov'era.
+    await tp.locator('.board-sel-menu .board-color[data-recolor="red"]').click()
+    const reds = (await ssaved()).filter((s) => s.color === 'red').length
+    await tstroke([[200, 280]], { pointerType: 'mouse' })
+    const menuAfterTap = await tp.locator('.board-sel-menu').count()
+    await tstroke([[200, 280]], { pointerType: 'mouse' })
+    const menuAfterTwo = await tp.locator('.board-sel-menu').count()
+    await tp.locator('.board-sel-menu .board-sel-item', { hasText: 'Copia' }).click()
+    const copiedSel = { menu: await tp.locator('.board-sel-menu').count(), selected: await selectedNow(), paste: await tp.locator('.board-paste').isEnabled() }
+    await tstroke([[150, 560]], { pointerType: 'mouse' })
+    const deselected = { selected: await selectedNow(), menu: await tp.locator('.board-sel-menu').count() }
+    await tstroke([[150, 560]], { pointerType: 'mouse' })
+    const pasteMenu = await tp.locator('.board-sel-menu[data-kind="paste"]').textContent().catch(() => '')
+    await tp.locator('.board-sel-menu .board-sel-item', { hasText: 'Incolla' }).click()
+    const pasted = (await ssaved()).filter((s) => s.y > 450)
+    const pastedState = { strokes: await tcount(), selected: await selectedNow(), pasted }
+    await tstroke([[60, 320]], { pointerType: 'mouse' })
+    const tapped = { selected: await selectedNow(), menu: await tp.locator('.board-sel-menu[data-kind="selection"]').count() }
+    await tp.locator('.board-sel-menu .board-sel-item', { hasText: 'Duplica' }).click()
+    const duplicated = { strokes: await tcount(), selected: await selectedNow(), copy: (await ssaved()).find((s) => s.x === 60 && s.y === 340) }
+    await tp.locator('.board-sel-menu .board-sel-item', { hasText: 'Taglia' }).click()
+    const cut = { strokes: await tcount(), selected: await selectedNow() }
+    await tp.locator('.board-paste').click()
+    const backAgain = { strokes: await tcount(), selected: await selectedNow(), copy: (await ssaved()).find((s) => s.x === 60 && s.y === 340) }
+    check(
+      reds === 2 && menuAfterTap === 0 && menuAfterTwo === 1 &&
+        copiedSel.menu === 0 && copiedSel.selected === 2 && copiedSel.paste &&
+        deselected.selected === 0 && deselected.menu === 0 && pasteMenu === 'Incolla' &&
+        pastedState.strokes === 5 && pastedState.selected === 2 && pasted.length === 2 && pasted.every((s) => s.color === 'red' && s.size === 3 && s.x >= 0) &&
+        Math.abs((pasted[0].y + pasted[1].y) / 2 - 560) < 6 &&
+        tapped.selected === 1 && tapped.menu === 1 &&
+        duplicated.strokes === 6 && duplicated.selected === 1 && duplicated.copy &&
+        cut.strokes === 5 && cut.selected === 0 && backAgain.strokes === 6 && backAgain.selected === 1 && backAgain.copy,
+      `dal menu della selezione il colore, Copia e (toccando un punto vuoto) Incolla, Duplica e Taglia; un tocco su una riga la prende (${JSON.stringify({ reds, menuAfterTap, menuAfterTwo, copiedSel, deselected, pasteMenu, pastedState, tapped, duplicated, cut, backAgain })})`,
+    )
+    // Dalla tastiera: Ctrl+A prende tutto, Canc lo toglie, Ctrl+Z lo rimette (selezionato); le frecce
+    // spostano e sono un passo solo da annullare; Esc toglie la selezione, e cambiando strumento va via.
+    await tp.keyboard.press('Control+A')
+    const all = await selectedNow()
+    await tp.keyboard.press('Delete')
+    const deleted = await tcount()
+    await tp.keyboard.press('Control+Z')
+    const restored = { strokes: await tcount(), selected: await selectedNow() }
+    const beforeNudge = await firstPoints()
+    await tp.keyboard.press('ArrowRight')
+    await tp.keyboard.press('ArrowRight')
+    await tp.keyboard.press('Shift+ArrowDown')
+    const nudged = await firstPoints()
+    await tp.keyboard.press('Control+Z')
+    const unnudged = await firstPoints()
+    await tp.keyboard.press('Escape')
+    const escaped = await selectedNow()
+    await tp.locator('.board-all').click()
+    const allButton = await selectedNow()
+    await tp.locator('.board-button[aria-label="Penna"]').click()
+    const penAgain = { selected: await selectedNow(), tool: await tpane.getAttribute('data-tool'), menu: await tp.locator('.board-sel-menu').count() }
+    check(
+      all === 6 && deleted === 0 && restored.strokes === 6 && restored.selected === 6 &&
+        JSON.stringify(nudged) === JSON.stringify(beforeNudge.map(([x, y]) => [x + 2, y + 10])) && JSON.stringify(unnudged) === JSON.stringify(beforeNudge) &&
+        escaped === 0 && allButton === 6 && penAgain.selected === 0 && penAgain.tool === 'pen' && penAgain.menu === 0,
+      `dalla tastiera Ctrl+A, Canc, Ctrl+Z, le frecce (un passo solo) ed Esc; «Tutto» prende tutto; con la penna la selezione va via (${JSON.stringify({ all, deleted, restored, nudged, unnudged, escaped, allButton, penAgain })})`,
+    )
     await toolsContext.close()
   }
   // Niente barra in alto: in cima alla barra laterale il logo e subito gli appunti; in fondo

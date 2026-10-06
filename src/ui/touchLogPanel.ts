@@ -20,9 +20,16 @@ export function touchLogHeader(): string[] {
   const board = document.querySelector<HTMLElement>('.board-pane')
   const theme = document.documentElement.dataset.theme ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'scuro dal sistema' : 'chiaro dal sistema')
   const views: Record<string, string> = { editor: 'Editor', split: 'Diviso', preview: 'Anteprima', board: 'Lavagna' }
-  const tools: Record<string, string> = { pen: 'penna', highlight: 'evidenziatore', eraser: 'gomma' }
+  const tools: Record<string, string> = { pen: 'penna', highlight: 'evidenziatore', eraser: 'gomma', lasso: 'selezione' }
   const tool = tools[board?.dataset.tool ?? ''] ?? '?'
-  const eraser = board?.dataset.tool === 'eraser' ? (board.dataset.eraser === 'stroke' ? ' (linea intera)' : ' (dove passa)') : ''
+  const eraser =
+    board?.dataset.tool === 'eraser'
+      ? board.dataset.eraser === 'stroke'
+        ? ' (linea intera)'
+        : ' (dove passa)'
+      : board?.dataset.tool === 'lasso'
+        ? ` (${board.dataset.selected ?? '0'} tratti selezionati)`
+        : ''
   return [
     `Copiato: ${new Date().toLocaleString('it-IT')} · Glifo ${__GLIFO_VERSION__}`,
     `Dispositivo: ${nav.userAgent}`,

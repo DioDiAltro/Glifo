@@ -207,7 +207,8 @@ const SCENES = {
   },
   // La lavagna: si apre accanto al testo e ci si scrive a mano con una penna (simulata, con la
   // pressione): gli assi (frecce storte che, tenendo ferma la penna, diventano precise), la parabola
-  // in blu, «y = x²» con l'evidenziatore e il vertice cerchiato in rosso.
+  // in blu, «y = x²» con l'evidenziatore e il vertice cerchiato in rosso; alla fine il lazo prende
+  // «y = x²» e la penna lo sposta accanto alla parabola.
   lavagna: {
     settings: { view: 'editor', notesOpen: false },
     async setup(page) {
@@ -299,6 +300,18 @@ const SCENES = {
         return [200 + 22 * Math.cos(a), 330 + 18 * Math.sin(a)]
       })
       await pen(circle, () => 0.55, 6)
+      // Il lazo intorno a «y = x²» (con l'evidenziatore), poi trascinato più in basso; la penna, scelta
+      // di nuovo, toglie la selezione.
+      await color('lasso', '.board-button[aria-label="Selezione"]')
+      const loop = Array.from({ length: 37 }, (_, i) => {
+        const a = (i / 34) * 2 * Math.PI + 0.4
+        return [345 + 78 * Math.cos(a), 160 + 44 * Math.sin(a)]
+      })
+      await pen(loop, () => 0.5, 8)
+      await page.waitForTimeout(700)
+      await pen([[345, 160], [350, 172], [357, 190], [362, 205], [365, 214]], () => 0.5, 40)
+      await page.waitForTimeout(900)
+      await color('pen', '.board-button[aria-label="Penna"]')
       await page.mouse.move(stage.x + 330, stage.y + 470, { steps: 20 })
     },
   },

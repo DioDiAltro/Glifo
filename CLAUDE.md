@@ -242,7 +242,12 @@ prossimi passi sono in «In programma» nella ROADMAP.
   forme automatiche: niente spezzate, misure minime più grandi), `adjustShape` (la penna ancora giù
   la regola) e `shapePoints`; i tratti con `shape` hanno solo i vertici e si disegnano con il
   contorno di spessore uguale (`shapeSvg` in ink.ts). Le soglie sono state scelte provando tanti
-  tratti simulati (tremolio, angoli arrotondati) e la scrittura. `ink.ts` il contorno con
+  tratti simulati (tremolio, angoli arrotondati) e la scrittura. `selection.ts` la selezione, come
+  in Note di Apple: il lazo (`insideLasso` conta i giri; `lassoed` prende i tratti dentro almeno per
+  metà della lunghezza, `strokeAt` la linea toccata), il riquadro (`selectionBox`), spostare e
+  ingrandire (`transformStrokes`, `handleScale`), le copie (`copyStrokes`), il colore (`recolor`) e
+  `keepInside` per quello che si incolla; ogni cambiamento fa tratti nuovi con id nuovi (come la
+  gomma), così le altre schede non tengono il disegno vecchio. `ink.ts` il contorno con
   perfect-freehand, le tre misure di ogni strumento (`TOOL_SIZES`) e i colori dei due temi
   (`BOARD_PALETTES`: nei tratti c'è il nome del colore);
   `store.ts` le lavagne in IndexedDB (`glifo-lavagne`, un tratto per record con la chiave [nota, id],
@@ -254,7 +259,13 @@ prossimi passi sono in «In programma» nella ROADMAP.
   gomma; i colori e il modo della gomma uno sopra l'altro in `.board-options`, così cambiando
   strumento non si sposta; sulla lavagna stretta si stringe con `@container`), il menu delle misure
   (`openMenu`: lo strumento premuto di nuovo o il pulsante con il pallino; scelte in
-  `glifo.lavagna.v1`; nel menu della penna l'interruttore «Forme automatiche»), le figure (la punta
+  `glifo.lavagna.v1`; nel menu della penna l'interruttore «Forme automatiche»; con il lazo, al posto
+  di colori e misura, «Tutto» e «Incolla»), la selezione (`startSelect`: sulla selezione la sposta o,
+  dal pallino nell'angolo, la ingrandisce, `MoveAction`, disegnata sopra con la trasformazione del
+  canvas finché non si alza; fuori un lazo nuovo, `LassoAction`; il menu `openSelMenu` sopra i tratti
+  presi, o «Incolla» toccando un punto vuoto; gli appunti `clipboard` restano cambiando nota; i passi
+  di Annulla hanno `selection`, così la selezione torna com'era; le frecce di seguito sono un passo
+  solo, `nudge`), le figure (la punta
   ferma `HOLD_MS` in `watchHold`/`holdShape`, poi `adjustShape` finché è giù; in `finishDraw` due
   passi, il tratto a mano e la figura con `pair`, così Annulla riporta il tratto), schermo intero (su iPad e iPhone
   senza quello del browser, `device.ts`: Safari ne usciva prendendo la penna per una tastiera; sotto,
@@ -268,8 +279,8 @@ prossimi passi sono in «In programma» nella ROADMAP.
   lavagna lo apre, e lo studente lo copia o lo scarica per mandarlo nella chat. In `main.ts`
   la lavagna si toglie con la nota, segue la nota che cambia id con l'account (`replaced`,
   `adoptGuestNotes`) e uscendo dall'account si toglie, con l'avviso. Per le prove nel browser lo stato
-  è in `data-strokes`, `data-note`, `data-loaded`, `data-tool`, `data-eraser`, `data-shapes` e
-  `data-shape` (l'ultima figura) sulla `.board-pane`.
+  è in `data-strokes`, `data-note`, `data-loaded`, `data-tool`, `data-eraser`, `data-shapes`,
+  `data-shape` (l'ultima figura) e `data-selected` (quanti tratti sono selezionati) sulla `.board-pane`.
 - `src/ai/`: assistente AI, con la chiave di chi lo usa: Anthropic con l'SDK, o un servizio che parla la
   «lingua» di OpenAI (`services.ts`: Gemini gratis, OpenRouter, Ollama sul computer, un altro con il suo
   indirizzo; `askCompatible` in `assistant.ts` chiede lo schema, poi un oggetto JSON, poi niente, e legge la

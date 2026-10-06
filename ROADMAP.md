@@ -220,6 +220,12 @@ con Claude. La discussione è in [ABBONAMENTI.md](ABBONAMENTI.md), «La lavagna�
     tratto: linea, freccia, spezzata, triangolo, rettangolo, quadrato, rombo, pentagono, esagono,
     ellisse, cerchio, raddrizzati; con la penna ancora giù la si regola. Nel menu della penna
     l'interruttore «Forme automatiche». Annulla riporta il tratto a mano;
+  - fatto, sul ramo `prova` (6 ottobre 2026), da vedere: **selezionare come in Note di Apple** (lo
+    studente: «nella lavagna dobbiamo aggiungere il poter selezionare stile note di apple»). Il
+    lazo, nella barra, prende quello che ci si disegna intorno (o la linea toccata); poi lo si
+    trascina, lo si ingrandisce con il pallino nell'angolo e dal menu lo si taglia, copia,
+    duplica, elimina o gli si cambia colore; «Incolla» toccando un punto vuoto o dalla barra,
+    con «Tutto»; dalla tastiera Ctrl+A, C, X, V, D, Canc, le frecce ed Esc;
   - scaricare la lavagna come immagine;
 - la lavagna sugli altri dispositivi, con l'account;
 - sull'iPad la prima prova (5 ottobre 2026) ha trovato quattro problemi, corretti subito: le parole

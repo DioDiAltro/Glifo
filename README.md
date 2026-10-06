@@ -618,6 +618,13 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
   nuovo) c'è l'interruttore **Forme automatiche**: acceso, le figure diventano precise da sole,
   senza fermarsi; la scrittura e le figure piccole restano come sono. Annulla riporta il tratto
   fatto a mano.
+- **Selezione**, come in Note di Apple: con il lazo (l'ultimo strumento) si disegna intorno a
+  quello che si vuole prendere, o si tocca una linea; i tratti presi hanno intorno un alone. Si
+  trascinano per spostarli e si ingrandiscono tirando il pallino nell'angolo (anche lo spessore);
+  toccandoli si apre il menu con **Taglia**, **Copia**, **Duplica**, **Elimina** e i colori.
+  Toccando un punto vuoto c'è **Incolla**, e nella barra **Tutto** e **Incolla**. Dalla tastiera
+  Ctrl+A, Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+D, Canc, le frecce ed Esc. Ogni cosa si annulla con
+  Annulla, e quello che si incolla va anche nella lavagna di un'altra nota.
 - **Annulla** e **Ripeti** (anche Ctrl+Z e Ctrl+Y) e **Pulisci**, con la conferma.
 - **Spostarsi e ingrandire**: due dita, oppure la rotellina (con Ctrl ingrandisce), il tasto
   centrale o lo spazio tenuto premuto; il numero in basso a destra riporta alla vista di
@@ -815,9 +822,11 @@ src/
     export.ts             il file di «Scarica i miei dati»
   board/                  la lavagna, per scrivere a mano accanto al testo (una per nota)
     strokes.ts            i tratti come vettori (punti con la pressione) e la gomma che li taglia
+    shapes.ts             le figure precise: linee, frecce, poligoni ed ellissi riconosciuti nel tratto
+    selection.ts          la selezione: il lazo, i tratti presi, spostare, ingrandire, copiare, colori
     ink.ts                il contorno dei tratti (perfect-freehand) e i colori dei due temi
     store.ts              le lavagne in IndexedDB, un tratto per record, e le altre schede avvisate
-    board.ts              penna, dita, mouse e palmo; gomma, colori, annulla, spostare e ingrandire
+    board.ts              penna, dita, mouse e palmo; strumenti, lazo, menu, annulla, spostare e ingrandire
     device.ts             iPad e iPhone, dove lo schermo intero del browser non va bene per scrivere
     touchlog.ts           il registro dei tocchi: penna, dita, decisioni della lavagna e browser
   share/                  le note condivise con un link (una fotografia della nota)

@@ -3853,6 +3853,15 @@ kbd {
   cursor: grabbing;
 }
 
+/* Con il lazo, sopra la selezione: la si sposta; sul pallino nell'angolo la si ingrandisce. */
+.board-stage.is-move {
+  cursor: move;
+}
+
+.board-stage.is-resize {
+  cursor: nwse-resize;
+}
+
 .board-canvas,
 .board-live {
   position: absolute;
@@ -3937,15 +3946,31 @@ kbd {
 }
 
 /* I colori della penna, quelli dell'evidenziatore e il modo della gomma, uno sopra l'altro: la barra
-   è larga quanto il più largo e non cambia cambiando strumento. Si vede quello dello strumento scelto. */
+   è larga quanto il più largo e non cambia cambiando strumento. Si vede quello dello strumento scelto.
+   La misura ha la sua colonna; con il lazo «Tutto» e «Incolla» prendono il posto di tutte e due. */
 .board-options {
   display: grid;
   flex: none;
+  grid-template-columns: auto auto;
   align-items: center;
 }
 
 .board-options > * {
   grid-area: 1 / 1;
+}
+
+.board-options > .board-size {
+  grid-area: 1 / 2;
+}
+
+.board-options > .board-lasso {
+  grid-area: 1 / 1 / 2 / 3;
+  justify-self: center;
+}
+
+.board-lasso {
+  display: flex;
+  gap: 2px;
 }
 
 .board-options > .board-mode {
@@ -3991,6 +4016,11 @@ kbd {
 
 .board-chip:hover {
   background: var(--surface-2);
+}
+
+.board-chip:disabled {
+  opacity: 0.38;
+  pointer-events: none;
 }
 
 .board-chip svg {
@@ -4177,6 +4207,53 @@ kbd {
   height: 60px;
 }
 
+/* Il menu della selezione, sopra i tratti presi: Taglia, Copia, Duplica, Elimina e i colori (o solo
+   «Incolla», dove si è toccato col lazo). Sulla lavagna stretta i colori vanno sotto. */
+.board-sel-menu {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: max-content;
+  max-width: calc(100% - 16px);
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  touch-action: manipulation;
+}
+
+.board-sel-item {
+  height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.board-sel-item:hover {
+  background: var(--surface-2);
+}
+
+.board-sel-item.is-danger {
+  color: var(--danger);
+}
+
+.board-sel-colors {
+  display: flex;
+  gap: 1px;
+  margin-left: 2px;
+  padding-left: 4px;
+  border-left: 1px solid var(--border);
+}
+
 /* Il registro dei tocchi sta registrando (src/board/touchlog.ts): il pallino rosso lo apre. */
 .board-button.board-log,
 .board-button.board-log:hover {
@@ -4220,6 +4297,45 @@ kbd {
 
   .board-size {
     margin-left: 2px;
+  }
+
+  /* Il menu della selezione su due righe: sopra le azioni, sotto i colori. */
+  .board-sel-menu {
+    display: grid;
+    grid-template-columns: repeat(4, auto);
+    justify-content: center;
+  }
+
+  .board-sel-item {
+    padding: 0 8px;
+  }
+
+  .board-sel-colors {
+    grid-column: 1 / -1;
+    justify-content: center;
+    margin: 2px 0 0;
+    padding: 4px 0 0;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+}
+
+/* Sui telefoni più stretti (360 pixel) un po' meno ancora, così ci sta anche il lazo. */
+@container (max-width: 380px) {
+  .board-tools .board-button {
+    width: 29px;
+  }
+
+  .board-tools .board-color {
+    width: 25px;
+  }
+
+  .board-tools .board-sep {
+    margin: 0 2px;
+  }
+
+  .board-chip {
+    padding: 0 2px 0 4px;
   }
 }
 
