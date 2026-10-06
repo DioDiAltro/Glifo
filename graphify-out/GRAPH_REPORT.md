@@ -1,7 +1,7 @@
 # Graph Report - matherdown  (2026-10-06)
 
 ## Corpus Check
-- 266 files · ~515,699 words
+- 266 files · ~515,748 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 5 file(s) not represented in the graph (top: (none) 4, .css 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `f09fdeb0`
+- Built from commit: `04cef548`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -152,12 +152,12 @@
   ARCHITETTURA.md → src/editor/schemaBlocks.ts
 - `Come viene pubblicata` --references--> `dist()`  [INFERRED]
   README.md → src/board/shapes.ts
-- `Dove sono le cose` --references--> `adoptGuestNotes()`  [INFERRED]
-  ARCHITETTURA.md → src/account/space.ts
-- `Dove sono le cose` --references--> `sharedLinks()`  [INFERRED]
-  ARCHITETTURA.md → src/account/supabase.ts
-- `Dove sono le cose` --references--> `shareNote()`  [INFERRED]
-  ARCHITETTURA.md → src/account/supabase.ts
+- `Dove sono le cose` --references--> `GaussRational`  [INFERRED]
+  ARCHITETTURA.md → src/math/complex.ts
+- `Dove sono le cose` --references--> `Wave`  [INFERRED]
+  ARCHITETTURA.md → src/math/odesolve.ts
+- `Dove sono le cose` --references--> `severalLimit`  [INFERRED]
+  ARCHITETTURA.md → src/math/limits.ts
 
 ## Import Cycles
 - 3-file cycle: `src/math/complex.ts -> src/math/evaluate.ts -> src/math/limits.ts -> src/math/complex.ts`
@@ -612,7 +612,7 @@ Cohesion: 0.50
 Nodes (4): Deciso (5 ottobre 2026), I modelli e le chiavi API, Il parere di Claude (niente di deciso), Le idee dello studente (5 ottobre 2026)
 
 ## Knowledge Gaps
-- **593 isolated node(s):** `Comandi`, `Promemoria per lo studente`, `Regole`, `Condividere una nota con un link`, `Provarlo sul tuo computer` (+588 more)
+- **593 isolated node(s):** `PATHS`, `Editing`, `Move`, `SheetTemplate`, `Moves` (+588 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 822 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **26 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -620,14 +620,14 @@ Nodes (4): Deciso (5 ottobre 2026), I modelli e le chiavi API, Il parere di Clau
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Dove sono le cose` connect `Dove sono le cose` to `touchlog.ts`, `parse.ts`, `main.ts`, `odesolve.ts`, `spec.ts`, `several.ts`, `num`, `graph/preview.ts`, `complex.ts`, `svg.ts`, `spreadsheet/editor.ts`, `SheetEditor`, `MathError`, `numerical.ts`, `markdown.ts`, `Board`, `distributions.ts`, `linear.ts`, `assistant.ts`, `tutorial.ts`, `Pt`, `graph/space.ts`, `spreadsheet/evaluate.ts`, `graphInsert.ts`, `logic.ts`, `arithmetic.ts`, `toLatex`, `NotesStore`, `study.ts`, `functions.ts`, `ink.ts`, `gauss.ts`, `board/shapes.ts`, `linsys.ts`, `latex.ts`, `account/space.ts`, `supabase.ts`, `ui/preview.ts`, `Sheet`, `settings.ts`, `blockMove.ts`, `symbolic.ts`, `schema/editor.ts`, `BoardStore`, `severalGraph.ts`, `toolbar.ts`, `graph/file.ts`, `sheet.ts`, `Rational`?**
-  _High betweenness centrality (0.165) - this node is a cross-community bridge._
+  _High betweenness centrality (0.158) - this node is a cross-community bridge._
 - **Why does `vitest` connect `vitest` to `touchlog.ts`, `main.ts`, `sync.ts`, `numerical.test.ts`, `num`, `editor/lists.ts`, `svg.ts`, `spreadsheet/editor.ts`, `markdown.ts`, `distributions.ts`, `store.ts`, `assistant.ts`, `tutorial.ts`, `notesPanel.ts`, `resize.ts`, `NotesStore`, `scopeWith`, `ink.ts`, `board/shapes.ts`, `laplace.ts`, `linsys.ts`, `search.ts`, `h`, `account/space.ts`, `supabase.ts`, `ui/preview.ts`, `parseSchema`, `Sheet`, `settings.ts`, `Dove sono le cose`, `blockMove.ts`, `schema/editor.ts`, `board.ts`, `editor.test.ts`, `logo.ts`, `editor/editor.ts`, `page.ts`, `sidePanel.ts`, `toolbar.ts`, `graph/file.ts`, `sheet.ts`, `@codemirror/state`, `sql.ts`?**
-  _High betweenness centrality (0.118) - this node is a cross-community bridge._
+  _High betweenness centrality (0.103) - this node is a cross-community bridge._
 - **Why does `h()` connect `h` to `main.ts`, `graph/preview.ts`, `spreadsheet/editor.ts`, `SchemaEditor`, `SheetEditor`, `Board`, `tutorial.ts`, `notesPanel.ts`, `resize.ts`, `ink.ts`, `ui/preview.ts`, `openShareDialog`, `schema/editor.ts`, `board.ts`, `files.ts`, `page.ts`, `sidePanel.ts`, `toolbar.ts`, `@codemirror/state`, `SidePanel`?**
-  _High betweenness centrality (0.045) - this node is a cross-community bridge._
+  _High betweenness centrality (0.062) - this node is a cross-community bridge._
 - **Are the 165 inferred relationships involving `Dove sono le cose` (e.g. with `adoptGuestNotes()` and `sharedLinks()`) actually correct?**
   _`Dove sono le cose` has 165 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `Comandi`, `Promemoria per lo studente`, `Regole` to the rest of the system?**
+- **What connects `PATHS`, `Editing`, `Move` to the rest of the system?**
   _593 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `touchlog.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.08673469387755102 - nodes in this community are weakly interconnected._
