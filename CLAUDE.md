@@ -346,7 +346,7 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
 
 ## Regole
 
-- Per capire il codice usa prima `graphify query`, `graphify explain` o `graphify path`. Apri i file solo nelle parti che servono, mai interi.
+- Per cercare o capire il codice delega sempre a esploratore, invece di leggere i file direttamente. Apri tu i file solo nelle parti che devi modificare. Se esploratore segnala che il grafo non è aggiornato, esegui `graphify update .` e ripeti la ricerca.
 - Ogni push sul branch predefinito esegue test e build e pubblica il sito
   (`.github/workflows/deploy.yml` → branch `gh-pages`).
 - Le modifiche che lo studente vuole provare prima che vadano online (per esempio la grafica)
