@@ -56,6 +56,10 @@ prossimi passi sono in «In programma» nella ROADMAP.
 
 La mappa dettagliata del codice è in ARCHITETTURA.md: si leggono solo le parti che servono.
 
+Prima di modificare una parte del codice, leggi tu la sezione di ARCHITETTURA.md che la riguarda:
+contiene decisioni da rispettare (per esempio che il tema si cambia solo nelle impostazioni). È
+documentazione, non codice: la regola di delegare all'esploratore vale per il codice.
+
 - `src/symbols/`: catalogo dei simboli; per aggiungerne uno vedi «Aggiungere un simbolo» nel README.
 - `src/search/`: ricerca a parole in italiano e suggerimenti mentre si scrive `\…`.
 - `src/editor/`: editor CodeMirror 6 (formule, segnaposto, suggerimenti, ortografia, elenchi).
@@ -69,6 +73,7 @@ La mappa dettagliata del codice è in ARCHITETTURA.md: si leggono solo le parti 
 - `src/graph/`: i grafici nella nota (2D e 3D, zone, piano di Gauss, statistica) con gli slider.
 - `src/board/`: la lavagna per scrivere a mano accanto al testo, con il registro dei tocchi.
 - `src/ai/`: assistente AI, con la chiave di chi lo usa.
+- `src/host.ts`: funzioni della demo dentro claude.ai.
 - `src/account/`: account e sincronizzazione con Supabase.
 - `src/share/`: le note condivise con un link (`nota.html#codice`).
 - `privacy.html` e `nota.html`: l'informativa sulla privacy e la pagina delle note condivise.
