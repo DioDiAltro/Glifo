@@ -95,8 +95,9 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
     studente vuole poi una lavagna «completa di tutto», come Microsoft Whiteboard (la grandezza degli
     strumenti, gli evidenziatori, la gomma a tratto e a linea intera: vedi la ROADMAP), i diagrammi di
     flusso trasformati in codice e negli schemi le tabelle come in Excel, che usava alle superiori in
-    G.E.S.P. (Gestione Economica e Servizi Produttivi): la pianificazione della produzione, i costi
-    fissi e variabili con il prezzo e il punto di pareggio, i flussi dei processi (vedi la ROADMAP).
+    G.E.S.P. (Gestione d'Impresa e Organizzazione Aziendale): la pianificazione della produzione,
+    i costi fissi e variabili con il prezzo e il punto di pareggio, i flussi dei processi (vedi la
+    ROADMAP).
     Decide che il codice, come l'SQL, è nei piani a pagamento (vedi «Deciso»).
 16. **Sì a tutto** (5 ottobre 2026). Lo studente approva la proposta delle tabelle (con il Gantt e le
     corsie) e le vuole gratis; il codice dai diagrammi anche in pseudocodice. Si comincia dagli

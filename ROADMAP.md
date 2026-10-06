@@ -253,7 +253,7 @@ grafici. Tutto è descritto nel README. Se serviranno:
   Come l'SQL, solo nei piani a pagamento, perché scrivere il codice a mano fa bene (vedi
   [ABBONAMENTI.md](ABBONAMENTI.md), «Deciso»);
 - **tabelle come in Excel** negli schemi (lo studente, 5 ottobre 2026), per gli esercizi che faceva
-  alle superiori in G.E.S.P. (Gestione Economica e Servizi Produttivi):
+  alle superiori in G.E.S.P. (Gestione d'Impresa e Organizzazione Aziendale):
   - la pianificazione e il controllo della produzione: come un'azienda informatica organizza i suoi
     servizi (sviluppo del software, assistenza, cicli produttivi);
   - la gestione dei costi: i costi fissi e variabili dei servizi e delle risorse, per trovare il
