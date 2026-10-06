@@ -1,17 +1,17 @@
 # Graph Report - matherdown  (2026-10-06)
 
 ## Corpus Check
-- 250 files · ~483,993 words
+- 250 files · ~484,009 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 5 file(s) not represented in the graph (top: (none) 4, .css 1)
 
 ## Summary
-- 4099 nodes · 14683 edges · 138 communities (111 shown, 27 thin omitted)
-- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 436 edges (avg confidence: 0.86)
+- 4099 nodes · 14680 edges · 137 communities (112 shown, 25 thin omitted)
+- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 433 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `35a6bfab`
+- Built from commit: `bc81ccdc`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -29,7 +29,7 @@
 - complex.ts
 - editor/lists.ts
 - svg.ts
-- sheet.ts
+- Sheet
 - SchemaEditor
 - Rational
 - toNode
@@ -61,19 +61,19 @@
 - NotesStore
 - study.ts
 - editor/editor.ts
-- notes.ts
+- sheet.ts
 - .constructor
+- notes.ts
 - account/space.ts
-- limits.ts
 - board/shapes.ts
 - linsys.ts
 - solve.ts
 - search.ts
+- toolbar.ts
 - statsGraph.ts
-- graphInsert.ts
 - finite.ts
 - 20261004091555_note_condivise.sql
-- toolbar.ts
+- limits.ts
 - Field
 - grafo-html.mjs
 - schema/shapes.ts
@@ -81,9 +81,9 @@
 - supabase.ts
 - Le spiegazioni, come funzionano
 - ui/preview.ts
-- Più avanti
+- .read
 - parseSchema
-- MathNode
+- FormattedResult
 - dialogs.ts
 - Benvenuto in Glifo
 - compilerOptions
@@ -91,7 +91,7 @@
 - Piano per piano
 - markdown.ts
 - symbolic.ts
-- AccountSync
+- .folderItem
 - Le quattro modalità
 - 20260930141840_note_cartelle_impostazioni.sql
 - schema/editor.ts
@@ -102,16 +102,16 @@
 - tutorial.mjs
 - Abbonamenti
 - BoardStore
-- Costi
 - supabase-stub.sql
 - account-test.mjs
 - Il database degli account (Supabase)
+- sync.test.ts
 - schemaTools.test.ts
-- La lavagna
-- .folderItem
+- Più avanti
+- graphInsert.ts
 - package.json
-- Sheet
-- I modelli e le chiavi API
+- render/lists.ts
+- formatLinear
 - fake-supabase.mjs
 - createFakeSupabase
 - toast
@@ -121,27 +121,26 @@
 - .constructor
 - graph/file.ts
 - formatNumber
-- sync.test.ts
+- .showSpaces
 - spell.test.ts
 - SidePanel
-- .solveAll
+- logo.ts
 - sql.ts
 - SuggestionController
 - Glifo
-- render/lists.ts
+- AccountSync
 - smoke-test.mjs
-- formatLinear
-- .showSpaces
-- logo.ts
 - linear.test.ts
-- .record
+- MathNode
+- Costi
+- La lavagna
+- I modelli e le chiavi API
 - icons.mjs
-- ExactRandom
 
 ## God Nodes (most connected - your core abstractions)
 1. `MathError` - 151 edges
 2. `num()` - 145 edges
-3. `Dove sono le cose` - 144 edges
+3. `Dove sono le cose` - 141 edges
 4. `Sheet` - 129 edges
 5. `MathNode` - 128 edges
 6. `mul()` - 124 edges
@@ -168,7 +167,7 @@
 - 4-file cycle: `src/math/evaluate.ts -> src/math/limits.ts -> src/math/format.ts -> src/math/exact.ts -> src/math/evaluate.ts`
 - 5-file cycle: `src/math/complex.ts -> src/math/format.ts -> src/math/exact.ts -> src/math/evaluate.ts -> src/math/limits.ts -> src/math/complex.ts`
 
-## Communities (138 total, 27 thin omitted)
+## Communities (137 total, 25 thin omitted)
 
 ### Community 0 - "touchlog.ts"
 Cohesion: 0.09
@@ -176,7 +175,7 @@ Nodes (26): at(), browserStore, clip(), isSaved(), KINDS, LOG_KEY, LOG_MAX_LINES
 
 ### Community 1 - "parse.ts"
 Cohesion: 0.08
-Nodes (40): hasWord(), ACCENTS, AND_WORDS, BARE_WORDS, CLOSING, COMMAND_OPS, CONNECTIVES, describe() (+32 more)
+Nodes (39): hasWord(), ACCENTS, AND_WORDS, BARE_WORDS, CLOSING, COMMAND_OPS, CONNECTIVES, describe() (+31 more)
 
 ### Community 2 - "main.ts"
 Cohesion: 0.05
@@ -222,9 +221,9 @@ Nodes (57): applyListStyle(), continueList(), deleteListMarker(), endEmptyItem()
 Cohesion: 0.09
 Nodes (54): contourLevels(), equilibria(), phaseTrajectory(), solutionCurves(), chooseY(), clipLines(), domainEdge(), features() (+46 more)
 
-### Community 13 - "sheet.ts"
-Cohesion: 0.09
-Nodes (23): Ode, OdeFunction, BRACKETS, CHECK_VALUES, checks, close(), Definition, digitsMatch() (+15 more)
+### Community 13 - "Sheet"
+Cohesion: 0.12
+Nodes (24): readBases(), Sheet, text(), tex(), text(), result(), text(), result() (+16 more)
 
 ### Community 15 - "Rational"
 Cohesion: 0.09
@@ -346,21 +345,21 @@ Nodes (33): breaks(), Asymptote, boundaries(), cutsOf(), defined(), domainOf(), 
 Cohesion: 0.09
 Nodes (25): @codemirror/commands, @codemirror/language, @codemirror/state, @codemirror/view, highlight, italianPhrases, listMarkers, blockLine (+17 more)
 
-### Community 45 - "notes.ts"
-Cohesion: 0.15
-Nodes (17): Deletion, DeletionLog, Folder, FOLDER_NAME_MAX, FolderGroup, groupByFolder(), loadClosedFolders(), RemoteFolder (+9 more)
+### Community 45 - "sheet.ts"
+Cohesion: 0.08
+Nodes (25): Ode, OdeFunction, FiniteContext, BRACKETS, CHECK_VALUES, checks, close(), Definition (+17 more)
 
 ### Community 46 - ".constructor"
 Cohesion: 0.12
 Nodes (5): BoardOptions, clampZoom(), loadPrefs(), validView(), highlightName()
 
-### Community 47 - "account/space.ts"
+### Community 47 - "notes.ts"
+Cohesion: 0.15
+Nodes (17): Deletion, DeletionLog, Folder, FOLDER_NAME_MAX, FolderGroup, groupByFolder(), loadClosedFolders(), RemoteFolder (+9 more)
+
+### Community 48 - "account/space.ts"
 Cohesion: 0.17
 Nodes (19): accountSpace(), adoptGuestNotes(), currentAccount(), forgetAccount(), guestNoteCount(), isWelcome(), knowsAccount(), prefixOf() (+11 more)
-
-### Community 48 - "limits.ts"
-Cohesion: 0.20
-Nodes (17): close(), Definite, definiteIntegral(), exValue(), samples(), alternating(), close(), derivatives() (+9 more)
 
 ### Community 49 - "board/shapes.ts"
 Cohesion: 0.13
@@ -378,25 +377,25 @@ Nodes (26): splitRoot(), surdText(), isStandardUnknown(), linearSystem(), RelOp,
 Cohesion: 0.17
 Nodes (23): editDistance(), normalizeText(), stem(), STOPWORDS, words(), buildIndex(), containsPhrase(), getIndex() (+15 more)
 
-### Community 53 - "statsGraph.ts"
+### Community 53 - "toolbar.ts"
+Cohesion: 0.14
+Nodes (17): insertBlock(), InsertOptions, toggleLinePrefix(), wrapSelection(), LIST_STYLES, addPlaceholders, Placeholder, Action (+9 more)
+
+### Community 54 - "statsGraph.ts"
 Cohesion: 0.17
 Nodes (18): FieldContext, isTestLine(), number(), testItems(), classes(), dataOf(), distributionExtent(), distributionLabel() (+10 more)
 
-### Community 54 - "graphInsert.ts"
-Cohesion: 0.25
-Nodes (13): formulaAtCursor(), GraphLabelLines, insertGraphBlock(), setGraphLabels(), mathRegionAt(), formulaGraphLine(), graphBlockText(), graphNames() (+5 more)
-
 ### Community 55 - "finite.ts"
-Cohesion: 0.18
-Nodes (27): countOf(), Elem, elemOf(), elemTex(), elemText(), EMPTY, expandDots(), FiniteError (+19 more)
+Cohesion: 0.19
+Nodes (26): countOf(), elemOf(), elemTex(), elemText(), EMPTY, expandDots(), FiniteError, FiniteResult (+18 more)
 
 ### Community 56 - "20261004091555_note_condivise.sql"
 Cohesion: 0.15
 Nodes (6): after_delete_unshare, private.read_shared_note(), private.share_own_note(), public.shared_links(), public.shared_notes, shared_notes_owner
 
-### Community 57 - "toolbar.ts"
-Cohesion: 0.14
-Nodes (17): insertBlock(), InsertOptions, toggleLinePrefix(), wrapSelection(), LIST_STYLES, addPlaceholders, Placeholder, Action (+9 more)
+### Community 57 - "limits.ts"
+Cohesion: 0.20
+Nodes (17): close(), Definite, definiteIntegral(), exValue(), samples(), alternating(), close(), derivatives() (+9 more)
 
 ### Community 58 - "Field"
 Cohesion: 0.12
@@ -426,17 +425,17 @@ Nodes (7): Come si costruisce (per dopo), Cosa succede dietro, Cosa vede chi stu
 Cohesion: 0.09
 Nodes (20): GraphLabels, remapGraphLines(), remapLineKeys(), renameGraphScope(), renameScopeKeys(), BlockKind, MoveDir, draw() (+12 more)
 
-### Community 65 - "Più avanti"
-Cohesion: 0.14
-Nodes (14): Abbonamento e funzioni a pagamento (da capire), Account: i propri appunti su ogni dispositivo, anche da condividere, Aiuto con gli esercizi, Altre idee, Calcoli e grafici: idee in più, Idee per il futuro, In programma, La lavagna: idee in più (+6 more)
+### Community 65 - ".read"
+Cohesion: 0.15
+Nodes (9): bracketParts(), chainOf(), definitionTarget(), parseCached(), splitPieces(), withoutDots(), mapNode(), check() (+1 more)
 
 ### Community 66 - "parseSchema"
 Cohesion: 0.12
 Nodes (25): graphsForFile(), hide(), markdownForFile(), findFencedBlocks(), findSchemaBlock(), findSchemaBlocks(), OpenFence, SchemaBlock (+17 more)
 
-### Community 67 - "MathNode"
-Cohesion: 0.18
-Nodes (7): ExactComplexScope, ConicInfo, withWorkLimit(), FormattedResult, MathNode, Found, needsSymbols()
+### Community 67 - "FormattedResult"
+Cohesion: 0.23
+Nodes (4): ConicInfo, withWorkLimit(), FormattedResult, needsSymbols()
 
 ### Community 68 - "dialogs.ts"
 Cohesion: 0.13
@@ -498,10 +497,6 @@ Nodes (14): Abbonamenti, Com'è andata la discussione, Come si decide cosa far p
 Cohesion: 0.13
 Nodes (6): BoardStore, MemoryBoards, applyAccountChange(), completeSignIn(), reloadPage(), signOutAccount()
 
-### Community 92 - "Costi"
-Cohesion: 0.33
-Nodes (6): Attivato, Costi, Da attivare solo quando lo dice lo studente, Gratis anche quando Glifo sarà aperto a tutti, Oggi: tutto gratis, Quando lo studente dice di cominciare
-
 ### Community 96 - "account-test.mjs"
 Cohesion: 0.20
 Nodes (4): device(), login(), newContext, waitFor()
@@ -510,25 +505,33 @@ Nodes (4): device(), login(), newContext, waitFor()
 Cohesion: 0.17
 Nodes (11): Accesso con Google, Cambiare il database, Cosa c'è, Eliminare l'account, Il database degli account (Supabase), Il progetto, Nell'app, Note condivise con un link (+3 more)
 
+### Community 98 - "sync.test.ts"
+Cohesion: 0.19
+Nodes (9): @electric-sql/pglite, LocalChange, callAs(), createDatabase(), createUser(), databaseTests(), migrations, shareTests() (+1 more)
+
 ### Community 100 - "schemaTools.test.ts"
 Cohesion: 0.14
 Nodes (20): alignBoxes(), Alignment, Box, distributeBoxes(), Position, base64(), crc32(), svgSize() (+12 more)
 
-### Community 101 - "La lavagna"
-Cohesion: 0.40
-Nodes (5): Deciso (5 ottobre 2026), Dopo, L'idea dello studente (5 ottobre 2026), La lavagna, La lavagna base (fatta e pubblicata il 5 ottobre 2026)
+### Community 101 - "Più avanti"
+Cohesion: 0.14
+Nodes (14): Abbonamento e funzioni a pagamento (da capire), Account: i propri appunti su ogni dispositivo, anche da condividere, Aiuto con gli esercizi, Altre idee, Calcoli e grafici: idee in più, Idee per il futuro, In programma, La lavagna: idee in più (+6 more)
+
+### Community 102 - "graphInsert.ts"
+Cohesion: 0.25
+Nodes (13): formulaAtCursor(), GraphLabelLines, insertGraphBlock(), setGraphLabels(), mathRegionAt(), formulaGraphLine(), graphBlockText(), graphNames() (+5 more)
 
 ### Community 103 - "package.json"
 Cohesion: 0.05
 Nodes (39): description, devDependencies, @electric-sql/pglite, fake-indexeddb, jsdom, playwright-core, @types/markdown-it-footnote, typescript (+31 more)
 
-### Community 104 - "Sheet"
-Cohesion: 0.11
-Nodes (24): Sheet, text(), tex(), text(), check(), result(), text(), result() (+16 more)
+### Community 104 - "render/lists.ts"
+Cohesion: 0.38
+Nodes (10): bulletGroup(), sameList(), alignInside(), asciiTrim(), findMarker(), isOrdered(), listAttrs(), listRule() (+2 more)
 
-### Community 105 - "I modelli e le chiavi API"
-Cohesion: 0.50
-Nodes (4): Deciso (5 ottobre 2026), I modelli e le chiavi API, Il parere di Claude (niente di deciso), Le idee dello studente (5 ottobre 2026)
+### Community 105 - "formatLinear"
+Cohesion: 0.36
+Nodes (10): circleText(), entry(), formatLinear(), lineCoefficients(), lineText(), matrixTex(), plainArea(), planeText() (+2 more)
 
 ### Community 106 - "fake-supabase.mjs"
 Cohesion: 0.29
@@ -566,10 +569,6 @@ Nodes (34): FIGURE_PALETTE, figureName(), graphFigure(), graphImage(), graphImag
 Cohesion: 0.11
 Nodes (30): decimalSeparator(), Digits, formatNumber(), FormatOptions, formatRational(), fromNumber(), fromRational(), SUPERSCRIPT (+22 more)
 
-### Community 121 - "sync.test.ts"
-Cohesion: 0.19
-Nodes (9): @electric-sql/pglite, LocalChange, callAs(), createDatabase(), createUser(), databaseTests(), migrations, shareTests() (+1 more)
-
 ### Community 122 - "spell.test.ts"
 Cohesion: 0.07
 Nodes (29): @codemirror/lang-markdown, noIndentedCode, mathMarkdown, misspelledMark, refreshSpelling, setTarget, SKIP, spellcheck() (+21 more)
@@ -578,9 +577,9 @@ Nodes (29): @codemirror/lang-markdown, noIndentedCode, mathMarkdown, misspelledM
 Cohesion: 0.24
 Nodes (4): isConfidentAnswer(), displayCode(), preventFocusSteal(), SidePanel
 
-### Community 124 - ".solveAll"
-Cohesion: 0.16
-Nodes (8): bracketParts(), chainOf(), definitionTarget(), parseCached(), splitPieces(), withoutDots(), mapNode(), scopeWithSets()
+### Community 124 - "logo.ts"
+Cohesion: 0.33
+Nodes (6): sidebarToggle(), BOX, glyph(), LOGO_COLOR, logoIcon(), logoMark()
 
 ### Community 125 - "sql.ts"
 Cohesion: 0.17
@@ -594,45 +593,49 @@ Nodes (3): EditorMathContext, expand(), SuggestionController
 Cohesion: 0.15
 Nodes (13): Account, Aggiungere un simbolo, Assistente AI, Com'è fatto, Come viene pubblicata, Compatibilità con VS Code, Condividere una nota con un link, Funzionalità (+5 more)
 
-### Community 128 - "render/lists.ts"
-Cohesion: 0.38
-Nodes (10): bulletGroup(), sameList(), alignInside(), asciiTrim(), findMarker(), isOrdered(), listAttrs(), listRule() (+2 more)
-
 ### Community 129 - "smoke-test.mjs"
 Cohesion: 0.29
 Nodes (4): markdown-it, vite, firstVisit(), plainContext
 
-### Community 131 - "formatLinear"
-Cohesion: 0.36
-Nodes (10): circleText(), entry(), formatLinear(), lineCoefficients(), lineText(), matrixTex(), plainArea(), planeText() (+2 more)
-
-### Community 133 - "logo.ts"
-Cohesion: 0.33
-Nodes (6): sidebarToggle(), BOX, glyph(), LOGO_COLOR, logoIcon(), logoMark()
-
-### Community 134 - "linear.test.ts"
+### Community 131 - "linear.test.ts"
 Cohesion: 0.29
 Nodes (7): EXACT, FLOAT, A, B, q(), result(), text()
+
+### Community 132 - "MathNode"
+Cohesion: 0.15
+Nodes (5): ExactComplexScope, ExactRandom, Elem, MathNode, fingerprint()
+
+### Community 133 - "Costi"
+Cohesion: 0.33
+Nodes (6): Attivato, Costi, Da attivare solo quando lo dice lo studente, Gratis anche quando Glifo sarà aperto a tutti, Oggi: tutto gratis, Quando lo studente dice di cominciare
+
+### Community 134 - "La lavagna"
+Cohesion: 0.40
+Nodes (5): Deciso (5 ottobre 2026), Dopo, L'idea dello studente (5 ottobre 2026), La lavagna, La lavagna base (fatta e pubblicata il 5 ottobre 2026)
+
+### Community 135 - "I modelli e le chiavi API"
+Cohesion: 0.50
+Nodes (4): Deciso (5 ottobre 2026), I modelli e le chiavi API, Il parere di Claude (niente di deciso), Le idee dello studente (5 ottobre 2026)
 
 ## Knowledge Gaps
 - **577 isolated node(s):** `Comandi`, `Promemoria per lo studente`, `Regole`, `Moves`, `Writing` (+572 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 798 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **27 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **25 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Dove sono le cose` connect `Dove sono le cose` to `touchlog.ts`, `parse.ts`, `main.ts`, `odesolve.ts`, `spec.ts`, `logo.ts`, `num`, `graph/preview.ts`, `several.ts`, `complex.ts`, `svg.ts`, `Rational`, `toNode`, `compile`, `numerical.ts`, `Board`, `IdbBoards`, `MathError`, `toLatex`, `assistant.ts`, `h`, `graph.ts`, `Pt`, `graph/space.ts`, `distributions.ts`, `logic.ts`, `arithmetic.ts`, `namesIn`, `study.ts`, `editor/editor.ts`, `account/space.ts`, `limits.ts`, `board/shapes.ts`, `linsys.ts`, `graphInsert.ts`, `finite.ts`, `supabase.ts`, `ui/preview.ts`, `MathNode`, `dialogs.ts`, `markdown.ts`, `symbolic.ts`, `schema/editor.ts`, `board.ts`, `BoardStore`, `schemaTools.test.ts`, `.constructor`, `graph/file.ts`, `.solveAll`?**
-  _High betweenness centrality (0.120) - this node is a cross-community bridge._
-- **Why does `vitest` connect `vitest` to `touchlog.ts`, `main.ts`, `logo.ts`, `linear.test.ts`, `num`, `editor/lists.ts`, `svg.ts`, `Rational`, `compile`, `IdbBoards`, `assistant.ts`, `h`, `graph/space.ts`, `resize.ts`, `editor/editor.ts`, `notes.ts`, `account/space.ts`, `board/shapes.ts`, `linsys.ts`, `search.ts`, `toolbar.ts`, `supabase.ts`, `ui/preview.ts`, `parseSchema`, `dialogs.ts`, `Dove sono le cose`, `markdown.ts`, `board.ts`, `editor.test.ts`, `schemaTools.test.ts`, `package.json`, `Sheet`, `page.ts`, `sidePanel.ts`, `.constructor`, `graph/file.ts`, `sync.test.ts`, `spell.test.ts`, `sql.ts`?**
-  _High betweenness centrality (0.104) - this node is a cross-community bridge._
-- **Why does `h()` connect `h` to `main.ts`, `logo.ts`, `graph/preview.ts`, `editor/lists.ts`, `SchemaEditor`, `Board`, `graph.ts`, `resize.ts`, `notes.ts`, `.constructor`, `toolbar.ts`, `ui/preview.ts`, `dialogs.ts`, `schema/editor.ts`, `board.ts`, `.folderItem`, `toast`, `page.ts`, `sidePanel.ts`, `spell.test.ts`, `SidePanel`?**
-  _High betweenness centrality (0.048) - this node is a cross-community bridge._
-- **Are the 143 inferred relationships involving `Dove sono le cose` (e.g. with `adoptGuestNotes()` and `sharedLinks()`) actually correct?**
-  _`Dove sono le cose` has 143 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `Dove sono le cose` connect `Dove sono le cose` to `touchlog.ts`, `parse.ts`, `main.ts`, `odesolve.ts`, `spec.ts`, `several.ts`, `num`, `graph/preview.ts`, `complex.ts`, `svg.ts`, `Sheet`, `Rational`, `toNode`, `compile`, `numerical.ts`, `Board`, `IdbBoards`, `MathError`, `toLatex`, `assistant.ts`, `h`, `graph.ts`, `Pt`, `graph/space.ts`, `distributions.ts`, `logic.ts`, `arithmetic.ts`, `namesIn`, `study.ts`, `editor/editor.ts`, `account/space.ts`, `board/shapes.ts`, `linsys.ts`, `finite.ts`, `limits.ts`, `supabase.ts`, `ui/preview.ts`, `.read`, `FormattedResult`, `dialogs.ts`, `markdown.ts`, `symbolic.ts`, `schema/editor.ts`, `board.ts`, `BoardStore`, `schemaTools.test.ts`, `graphInsert.ts`, `.constructor`, `graph/file.ts`, `logo.ts`?**
+  _High betweenness centrality (0.123) - this node is a cross-community bridge._
+- **Why does `vitest` connect `vitest` to `touchlog.ts`, `main.ts`, `linear.test.ts`, `num`, `editor/lists.ts`, `svg.ts`, `Sheet`, `Rational`, `compile`, `IdbBoards`, `assistant.ts`, `h`, `graph/space.ts`, `resize.ts`, `editor/editor.ts`, `notes.ts`, `account/space.ts`, `board/shapes.ts`, `linsys.ts`, `search.ts`, `toolbar.ts`, `supabase.ts`, `ui/preview.ts`, `.read`, `parseSchema`, `dialogs.ts`, `Dove sono le cose`, `markdown.ts`, `board.ts`, `editor.test.ts`, `sync.test.ts`, `schemaTools.test.ts`, `package.json`, `page.ts`, `sidePanel.ts`, `.constructor`, `graph/file.ts`, `spell.test.ts`, `logo.ts`, `sql.ts`?**
+  _High betweenness centrality (0.121) - this node is a cross-community bridge._
+- **Why does `h()` connect `h` to `main.ts`, `graph/preview.ts`, `editor/lists.ts`, `SchemaEditor`, `Board`, `graph.ts`, `resize.ts`, `.constructor`, `notes.ts`, `toolbar.ts`, `ui/preview.ts`, `dialogs.ts`, `.folderItem`, `schema/editor.ts`, `board.ts`, `toast`, `page.ts`, `sidePanel.ts`, `spell.test.ts`, `SidePanel`, `logo.ts`?**
+  _High betweenness centrality (0.044) - this node is a cross-community bridge._
+- **Are the 140 inferred relationships involving `Dove sono le cose` (e.g. with `adoptGuestNotes()` and `sharedLinks()`) actually correct?**
+  _`Dove sono le cose` has 140 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `Comandi`, `Promemoria per lo studente`, `Regole` to the rest of the system?**
   _577 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `touchlog.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.08653061224489796 - nodes in this community are weakly interconnected._
 - **Should `parse.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.07553124342520513 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07667525773195877 - nodes in this community are weakly interconnected._
