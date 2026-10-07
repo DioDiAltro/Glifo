@@ -41,6 +41,27 @@ const check = (ok, msg) => {
   if (!ok) failures++
 }
 
+/**
+ * Il worker di WebLLM finto, per «Spiegami» (src/ai/llmWorker.ts parla allo stesso modo): carica
+ * subito, chiede al motore la primitiva e poi scrive due passaggi, un pezzo alla volta.
+ */
+function fakeLlmWorker() {
+  const steps = String.raw`1. Porto fuori $\pi$, che è una costante. $$\int_{-R}^{R} \pi (R^2 - x^2) \, dx = \pi \int_{-R}^{R} (R^2 - x^2) \, dx$$
+2. Sostituisco gli estremi nella primitiva. $$\pi \left[R^2 x - \frac{x^3}{3}\right]_{-R}^{R} = \frac{4\pi R^3}{3}$$`
+  const call = '<tool_call>{"name": "primitiva", "arguments": {"funzione": "R^2 - x^2", "variabile": "x"}}</tool_call>'
+  self.addEventListener('message', (ev) => {
+    const msg = ev.data
+    if (msg.type === 'load') {
+      self.postMessage({ id: msg.id, type: 'progress', progress: 0.5, text: 'Fetching param cache[1/2]' })
+      setTimeout(() => self.postMessage({ id: msg.id, type: 'done', value: `${msg.model}-q4f16_1-MLC` }), 100)
+    } else if (msg.type === 'chat') {
+      const reply = msg.messages.at(-1).content.includes('<tool_response>') ? steps : call
+      for (let i = 0; i < reply.length; i += 16) self.postMessage({ id: msg.id, type: 'delta', text: reply.slice(i, i + 16) })
+      self.postMessage({ id: msg.id, type: 'done', value: reply })
+    } else if (msg.type === 'remove') self.postMessage({ id: msg.id, type: 'done' })
+  })
+}
+
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
   const errors = []
@@ -3466,6 +3487,75 @@ try {
   const darkVideo = await firstDark.locator('dialog.dialog-tutorial video').getAttribute('src')
   check(darkVideo.endsWith('scrivere-scuro.webm'), `nel tema scuro il tutorial mostra i video scuri (${darkVideo})`)
   await firstDark.context().close()
+  // «Spiegami» (in prova): nel pannello della formula i passaggi di un Qwen3 che gira nel browser con
+  // WebLLM, con i conti chiesti al motore di Glifo e controllati da lui. Qui Qwen3 non c'è (niente scheda
+  // grafica, niente download): il worker di WebLLM è sostituito da uno finto che parla come lui.
+  {
+    // Senza service worker: le richieste che passano da lui page.route non le vede, e il worker finto non arriverebbe.
+    const exContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block' })
+    const ex = await exContext.newPage()
+    ex.on('pageerror', (e) => errors.push(e.message))
+    const workerRequests = []
+    await ex.route('**/assets/llmWorker-*.js', (route) => {
+      workerRequests.push(route.request().url())
+      return route.fulfill({ contentType: 'text/javascript', body: `(${fakeLlmWorker})()` })
+    })
+    await ex.goto(url)
+    await ex.waitForSelector('.cm-editor')
+    await ex.locator('.notes-head button[aria-label="Nuova nota"]').click()
+    await ex.keyboard.press('Control+a')
+    await ex.keyboard.type('# Sfera\n\nIl volume è $\\int_{-R}^{R} \\pi (R^2 - x^2) \\, dx =')
+    await ex.waitForSelector('.cm-calc-result')
+    const explainButton = ex.locator('.formula-box .btn-explain')
+    await explainButton.waitFor({ state: 'visible', timeout: 5000 })
+    const hiddenBefore = workerRequests.length
+    await explainButton.click()
+    await ex.waitForSelector('.explain-box .explain-step', { timeout: 10000 })
+    const shown = await ex.evaluate(() => ({
+      steps: document.querySelectorAll('.explain-box .explain-step').length,
+      ok: document.querySelectorAll('.explain-box .calc-check.is-ok').length,
+      model: document.querySelector('.explain-box .ai-model')?.textContent,
+      summary: document.querySelector('.explain-box .explain-summary')?.textContent,
+      katex: document.querySelectorAll('.explain-box .explain-math .katex').length,
+    }))
+    check(
+      hiddenBefore === 0 && workerRequests.length === 1 && shown.steps === 2 && shown.ok === 2 && shown.katex === 2 && shown.model === 'Qwen3 1.7B' && shown.summary.startsWith('✓ Arriva al risultato di Glifo'),
+      `«Spiegami» carica WebLLM solo ora e mostra i passaggi con il ✓ di Glifo (${JSON.stringify(shown)})`,
+    )
+    await ex.locator('.explain-box button', { hasText: 'Inserisci nella nota' }).click()
+    // Nella nota i passaggi si controllano come le altre formule (quello con l'integrale: ✓).
+    await ex.waitForFunction(() => document.querySelectorAll('.markdown-body li .calc-check.is-ok').length >= 1, null, { timeout: 5000 })
+    const inserted = await ex.locator('.cm-line', { hasText: /^\d\. / }).allInnerTexts()
+    const wrongInNote = await ex.locator('.markdown-body .calc-check.is-wrong').count()
+    check(
+      inserted.length === 2 && inserted[0].startsWith('1. Porto fuori') && inserted[1].startsWith('2. Sostituisco') && wrongInNote === 0,
+      `«Inserisci nella nota» mette i passaggi dopo la formula, e la nota li controlla (${JSON.stringify(inserted)})`,
+    )
+    // Le impostazioni: il modello nel browser e il tono.
+    await ex.locator('.side-profile button[aria-label="Impostazioni"]').click()
+    const settings = ex.locator('dialog fieldset.explain-settings')
+    await settings.waitFor()
+    const models = await settings.locator('#local-model option').allInnerTexts()
+    const tones = await settings.locator('.segmented label').allInnerTexts()
+    await ex.keyboard.press('Escape')
+    check(models.length === 3 && models[1].startsWith('Qwen3 1.7B') && tones.join() === 'Come il professore,Più semplice', `nelle impostazioni il modello e il tono delle spiegazioni (${JSON.stringify({ models, tones })})`)
+    await exContext.close()
+
+    // Con il worker vero: WebLLM si carica, ma qui manca WebGPU, e il pannello lo dice.
+    const real = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+    real.on('pageerror', (e) => errors.push(e.message))
+    await real.goto(url)
+    await real.waitForSelector('.cm-editor')
+    await real.locator('.notes-head button[aria-label="Nuova nota"]').click()
+    await real.keyboard.press('Control+a')
+    await real.keyboard.type('$\\int_0^1 x^2 \\, dx =')
+    await real.locator('.formula-box .btn-explain').waitFor({ state: 'visible', timeout: 5000 })
+    await real.locator('.formula-box .btn-explain').click()
+    await real.waitForSelector('.explain-box .ai-error', { timeout: 30000 })
+    const realError = await real.locator('.explain-box .ai-error').innerText()
+    check(/WebGPU/.test(realError), `senza WebGPU il pannello dice che cosa manca (${JSON.stringify(realError)})`)
+    await real.close()
+  }
   // Dentro claude.ai (la demo e le prove della grafica) Accedi e Condividi si vedono come sul
   // sito, ma l'accesso è spento: la finestra lo dice e non va da nessuna parte
   const viewer = await browser.newPage({ viewport: { width: 1440, height: 900 } })

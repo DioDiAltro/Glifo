@@ -216,6 +216,10 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   `\left[…\right]_a^b` con `bracketValue`); definizioni, equazioni e formule con ⇒ no. Il segno ✓/✗ è in
   `src/render/check.ts` (nell'editor il ✗ aspetta che il cursore esca dalla formula); i controlli fatti
   li ricorda `checks`, con l'impronta delle definizioni (`state`). `\log` è il logaritmo naturale.
+  π, e o un numero della nota davanti a una parentesi sono un prodotto (`callsUnknown`: \pi \left(…\right)
+  non è una funzione che manca). `Sheet.same` dice se due espressioni valgono lo stesso anche quando
+  nessuna è un conto ((x + 1)^2 e x^2 + 2x + 1, la primitiva tra gli estremi), per i passaggi delle
+  spiegazioni (`src/ai/explain.ts`).
 - `src/graph/`: i blocchi ```grafico (una riga per funzione, curva, punto, vettore, area di un integrale; `spec.ts`), il campionamento
   con salti e asintoti e la finestra scelta da sola (`plot.ts`), il disegno SVG (`svg.ts`, colori
   validati con la skill dataviz), l'anteprima interattiva (`preview.ts`) e i file .md (`file.ts`, come
@@ -336,6 +340,34 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   indirizzo; `askCompatible` in `assistant.ts` chiede lo schema, poi un oggetto JSON, poi niente, e legge la
   risposta con `jsonIn`). Chiave, modello e indirizzo di ogni servizio restano nel browser (`aiKeys`,
   `aiModels`, `aiUrls` nelle impostazioni). `src/host.ts`: funzioni della demo dentro claude.ai.
+  «Spiegami» (in prova sul ramo `prova`, 7 ottobre 2026; il disegno è in ABBONAMENTI.md, «Le
+  spiegazioni, come funzionano»): un Qwen3 piccolo che gira nel browser con WebLLM scrive i passaggi di
+  un conto e il motore li firma. `localModels.ts` i modelli (Qwen3 0.6B, 1.7B, 4B: `webllmId` sceglie
+  q4f16 o q4f32 secondo `shader-f16`), se sono già nella Cache Storage di WebLLM (`modelInBrowser`, senza
+  caricarlo) e i messaggi con il worker; `llmWorker.ts` il worker con WebLLM (6 MB, solo lì: la pagina
+  non lo importa mai), senza il ragionamento (`enable_thinking: false`); `local.ts` il lato pagina
+  (`LocalLlm`, uno per pagina con `localLlm()`: carica una volta, risposte a pezzi, `stop` con Annulla,
+  `localErrorMessage` in italiano). `tools.ts` il motore come strumenti nel formato dei Qwen3
+  (`<tools>` nel messaggio di sistema, `<tool_call>` letti dal testo con le barre del LaTeX aggiustate,
+  `<tool_response>` in un messaggio dell'utente): calcola, controlla, deriva, primitiva, risolvi, ognuno
+  su un foglio nuovo con le definizioni della nota (`sheetFactory`); `checkFormula` controlla un
+  passaggio prima come la nota (`Sheet.read`) e poi parte con parte con `Sheet.same` (`strict`, `soft`
+  nelle equazioni: solo ✓). `explain.ts` il giro: `explainTarget` (un risultato dopo «=», un risultato
+  scritto, le soluzioni dopo ⇒), il primo messaggio con il risultato di Glifo e la primitiva di ogni
+  integrale (`engineHints`), fino a 3 giri di strumenti, `stepsIn` legge «1. frase $$formula$$» (anche
+  \[…\], la formula in linea, i paragrafi), `checkSteps` (un ✗ con lettere che la formula non ha, come
+  u = x², non è sicuro e non si dice; `reaches`: l'ultimo passaggio contro il risultato), `feedback` fa
+  correggere fino a 2 volte e si tiene la spiegazione con meno ✗; il contesto è di 4096 token
+  (`tooLong`). L'interfaccia è `src/ui/explainPanel.ts`: «Spiegami» nel riquadro della formula di
+  `sidePanel.ts` (`.formula-actions`, solo su un conto: `regionToExplain` e `targetAt` in
+  `src/editor/explainInsert.ts`, ricalcolati quando cambiano nota o formula) e sotto il riquadro la
+  spiegazione (`.explain-box`: scaricamento, testo mentre arriva, passaggi con `checkHtml`, «Inserisci
+  nella nota» con `insertExplanation` dopo il blocco della formula, «Rifai»); resta finché non si chiude.
+  Dentro claude.ai lo dice subito (la pagina blocca i download). Impostazioni `localModel` ed
+  `explainTone`, solo su questo dispositivo (`explainFieldset` in `src/ui/dialogs.ts`). Nella PWA il
+  worker non è tra i file precaricati: alla prima spiegazione va nella cache `glifo-webllm`, per
+  l'offline. Nelle prove nel browser il worker è sostituito da uno finto (`fakeLlmWorker` in
+  `scripts/smoke-test.mjs`).
 - `src/account/`: account e sincronizzazione. `sync.ts` è il motore (manda, scarica, nei
   conflitti tiene tutte e due le versioni), `controller.ts` decide quando sincronizzare,
   `space.ts` tiene le note di ogni account in uno spazio a parte del browser (`glifo.u.<id>.…`),

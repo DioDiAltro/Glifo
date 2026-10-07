@@ -17,6 +17,7 @@ ottobre 2026 (i piani, i prezzi per chi usa Glifo e il resto sono in [ABBONAMENT
 | Accesso con Google | gratis | |
 | Cloudflare (l'account c'è già) | gratuito | |
 | L'assistente AI | con la chiave di chi lo usa | le prove si fanno gratis con una chiave gratuita di Gemini (Google AI Studio, senza carta di credito) o con i 10.000 «neuroni» al giorno di Cloudflare Workers AI |
+| «Spiegami» con Qwen3 nel browser (in prova, 7 ottobre 2026) | gratis: il modello gira sul dispositivo di chi lo usa | si scarica da Hugging Face la prima volta (da 0,4 a 2,3 GB); serve WebGPU, quindi di solito un computer |
 
 ## Gratis anche quando Glifo sarà aperto a tutti
 

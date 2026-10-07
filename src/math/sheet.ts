@@ -926,11 +926,17 @@ export class Sheet {
     }
   }
 
-  /** Se la parte usa una funzione che la nota non definisce (f(x)) e che non è una delle `letters` (x(x + 1) è un prodotto). */
+  /**
+   * Se la parte usa una funzione che la nota non definisce (f(x)) e che non è una delle `letters` (x(x + 1)
+   * è un prodotto); nemmeno π, e o un numero della nota davanti a una parentesi: \pi \left(\frac{2R^3}{3}\right)
+   * è un prodotto.
+   */
   private callsUnknown(node: MathNode, letters: readonly string[]): boolean {
     let unknown = false
     walk(node, (n) => {
-      if (n.k === 'apply' && !this.fns.has(n.name) && !this.vfns.has(n.name) && !this.bodies.has(n.name) && !letters.includes(n.name)) unknown = true
+      if (n.k !== 'apply' || this.fns.has(n.name) || this.vfns.has(n.name) || this.bodies.has(n.name) || letters.includes(n.name)) return
+      if (n.name === 'π' || n.name === 'e' || this.consts.has(n.name)) return
+      unknown = true
     })
     return unknown
   }
@@ -2125,6 +2131,41 @@ export class Sheet {
     }
     const tex = toLatex(value)
     return tex ? { tex, text: plainText(value), rich: true } : null
+  }
+
+  /**
+   * Due espressioni valgono lo stesso? Per i passaggi delle spiegazioni (src/ai/explain.ts): ogni
+   * passaggio è una catena a = b = c in cui nessuna parte è per forza un conto da fare ((x + 1)^2 e
+   * x^2 + 2x + 1, \pi \left[R^2 x - \frac{x^3}{3}\right]_{-R}^{R} e \frac{4\pi R^3}{3}). Con le lettere
+   * si confrontano i valori per tre scelte di numeri positivi, come nei controlli; la primitiva tra
+   * gli estremi è la differenza (`variable`: la variabile dell'integrale, se si sa). true, false, o
+   * null se una delle due non si sa calcolare (una primitiva senza estremi, un'equazione, un insieme).
+   */
+  same(a: string, b: string, variable: string | null = null): boolean | null {
+    const read = (src: string): MathNode | null => {
+      const clean = withoutDots(src.trim())
+      return this.bracketValue(clean, variable) ?? parseCached(clean)
+    }
+    const x = read(a)
+    const y = read(b)
+    if (!x || !y) return null
+    const value = (n: MathNode) => !['rel', 'and', 'or', 'set', 'cases', 'prim'].includes(n.k)
+    if (!value(x) || !value(y)) return null
+    const letters = [...new Set([...this.freeNames(x), ...this.freeNames(y)])]
+    if (this.callsUnknown(x, letters) || this.callsUnknown(y, letters)) return null
+    try {
+      if (!letters.length) {
+        const p = this.evaluate(x) ?? this.realOf(x)
+        const q = this.evaluate(y) ?? this.realOf(y)
+        if (!p || !q) return null
+        return p.exact && q.exact ? p.exact.cmp(q.exact) === 0 : close(p.float, q.float, 1e-9)
+      }
+      const f = this.compileWith(x, letters)
+      const g = this.compileWith(y, letters)
+      return f && g ? this.samplesAgree(letters, f, g, 1e-7) : null
+    } catch {
+      return null
+    }
   }
 
   /** Le definizioni che servono a questi nomi (anche attraverso altre definizioni), in ordine. */

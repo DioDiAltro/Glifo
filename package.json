@@ -28,6 +28,7 @@
     "@lezer/highlight": "^1.2.5",
     "@lezer/markdown": "^1.7.2",
     "@maxgraph/core": "^0.24.0",
+    "@mlc-ai/web-llm": "^0.2.85",
     "@supabase/supabase-js": "^2.117.2",
     "dictionary-en": "^4.0.0",
     "dictionary-it": "^2.0.0",

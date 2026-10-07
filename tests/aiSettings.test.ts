@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { openSettingsDialog } from '../src/ui/dialogs'
 import { DEFAULT_SETTINGS, type Settings } from '../src/store/settings'
 
@@ -69,5 +69,34 @@ describe('le impostazioni dell\'assistente AI', () => {
     model.value = 'gemma3'
     model.dispatchEvent(new Event('change'))
     expect(changes).toContainEqual({ aiModels: { ollama: 'gemma3' } })
+  })
+})
+
+describe('le impostazioni delle spiegazioni (prova)', () => {
+  function explainSection(settings: Partial<Settings> = {}) {
+    const { changes } = open(settings)
+    return { changes, section: document.querySelector<HTMLElement>('fieldset.explain-settings')! }
+  }
+
+  it('il modello nel browser, con quanto si scarica, e il tono', async () => {
+    const { section, changes } = explainSection()
+    expect(section.querySelector('legend')?.textContent).toBe('Spiegazioni (prova)')
+    const select = section.querySelector<HTMLSelectElement>('#local-model')!
+    expect([...select.options].map((o) => o.value)).toEqual(['Qwen3-0.6B', 'Qwen3-1.7B', 'Qwen3-4B'])
+    expect(select.value).toBe('Qwen3-1.7B')
+    expect(select.selectedOptions[0].textContent).toBe('Qwen3 1.7B, consigliato (circa 1 GB)')
+    // Qui la Cache Storage non c'è: il modello si scaricherà.
+    await vi.waitFor(() => expect(section.querySelector('.explain-status')?.textContent).toMatch(/^Qwen3 1\.7B si scarica la prima volta che premi «Spiegami» \(circa 1 GB\)/))
+    select.value = 'Qwen3-0.6B'
+    select.dispatchEvent(new Event('change'))
+    expect(changes).toContainEqual({ localModel: 'Qwen3-0.6B' })
+    await vi.waitFor(() => expect(section.querySelector('.explain-status')?.textContent).toMatch(/^Qwen3 0\.6B si scarica/))
+    const tones = [...section.querySelectorAll<HTMLInputElement>('input[name="explain-tone"]')]
+    expect(tones.map((t) => [t.value, t.checked])).toEqual([
+      ['professore', true],
+      ['semplice', false],
+    ])
+    tones[1].click()
+    expect(changes).toContainEqual({ explainTone: 'semplice' })
   })
 })

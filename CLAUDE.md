@@ -73,7 +73,7 @@ documentazione, non codice: la regola di delegare all'esploratore vale per il co
 - `src/math/`: le espressioni delle formule: lettura, calcoli e il «foglio» della nota con i controlli.
 - `src/graph/`: i grafici nella nota (2D e 3D, zone, piano di Gauss, statistica, i dati delle tabelle, il Gantt e il reticolo) con gli slider.
 - `src/board/`: la lavagna per scrivere a mano accanto al testo, con il registro dei tocchi.
-- `src/ai/`: assistente AI, con la chiave di chi lo usa.
+- `src/ai/`: assistente AI, con la chiave di chi lo usa, e «Spiegami» (in prova): Qwen3 nel browser con WebLLM, con il motore come strumenti.
 - `src/host.ts`: funzioni della demo dentro claude.ai.
 - `src/account/`: account e sincronizzazione con Supabase.
 - `src/share/`: le note condivise con un link (`nota.html#codice`).
@@ -100,6 +100,8 @@ documentazione, non codice: la regola di delegare all'esploratore vale per il co
   non tiene mai il testo delle note (`where`).
 - Prima di sincronizzare, scaricare o eliminare, `src/account/supabase.ts` controlla che l'accesso
   salvato nel browser sia dell'account aperto.
+- WebLLM (6 MB) sta solo nel worker `src/ai/llmWorker.ts`: la pagina non lo importa mai, parla con il
+  worker da `src/ai/local.ts`. Nelle prove nel browser il worker è finto (Qwen3 non si scarica).
 
 ## Promemoria per lo studente
 
@@ -113,6 +115,9 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
   nella finestra «Condividi» di NotebookLM) e lo scrivere insieme senza conflitti. Il 4 ottobre
   2026, fatto il link, lo studente ha chiesto di tenerlo per dopo e di sistemare prima la
   grafica: le idee sono al passo 5 di ROADMAP.md.
+- Provare «Spiegami» (sul ramo `prova`, 7 ottobre 2026) su un computer con Chrome o Edge, su esercizi
+  veri: quale Qwen3 va meglio (0.6B, 1.7B o 4B, nelle impostazioni) e se i passaggi sono chiari. Va
+  deciso come provarlo: dentro claude.ai il modello non si scarica (vedi «Spiegami» nella ROADMAP).
 - Provare la lavagna sull'iPad con la Apple Pencil, quando l'avrà di nuovo: le correzioni del 5
   ottobre 2026 sono già online. Prima accendere il registro dei tocchi (Impostazioni, in fondo).
   Scrivendo non si deve selezionare niente, a tutto schermo la lavagna non si deve chiudere e la

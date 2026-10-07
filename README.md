@@ -140,6 +140,8 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
 - **Assistente AI** (facoltativo) per le domande difficili, es. «freccia con scritto sopra
   n → ∞»: risponde con il codice LaTeX pronto da inserire. Con la chiave di Anthropic, di Gemini
   (gratis), di OpenRouter, con Ollama sul tuo computer o con un altro servizio compatibile con OpenAI.
+- **Spiegami** (in prova): con il cursore su un conto, i passaggi scritti da Qwen3, un modello AI
+  che gira nel browser, con i conti fatti e controllati dal motore di Glifo (vedi «Spiegami»).
 
 **Calcoli e grafici** (come le Note matematiche della Calcolatrice dell'iPad)
 - Una formula che finisce con `=` mostra il **risultato**: nell'editor accanto all'uguale, più chiaro,
@@ -874,6 +876,29 @@ Se pubblichi Glifo per altri studenti e non vuoi che ognuno usi la propria chiav
 mettere la chiave di Anthropic in un piccolo server "proxy" (per esempio un Cloudflare Worker)
 e indicarne l'indirizzo in **Impostazioni → Assistente AI → Avanzate**.
 
+## Spiegami (in prova)
+
+Con il cursore su un conto che Glifo sa fare (una formula che finisce con `=`, un risultato scritto
+come `\int_0^1 x^2 \, dx = \frac{1}{2}`, un'equazione con `\Rightarrow`), sotto l'anteprima della
+formula compare **Spiegami**. Premendolo, i passaggi li scrive **Qwen3**, un modello AI aperto che
+gira **nel browser** con [WebLLM](https://github.com/mlc-ai/web-llm), sulla scheda grafica (WebGPU):
+niente chiave, niente costi, e la nota non esce dal dispositivo. Serve un browser con WebGPU (Chrome
+o Edge aggiornati, su un computer).
+
+I conti li fa il **motore di Glifo**: il modello glieli chiede (calcolare, controllare
+un'uguaglianza, derivare, trovare una primitiva, risolvere), e alla fine Glifo controlla ogni
+passaggio. Accanto a ogni passaggio c'è il segno: ✓ giusto, ✗ sbagliato (con il valore giusto) o
+«non controllato» quando non si sa controllare (una sostituzione come $u = x^2$). Se qualcosa non
+torna, Glifo lo fa correggere al modello prima di mostrare la spiegazione; sotto si vede se l'ultimo
+passaggio arriva al risultato di Glifo. **Inserisci nella nota** mette i passaggi dopo la formula,
+come elenco numerato (e lì Glifo li controlla come le altre formule); **Rifai** ne chiede un'altra.
+
+In **Impostazioni → Spiegazioni** si sceglie il modello (Qwen3 0.6B, il più leggero, circa 0,4 GB;
+1.7B, consigliato, circa 1 GB; 4B, il più bravo, circa 2,3 GB) e il tono (come il professore o più
+semplice). Il modello si scarica da Hugging Face la prima volta che premi Spiegami e poi resta nel
+browser: le spiegazioni funzionano anche offline; dalle impostazioni lo puoi togliere. Dentro
+claude.ai il modello non si può scaricare: lì Spiegami lo dice.
+
 ## Compatibilità con VS Code
 
 Gli appunti sono normali file `.md`: puoi aprirli in VS Code, Obsidian o su GitHub.
@@ -903,6 +928,7 @@ Web app in **TypeScript** con [Vite](https://vite.dev), senza framework e senza 
 | Anteprima Markdown | [markdown-it](https://github.com/markdown-it/markdown-it), highlight.js, DOMPurify |
 | Controllo ortografico | [Hunspell](https://hunspell.github.io) in WebAssembly ([@farscrl/hunspell-wasm](https://github.com/farscrl/hunspell-wasm)) in un worker, dizionari [dictionary-it e dictionary-en](https://github.com/wooorm/dictionaries) |
 | Assistente AI | SDK ufficiale di Anthropic (caricato solo quando serve) |
+| Spiegami (in prova) | [WebLLM](https://github.com/mlc-ai/web-llm) con i modelli Qwen3, sulla scheda grafica con WebGPU (in un worker, caricato solo quando serve) |
 | Account e sincronizzazione | [Supabase](https://supabase.com): database Postgres e accesso via email, senza password (il client si carica solo se si accede) |
 | Schemi | [maxGraph](https://github.com/maxGraph/maxGraph), il motore di draw.io (caricato solo quando serve) |
 | Lavagna | [perfect-freehand](https://github.com/steveruizok/perfect-freehand) per il contorno dei tratti con la pressione; disegno su canvas, salvataggio in IndexedDB |

@@ -315,6 +315,26 @@ attiva solo quando lo dice lo studente, è in [COSTI.md](COSTI.md).
 - Due strade: trascrizione nel browser con un modello Whisper (gratis e privata, ma pesante
   per i telefoni) oppure un servizio in cloud, più veloce e preciso, a pagamento.
 
+### Spiegami: le spiegazioni dei conti (in prova)
+
+**In prova sul ramo `prova` (7 ottobre 2026)**, lo studente: «sul ramo di prova possiamo provare ad
+integrare il modello piccolo di Qwen3 con WebLLM per le spiegazioni che possa usare il motore
+matematico di Glifo?». Fatto: con il cursore su un conto, «Spiegami» sotto l'anteprima della formula;
+i passaggi li scrive Qwen3 nel browser (WebLLM, 0.6B, 1.7B o 4B nelle impostazioni, con il tono), che
+chiede i conti al motore; Glifo li controlla (✓, ✗ con il valore giusto, «non controllato»), fa
+correggere quelli sbagliati e dice se l'ultimo arriva al suo risultato; «Inserisci nella nota» e
+«Rifai». Descritto nel README («Spiegami») e in ABBONAMENTI.md.
+
+Da fare:
+- provarlo davvero su un computer con WebGPU (Chrome o Edge), su esercizi veri, e scegliere il modello
+  di partenza: finora è provato solo con un modello finto (nella sessione di Claude Hugging Face era
+  bloccato, e dentro claude.ai il modello non si scarica);
+- dove WebGPU non c'è (telefono, iPad): lo stesso giro con il modello sul server (Cloudflare Workers
+  AI) o con la propria chiave;
+- il «Perché?» su ogni passaggio, i passaggi che il motore sa scrivere da solo (derivate, Ruffini,
+  Gauss) e il primo argomento da curare (la proposta è gli integrali);
+- poi, se va bene, il tutor («Aiuto con gli esercizi»), con lo stesso controllo dei passaggi.
+
 ### Aiuto con gli esercizi
 
 - Una modalità dell'assistente che aiuta senza dare subito la soluzione: chiede cosa hai

@@ -27,6 +27,10 @@ describe('il controllo delle uguaglianze scritte (✓/✗)', () => {
     expect(check(r`\int_0^{2\pi} \int_0^{\pi} \int_0^R \rho^2 \sin\varphi \, d\rho \, d\varphi \, d\theta = \frac{4}{3} \pi R^3`)).toBe('✓')
     // Con un nome davanti: il nome si definisce e il resto si controlla.
     expect(check(r`V = \int_{-R}^{R} \pi (R^2 - x^2) \, dx = \frac{4}{3} \pi R^3`)).toBe('✓')
+    // π davanti a una parentesi è un prodotto, non una funzione che la nota non definisce.
+    expect(check(r`\int_{-R}^{R} \pi (R^2 - x^2) \, dx = \pi \left(\frac{2R^3}{3} + \frac{2R^3}{3}\right)`)).toBe('✓')
+    expect(check(r`\int_{-R}^{R} \pi (R^2 - x^2) \, dx = \pi \left(\frac{2R^3}{3} + \frac{R^3}{3}\right)`)).toBe('✗ (4πR³)/3')
+    expect(check('a = 3', r`\int_0^1 a x \, dx = a \left(\frac{1}{2}\right)`)).toBe('✓')
   })
 
   it('i conti con i numeri, anche scritti al contrario', () => {

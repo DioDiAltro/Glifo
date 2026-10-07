@@ -12,6 +12,7 @@ import { CATEGORIES, symbolsInCategory, type CategoryId, type SymbolEntry, type 
 import { cardPreviewTex, formPreviewTex, templateText } from '../symbols/template'
 import type { Settings } from '../store/settings'
 import { ICONS, clear, h, icon } from './dom'
+import { ExplainPanel } from './explainPanel'
 
 export interface SidePanelDeps {
   editor: MarkdownEditor
@@ -66,8 +67,11 @@ export class SidePanel {
   /** Chiave dell'ultima anteprima disegnata (per non ridisegnare a vuoto). */
   private lastFormulaKey: string | null = null
   private ai: AiState = { status: 'idle' }
+  /** «Spiegami»: il pulsante nel riquadro della formula e la spiegazione sotto (src/ui/explainPanel.ts). */
+  private readonly explain: ExplainPanel
 
   constructor(private readonly deps: SidePanelDeps) {
+    this.explain = new ExplainPanel({ editor: deps.editor, settings: deps.settings, openSettings: deps.openSettings, toast: deps.toast })
     this.searchInput = h('input', {
       class: 'panel-search-input',
       attrs: {
@@ -138,8 +142,10 @@ export class SidePanel {
         h('div', { class: 'formula-head' }, h('span', {}, 'Anteprima formula'), this.formulaMeta),
         this.formulaRender,
         this.formulaError,
+        h('div', { class: 'formula-actions' }, this.explain.button),
         this.formulaGraph,
       ),
+      this.explain.el,
       this.body,
     )
 
@@ -147,8 +153,10 @@ export class SidePanel {
       this.render()
       this.updateFormula()
       this.updateGraph()
+      this.explain.update()
     })
     this.updateFormula()
+    this.explain.update()
     this.render()
   }
 

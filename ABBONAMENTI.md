@@ -102,6 +102,12 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
 16. **Sì a tutto** (5 ottobre 2026). Lo studente approva la proposta delle tabelle (con il Gantt e le
     corsie) e le vuole gratis; il codice dai diagrammi anche in pseudocodice. Si comincia dagli
     strumenti della lavagna, sul ramo `prova`.
+17. **Le spiegazioni con Qwen3 nel browser** (7 ottobre 2026). Lo studente: «sul ramo di prova
+    possiamo provare ad integrare il modello piccolo di Qwen3 con WebLLM per le spiegazioni che possa
+    usare il motore matematico di Glifo?». Claude fa «Spiegami» sul ramo `prova`, come in «Le
+    spiegazioni, come funzionano», con il modello che gira nel browser al posto di quello sul server:
+    vedi «In prova sul ramo `prova`» qui sotto, in «I modelli e le chiavi API». Niente di deciso sui
+    piani: per ora è gratis, perché non costa niente a Glifo.
 
 ## La proposta dello studente (4 ottobre 2026)
 
@@ -513,6 +519,24 @@ più il motore di Glifo e, più avanti, un modello aperto addestrato apposta per
   scelto.
 - Finché Glifo è in sviluppo non si spende niente: le cose che costano sono in
   [COSTI.md](COSTI.md).
+
+### In prova sul ramo `prova` (7 ottobre 2026): Qwen3 nel browser per «Spiegami»
+
+Lo studente chiede di provare il modello piccolo nel browser, con WebLLM, al posto di Cloudflare
+Workers AI. Com'è fatto (vedi README, «Spiegami», e ARCHITETTURA.md, `src/ai/`):
+
+- Qwen3 0.6B, 1.7B (quello di partenza) o 4B, scelto nelle impostazioni con il tono; si scarica da
+  Hugging Face la prima volta (da 0,4 a 2,3 GB) e poi resta nel browser, anche offline. Licenza Apache
+  2.0, come WebLLM.
+- Il modello usa il motore come strumenti (calcola, controlla, deriva, primitiva, risolvi), Glifo
+  controlla ogni passaggio, gli fa correggere quelli sbagliati e mostra il ✓ o il ✗; «Inserisci nella
+  nota» e «Rifai». Il «Perché?» su ogni passaggio non c'è ancora.
+- Costa zero a Glifo e la nota non esce dal dispositivo; però serve WebGPU (Chrome o Edge su un
+  computer con una scheda grafica): su telefono e iPad di solito no. Per quelli resta la strada del
+  server (Cloudflare Workers AI, deciso il 5 ottobre), con lo stesso giro: cambia solo chi risponde.
+- Da provare sul computer dello studente, su esercizi veri: dentro claude.ai il modello non si
+  scarica, e nella sessione di Claude Hugging Face era bloccato, quindi è stato provato solo con un
+  modello finto.
 
 ## Quanto costano a Glifo le cose a pagamento
 

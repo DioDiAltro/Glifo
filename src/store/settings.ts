@@ -1,3 +1,5 @@
+import type { ExplainTone } from '../ai/explain'
+import { DEFAULT_LOCAL_MODEL } from '../ai/localModels'
 import { readJson, writeJson } from './storage'
 
 export type Theme = 'auto' | 'light' | 'dark'
@@ -28,6 +30,12 @@ export interface Settings {
   aiKeys: Record<string, string>
   aiModels: Record<string, string>
   aiUrls: Record<string, string>
+  /**
+   * «Spiegami» (src/ai/explain.ts, in prova): il modello che gira nel browser (src/ai/localModels.ts;
+   * resta su questo dispositivo, come il modello scaricato) e il tono delle spiegazioni.
+   */
+  localModel: string
+  explainTone: ExplainTone
 }
 
 export const SPELL_LANGUAGES: { id: SpellLanguages; label: string }[] = [
@@ -64,6 +72,8 @@ export const DEFAULT_SETTINGS: Settings = {
   aiKeys: {},
   aiModels: {},
   aiUrls: {},
+  localModel: DEFAULT_LOCAL_MODEL,
+  explainTone: 'professore',
 }
 
 function stored(): Partial<Settings> {

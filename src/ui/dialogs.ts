@@ -1,4 +1,7 @@
 import { inClaudeViewer } from '../host'
+import { EXPLAIN_TONES } from '../ai/explain'
+import { localLlm } from '../ai/local'
+import { LOCAL_MODELS, localModel, modelInBrowser } from '../ai/localModels'
 import { AI_SERVICES, aiService } from '../ai/services'
 import { AI_MODELS, SPELL_LANGUAGES, type Settings, type SpellLanguages, type Theme } from '../store/settings'
 import { ICONS, h, icon } from './dom'
@@ -203,6 +206,96 @@ function aiFieldset(initial: Settings, deps: SettingsDialogDeps): HTMLElement {
   return fieldset
 }
 
+/**
+ * «Spiegazioni (prova)»: il modello che scrive i passaggi di «Spiegami», che gira in questo browser
+ * (src/ai/localModels.ts), se è già scaricato (e il pulsante per toglierlo) e il tono.
+ */
+function explainFieldset(initial: Settings, deps: SettingsDialogDeps): HTMLElement {
+  let chosen = localModel(initial.localModel).id
+  const status = h('p', { class: 'field-help explain-status', attrs: { 'aria-live': 'polite' } })
+  const remove = h(
+    'button',
+    {
+      class: 'btn btn-small',
+      attrs: { type: 'button', hidden: true },
+      on: {
+        click: () => {
+          const model = localModel(chosen)
+          remove.disabled = true
+          status.textContent = `Tolgo ${model.name} da questo browser…`
+          localLlm()
+            .remove(model.id)
+            .then(
+              () => refresh(),
+              (err: unknown) => (status.textContent = err instanceof Error ? err.message : String(err)),
+            )
+            .finally(() => (remove.disabled = false))
+        },
+      },
+    },
+    icon(ICONS.trash, 14),
+    'Toglilo da questo browser',
+  )
+  const refresh = async () => {
+    const model = localModel(chosen)
+    const here = await modelInBrowser(model.id)
+    if (model.id !== chosen) return
+    status.textContent = here
+      ? `${model.name} è già in questo browser: le spiegazioni funzionano anche offline.`
+      : `${model.name} si scarica la prima volta che premi «Spiegami» (${model.size}) e poi resta in questo browser.`
+    remove.hidden = !here
+  }
+  void refresh()
+  return h(
+    'fieldset',
+    { class: 'explain-settings' },
+    h('legend', {}, 'Spiegazioni (prova)'),
+    h(
+      'p',
+      { class: 'field-help' },
+      'Con il cursore su un conto, «Spiegami» (sotto l\'anteprima della formula) fa scrivere i passaggi a Qwen3, un modello AI che gira in questo browser con WebLLM: niente chiave, niente costi, e la nota non esce dal dispositivo. I conti li fa e li controlla il motore di Glifo. Serve WebGPU: Chrome o Edge aggiornati, su un computer.',
+    ),
+    h(
+      'label',
+      { class: 'field field-column' },
+      h('span', {}, 'Modello'),
+      h(
+        'select',
+        {
+          attrs: { id: 'local-model' },
+          on: {
+            change: (ev) => {
+              chosen = (ev.target as HTMLSelectElement).value
+              deps.onChange({ localModel: chosen })
+              void refresh()
+            },
+          },
+        },
+        LOCAL_MODELS.map((m) => h('option', { attrs: { value: m.id, selected: m.id === chosen } }, `${m.label} (${m.size})`)),
+      ),
+    ),
+    status,
+    remove,
+    h(
+      'div',
+      { class: 'field field-column' },
+      h('span', {}, 'Tono'),
+      h(
+        'div',
+        { class: 'segmented', attrs: { role: 'radiogroup', 'aria-label': 'Tono delle spiegazioni' } },
+        EXPLAIN_TONES.map((t) =>
+          h(
+            'label',
+            {},
+            h('input', { attrs: { type: 'radio', name: 'explain-tone', value: t.id, checked: initial.explainTone === t.id }, on: { change: () => deps.onChange({ explainTone: t.id }) } }),
+            h('span', {}, t.label),
+          ),
+        ),
+      ),
+    ),
+  )
+}
+
 export function openSettingsDialog(deps: SettingsDialogDeps): void {
   const s = deps.settings
   const themeOptions: [Theme, string][] = [
@@ -315,6 +408,7 @@ export function openSettingsDialog(deps: SettingsDialogDeps): void {
       ),
     ),
     aiFieldset(s, deps),
+    explainFieldset(s, deps),
     h(
       'fieldset',
       {},

@@ -61,7 +61,17 @@ export default defineConfig({
             maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
             // L'SDK dell'assistente AI si scarica solo quando serve; service e hunspell.web
             // servono solo dove i worker non sono ammessi (il correttore di solito gira in un worker).
-            globIgnores: ['**/sdk-*.js', '**/service-*.js', '**/hunspell.web-*.js'],
+            // Anche WebLLM (llmWorker, 6 MB, per «Spiegami») si scarica solo quando serve.
+            globIgnores: ['**/sdk-*.js', '**/service-*.js', '**/hunspell.web-*.js', '**/llmWorker-*.js'],
+            runtimeCaching: [
+              {
+                // Scaricato la prima volta che si preme «Spiegami», WebLLM resta: con il modello già nel
+                // browser (lo tiene WebLLM) le spiegazioni funzionano anche offline.
+                urlPattern: /\/assets\/llmWorker-[\w-]+\.js$/,
+                handler: 'CacheFirst',
+                options: { cacheName: 'glifo-webllm', expiration: { maxEntries: 2 } },
+              },
+            ],
           },
         }),
       ]
