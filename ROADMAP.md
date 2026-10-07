@@ -327,8 +327,10 @@ correggere quelli sbagliati e dice se l'ultimo arriva al suo risultato; «Inseri
 
 Da fare:
 - provarlo davvero su un computer con WebGPU (Chrome o Edge), su esercizi veri, e scegliere il modello
-  di partenza: finora è provato solo con un modello finto (nella sessione di Claude Hugging Face era
-  bloccato, e dentro claude.ai il modello non si scarica);
+  di partenza: finora è provato solo con un modello finto (nelle sessioni di Claude Hugging Face era
+  bloccato, anche riprovando il 7 ottobre 2026, e dentro claude.ai il modello non si scarica). Quando
+  l'ambiente delle sessioni permette `huggingface.co` e `*.hf.co`, la prova con Qwen3 vero si fa anche
+  lì con `node scripts/spiegami-qwen.mjs` (WebGPU sulla CPU: lento, ma il resto è già pronto);
 - dove WebGPU non c'è (telefono, iPad): lo stesso giro con il modello sul server (Cloudflare Workers
   AI) o con la propria chiave;
 - il «Perché?» su ogni passaggio, i passaggi che il motore sa scrivere da solo (derivate, Ruffini,

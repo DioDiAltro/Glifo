@@ -38,6 +38,11 @@ prossimi passi sono in «In programma» nella ROADMAP.
   tutorial, nel tema chiaro e in quello scuro, in `public/tutorial/` (serve `CHROMIUM_PATH`; usa
   l'ffmpeg di Playwright). Va rifatto quando cambia l'interfaccia che i video mostrano; con un
   nome (`formule`) rifà solo quella pagina.
+- `node scripts/spiegami-qwen.mjs`: «Spiegami» con Qwen3 vero sulla build in `dist/` (le prove di
+  sempre usano un modello finto). Serve la rete verso Hugging Face (`huggingface.co` e i server dei
+  file, `*.hf.co`); senza scheda grafica Chromium usa WebGPU sulla CPU (SwiftShader): va bene per
+  vedere se passaggi e strumenti funzionano, non per la velocità. `MODELLO=Qwen3-1.7B` per un altro
+  modello; scrive le domande, le risposte del modello e i passaggi con i segni di Glifo.
 - `node scripts/icons.mjs`: ridisegna `public/favicon.svg` e le icone PNG dell'app dal simbolo
   ∮ in `src/ui/logo.ts` (serve `CHROMIUM_PATH`). Va rifatto ogni volta che cambia il simbolo.
 - `graphify update .`: rifà il grafo del codice in `graphify-out/` (in locale, senza modelli AI).
