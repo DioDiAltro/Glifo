@@ -357,6 +357,13 @@ c'è già), da fare:
   variabile → «Save and Deploy». Poi, nel progetto, «Settings» → «Build» → «Branch control»: Preview
   branch «None», se no Cloudflare costruisce anche gli altri rami (il principale e `gh-pages`, dove la
   build fallisce). Si aggiorna da solo a ogni push su `prova`; l'indirizzo è `glifo-prova.pages.dev`;
+- attenzione a non finire su Workers («Import a repository», con Deploy command `npx wrangler deploy` e
+  l'API token): il 7 ottobre sera lo studente ci era arrivato e gli è stato detto di tornare su Pages.
+  Lì Cloudflare parte dal ramo principale del repository (il ramo si cambia dopo, in «Settings» →
+  «Build» → «Branch control»), senza `wrangler.jsonc` apre una pull request con la sua configurazione
+  e la build ha `WORKERS_CI` invece di `CF_PAGES` (quindi non sarebbe il sito di prova). Se un giorno
+  si passa a Workers (Cloudflare lo consiglia per i progetti nuovi): `wrangler.jsonc` con lo stesso
+  nome del Worker e `assets` su `./dist`, anche sul ramo principale, e `WORKERS_CI` in vite.config.ts;
 - poi lo studente prova «Spiegami» sul suo computer (Chrome o Edge, con WebGPU) e dice com'è andata.
 
 ### Aiuto con gli esercizi
