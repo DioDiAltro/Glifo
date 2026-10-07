@@ -261,8 +261,8 @@ grafici. Tutto è descritto nel README. Se serviranno:
   - l'ottimizzazione dei flussi: lo studio dei processi per automatizzarli o gestirli con un
     gestionale (ERP).
 
-  Approvato dallo studente il 5 ottobre 2026 («sì a tutto»), gratis come i calcoli e i grafici. Si fa
-  un pezzo alla volta:
+  Approvato dallo studente il 5 ottobre 2026 («sì a tutto»), gratis come i calcoli e i grafici. Fatto
+  tutto entro il 7 ottobre 2026, un pezzo alla volta:
   - fatto (6 ottobre 2026, lo studente: «sì, parti dalla tabella con le formule»; vista sul ramo
     `prova` e provata anche sul telefono, il 7 ottobre «carica tutto sul ramo principale»): **la
     tabella con le formule**, non dentro gli schemi ma un blocco
@@ -279,8 +279,8 @@ grafici. Tutto è descritto nel README. Se serviranno:
     `pareggio: Ricavi, Costi totali` colora l'utile e la perdita e segna il punto di pareggio; il
     pulsante «Grafico» dell'editor delle tabelle le scrive da solo, e il modello «Punto di pareggio»
     ha anche la colonna dei costi fissi;
-  - fatto sul ramo `prova` (7 ottobre 2026, lo studente: «fai tutto quello che riguarda GESP; non
-    fare le cose a pezzi»), da vedere prima di portarlo sul ramo principale, tutto insieme:
+  - fatto (7 ottobre 2026, lo studente: «fai tutto quello che riguarda GESP; non fare le cose a
+    pezzi»; visto sul ramo `prova`, «va bene, carica tutto sul ramo principale»), tutto insieme:
     - **il diagramma di Gantt e il reticolo** dalle attività di una tabella (durata, precedenti, chi
       le fa, quanto è fatto): le righe `gantt: A1:E9` e `reticolo: A1:E9` del blocco grafico, con il
       **percorso critico** calcolato da Glifo (inizio e fine al più presto e al più tardi, margini
