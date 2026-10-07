@@ -19,9 +19,9 @@ import {
   VertexHandlerConfig,
   type CellStyle,
 } from '@maxgraph/core'
-import { labelHtml, tableHtml } from './label'
-import { DEFAULT_EDGE, FONT_SIZE, INK, PALETTE, type EdgeLook, type NodeLook, type Rotation, type Schema, type TextAt, type Theme } from './model'
-import { DOT_PERIMETER, registerShapes, SHAPE_STYLES } from './shapes'
+import { labelHtml, lanesHtml, tableHtml } from './label'
+import { DEFAULT_EDGE, FONT_SIZE, INK, laneNames, PALETTE, type EdgeLook, type NodeLook, type Rotation, type Schema, type TextAt, type Theme } from './model'
+import { DOT_PERIMETER, registerShapes, SHAPE_STYLES, type LanesStyle } from './shapes'
 
 export interface Look {
   theme: Theme
@@ -124,6 +124,11 @@ export function nodeStyle(v: NodeLook, look: Look): CellStyle {
     case 'table':
       // Il nome in alto e i campi sotto li mette in fila tableHtml.
       return { ...base, shape: SHAPE_STYLES.table, verticalAlign: 'top', spacing: 0, overflow: 'fill' }
+    case 'lanes': {
+      // I nomi nella fascia li mette lanesHtml; quante corsie e il verso servono al disegno (LanesShape).
+      const lanes: LanesStyle = { glifoLanes: laneNames(v.text).length, glifoRows: v.rot === 1 }
+      return { ...base, shape: SHAPE_STYLES.lanes, verticalAlign: 'top', align: 'left', spacing: 0, overflow: 'fill', ...lanes } as CellStyle
+    }
     default:
       return base
   }
@@ -188,6 +193,7 @@ function cellHtml(cell: Cell, mathml: boolean): string {
   if (cell.isVertex()) {
     const look = nodeLook(cell)
     if (look.shape === 'table') return tableHtml(look.text, FONT_SIZE[look.size], mathml)
+    if (look.shape === 'lanes') return lanesHtml(look.text, FONT_SIZE[look.size], look.rot === 1, mathml)
   }
   return labelHtml(cellText(cell), mathml)
 }

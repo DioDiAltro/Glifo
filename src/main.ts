@@ -22,7 +22,7 @@ import {
   type Settings,
   type ViewMode,
 } from './store/settings'
-import { downloadText, fileNameFor, openMarkdownFiles, saveMarkdownFile } from './store/files'
+import { downloadText, fileNameFor, openMarkdownFiles, saveMarkdownFile, type OpenedFile } from './store/files'
 import { findFencedBlocks, findSchemaBlock, findSchemaBlocks, schemaBlockAtLine, schemaBlockText } from './schema/blocks'
 import { graphImagesFor, graphsForFile, graphsFromFile } from './graph/file'
 import { remapGraphLines, renameGraphScope } from './graph/preview'
@@ -30,6 +30,7 @@ import { schemasForFile, schemasFromFile } from './schema/file'
 import { parseSchema, SchemaError, serializeSchema, type Schema } from './schema/model'
 import { findSheetBlock, findSheetBySource } from './spreadsheet/blocks'
 import { dataRange } from './graph/tableGraph'
+import { planRange } from './graph/planBlock'
 import { sheetsForFile, sheetsFromFile } from './spreadsheet/file'
 import { emptySheet, parseSheet, serializeSheet, sheetBlockText, type SheetModel } from './spreadsheet/model'
 import { BLOCK_NAMES } from './ui/moveButtons'
@@ -974,6 +975,7 @@ async function openSheet(line: number | null, match?: { source?: string; hash?: 
         block = saveSheetBlock(block, near, next)
         if (block) placeChart(block, lines)
       },
+      title: active.title,
     })
   } catch {
     toast('L\'editor delle tabelle non si è aperto: riprova.', 'error')
@@ -1020,9 +1022,15 @@ function saveSheetBlock(block: { source: string; from: number } | null, near: nu
   return { source, from: from + prefix.length }
 }
 
+/** Che grafico di una tabella è un blocco: dei dati (riga dati:), il Gantt o il reticolo; null se è altro. */
+function tableChartKind(source: string): 'dati' | 'gantt' | 'reticolo' | null {
+  return planRange(source)?.kind ?? (dataRange(source) !== null ? 'dati' : null)
+}
+
 /**
  * Il grafico della tabella (`block`), con le righe `lines`, subito sotto di lei: un blocco ```grafico
- * nuovo o, se lì c'è già un grafico dei dati di una tabella (con la riga dati:), quello rifatto.
+ * nuovo o, se tra i grafici della tabella che la seguono ce n'è già uno dello stesso tipo (dei dati,
+ * il Gantt o il reticolo), quello rifatto. Il nuovo va dopo quelli che ci sono.
  */
 function placeChart(block: { source: string; from: number }, lines: string[]): void {
   const view = editor.view
@@ -1032,13 +1040,19 @@ function placeChart(block: { source: string; from: number }, lines: string[]): v
   // Nella voce di un elenco il grafico ha il rientro della tabella.
   const indent = /^[ \t]*/.exec(doc.slice(table.from))![0]
   const body = lines.map((l) => indent + l).join('\n')
-  const next = findFencedBlocks(doc, 'grafico').find((g) => g.from >= table.to)
-  if (next?.closed && !doc.slice(table.to, next.from).trim() && dataRange(next.source) !== null) {
-    view.dispatch({ changes: { from: next.contentFrom, to: next.contentTo, insert: body }, selection: EditorSelection.cursor(next.contentFrom), scrollIntoView: true, userEvent: 'input' })
-    return
+  const kind = tableChartKind(lines.join('\n'))
+  let end = table.to
+  for (const next of findFencedBlocks(doc, 'grafico').filter((g) => g.from >= table.to)) {
+    const nextKind = tableChartKind(next.source)
+    if (!next.closed || doc.slice(end, next.from).trim() || !nextKind) break
+    if (nextKind === kind) {
+      view.dispatch({ changes: { from: next.contentFrom, to: next.contentTo, insert: body }, selection: EditorSelection.cursor(next.contentFrom), scrollIntoView: true, userEvent: 'input' })
+      return
+    }
+    end = next.to
   }
   const insert = `\n\n${indent}\`\`\`grafico\n${body}\n${indent}\`\`\``
-  view.dispatch({ changes: { from: table.to, insert }, selection: EditorSelection.cursor(table.to + insert.length), scrollIntoView: true, userEvent: 'input' })
+  view.dispatch({ changes: { from: end, insert }, selection: EditorSelection.cursor(end + insert.length), scrollIntoView: true, userEvent: 'input' })
 }
 
 // ——— File ———
@@ -1049,15 +1063,58 @@ async function openFiles(): Promise<void> {
   flushSave()
   let last: Note | null = null
   const folderId = currentFolderId()
+  const notes: string[] = []
   for (const f of files) {
+    // Un file di Excel o un .csv diventa una nota con le sue tabelle.
+    if (f.bytes || /\.(csv|tsv)$/i.test(f.name)) {
+      const table = await tablesNote(f)
+      if (!table) continue
+      last = store.create(table.text, folderId)
+      if (table.note) notes.push(table.note)
+      continue
+    }
     // Gli schemi e i grafici salvati come immagini e le tabelle salvate con i risultati (vedi
     // saveToFile) tornano blocchi da modificare.
     last = store.create(sheetsFromFile(graphsFromFile(schemasFromFile(f.content))), folderId)
     if (f.handle) fileHandles.set(last.id, f.handle)
   }
   changedHere()
-  if (last) switchTo(last.id)
-  toast(files.length === 1 ? `Aperto «${files[0].name}»` : `Aperti ${files.length} file`)
+  if (!last) return
+  switchTo(last.id)
+  toast([files.length === 1 ? `Aperto «${files[0].name}»` : `Aperti ${files.length} file`, ...notes].join('. '))
+}
+
+/**
+ * La nota di un file di Excel (.xlsx) o .csv: il nome del file come titolo e una tabella con le
+ * formule per ogni foglio che ha delle celle (con il suo nome, se sono più di uno). `note`: quello che
+ * c'è da sapere (le formule rimaste valori, le righe lasciate fuori). Null se il file non si apre.
+ */
+async function tablesNote(f: OpenedFile): Promise<{ text: string; note?: string } | null> {
+  try {
+    const { baseName, xlsxSheets } = await import('./spreadsheet/xlsx')
+    const block = (model: SheetModel) => sheetBlockText(serializeSheet(model))
+    const title = `# ${baseName(f.name)}\n\n`
+    if (!f.bytes) {
+      const { csvToSheet } = await import('./spreadsheet/csv')
+      const { model, cut } = csvToSheet(f.content)
+      return { text: `${title}${block(model)}\n`, ...(cut && { note: 'Le righe in più sono rimaste fuori' }) }
+    }
+    const sheets = xlsxSheets(f.bytes).filter((sheet) => sheet.model.cells.length)
+    if (!sheets.length) {
+      toast(`«${f.name}» non ha celle da aprire.`, 'error')
+      return null
+    }
+    const parts = sheets.map((sheet) => (sheets.length > 1 ? `## ${sheet.name}\n\n${block(sheet.model)}\n` : `${block(sheet.model)}\n`))
+    const values = sheets.reduce((n, sheet) => n + sheet.valuesOnly, 0)
+    const note = [
+      values ? `${values === 1 ? 'Una formula usa' : `${values} formule usano`} funzioni o fogli che Glifo non ha: ${values === 1 ? 'resta il suo valore' : 'restano i loro valori'}` : '',
+      sheets.some((sheet) => sheet.cut) ? 'Le righe in più sono rimaste fuori' : '',
+    ].filter(Boolean).join('. ')
+    return { text: title + parts.join('\n'), ...(note && { note }) }
+  } catch (err) {
+    toast(err instanceof Error && err.name === 'XlsxError' ? err.message : `«${f.name}» non si riesce ad aprire.`, 'error')
+    return null
+  }
 }
 
 /**

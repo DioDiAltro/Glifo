@@ -1,6 +1,6 @@
 import { escapeHtml, renderTexMathml, renderTexOrError } from '../render/katex'
 import { matchInlineMath } from '../render/mathDelims'
-import { parseTable, tableMetricsFor } from './model'
+import { laneHeadFor, laneNames, parseTable, tableMetricsFor } from './model'
 
 /** Testo semplice in HTML: `\$` è un dollaro, gli a capo restano. */
 function plainHtml(text: string): string {
@@ -52,4 +52,23 @@ export function tableHtml(text: string, fontSize: number, mathml = false): strin
   })
   const title = `<div style="height:${head}px;line-height:${head}px;padding:0 8px;text-align:center;font-weight:600;${LINE}">${labelHtml(name, mathml)}</div>`
   return `${title}<div style="padding:5px 0">${rows.join('')}</div>`
+}
+
+/**
+ * I nomi delle corsie, ognuno nella sua parte della fascia: in alto se le corsie sono in colonne, a
+ * sinistra (scritti dal basso in alto, come nei diagrammi BPMN) se sono in righe. Lo spessore della
+ * fascia è quello con cui la forma la disegna (laneHeadFor).
+ */
+export function lanesHtml(text: string, fontSize: number, rows: boolean, mathml = false): string {
+  const head = laneHeadFor(fontSize)
+  const cell = 'flex:1;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;font-weight:600;text-align:center'
+  const names = laneNames(text).map((name) => {
+    const body = labelHtml(name, mathml)
+    return rows
+      ? `<div style="${cell}"><div style="writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;line-height:1.2">${body}</div></div>`
+      : `<div style="${cell};padding:0 6px;line-height:1.2">${body}</div>`
+  })
+  return rows
+    ? `<div style="display:flex;flex-direction:column;width:${head}px;height:100%">${names.join('')}</div>`
+    : `<div style="display:flex;width:100%;height:${head}px">${names.join('')}</div>`
 }

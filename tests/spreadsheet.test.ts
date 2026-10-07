@@ -619,13 +619,13 @@ describe('tabelle: le modifiche dell\'editor', () => {
       const results = new SheetEvaluator(m).all()
       return results.map((row) => row.map((r) => formatValue(r.value, r.format)))
     }
-    expect(TEMPLATES.map((t) => t.name)).toEqual(['Fattura con l\'IVA', 'Punto di pareggio', 'Conto economico', 'Piano di ammortamento'])
+    expect(TEMPLATES.map((t) => t.name)).toEqual(['Fattura con l\'IVA', 'Punto di pareggio', 'Conto economico', 'Piano di ammortamento', 'Prezzo di vendita', 'Preventivo di un progetto', 'Diagramma di Gantt'])
     for (const t of TEMPLATES) {
       expect(shown(t.source).flat().filter((s) => s.startsWith('#')), t.name).toEqual([])
       // Il testo del modello è già come lo riscrive l'editor.
       expect(serializeSheet(parseSheet(t.source)), t.name).toBe(t.source)
     }
-    const [fattura, pareggio, conto, piano] = TEMPLATES.map((t) => shown(t.source))
+    const [fattura, pareggio, conto, piano, prezzo, preventivo] = TEMPLATES.map((t) => shown(t.source))
     expect(fattura[6][3]).toBe('75,64 €')
     expect(pareggio[4][1]).toBe('2000')
     // Con 2000 pezzi i ricavi coprono i costi: l'utile è zero (e i costi fissi restano quelli).
@@ -637,5 +637,15 @@ describe('tabelle: le modifiche dell\'editor', () => {
     expect(conto[11][2]).toBe('9,1%')
     expect(piano[3][1]).toBe('2.373,96 €')
     expect(piano[10][3]).toBe('0,00 €')
+    // Dai costi al prezzo: 30 + 20 = 50 di costo primo, +10 di costi generali, +12 commerciali, +25%.
+    expect(prezzo[3][2]).toBe('50,00 €')
+    expect(prezzo[7][2]).toBe('72,00 €')
+    expect(prezzo[9][2]).toBe('90,00 €')
+    expect(prezzo[11][2]).toBe('109,80 €')
+    // Il preventivo: 210 ore, 7.520 € di costi diretti, il prezzo con il ricarico e l'IVA.
+    expect(preventivo[5][1]).toBe('210')
+    expect(preventivo[5][3]).toBe('7.520,00 €')
+    expect(preventivo[9][3]).toBe('11.242,40 €')
+    expect(preventivo[11][3]).toBe('13.715,73 €')
   })
 })

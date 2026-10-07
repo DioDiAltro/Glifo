@@ -19,6 +19,8 @@ export const SHAPES = [
   'arrow',
   'doubleArrow',
   'text',
+  // I processi con le corsie (chi fa cosa): un riquadro diviso in corsie, una per chi lavora
+  'lanes',
   // Basi di dati: diagrammi E-R (Chen e, con i pallini, Atzeni) e tabelle
   'weakEntity',
   'identifyingRelation',
@@ -63,7 +65,7 @@ export interface SchemaNode {
   text: string
   color: ColorName
   size: TextSize
-  /** Solo per le forme con un verso (ROTATABLE), altrimenti 0. */
+  /** Solo per le forme con un verso (ROTATABLE) e per le corsie (1: in righe), altrimenti 0. */
   rot: Rotation
 }
 
@@ -108,6 +110,7 @@ export const SHAPE_SIZE: Record<ShapeKind, [number, number]> = {
   arrow: [130, 60],
   doubleArrow: [150, 60],
   text: [100, 40],
+  lanes: [660, 420],
   weakEntity: [130, 64],
   identifyingRelation: [140, 86],
   keyAttribute: [110, 50],
@@ -216,6 +219,7 @@ export const SHAPE_NAMES: Record<ShapeKind, string> = {
   arrow: 'Freccia grande',
   doubleArrow: 'Freccia doppia',
   text: 'Testo',
+  lanes: 'Corsie',
   weakEntity: 'Entità debole',
   identifyingRelation: 'Relazione identificante',
   keyAttribute: 'Attributo chiave',
@@ -306,10 +310,49 @@ function point(value: unknown): [number, number] | null {
   return [num(x, -MAX_COORD, MAX_COORD, 0), num(y, -MAX_COORD, MAX_COORD, 0)]
 }
 
-/** Il verso, se la forma ne ha uno: i pallini hanno solo 0 (nome a destra) e 2 (a sinistra). */
+/**
+ * Il verso, se la forma ne ha uno: i pallini hanno solo 0 (nome a destra) e 2 (a sinistra), le
+ * corsie 0 (in colonne, i nomi in alto) e 1 (in righe, i nomi a sinistra).
+ */
 function rotation(shape: ShapeKind, value: unknown): Rotation {
+  if (shape === 'lanes') return value === 1 ? 1 : 0
   if (!ROTATABLE.includes(shape) || ![1, 2, 3].includes(value as number)) return 0
   return DOT_SHAPES.includes(shape) && value !== 2 ? 0 : (value as Rotation)
+}
+
+// ——— Le corsie ———
+// Un riquadro solo, diviso in parti uguali: in colonne (rot 0, i nomi in una fascia in alto) o in
+// righe (rot 1, i nomi in una fascia a sinistra). Il testo ha un nome per riga, uno per corsia. Le
+// forme del processo stanno sopra (non dentro: lo schema resta un elenco di forme), e spostando le
+// corsie si spostano con loro (vedi l'editor).
+
+/** I nomi delle corsie: uno per riga del testo (almeno una corsia). */
+export function laneNames(text: string): string[] {
+  const names = text.split('\n')
+  return names.length ? names : ['']
+}
+
+/** Lo spessore della fascia con i nomi, per una dimensione del testo in pixel. */
+export function laneHeadFor(fontSize: number): number {
+  return Math.round(fontSize * 2.4)
+}
+
+/** La corsia nel punto (x, y) del riquadro (in coordinate dello schema) e se il punto è sulla fascia dei nomi; null se è fuori. */
+export function laneAt(node: Pick<SchemaNode, 'x' | 'y' | 'w' | 'h' | 'text' | 'rot' | 'size'>, x: number, y: number): { lane: number; head: boolean } | null {
+  if (x < node.x || y < node.y || x > node.x + node.w || y > node.y + node.h) return null
+  const count = laneNames(node.text).length
+  const head = laneHeadFor(FONT_SIZE[node.size])
+  const rows = node.rot === 1
+  const along = rows ? (y - node.y) / node.h : (x - node.x) / node.w
+  const across = rows ? x - node.x : y - node.y
+  return { lane: Math.max(0, Math.min(count - 1, Math.floor(along * count))), head: across <= head }
+}
+
+/** Il riquadro di una forma sta (con il suo centro) dentro le corsie. */
+export function insideLanes(lanes: Pick<SchemaNode, 'x' | 'y' | 'w' | 'h'>, box: Pick<SchemaNode, 'x' | 'y' | 'w' | 'h'>): boolean {
+  const cx = box.x + box.w / 2
+  const cy = box.y + box.h / 2
+  return cx > lanes.x && cx < lanes.x + lanes.w && cy > lanes.y && cy < lanes.y + lanes.h
 }
 
 /**

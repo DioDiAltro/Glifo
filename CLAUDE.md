@@ -68,10 +68,10 @@ documentazione, non codice: la regola di delegare all'esploratore vale per il co
 - `src/render/`: KaTeX e anteprima Markdown; i conti per spostare schemi e grafici con le frecce ↑ ↓.
 - `src/ui/`: interfaccia: barra laterale, pulsanti volanti, barra di formattazione, anteprima, tutorial.
 - `src/store/`: note, cartelle, impostazioni e misure delle sezioni nel browser (chiavi `glifo.*`).
-- `src/schema/`: schemi stile draw.io con maxGraph: editor a tutto schermo, file .md, codice SQL.
-- `src/spreadsheet/`: le tabelle con le formule come Excel (blocchi ```tabella), con il loro editor.
+- `src/schema/`: schemi stile draw.io con maxGraph: editor a tutto schermo, corsie dei processi, file .md, codice SQL.
+- `src/spreadsheet/`: le tabelle con le formule come Excel (blocchi ```tabella), con il loro editor e i file .xlsx e .csv.
 - `src/math/`: le espressioni delle formule: lettura, calcoli e il «foglio» della nota con i controlli.
-- `src/graph/`: i grafici nella nota (2D e 3D, zone, piano di Gauss, statistica, i dati delle tabelle) con gli slider.
+- `src/graph/`: i grafici nella nota (2D e 3D, zone, piano di Gauss, statistica, i dati delle tabelle, il Gantt e il reticolo) con gli slider.
 - `src/board/`: la lavagna per scrivere a mano accanto al testo, con il registro dei tocchi.
 - `src/ai/`: assistente AI, con la chiave di chi lo usa.
 - `src/host.ts`: funzioni della demo dentro claude.ai.

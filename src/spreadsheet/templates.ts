@@ -1,7 +1,8 @@
 /**
- * I modelli pronti dell'editor delle tabelle: gli esercizi di economia aziendale che si fanno con
- * Excel (la fattura con l'IVA, il punto di pareggio, il conto economico, il piano di ammortamento).
- * Sono anche esempi delle formule: si cambiano i numeri e i conti si rifanno.
+ * I modelli pronti dell'editor delle tabelle: gli esercizi di economia aziendale e di gestione del
+ * progetto che si fanno con Excel (la fattura con l'IVA, il punto di pareggio, il conto economico, il
+ * piano di ammortamento, il prezzo di vendita dai costi, il preventivo di un progetto, le attività per
+ * il diagramma di Gantt). Sono anche esempi delle formule: si cambiano i numeri e i conti si rifanno.
  */
 
 export interface SheetTemplate {
@@ -78,6 +79,60 @@ export const TEMPLATES: SheetTemplate[] = [
       '| 3 | =D8*$B$2 | =$B$4-B9 | =D8-C9 |',
       '| 4 | =D9*$B$2 | =$B$4-B10 | =D9-C10 |',
       '| 5 | =D10*$B$2 | =$B$4-B11 | =D10-C11 |',
+    ].join('\n'),
+  },
+  {
+    name: 'Prezzo di vendita',
+    hint: 'Dai costi al prezzo: costo primo, industriale e complessivo, il ricarico e l\'IVA',
+    source: [
+      '| Voce | % | Importo |',
+      '| --- | --- | --- |',
+      '| Materie prime |  | 30,00 € |',
+      '| Manodopera diretta |  | 20,00 € |',
+      '| **Costo primo** |  | **=C2+C3** |',
+      '| Costi generali di produzione (sulla manodopera) | 50% | =C3*B5 |',
+      '| **Costo industriale** |  | **=C4+C5** |',
+      '| Costi commerciali e amministrativi | 20% | =C6*B7 |',
+      '| **Costo complessivo** |  | **=C6+C7** |',
+      '| Ricarico | 25% | =C8*B9 |',
+      '| **Prezzo di vendita** |  | **=C8+C9** |',
+      '| IVA | 22% | =C10*B11 |',
+      '| **Prezzo con l\'IVA** |  | **=C10+C11** |',
+    ].join('\n'),
+  },
+  {
+    name: 'Preventivo di un progetto',
+    hint: 'Le ore di ogni risorsa per il costo orario, la quota dei costi generali, il ricarico e il prezzo con l\'IVA',
+    source: [
+      '| Risorsa | Ore | Costo orario | Costo |',
+      '| --- | --- | --- | --- |',
+      '| Analista | 40 | 45,00 € | =B2*C2 |',
+      '| Programmatore | 120 | 35,00 € | =B3*C3 |',
+      '| Web designer | 30 | 32,00 € | =B4*C4 |',
+      '| Collaudatore | 20 | 28,00 € | =B5*C5 |',
+      '| **Costi diretti** | **=SOMMA(B2:B5)** |  | **=SOMMA(D2:D5)** |',
+      '| Costi generali | 15% |  | =D6*B7 |',
+      '| **Costo del progetto** |  |  | **=D6+D7** |',
+      '| Ricarico | 30% |  | =D8*B9 |',
+      '| **Prezzo di vendita** |  |  | **=D8+D9** |',
+      '| IVA | 22% |  | =D10*B11 |',
+      '| **Totale del preventivo** |  |  | **=D10+D11** |',
+    ].join('\n'),
+  },
+  {
+    name: 'Diagramma di Gantt',
+    hint: 'Le attività di un progetto con la durata, le precedenti e chi le fa: «Grafico» fa il diagramma di Gantt o il reticolo, con il percorso critico',
+    source: [
+      '| Attività | Descrizione | Durata (giorni) | Precedenti | Chi |',
+      '| --- | --- | --- | --- | --- |',
+      '| A | Analisi dei requisiti | 5 |  | Analista |',
+      '| B | Progettazione del database | 4 | A | Analista |',
+      '| C | Progettazione dell\'interfaccia | 3 | A | Web designer |',
+      '| D | Sviluppo del server | 8 | B | Programmatore |',
+      '| E | Sviluppo dell\'interfaccia | 6 | C | Web designer |',
+      '| F | Collaudo | 4 | D, E | Collaudatore |',
+      '| G | Formazione degli utenti | 2 | F | Analista |',
+      '| H | Messa in servizio | 1 | F | Sistemista |',
     ].join('\n'),
   },
 ]

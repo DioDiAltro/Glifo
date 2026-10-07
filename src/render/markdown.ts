@@ -30,9 +30,11 @@ import xml from 'highlight.js/lib/languages/xml'
 import yaml from 'highlight.js/lib/languages/yaml'
 import { graphNames } from '../graph/spec'
 import { dataRange } from '../graph/tableGraph'
+import { planRange } from '../graph/planBlock'
 import { markMoves, moveAttrs } from './blockMove'
 import { Sheet } from '../math/sheet'
 import { chartData } from '../spreadsheet/chart'
+import { planData } from '../spreadsheet/plan'
 import { sheetHtml } from '../spreadsheet/render'
 import { checkHtml } from './check'
 import { escapeHtml, renderTexOrError, renderTexWithResult } from './katex'
@@ -195,7 +197,8 @@ function createMarkdownIt(): MarkdownIt {
   // lasciano il posto al disegno, che l'anteprima fa dopo (src/schema/preview.ts, src/graph/preview.ts).
   // Le tabelle ```tabella si calcolano subito (src/spreadsheet): i testi delle celle hanno il loro
   // Markdown, con le formule $…$ che passano dal foglio della nota come le altre. Un grafico con la
-  // riga `dati: A8:D13` prende i numeri dell'ultima tabella prima di lui (`data-table`).
+  // riga `dati: A8:D13` prende i numeri dell'ultima tabella prima di lui (`data-table`), uno con la riga
+  // `gantt: A1:E9` (o `reticolo:`) le attività della stessa tabella (`data-plan`).
   const fence = md.renderer.rules.fence!
   md.renderer.rules.fence = (tokens, idx, options, env, self) => {
     const token = tokens[idx]
@@ -212,7 +215,10 @@ function createMarkdownIt(): MarkdownIt {
       const defs = sheetOf(env)?.definitionsFor(graphNames(token.content)) ?? []
       const range = dataRange(token.content)
       const table = range === null ? '' : ` data-table="${escapeHtml(JSON.stringify(chartData((env as RenderEnv).table, range)))}"`
-      return `<div class="graph-block"${attr}${moveAttrs(token)} data-graph="${escapeHtml(token.content)}" data-defs="${escapeHtml(JSON.stringify(defs))}"${table}></div>\n`
+      // Il diagramma di Gantt e il reticolo: le attività della stessa tabella (`data-plan`).
+      const planned = planRange(token.content)
+      const plan = planned === null ? '' : ` data-plan="${escapeHtml(JSON.stringify(planData((env as RenderEnv).table, planned.range)))}"`
+      return `<div class="graph-block"${attr}${moveAttrs(token)} data-graph="${escapeHtml(token.content)}" data-defs="${escapeHtml(JSON.stringify(defs))}"${table}${plan}></div>\n`
     }
     if (info === 'tabella') {
       ;(env as RenderEnv).table = token.content
@@ -279,7 +285,7 @@ export function renderMarkdown(src: string, opts: { untrusted?: boolean } = {}):
   untrusted = !!opts.untrusted
   try {
     return DOMPurify.sanitize(html, {
-      ADD_ATTR: ['target', 'data-line', 'data-task-line', 'data-schema', 'data-graph', 'data-defs', 'data-table', 'data-hash', 'data-move', 'data-move-in', 'aria-hidden', 'encoding'],
+      ADD_ATTR: ['target', 'data-line', 'data-task-line', 'data-schema', 'data-graph', 'data-defs', 'data-table', 'data-plan', 'data-hash', 'data-move', 'data-move-in', 'aria-hidden', 'encoding'],
       ADD_TAGS: ['semantics', 'annotation'],
       FORBID_TAGS: FORBIDDEN_TAGS,
       FORBID_ATTR: ['autofocus', 'popover', 'popovertarget'],

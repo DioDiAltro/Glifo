@@ -9,6 +9,7 @@ import { chromium } from 'playwright-core'
 import { preview } from 'vite'
 import MarkdownIt from 'markdown-it'
 import { readFileSync } from 'node:fs'
+import { strFromU8, unzipSync } from 'fflate'
 
 const server = await preview({ preview: { port: 4174, strictPort: true }, logLevel: 'error' })
 const url = server.resolvedUrls.local[0]
@@ -723,7 +724,7 @@ try {
   await s2.locator('.editor-toolbar button[aria-label^="Schema"]').click()
   await editor2.waitFor()
   const paletteCount = await s2.locator('.schema-shape[data-shape]').count()
-  check(paletteCount === 14, `nel pannello ci sono 14 forme, con cilindro, nuvola, frecce grandi… (${paletteCount})`)
+  check(paletteCount === 15, `nel pannello ci sono 15 forme, con cilindro, nuvola, frecce grandi, corsie… (${paletteCount})`)
   const canvasTexts = () => s2.evaluate(() => [...document.querySelectorAll('.schema-canvas foreignObject')].map((f) => f.textContent))
   await s2.locator('.schema-templates button', { hasText: 'Diagramma di flusso' }).click()
   const flowTexts = await canvasTexts()
@@ -815,6 +816,63 @@ try {
   const previewTexts = await s2.evaluate(() => [...document.querySelectorAll('.preview-pane .schema-block foreignObject')].map((f) => f.textContent))
   check(previewTexts.includes('Fase 4'), 'nell\'anteprima lo schema si vede con le forme nuove')
   await s2context.close()
+
+  // I processi con le corsie: il modello mette le corsie dietro alle forme; le corsie si prendono dalla
+  // fascia dei nomi e si portano dietro le forme che hanno sopra; un clic dentro una corsia è come sul
+  // foglio vuoto; i nomi si cambiano nel pannello. Nella nota le corsie vanno per prime.
+  {
+    const lp = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+    lp.on('pageerror', (e) => errors.push(e.message))
+    await lp.goto(url)
+    await lp.waitForSelector('.cm-editor')
+    await lp.locator('.notes-head button[aria-label="Nuova nota"]').click()
+    await lp.keyboard.press('Control+a')
+    await lp.keyboard.type('# Processo\n')
+    const laneEditor = lp.locator('dialog.schema-editor[open]')
+    await lp.locator('.editor-toolbar button[aria-label^="Schema"]').click()
+    await laneEditor.waitFor()
+    await lp.locator('.schema-templates button', { hasText: 'Processo con le corsie' }).click()
+    const textBox = (text) => lp.locator('dialog.schema-editor .schema-canvas div', { hasText: new RegExp(`^${text}$`) }).last().boundingBox()
+    const head = await textBox('Vendite')
+    const fattura = await textBox('Emette la fattura')
+    // Dentro una corsia, lontano dalle forme: niente si seleziona.
+    await lp.mouse.click(head.x + head.width / 2, head.y + 520)
+    const bodySelects = await lp.locator('.schema-lanes-section').count()
+    await lp.mouse.move(head.x + head.width / 2, head.y + head.height / 2)
+    await lp.mouse.down()
+    await lp.mouse.move(head.x + head.width / 2 + 60, head.y + head.height / 2 + 40, { steps: 8 })
+    await lp.mouse.up()
+    const laneNames = await lp.locator('.schema-lane-name').evaluateAll((els) => els.map((e) => e.value))
+    const headAfter = await textBox('Vendite')
+    const fatturaAfter = await textBox('Emette la fattura')
+    const moved = [headAfter.x - head.x, headAfter.y - head.y, fatturaAfter.x - fattura.x, fatturaAfter.y - fattura.y].map(Math.round)
+    check(
+      bodySelects === 0 && laneNames.join('|') === 'Cliente|Vendite|Magazzino|Amministrazione' && moved[0] > 20 && moved[0] === moved[2] && moved[1] === moved[3],
+      `le corsie si prendono dalla fascia dei nomi e spostandole le forme del processo vengono con loro (${JSON.stringify({ bodySelects, laneNames, moved })})`,
+    )
+    await lp.locator('.schema-lanes-section button', { hasText: 'Aggiungi corsia' }).click()
+    const added = lp.locator('.schema-lane-name').nth(4)
+    await added.fill('Fornitore')
+    await added.press('Enter')
+    await lp.locator('dialog.schema-editor .btn-primary', { hasText: 'Fatto' }).click()
+    await laneEditor.waitFor({ state: 'detached' })
+    await lp.waitForFunction(() => [...Array(localStorage.length).keys()].some((i) => localStorage.getItem(localStorage.key(i))?.includes('Amministrazione\\nFornitore')), null, { timeout: 5000 }).catch(() => {})
+    const laneNote = await lp.evaluate(() => {
+      for (let i = 0; i < localStorage.length; i++) {
+        const value = localStorage.getItem(localStorage.key(i))
+        if (value?.startsWith('# Processo')) return value
+      }
+      return ''
+    })
+    const firstNode = /"nodes":\[\n(\{[^\n]*\})/.exec(laneNote)?.[1] ?? ''
+    await lp.waitForSelector('.preview-pane .schema-block > svg')
+    const laneTexts = await lp.evaluate(() => [...document.querySelectorAll('.preview-pane .schema-block foreignObject')].map((f) => f.textContent).join('|'))
+    check(
+      firstNode.includes('"shape":"lanes"') && firstNode.includes('Amministrazione\\nFornitore') && laneTexts.includes('Fornitore') && laneTexts.includes('Registra l\'incasso'),
+      `nella nota le corsie vanno per prime (dietro), con la corsia aggiunta, e l'anteprima le disegna (${firstNode.slice(0, 120)})`,
+    )
+    await lp.close()
+  }
 
   // Frecce curve e basi di dati: il gruppo «Basi di dati» (che si ricorda aperto), pallini, tabelle,
   // linee E-R senza punte, testo della freccia vicino a un capo, il modello «Schema E-R»
@@ -2060,6 +2118,80 @@ try {
     await tp.waitForTimeout(400)
     const chartsAgain = ((await chartNote()).match(/```grafico/g) ?? []).length
     check(chartsAgain === 1, `di nuovo «Grafico» rifà lo stesso grafico, non ne aggiunge un altro (${chartsAgain})`)
+    // «File»: la tabella come file di Excel (le formule in inglese, con i risultati) e come .csv per
+    // l'Excel italiano; un .xlsx aperto con «Apri .md» diventa una nota con la tabella e le formule.
+    await tp.locator('.cm-schema[data-kind="tabella"] button', { hasText: 'Modifica' }).click()
+    await sheetEditor.waitFor()
+    await tp.locator('.sheet-bar button', { hasText: 'File' }).click()
+    const [xlsxDownload] = await Promise.all([tp.waitForEvent('download'), tp.locator('.sheet-menu-item', { hasText: 'Scarica come Excel' }).click()])
+    const xlsxBytes = readFileSync(await xlsxDownload.path())
+    const xlsxSheet = strFromU8(unzipSync(new Uint8Array(xlsxBytes))['xl/worksheets/sheet1.xml'])
+    await tp.locator('.sheet-bar button', { hasText: 'File' }).click()
+    const [csvDownload] = await Promise.all([tp.waitForEvent('download'), tp.locator('.sheet-menu-item', { hasText: 'Scarica come .csv' }).click()])
+    const csvText = readFileSync(await csvDownload.path(), 'utf8')
+    check(
+      xlsxDownload.suggestedFilename() === 'Pareggio.xlsx' && xlsxSheet.includes('<f>$B$1+$B$2*A9</f><v>12000</v>') && csvDownload.suggestedFilename() === 'Pareggio.csv' && csvText.includes('\r\n2000;12.000 €;20.000,00 €;20.000,00 €;0,00 €\r\n'),
+      `«File» scarica la tabella come Excel, con le formule in inglese e i risultati, e come .csv con il punto e virgola (${csvText.split('\r\n')[10]})`,
+    )
+    // Un .csv al posto della tabella (prima si chiede, e Annulla la riporta com'era).
+    await tp.locator('.sheet-bar button', { hasText: 'File' }).click()
+    const [csvChooser] = await Promise.all([tp.waitForEvent('filechooser'), tp.locator('.sheet-menu-item', { hasText: 'Apri un file Excel' }).click()])
+    await csvChooser.setFiles({ name: 'voti.csv', mimeType: 'text/csv', buffer: Buffer.from('Studente;Voto\nAnna;8\nLuca;7,5\n') })
+    await tp.locator('dialog[open] button', { hasText: 'Sostituisci' }).click()
+    await tp.waitForFunction(() => document.querySelector('#sheet-2-1')?.textContent === '7,5', null, { timeout: 5000 })
+    const csvHint = (await tp.locator('.sheet-hint').textContent()) ?? ''
+    await tp.keyboard.press('Control+z')
+    const csvUndone = await tp.locator('#sheet-0-1').textContent()
+    check(csvHint.includes('voti.csv') && csvUndone === '12.000 €', `un .csv si apre al posto della tabella, e Annulla la riporta com'era (${JSON.stringify({ csvHint, csvUndone })})`)
+    await tp.locator('.sheet-bar button', { hasText: 'Chiudi' }).click()
+    await tp.locator('dialog[open] button', { hasText: 'Chiudi senza salvare' }).click().catch(() => {})
+    await sheetEditor.waitFor({ state: 'detached' })
+    await tp.evaluate((bytes) => {
+      window.showOpenFilePicker = async () => [{ getFile: async () => new File([new Uint8Array(bytes)], 'Pareggio.xlsx') }]
+    }, [...xlsxBytes])
+    await tp.locator('button', { hasText: 'Apri .md' }).click()
+    await tp.waitForFunction(
+      () => [...Array(localStorage.length).keys()].map((i) => localStorage.getItem(localStorage.key(i))).filter((v) => v?.includes('=$B$1+$B$2*A9')).length >= 2,
+      null,
+      { timeout: 5000 },
+    )
+    check(true, 'un file di Excel aperto con «Apri .md» diventa una nota con la tabella e le formule in italiano')
+    // Il diagramma di Gantt e il reticolo: dal modello «Diagramma di Gantt», «Grafico» chiede quale
+    // fare; il Gantt va sotto la tabella con le barre e il percorso critico, il reticolo dopo di lui.
+    await tp.locator('.notes-head button[aria-label="Nuova nota"]').click()
+    await tp.keyboard.press('Control+a')
+    await tp.keyboard.type('# Progetto\n\n')
+    await newSheet()
+    await tp.locator('.sheet-bar button', { hasText: 'Modelli' }).click()
+    await tp.locator('.sheet-menu-item', { hasText: 'Diagramma di Gantt' }).click()
+    await tp.locator('.sheet-bar button', { hasText: 'Grafico' }).click()
+    await tp.locator('.sheet-menu-item', { hasText: 'Diagramma di Gantt' }).click()
+    await sheetEditor.waitFor({ state: 'detached' })
+    await tp.waitForSelector('.preview-pane .graph-block.is-gantt .plan-task', { timeout: 10000 })
+    const ganttTasks = await tp.locator('.preview-pane .graph-block.is-gantt .plan-task').count()
+    const ganttNotes = (await tp.locator('.preview-pane .graph-block.is-gantt .plan-notes').textContent()) ?? ''
+    await tp.locator('.cm-schema[data-kind="tabella"] button', { hasText: 'Modifica' }).click()
+    await sheetEditor.waitFor()
+    await tp.locator('.sheet-bar button', { hasText: 'Grafico' }).click()
+    await tp.locator('.sheet-menu-item', { hasText: 'Reticolo' }).click()
+    await sheetEditor.waitFor({ state: 'detached' })
+    await tp.waitForSelector('.preview-pane .graph-block.is-network .plan-task', { timeout: 10000 })
+    await tp
+      .waitForFunction(() => [...Array(localStorage.length).keys()].some((i) => localStorage.getItem(localStorage.key(i))?.includes('reticolo: A1:E9')), null, { timeout: 5000 })
+      .catch(() => {})
+    const projectText = await tp.evaluate(() => {
+      for (let i = 0; i < localStorage.length; i++) {
+        const value = localStorage.getItem(localStorage.key(i))
+        if (value?.startsWith('# Progetto')) return value
+      }
+      return ''
+    })
+    const ganttAt = projectText.indexOf('```grafico\ntitolo: Diagramma di Gantt\ngantt: A1:E9\n```')
+    const networkAt = projectText.indexOf('```grafico\ntitolo: Reticolo del progetto\nreticolo: A1:E9\n```')
+    check(
+      ganttTasks === 8 && ganttNotes.includes('Percorso critico: A → B → D → F → G') && ganttNotes.includes('23 giorni') && projectText.indexOf('```tabella') < ganttAt && ganttAt < networkAt,
+      `«Grafico» sulle attività fa il diagramma di Gantt con il percorso critico e poi il reticolo, uno dopo l'altro sotto la tabella (${JSON.stringify({ ganttTasks, ganttNotes, ganttAt, networkAt })})`,
+    )
     await tp.close()
     // Sul telefono: un tocco sceglie la cella, un altro ci scrive
     const phoneSheet = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })

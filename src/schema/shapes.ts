@@ -1,12 +1,12 @@
 /**
  * Le forme che maxGraph non ha già (draw.io le disegna con codice suo): parallelogramma,
- * documento, nota con l'angolo piegato, frecce grandi e quelle delle basi di dati (entità
- * debole, relazione identificante, tabella, attributo a pallino). Cilindro, esagono, triangolo,
+ * documento, nota con l'angolo piegato, frecce grandi, le corsie dei processi e quelle delle basi
+ * di dati (entità debole, relazione identificante, tabella, attributo a pallino). Cilindro, esagono, triangolo,
  * nuvola ed ellisse doppia invece ci sono. Ogni forma si disegna nel suo riquadro largo `w` e
  * alto `h`; se è girata, maxGraph scambia `w` e `h` e ruota il disegno.
  */
 import { ActorShape, PerimeterRegistry, Point, ShapeRegistry, type AbstractCanvas2D, type PerimeterFunction } from '@maxgraph/core'
-import { tableMetricsFor } from './model'
+import { laneHeadFor, tableMetricsFor } from './model'
 
 /** Il nome di ogni forma per lo stile `shape` di maxGraph. */
 export const SHAPE_STYLES = {
@@ -19,7 +19,14 @@ export const SHAPE_STYLES = {
   identifyingRelation: 'glifoIdentifyingRelation',
   table: 'glifoTable',
   dot: 'glifoDot',
+  lanes: 'glifoLanes',
 } as const
+
+/** Nello stile delle corsie: quante sono e se sono in righe (i nomi a sinistra) invece che in colonne. */
+export interface LanesStyle {
+  glifoLanes?: number
+  glifoRows?: boolean
+}
 
 /** Il perimetro degli attributi «a pallino»: le frecce arrivano al pallino, non al nome. */
 export const DOT_PERIMETER = 'glifoDotPerimeter'
@@ -187,6 +194,52 @@ class TableShape extends ActorShape {
   }
 }
 
+/**
+ * Le corsie: il riquadro, la fascia dei nomi appena colorata (in alto, o a sinistra se sono in
+ * righe) e le linee tra una corsia e l'altra. I nomi li mette lanesHtml (label.ts).
+ */
+class LanesShape extends ActorShape {
+  override redrawPath(c: AbstractCanvas2D, _x: number, _y: number, w: number, h: number): void {
+    c.moveTo(0, 0)
+    c.lineTo(w, 0)
+    c.lineTo(w, h)
+    c.lineTo(0, h)
+    c.close()
+  }
+
+  override paintVertexShape(c: AbstractCanvas2D, x: number, y: number, w: number, h: number): void {
+    super.paintVertexShape(c, x, y, w, h)
+    const style = (this.style ?? {}) as LanesStyle & { fontSize?: number }
+    const count = Math.max(1, style.glifoLanes ?? 1)
+    const rows = !!style.glifoRows
+    const head = Math.min(rows ? w : h, laneHeadFor(style.fontSize ?? 14))
+    c.save()
+    c.setFillColor(this.stroke ?? null)
+    c.setFillAlpha(0.12)
+    if (rows) c.rect(0, 0, head, h)
+    else c.rect(0, 0, w, head)
+    c.fill()
+    c.restore()
+    c.begin()
+    if (rows) {
+      c.moveTo(head, 0)
+      c.lineTo(head, h)
+      for (let i = 1; i < count; i++) {
+        c.moveTo(0, (h * i) / count)
+        c.lineTo(w, (h * i) / count)
+      }
+    } else {
+      c.moveTo(0, head)
+      c.lineTo(w, head)
+      for (let i = 1; i < count; i++) {
+        c.moveTo((w * i) / count, 0)
+        c.lineTo((w * i) / count, h)
+      }
+    }
+    c.stroke()
+  }
+}
+
 /** Il raggio del pallino in un riquadro alto `h`. */
 function dotRadius(h: number): number {
   return Math.max(3, Math.min(6, h / 2 - 1))
@@ -241,5 +294,6 @@ export function registerShapes(): void {
   ShapeRegistry.add(SHAPE_STYLES.identifyingRelation, IdentifyingRelationShape)
   ShapeRegistry.add(SHAPE_STYLES.table, TableShape)
   ShapeRegistry.add(SHAPE_STYLES.dot, DotShape)
+  ShapeRegistry.add(SHAPE_STYLES.lanes, LanesShape)
   PerimeterRegistry.add(DOT_PERIMETER, dotPerimeter)
 }

@@ -20,6 +20,8 @@ import { staticGraphSvg } from './picture'
 import { parseGraph, type GraphItem, type GraphSpec } from './spec'
 import type { ChartData } from '../spreadsheet/chart'
 import { readChart } from './tableGraph'
+import { readPlan } from './planBlock'
+import { planFigure } from './planFigure'
 import { areaColor, graphTitle, itemColors, PALETTES, escapeXml, type Palette } from './svg'
 
 const MARKER = 'glifo-grafico'
@@ -229,7 +231,9 @@ export function graphImagesFor(text: string): Map<number, string> {
     } catch {
       // Senza definizioni: il grafico usa solo le sue righe.
     }
-    images.set(Number(el.dataset.line), graphImage(el.dataset.graph ?? '', defs, readChart(el)))
+    // Il diagramma di Gantt e il reticolo: la loro figura, con la legenda.
+    const plan = el.dataset.plan !== undefined ? planFigure(el.dataset.graph ?? '', readPlan(el)) : null
+    images.set(Number(el.dataset.line), plan ?? graphImage(el.dataset.graph ?? '', defs, readChart(el)))
   }
   return images
 }

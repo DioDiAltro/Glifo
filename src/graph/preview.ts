@@ -36,6 +36,7 @@ import { chooseBox, type Box } from './space'
 import { parseGraph, typedSliderValue, widenSlider, type GraphError, type GraphSlider, type GraphSpec, type Range } from './spec'
 import type { ChartData } from '../spreadsheet/chart'
 import { readChart } from './tableGraph'
+import { PlanView } from './planPreview'
 import { graphSvg, graphTitle, itemColors, PALETTES, pointName, type Palette } from './svg'
 import { buildScene, DEFAULT_CAMERA, MAX_ELEVATION, sceneSvg, type Camera, type Quality, type Scene } from './view3d'
 
@@ -1148,7 +1149,7 @@ class GraphView {
 }
 
 /** I grafici disegnati, per rifarli quando cambia la larghezza dell'anteprima. */
-const drawnViews = new Map<HTMLElement, GraphView>()
+const drawnViews = new Map<HTMLElement, { resize(): void; redraw(): void }>()
 let resizer: ResizeObserver | null = null
 let printWatched = false
 
@@ -1179,7 +1180,8 @@ export function hydrateGraphs(root: HTMLElement, look: GraphLook): void {
   for (const block of root.querySelectorAll<HTMLElement>('.graph-block:not([data-drawn])')) {
     block.dataset.drawn = ''
     try {
-      drawnViews.set(block, new GraphView(block, look))
+      // Il diagramma di Gantt e il reticolo (con la riga gantt: o reticolo:) sono disegni fermi.
+      drawnViews.set(block, block.dataset.plan !== undefined ? new PlanView(block, look) : new GraphView(block, look))
       resizer?.observe(block)
     } catch {
       block.innerHTML = '<p class="graph-errors">Il grafico non si riesce a disegnare.</p>'

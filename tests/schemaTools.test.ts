@@ -2,8 +2,8 @@
 import { describe, expect, it } from 'vitest'
 import { alignBoxes, distributeBoxes, type Box } from '../src/schema/arrange'
 import { crc32, withDensity } from '../src/schema/image'
-import { tableHtml } from '../src/schema/label'
-import { fieldLine, joinTable, parseSchema, parseTable, serializeSchema, SHAPES, splitTable, tableField, tableHeight, tableText } from '../src/schema/model'
+import { lanesHtml, tableHtml } from '../src/schema/label'
+import { fieldLine, insideLanes, joinTable, laneAt, laneHeadFor, laneNames, parseSchema, parseTable, serializeSchema, SHAPES, splitTable, tableField, tableHeight, tableText } from '../src/schema/model'
 import { TEMPLATES } from '../src/schema/templates'
 
 const boxes: Box[] = [
@@ -54,7 +54,7 @@ describe('allineare e distribuire', () => {
 
 describe('i modelli pronti', () => {
   it('sono schemi validi, che si salvano e si rileggono uguali, senza forme una sopra l\'altra', () => {
-    expect(TEMPLATES.map((t) => t.name)).toEqual(['Diagramma di flusso', 'Mappa concettuale', 'Albero', 'Ciclo', 'Linea del tempo', 'Schema E-R', 'Tabelle'])
+    expect(TEMPLATES.map((t) => t.name)).toEqual(['Diagramma di flusso', 'Mappa concettuale', 'Albero', 'Ciclo', 'Linea del tempo', 'Processo con le corsie', 'Schema E-R', 'Tabelle'])
     for (const t of TEMPLATES) {
       const json = serializeSchema(t.schema)
       const again = parseSchema(json)
@@ -62,6 +62,17 @@ describe('i modelli pronti', () => {
       expect(new Set(again.nodes.map((n) => n.id)).size, t.name).toBe(again.nodes.length)
       for (const [i, a] of again.nodes.entries()) {
         expect(SHAPES).toContain(a.shape)
+        // Le forme di un processo stanno sopra le corsie (ognuna nella sua), non sulla fascia dei nomi.
+        if (a.shape === 'lanes') {
+          const count = laneNames(a.text).length
+          for (const b of again.nodes.slice(i + 1)) {
+            expect(insideLanes(a, b), `${t.name}: ${b.id} nelle corsie`).toBe(true)
+            expect(b.y, `${t.name}: ${b.id} sotto i nomi`).toBeGreaterThan(a.y + laneHeadFor(14))
+            const lane = (x: number) => Math.floor(((x - a.x) / a.w) * count)
+            expect(lane(b.x), `${t.name}: ${b.id} in una corsia sola`).toBe(lane(b.x + b.w - 1))
+          }
+          continue
+        }
         for (const b of again.nodes.slice(i + 1)) {
           const apart = a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y
           expect(apart, `${t.name}: ${a.id} e ${b.id}`).toBe(true)
@@ -207,5 +218,42 @@ describe('basi di dati e frecce curve', () => {
     expect(rows[0].querySelector('u')?.textContent).toBe('Matricola')
     // Con una chiave doppia la colonna di PK e FK è più larga.
     expect((rows[0].children[0] as HTMLElement).style.width).toBe('4.2em')
+  })
+})
+
+describe('le corsie', () => {
+  const lanes = { x: 0, y: 0, w: 600, h: 400, text: 'Cliente\nVendite\nMagazzino', rot: 0 as const, size: 'm' as const }
+
+  it('un nome per riga, in colonne (0) o in righe (1); gli altri versi tornano in colonne', () => {
+    expect(laneNames('Cliente\nVendite')).toEqual(['Cliente', 'Vendite'])
+    const read = (rot: number) => parseSchema(`{"v":1,"nodes":[{"id":"c","shape":"lanes","x":0,"y":0,"w":600,"h":400,"text":"A\\nB","rot":${rot}}],"edges":[]}`).nodes[0].rot
+    expect([read(0), read(1), read(2), read(3)]).toEqual([0, 1, 0, 0])
+  })
+
+  it('il punto dice quale corsia e se è sulla fascia dei nomi', () => {
+    const head = laneHeadFor(14)
+    expect(laneAt(lanes, 300, head / 2)).toEqual({ lane: 1, head: true })
+    expect(laneAt(lanes, 550, 200)).toEqual({ lane: 2, head: false })
+    expect(laneAt(lanes, 700, 200)).toBeNull()
+    // In righe: la fascia è a sinistra e le corsie vanno dall'alto in basso.
+    expect(laneAt({ ...lanes, rot: 1 }, 10, 390)).toEqual({ lane: 2, head: true })
+    expect(laneAt({ ...lanes, rot: 1 }, 300, 50)).toEqual({ lane: 0, head: false })
+  })
+
+  it('una forma sta nelle corsie se ci sta il suo centro', () => {
+    expect(insideLanes(lanes, { x: 250, y: 100, w: 140, h: 60 })).toBe(true)
+    expect(insideLanes(lanes, { x: 560, y: 100, w: 140, h: 60 })).toBe(false)
+  })
+
+  it('i nomi in HTML sono testo (con le formule), uno per parte della fascia', () => {
+    const html = lanesHtml('Cliente\n<b>Vendite</b>\n$x^2$', 14, false)
+    const host = document.createElement('div')
+    host.innerHTML = html
+    expect(host.firstElementChild!.children).toHaveLength(3)
+    expect(host.querySelector('b')).toBeNull()
+    expect(host.textContent).toContain('<b>Vendite</b>')
+    expect(host.querySelector('.katex')).not.toBeNull()
+    // In righe i nomi si leggono dal basso in alto.
+    expect(lanesHtml('A\nB', 14, true)).toContain('writing-mode:vertical-rl')
   })
 })

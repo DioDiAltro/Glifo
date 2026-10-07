@@ -71,7 +71,7 @@ import { distributionOf, randomScope } from '../math/probability'
 import { odeOf, systemOf } from '../math/differential'
 import { calculusDims, calculusItems, vectorDefinition, type FieldContext } from './fields'
 import { gaussItem, isComplexLine, onlyComplex } from './gauss'
-import { dataLine, tableItems } from './tableGraph'
+import { dataLine, planLine, tableItems } from './tableGraph'
 import type { ChartData } from '../spreadsheet/chart'
 
 export type Range = [number, number]
@@ -968,6 +968,12 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
     const data = dataLine(l.text)
     if (data) {
       dataLines.push({ ...l, ...data })
+      continue
+    }
+    // Il diagramma di Gantt e il reticolo si disegnano a parte (planBlock.ts): qui resta solo la data da sola.
+    const plan = planLine(l.text)
+    if (plan) {
+      if (plan.key === 'inizio') fail(l, new MathError('La data d\'inizio serve al diagramma di Gantt: scrivi anche la riga gantt: con le celle delle attività (gantt: A1:E9)'))
       continue
     }
     try {
@@ -1876,7 +1882,7 @@ function usesSymbolicFunction(node: MathNode): boolean {
 export function graphNames(source: string): Set<string> {
   const names = new Set<string>()
   for (const l of blockLines(source)) {
-    if (labelLine(l.text) || dataLine(l.text)) continue
+    if (labelLine(l.text) || dataLine(l.text) || planLine(l.text)) continue
     try {
       const { main, cond } = parseLine(l.text)
       namesIn(main, names)

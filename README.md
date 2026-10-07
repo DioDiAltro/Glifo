@@ -46,6 +46,7 @@ Cose da sapere:
 - Per spostarli o tenerli al sicuro puoi anche usare **Salva .md** (pure dentro una cartella
   di OneDrive, Google Drive o iCloud) e **Apri .md** sull'altro dispositivo. In *Impostazioni*
   c'è anche **Scarica backup**, con tutti gli appunti (e le loro lavagne) in un solo file.
+  **Apri .md** apre anche i file di Excel (.xlsx) e .csv: diventano note con le tabelle.
 - Puoi tenere Glifo aperto in più schede, o nell'app installata e nel browser insieme: si
   aggiornano a vicenda e nessuna cancella gli appunti scritti nelle altre.
 - Quando esce una nuova versione, l'app si aggiorna da sola alla riapertura.
@@ -538,6 +539,29 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
   nella tabella (anche se cade tra due righe) e le linee tratteggiate verso gli assi. Passando sopra
   un punto si leggono i suoi valori. Il pulsante «Grafico» dell'editor delle tabelle scrive queste
   righe da solo.
+- **Il diagramma di Gantt e il reticolo**, per pianificare un progetto: nel blocco `gantt: A1:E9`
+  prende le **attività** dalla tabella scritta prima del grafico, una per riga, con il codice nella
+  prima colonna (A, B, C… o 1, 2, 3…) e le altre colonne riconosciute dal nome: la **durata**
+  («Durata», «Durata (settimane)», «Giorni lavorativi»…), le **precedenti** («Precedenti»,
+  «Predecessori»: `A, B` vuol dire dopo la fine di A e di B; come in Project anche `BII` inizio-inizio,
+  `BFF` fine-fine, `C+2` due giorni dopo la fine di C), **chi la fa** («Chi», «Risorse»…), la
+  descrizione e quanto è **fatto** («Fatto», «Avanzamento», in percentuale). Glifo calcola i tempi
+  con il **percorso critico** (CPM): l'inizio e la fine al più presto e al più tardi e il margine di
+  ogni attività. Nel Gantt le barre delle attività **critiche** sono rosse, le altre blu, con dopo la
+  linea sottile del **margine**; chi la fa è scritto nella barra; le frecce sono i legami, i traguardi
+  (durata zero) dei rombi, e con la colonna «Fatto» la parte fatta della barra è piena. In alto il
+  tempo in numeri o, con la riga `inizio: 12/10/2026`, le **date** (con i giorni lavorativi si saltano
+  sabato e domenica). `reticolo: A1:E9` disegna invece il **reticolo** (PERT, le attività nei nodi):
+  ogni riquadro ha sopra l'inizio al più presto, la durata e la fine al più presto, sotto l'inizio al
+  più tardi, il margine e la fine al più tardi, come nei libri, e in mezzo il codice e il nome (se è
+  lungo va a capo); il percorso critico è in rosso. Sotto
+  tutti e due il percorso critico (A → B → D → F) e la durata del progetto. Se la tabella ha anche
+  i tempi calcolati a mano (colonne «Inizio al più presto», «Fine al più tardi», «Margine»…), Glifo li
+  **controlla** e dice quali non tornano. Un ciclo (A dopo C e C dopo A), un codice che non c'è o
+  una durata che manca si leggono sotto il disegno, con la riga della tabella. Passando sopra
+  un'attività si leggono i suoi tempi; «Scarica» dà il disegno come immagine PNG o SVG, o copiato.
+  Il pulsante «Grafico» dell'editor delle tabelle, sulle attività, chiede se fare il Gantt o il
+  reticolo e scrive il blocco da solo.
 
 ![Risultati dopo «=» e grafici nell'anteprima](docs/grafici.png)
 
@@ -580,7 +604,7 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
 **Schemi stile draw.io**
 - Il pulsante con i due riquadri nella barra apre un editor a tutto schermo: forme a sinistra
   (rettangolo, arrotondato, ellisse, rombo, parallelogramma, esagono, triangolo, nuvola,
-  documento, cilindro, nota, freccia grande e doppia, testo), da trascinare sul foglio o da
+  documento, cilindro, nota, freccia grande e doppia, testo, corsie), da trascinare sul foglio o da
   cliccare; passando sopra una forma compaiono le **frecce blu**: trascinandone una la colleghi
   a un'altra forma (o, nel vuoto, ne nasce una nuova), cliccandola aggiungi una forma collegata.
 - **Basi di dati** (gruppo da aprire nel pannello): entità ed entità debole, relazione e relazione
@@ -595,8 +619,17 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
   SQL standard, PostgreSQL, MySQL/MariaDB, SQLite, Oracle o SQL Server, da scaricare come file
   `.sql` o copiare. Le chiavi esterne trovano la loro tabella con le frecce tra le tabelle o con i
   nomi; quello che non si capisce resta in una nota nel codice.
+- **Processi con le corsie** (chi fa cosa, come nei diagrammi dei processi aziendali e dei
+  gestionali ERP): la forma **Corsie** è un riquadro diviso in corsie, una per chi lavora (cliente,
+  vendite, magazzino…), con i nomi nella fascia in alto, o a sinistra se le corsie sono in righe. Le
+  forme del processo si mettono sopra, nella corsia di chi fa quel passo. Le corsie si prendono dalla
+  fascia dei nomi e, spostandole, le forme che ci sono sopra vengono con loro; dentro una corsia il
+  clic, il riquadro per scegliere più forme e il doppio clic sono come sul foglio vuoto. Il nome di
+  una corsia si cambia con un doppio clic sul nome; nel pannello a destra si aggiungono e si tolgono
+  corsie (le altre restano grandi com'erano) e si sceglie se sono in colonne o in righe.
 - **Modelli pronti** da cui partire, sul foglio vuoto o dal menu «Modelli»: diagramma di flusso,
-  mappa concettuale, albero, ciclo, linea del tempo, schema E-R e tabelle.
+  mappa concettuale, albero, ciclo, linea del tempo, processo con le corsie (l'ordine di un cliente,
+  dalle vendite al magazzino all'amministrazione), schema E-R e tabelle.
 - Con più forme selezionate (trascinando un riquadro sul foglio vuoto, o con Maiusc + clic):
   **allinea** (a sinistra, al centro, in alto…) e **distribuisci** con lo stesso spazio;
   triangolo e frecce grandi si **girano** di un quarto alla volta.
@@ -658,8 +691,21 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
   aggiungono e tolgono righe e colonne, e le formule si aggiustano come in Excel.
 - **Modelli pronti** dal menu «Modelli»: fattura con l'IVA, punto di pareggio (con la tabella
   dei costi fissi, dei costi totali e dei ricavi, da cui «Grafico» fa il diagramma), conto economico
-  con la percentuale sui ricavi, piano di ammortamento con la rata costante. Si cambiano i numeri e i
-  conti si rifanno.
+  con la percentuale sui ricavi, piano di ammortamento con la rata costante, **prezzo di vendita**
+  dai costi (costo primo, industriale e complessivo, il ricarico e l'IVA), **preventivo di un
+  progetto** (le ore di ogni risorsa per il costo orario, i costi generali, il ricarico) e le attività
+  per il **diagramma di Gantt** (lo sviluppo di un sito: durate, precedenti, chi le fa). Si cambiano i
+  numeri e i conti si rifanno.
+- **File di Excel e .csv** (menu «File» dell'editor): **Scarica come Excel (.xlsx)** dà la tabella
+  con le formule (nel file in inglese, come le vuole Excel: SOMMA diventa SUM), i risultati, i
+  formati in euro e in percentuale, il grassetto e l'intestazione bloccata; si apre in Excel, in
+  LibreOffice e in Fogli Google. **Scarica come .csv** dà i valori come si vedono, con il punto e
+  virgola dell'Excel italiano. **Apri un file Excel o .csv…** mette al posto della tabella un foglio
+  di un file .xlsx (con più fogli si sceglie quale) o un .csv (con il punto e virgola, la virgola o il
+  tabulatore, i numeri all'italiana o all'inglese): le formule tornano in italiano; quelle con
+  funzioni che Glifo non ha, o con altri fogli, restano con il loro valore (lo dice), le date
+  diventano testo. Prima si chiede, e Annulla riporta la tabella com'era. Anche **Apri .md**, nella
+  barra laterale, apre un file .xlsx o .csv: diventa una nota con una tabella per foglio.
 - Nella nota la tabella è un blocco ` ```tabella `, una riga di testo per ogni riga della tabella
   (`| Penne | 10 | 1,50 € | =B2*C2 |`): nell'**anteprima** si vede con i risultati, i numeri
   allineati a destra, l'intestazione e il grassetto; passando sopra una cella si legge la formula.
@@ -675,9 +721,12 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
   la prima colonna sull'asse x, le altre come linee. Con una cella sola prende il blocco di dati
   attorno a lei (o il primo della tabella, se lì non ci sono numeri da disegnare). Se tra le colonne
   ci sono i **ricavi** e i **costi totali** è il **grafico del punto di pareggio**, con l'utile e la
-  perdita colorati (la colonna dell'utile in fondo resta fuori: lo mostrano le aree). Premuto di
-  nuovo, rifà il grafico che c'è già sotto la tabella. Nella nota è un blocco ` ```grafico ` con la
-  riga `dati: A8:D13` (vedi i grafici): si può anche scrivere a mano.
+  perdita colorati (la colonna dell'utile in fondo resta fuori: lo mostrano le aree). Sulle
+  **attività di un progetto** (con la durata e le precedenti) un menu chiede se fare il **diagramma
+  di Gantt** o il **reticolo**. Premuto di nuovo, rifà il grafico dello stesso tipo che c'è già sotto
+  la tabella (gli altri restano: il Gantt e il reticolo stanno uno dopo l'altro). Nella nota è un
+  blocco ` ```grafico ` con la riga `dati: A8:D13` (o `gantt:`, `reticolo:`; vedi i grafici): si può
+  anche scrivere a mano.
 
 **Lavagna**
 - La vista **Lavagna** (in alto, accanto a Editor, Diviso e Anteprima) apre accanto al testo,
@@ -857,6 +906,7 @@ Web app in **TypeScript** con [Vite](https://vite.dev), senza framework e senza 
 | Account e sincronizzazione | [Supabase](https://supabase.com): database Postgres e accesso via email, senza password (il client si carica solo se si accede) |
 | Schemi | [maxGraph](https://github.com/maxGraph/maxGraph), il motore di draw.io (caricato solo quando serve) |
 | Lavagna | [perfect-freehand](https://github.com/steveruizok/perfect-freehand) per il contorno dei tratti con la pressione; disegno su canvas, salvataggio in IndexedDB |
+| File di Excel | [fflate](https://github.com/101arrowz/fflate) per lo zip (un .xlsx è uno zip di file XML, scritti e letti da Glifo) |
 | Calcoli e grafici | scritti per Glifo: lettura delle formule LaTeX, conti (anche esatti, con le frazioni), disegno in SVG |
 | App installabile | vite-plugin-pwa |
 
@@ -932,13 +982,15 @@ src/
     render.ts             la tabella nell'anteprima e come tabella di Markdown con i risultati
     file.ts, blocks.ts    le tabelle nei file .md; ritrovare il blocco nella nota
     preview.ts            «Modifica» e le frecce sulla tabella dell'anteprima
-    templates.ts          i modelli pronti (fattura, punto di pareggio, conto economico, ammortamento)
+    templates.ts          i modelli pronti (fattura, punto di pareggio, conto economico, ammortamento, prezzo, preventivo, Gantt)
+    chart.ts, plan.ts     i numeri di un intervallo per i grafici; le attività per il Gantt e il reticolo
+    xlsx.ts, csv.ts       i file di Excel (con le formule tradotte in inglese e ritorno) e i .csv
     editor.ts             l'editor a tutto schermo: griglia, barra della formula, tasti, menu
   schema/
     model.ts              il formato degli schemi (blocchi ```schema), i controlli e i colori dei due temi
     blocks.ts             trova i blocchi ```schema nella nota
     file.ts               gli schemi nei file .md: immagine SVG più il JSON in un commento, e ritorno
-    shapes.ts             le forme che maxGraph non ha (parallelogramma, documento, frecce grandi, tabella, pallini…)
+    shapes.ts             le forme che maxGraph non ha (parallelogramma, documento, frecce grandi, tabella, pallini, corsie…)
     templates.ts          i modelli pronti (diagramma di flusso, mappa concettuale…)
     arrange.ts            allinea e distribuisci (solo i conti)
     image.ts              lo schema come PNG, da scaricare o copiare
@@ -1000,6 +1052,10 @@ src/
     preview.ts            nell'anteprima: legenda, errori, slider, trascinare, ingrandire, coordinate, «Scarica»
     file.ts               i grafici nei file .md: immagine SVG più il testo nascosto, e ritorno; la figura da scaricare
     labels.ts             il titolo e i nomi degli assi: in HTML con KaTeX e, nei disegni, le formule come testo SVG
+    tableGraph.ts         i numeri di una tabella nel grafico (dati:, pareggio:)
+    schedule.ts           il percorso critico: i tempi al più presto e al più tardi, i margini, i legami
+    gantt.ts              il disegno del diagramma di Gantt e del reticolo, con la legenda
+    planBlock.ts, planFigure.ts, planPreview.ts   il blocco del Gantt, la figura da scaricare, l'anteprima
   host.ts                 integrazione facoltativa con claude.ai (per la demo pubblicata lì)
 privacy.html              l'informativa sulla privacy (una seconda pagina, fuori dall'app)
 nota.html                 la pagina delle note condivise con un link (src/share/page.ts)
@@ -1034,7 +1090,8 @@ inglese di SCOWL ([MIT e BSD](public/licenze/dizionario-inglese.txt), dal pacche
 `dictionary-en`). Gli schemi usano [maxGraph](https://github.com/maxGraph/maxGraph)
 ([Apache 2.0](public/licenze/maxgraph.txt)), la lavagna
 [perfect-freehand](https://github.com/steveruizok/perfect-freehand)
-([MIT](public/licenze/perfect-freehand.txt)). I testi delle licenze sono pubblicati anche insieme
+([MIT](public/licenze/perfect-freehand.txt)), i file di Excel [fflate](https://github.com/101arrowz/fflate)
+([MIT](public/licenze/fflate.txt)), per lo zip. I testi delle licenze sono pubblicati anche insieme
 all'app, in `licenze/`.
 
 ## Idee per il futuro

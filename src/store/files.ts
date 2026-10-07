@@ -3,7 +3,8 @@ import { hostDownloads, inClaudeViewer } from '../host'
 /**
  * Apertura e salvataggio di file .md. Su Chrome/Edge usa la File System
  * Access API (si può risalvare sullo stesso file, come in VS Code); sugli
- * altri browser si ripiega su "carica file" e "scarica".
+ * altri browser si ripiega su "carica file" e "scarica". Si aprono anche i
+ * file di Excel (.xlsx) e .csv, che diventano note con le tabelle.
  */
 
 interface PickerType {
@@ -20,10 +21,29 @@ const MD_TYPES: PickerType[] = [
   { description: 'Appunti Markdown', accept: { 'text/markdown': ['.md', '.markdown', '.txt'] } },
 ]
 
+const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+
+/** Quello che si apre: gli appunti e, in un tipo solo perché si vedano tutti insieme, le tabelle. */
+const OPEN_TYPES: PickerType[] = [
+  {
+    description: 'Appunti (.md) e tabelle (Excel, .csv)',
+    accept: { 'text/markdown': ['.md', '.markdown', '.txt'], [XLSX_TYPE]: ['.xlsx'], 'text/csv': ['.csv', '.tsv'] },
+  },
+]
+
 export interface OpenedFile {
   name: string
+  /** Il testo del file (vuoto per un .xlsx, che non è testo). */
   content: string
+  /** I byte di un file di Excel (.xlsx). */
+  bytes?: Uint8Array
   handle?: FileSystemFileHandle
+}
+
+/** Il contenuto del file: il testo o, per un .xlsx, i byte. */
+async function readOpened(file: File): Promise<Omit<OpenedFile, 'handle'>> {
+  if (/\.xlsx$/i.test(file.name)) return { name: file.name, content: '', bytes: new Uint8Array(await file.arrayBuffer()) }
+  return { name: file.name, content: await file.text() }
 }
 
 function fsWindow(): FsWindow {
@@ -42,11 +62,12 @@ export async function openMarkdownFiles(): Promise<OpenedFile[]> {
   const w = fsWindow()
   if (w.showOpenFilePicker && !inClaudeViewer()) {
     try {
-      const handles = await w.showOpenFilePicker({ multiple: true, types: MD_TYPES })
+      const handles = await w.showOpenFilePicker({ multiple: true, types: OPEN_TYPES })
       return Promise.all(
         handles.map(async (handle) => {
-          const file = await handle.getFile()
-          return { name: file.name, content: await file.text(), handle }
+          const opened = await readOpened(await handle.getFile())
+          // Solo i file .md si risalvano con «Salva .md»: un Excel resta com'è.
+          return /\.(md|markdown|txt)$/i.test(opened.name) ? { ...opened, handle } : opened
         }),
       )
     } catch (err) {
@@ -61,11 +82,11 @@ function pickWithInput(): Promise<OpenedFile[]> {
   return new Promise((resolve) => {
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = '.md,.markdown,.txt,text/markdown,text/plain'
+    input.accept = `.md,.markdown,.txt,text/markdown,text/plain,.xlsx,${XLSX_TYPE},.csv,.tsv,text/csv`
     input.multiple = true
     input.addEventListener('change', async () => {
       const files = [...(input.files ?? [])]
-      resolve(await Promise.all(files.map(async (f) => ({ name: f.name, content: await f.text() }))))
+      resolve(await Promise.all(files.map(readOpened)))
     })
     input.addEventListener('cancel', () => resolve([]))
     input.click()

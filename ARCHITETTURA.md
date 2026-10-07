@@ -67,7 +67,16 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   Nei file .md (`file.ts`, usato da «Salva .md» e «Apri .md») ogni schema diventa un'immagine
   SVG, che VS Code mostra, più il JSON in un commento HTML; aprendo il file torna un blocco.
   Le forme in più (anche quelle delle basi di dati: entità debole, attributi a pallino, tabella)
-  sono in `shapes.ts`; il testo delle tabelle (nome, campi, PK/FK) lo fa `tableHtml` in
+  sono in `shapes.ts`, con le corsie dei processi (`lanes`: un riquadro solo, diviso in parti
+  uguali, in colonne o in righe con `rot` 1; i nomi uno per riga del testo, `laneNames`; `LanesShape`
+  disegna fascia e divisioni, `lanesHtml` in `label.ts` i nomi, `laneAt`/`insideLanes` in `model.ts`
+  i conti). Le forme del processo non stanno dentro le corsie (lo schema resta un elenco di forme)
+  ma sopra: le corsie vanno dietro (`orderCells`), si prendono solo dalla fascia dei nomi (`setUpLanes`
+  nell'editor: `fireMouseEvent` toglie la cella dagli eventi sul resto, `intersects` fa lo stesso per
+  `getCellAt`), e spostandole o duplicandole vengono con loro le forme con il centro dentro e le frecce
+  tra queste (`withLaneContents`, anche in `SelectionHandler.getCells`); non si collegano
+  (`isValidTarget`); il pannello ha nomi, «Aggiungi corsia» e il verso (`lanesSection`, `setLanes`:
+  le altre corsie restano grandi com'erano). Il testo delle tabelle (nome, campi, PK/FK) lo fa `tableHtml` in
   `label.ts`, e nell'editor si scrive in due parti, il nome e i campi (`splitTable`/`joinTable`
   in `model.ts`). Una riga di campo è `PK FK Nome: TIPO` (`tableField`/`fieldLine`); il pannello a
   destra cambia gli stessi campi (`tableSection` nell'editor) e `sql.ts` ne fa il codice SQL per
@@ -106,7 +115,22 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   formato della colonna); il pulsante «Grafico» dell'editor sceglie le celle (`chartRange`: con una cella
   sola il blocco attorno, `currentRegion`, o il primo che ha dati) e scrive le righe del blocco
   (`chartLines`, con `pareggio:` se ci sono i ricavi e i costi totali, senza l'utile in fondo); `main.ts`
-  le mette sotto la tabella o rifà il grafico che c'è già (`placeChart`). Nella barra il pulsante della tabella è un menu (`tableMenu` in
+  le mette sotto la tabella o rifà il grafico dello stesso tipo tra quelli che la seguono (`placeChart`,
+  `tableChartKind`: dati, Gantt, reticolo; il nuovo va dopo gli altri). Le attività di un progetto
+  (`plan.ts`): `planData` legge un intervallo con la prima riga dei nomi (`columnRole` riconosce durata
+  con l'unità, precedenti, chi, descrizione, fatto e i tempi calcolati a mano da controllare; i codici e
+  le precedenti si leggono dal testo scritto, così «1,2» sono due attività); con la durata e le
+  precedenti (`isPlanRange`) «Grafico» apre un menu: Gantt o reticolo. I file (`xlsx.ts`, `csv.ts`, menu
+  «File» dell'editor): lo zip lo fa fflate (caricato con l'editor), l'XML Glifo; le formule passano
+  all'inglese (`toExcelFormula`, `EXCEL_NAMES`: ogni funzione deve averne uno, lo controlla un test) e
+  ritorno (`fromExcelFormula`: le virgole inglesi sono sempre separatori; quelle che Glifo non sa fare
+  restano valori, `valuesOnly`), con le formule condivise spostate (`shiftFormula`) e i formati che le
+  formule hanno già da soli tolti (`dropInferredFormats`); le date diventano testo. I .csv si leggono
+  con il separatore capito da solo (`csvDelimiter`) e si scrivono per l'Excel italiano (punto e
+  virgola, i valori come si vedono, BOM). Un testo che sembrerebbe un numero o una formula prende
+  l'apostrofo (`textCell`). «Apri .md» apre anche .xlsx e .csv (`OpenedFile.bytes` in
+  `src/store/files.ts`, `tablesNote` in `main.ts`: una nota con una tabella per foglio); di questi file
+  non si tiene l'handle, se no «Salva .md» ci scriverebbe sopra. Nella barra il pulsante della tabella è un menu (`tableMenu` in
   `src/ui/toolbar.ts`): con le formule o di testo, perché la barra deve stare in una riga. Per le
   prove nel browser le celle della griglia hanno l'id `sheet-<riga>-<colonna>` (da 0).
 - `src/math/`: le espressioni delle formule (LaTeX o da calcolatrice): `parse.ts` le legge, `evaluate.ts`
@@ -203,6 +227,19 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   con i colori di stato `gain`/`loss` della palette e il nome dentro con `insideSpot`) e i punti `mark`
   (`breakEven`). Con i dati la finestra parte da zero e lascia lo spazio ai numeri (`dataWindow` in
   `plot.ts`), le tacche hanno i punti delle migliaia (`tickLabel` con `grouped`) e non c'è la O.
+  Il diagramma di Gantt e il reticolo (`gantt:` e `reticolo:`, con `titolo:` e `inizio:`; `planBlock.ts`)
+  prendono le attività dalla stessa tabella: il renderer le scrive in `data-plan` (`planData`), e
+  `hydrateGraphs` per questi blocchi usa `PlanView` (`planPreview.ts`: un disegno fermo, niente
+  spostare, ingrandire e slider; «Scarica» e «Titolo…»). `schedule.ts` fa i conti del percorso critico
+  (in avanti e all'indietro, con i legami FI, II, FF, IF e lo scarto come in Project, `parseLinks`;
+  i giri e i codici sbagliati sono `problems` con la riga della tabella, i tempi scritti a mano che non
+  tornano `checks`), `gantt.ts` i disegni (il reticolo a colonne con i nodi finti per le frecce lunghe,
+  l'ordine con i baricentri e le altezze con `place`, i minimi quadrati con i vincoli d'ordine) e la
+  legenda, `planFigure.ts` la figura per «Scarica» e i file .md (`graphImagesFor`). Le larghezze dei
+  testi si misurano nel browser con un canvas (`textWidth`), nei test si stimano larghe. Nel reticolo
+  i nomi lunghi vanno a capo su due righe (`wrapText`, e allora tutti i riquadri sono più alti):
+  accorciati, «Progettazione del database» e «… dell'interfaccia» sarebbero uguali. `parseGraph`
+  salta le righe del Gantt (`planLine` in `tableGraph.ts`).
   Gli slider: ogni numero scritto con le cifre che il grafico usa ne ha uno (`spec.sliders`);
   `parseGraph(…, values)` rifà il grafico con altri valori senza cambiare la nota (file .md e stampa
   usano quelli scritti). Un integrale (`\int_0^2 x^2 \, dx`) è un'area (`kind: 'area'`, `sampleArea`

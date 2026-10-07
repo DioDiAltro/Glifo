@@ -18,6 +18,17 @@ export function dataLine(text: string): { key: 'dati' | 'pareggio'; value: strin
   return m ? { key: m[1].toLowerCase() as 'dati' | 'pareggio', value: m[2].trim() } : null
 }
 
+const PLAN_LINE = /^(gantt|reticolo|inizio)\s*:\s*(.*)$/i
+
+/**
+ * Una riga del diagramma di Gantt o del reticolo (`gantt: A1:E9`, `reticolo: A1:E9`, `inizio:
+ * 12/10/2026`); null se la riga è altro. Il disegno lo fanno planBlock.ts e gantt.ts.
+ */
+export function planLine(text: string): { key: 'gantt' | 'reticolo' | 'inizio'; value: string } | null {
+  const m = PLAN_LINE.exec(text.trim())
+  return m ? { key: m[1].toLowerCase() as 'gantt' | 'reticolo' | 'inizio', value: m[2].trim() } : null
+}
+
 /** L'intervallo della riga `dati:` del blocco (null se non c'è): i dati li prende chi disegna, dalla tabella sopra. */
 export function dataRange(source: string): string | null {
   for (const line of source.split('\n')) {

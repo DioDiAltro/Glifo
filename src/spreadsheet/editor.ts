@@ -39,6 +39,10 @@ import { cellName, colName, parseCellName, rangeName } from './refs'
 import { TEMPLATES } from './templates'
 import { isError } from './values'
 import { chartLines, chartRange } from './chart'
+import { isPlanRange } from './plan'
+import { csvToSheet, sheetToCsv } from './csv'
+import { sheetToXlsx, xlsxSheets, XlsxError, type XlsxSheet } from './xlsx'
+import { downloadBlob, downloadText, fileNameFor } from '../store/files'
 
 export interface SheetEditorOptions {
   sheet: SheetModel
@@ -49,6 +53,8 @@ export interface SheetEditorOptions {
    * del blocco ```grafico, vedi chartLines); poi l'editor si chiude. Senza, il pulsante non c'è.
    */
   onChart?(sheet: SheetModel, lines: string[]): void
+  /** Il titolo della nota: il nome dei file scaricati (tabella.xlsx se non c'è). */
+  title?: string
 }
 
 /** Apre l'editor; la promessa si risolve quando lo si chiude. */
@@ -66,6 +72,7 @@ const PATHS = {
   rows: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.5h18M3 14.5h18"/>',
   cols: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/>',
   chart: '<path d="M4 4v16h16"/><path d="m7.5 15 4-5 3 3 5-6"/>',
+  file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/>',
 } as const
 
 /** Quante righe e colonne vuote si vedono dopo la tabella, per continuare a scrivere. */
@@ -192,9 +199,9 @@ class SheetEditor {
                 'button',
                 {
                   class: 'btn sheet-menu-button sheet-chart',
-                  title: 'Il grafico delle celle scelte, sotto la tabella nella nota: la prima colonna sull\'asse x, le altre come linee',
+                  title: 'Il grafico delle celle scelte, sotto la tabella nella nota: la prima colonna sull\'asse x, le altre come linee (con le attività di un progetto, il diagramma di Gantt o il reticolo)',
                   attrs: { type: 'button' },
-                  on: { click: () => this.makeChart() },
+                  on: { click: (ev) => this.makeChart(ev.currentTarget as HTMLButtonElement) },
                 },
                 icon(PATHS.chart, 16),
                 'Grafico',
@@ -204,6 +211,7 @@ class SheetEditor {
       ),
       h('div', { class: 'schema-spacer' }),
       this.status,
+      this.menuButton('File', 'Apri un file di Excel (.xlsx) o .csv, o scarica la tabella', PATHS.file, () => this.fileEntries()),
       this.menuButton('Modelli', 'Tabelle pronte da cui partire', PATHS.templates, () =>
         TEMPLATES.map((t) => ({ label: t.name, run: () => void this.applyTemplate(t.source) })),
       ),
@@ -589,23 +597,118 @@ class SheetEditor {
   }
 
   private async applyTemplate(source: string): Promise<void> {
+    await this.replaceWith(parseSheet(source), 'il modello')
+  }
+
+  /** Al posto della tabella ne arriva un'altra (un modello, un file): se c'è già qualcosa, prima si chiede. Annulla la riporta com'era. */
+  private async replaceWith(model: SheetModel, what: string): Promise<boolean> {
     if (sheetSize(this.model).rows) {
       const ok = await confirmDialog({
         title: 'Sostituire la tabella?',
-        message: 'Al posto di quello che c\'è adesso arriva il modello.',
+        message: `Al posto di quello che c'è adesso arriva ${what}.`,
         note: 'Se cambi idea, Annulla (Ctrl+Z) la riporta com\'era.',
         confirmLabel: 'Sostituisci',
       })
       if (!ok) {
         this.grid.focus()
-        return
+        return false
       }
     }
     this.mutate(() => {
-      this.model = parseSheet(source)
+      this.model = model
     })
     this.select(0, 0)
     this.grid.focus()
+    return true
+  }
+
+  // ——— File di Excel e .csv ———
+
+  private fileEntries(): MenuEntry[] {
+    return [
+      { label: 'Apri un file Excel o .csv…', run: () => this.pickFile() },
+      { label: 'Scarica come Excel (.xlsx)', run: () => this.downloadXlsx() },
+      { label: 'Scarica come .csv', run: () => void this.downloadCsv() },
+    ]
+  }
+
+  /** Il nome dei file scaricati: il titolo della nota. */
+  private fileName(ext: string): string {
+    return fileNameFor(this.options.title?.trim() || 'tabella', ext)
+  }
+
+  private pickFile(): void {
+    const input = h('input', { attrs: { type: 'file', accept: '.xlsx,.csv,.tsv,.txt,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', hidden: true } })
+    // Nella finestra (modale): fuori il clic non arriverebbe.
+    this.dialog.append(input)
+    input.addEventListener('change', () => {
+      const file = input.files?.[0]
+      input.remove()
+      if (file) void this.openFile(file)
+    })
+    input.addEventListener('cancel', () => input.remove())
+    input.click()
+  }
+
+  /** Un file di Excel (un foglio: con più fogli si sceglie quale) o .csv al posto della tabella. */
+  async openFile(file: File): Promise<void> {
+    const note = (message: string, error = false) => {
+      this.hint.replaceChildren(h('strong', error ? { class: 'sheet-hint-error' } : {}, 'File'), ` — ${message}`)
+      this.say(message)
+    }
+    try {
+      if (/\.xlsx$/i.test(file.name)) {
+        const sheets = xlsxSheets(new Uint8Array(await file.arrayBuffer())).filter((sh) => sheetSize(sh.model).rows)
+        if (!sheets.length) {
+          note(`«${file.name}» non ha celle da aprire.`, true)
+          return
+        }
+        const use = async (sheet: XlsxSheet) => {
+          if (!(await this.replaceWith(sheet.model, `il foglio «${sheet.name}» di «${file.name}»`))) return
+          const extra = [
+            sheet.valuesOnly ? `${sheet.valuesOnly === 1 ? 'una formula usa' : `${sheet.valuesOnly} formule usano`} funzioni o fogli che Glifo non ha: ${sheet.valuesOnly === 1 ? 'resta il suo valore' : 'restano i loro valori'}` : '',
+            sheet.cut ? `le tabelle di Glifo hanno al massimo ${MAX_ROWS} righe e ${MAX_COLS} colonne: il resto è rimasto fuori` : '',
+          ].filter(Boolean)
+          note(`Aperto il foglio «${sheet.name}»${extra.length ? `; ${extra.join('; ')}` : ''}.`)
+        }
+        if (sheets.length === 1) {
+          await use(sheets[0])
+          return
+        }
+        // Più fogli: un menu per scegliere quale aprire.
+        const box = this.dialog.querySelector<HTMLElement>('.sheet-menu-button[title^="Apri un file"]')?.getBoundingClientRect() ?? this.grid.getBoundingClientRect()
+        this.openMenu(
+          sheets.map((sh) => {
+            const size = sheetSize(sh.model)
+            return { label: `${sh.name} · ${size.rows} ${size.rows === 1 ? 'riga' : 'righe'}`, run: () => void use(sh) }
+          }),
+          box.left,
+          box.bottom + 4,
+        )
+        note(`«${file.name}» ha ${sheets.length} fogli: scegli quale aprire.`)
+        return
+      }
+      const { model, cut } = csvToSheet(await file.text())
+      if (!sheetSize(model).rows) {
+        note(`«${file.name}» non ha celle da aprire.`, true)
+        return
+      }
+      if (await this.replaceWith(model, `la tabella di «${file.name}»`)) {
+        note(`Aperto «${file.name}»${cut ? `; le tabelle di Glifo hanno al massimo ${MAX_ROWS} righe e ${MAX_COLS} colonne: il resto è rimasto fuori` : ''}.`)
+      }
+    } catch (err) {
+      note(err instanceof XlsxError ? err.message : `«${file.name}» non si riesce ad aprire.`, true)
+    }
+  }
+
+  private downloadXlsx(): void {
+    const bytes = sheetToXlsx(this.current(), this.options.title?.trim() || 'Tabella')
+    downloadBlob(this.fileName('.xlsx'), new Blob([bytes as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
+    this.say('File di Excel scaricato')
+  }
+
+  private async downloadCsv(): Promise<void> {
+    if (await downloadText(this.fileName('.csv'), sheetToCsv(this.current()), 'text/csv')) this.say('File .csv scaricato')
   }
 
   // ——— Righe e colonne ———
@@ -1083,13 +1186,34 @@ class SheetEditor {
   /**
    * «Grafico»: le celle scelte (o, con una cella sola, il blocco di dati attorno, vedi chartRange)
    * diventano un grafico sotto la tabella nella nota; con i ricavi e i costi totali è il diagramma
-   * del punto di pareggio. Se non si può, il motivo e l'editor resta aperto.
+   * del punto di pareggio. Con le attività di un progetto (la durata e le precedenti, vedi
+   * plan.ts) un menu chiede se fare il diagramma di Gantt o il reticolo. Se non si può, il motivo e
+   * l'editor resta aperto.
    */
-  private makeChart(): void {
+  private makeChart(button?: HTMLButtonElement): void {
     const onChart = this.options.onChart
     if (!onChart) return
     const model = this.current()
-    const made = chartLines(model, chartRange(model, this.range()))
+    const range = chartRange(model, this.range())
+    if (isPlanRange(model, range)) {
+      const cells = rangeName(range.top, range.left, range.bottom, range.right)
+      const make = (lines: string[]) => {
+        onChart(cloneSheet(model), lines)
+        this.close()
+      }
+      const box = (button ?? this.grid).getBoundingClientRect()
+      this.openMenu(
+        [
+          { label: 'Diagramma di Gantt', run: () => make(['titolo: Diagramma di Gantt', `gantt: ${cells}`]) },
+          { label: 'Reticolo (PERT) con il percorso critico', run: () => make(['titolo: Reticolo del progetto', `reticolo: ${cells}`]) },
+        ],
+        box.left,
+        box.bottom + 4,
+        button,
+      )
+      return
+    }
+    const made = chartLines(model, range)
     if (!made.lines) {
       // Sotto la barra della formula, che si vede anche sul telefono (il messaggio in alto no).
       this.hint.replaceChildren(h('strong', { class: 'sheet-hint-error' }, 'Grafico'), ` — ${made.error}`)

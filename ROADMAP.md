@@ -279,9 +279,20 @@ grafici. Tutto è descritto nel README. Se serviranno:
     `pareggio: Ricavi, Costi totali` colora l'utile e la perdita e segna il punto di pareggio; il
     pulsante «Grafico» dell'editor delle tabelle le scrive da solo, e il modello «Punto di pareggio»
     ha anche la colonna dei costi fissi;
-  - il diagramma di Gantt per pianificare (attività, durate, chi le fa, il percorso critico);
-  - i flussi con le corsie (chi fa cosa);
-  - i file di Excel (.xlsx) e .csv da aprire e scaricare;
+  - fatto sul ramo `prova` (7 ottobre 2026, lo studente: «fai tutto quello che riguarda GESP; non
+    fare le cose a pezzi»), da vedere prima di portarlo sul ramo principale, tutto insieme:
+    - **il diagramma di Gantt e il reticolo** dalle attività di una tabella (durata, precedenti, chi
+      le fa, quanto è fatto): le righe `gantt: A1:E9` e `reticolo: A1:E9` del blocco grafico, con il
+      **percorso critico** calcolato da Glifo (inizio e fine al più presto e al più tardi, margini
+      totali e liberi, legami come in Project), le date con `inizio:` (anche i giorni lavorativi) e il
+      controllo dei tempi calcolati a mano; «Grafico» sulle attività chiede quale fare;
+    - **i flussi con le corsie** (chi fa cosa) negli schemi: la forma «Corsie», in colonne o in righe,
+      che si porta dietro le forme del processo, e il modello «Processo con le corsie» (l'ordine di un
+      cliente dalle vendite al magazzino all'amministrazione, i reparti di un ERP);
+    - **i file di Excel (.xlsx) e .csv** da aprire e scaricare, con le formule tradotte (menu «File»
+      dell'editor delle tabelle, e «Apri .md» nella barra laterale);
+    - i modelli **prezzo di vendita** (le configurazioni di costo e il ricarico), **preventivo di un
+      progetto** e **diagramma di Gantt**;
 - il contrario dell'SQL: da un file SQL alle tabelle disegnate; e il passaggio dallo schema E-R
   alle tabelle (la progettazione logica);
 - stampare con i colori del tema chiaro anche se si usa quello scuro;

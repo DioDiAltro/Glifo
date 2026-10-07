@@ -154,12 +154,46 @@ const tables: Schema = {
   edges: [edge('e1', 'esame', 'studente'), edge('e2', 'esame', 'corso')],
 }
 
+/**
+ * Un processo con le corsie (chi fa cosa), come nei libri di economia aziendale: l'ordine di un
+ * cliente dall'arrivo all'incasso, passando per le vendite, il magazzino e l'amministrazione (i
+ * reparti che un gestionale, un ERP, tiene insieme). Le corsie stanno per prime, cioè dietro.
+ */
+const process: Schema = {
+  nodes: [
+    node('corsie', 'lanes', 0, 0, 'Cliente\nVendite\nMagazzino\nAmministrazione', { w: 800, h: 740 }),
+    node('inizio', 'ellipse', 40, 60, 'Inizio', { h: 50, color: 'green' }),
+    node('ordine', 'rounded', 30, 140, 'Invia l\'ordine', { w: 140 }),
+    node('registra', 'rounded', 230, 140, 'Registra l\'ordine', { w: 140 }),
+    node('disponibile', 'rhombus', 225, 235, 'Merce\ndisponibile?', { w: 150, h: 90, color: 'yellow' }),
+    node('fornitore', 'rounded', 430, 250, 'Riordina dal fornitore', { w: 140 }),
+    node('prepara', 'rounded', 430, 360, 'Prepara e spedisce la merce', { w: 140 }),
+    node('fattura', 'document', 630, 355, 'Emette la fattura', { w: 140 }),
+    node('paga', 'rounded', 30, 560, 'Riceve la merce e paga', { w: 140 }),
+    node('incasso', 'rounded', 630, 560, 'Registra l\'incasso', { w: 140 }),
+    node('fine', 'ellipse', 640, 660, 'Fine', { h: 50, color: 'red' }),
+  ],
+  edges: [
+    edge('e1', 'inizio', 'ordine'),
+    edge('e2', 'ordine', 'registra'),
+    edge('e3', 'registra', 'disponibile'),
+    edge('e4', 'disponibile', 'prepara', { text: 'Sì', points: [[300, 390]] }),
+    edge('e5', 'disponibile', 'fornitore', { text: 'No' }),
+    edge('e6', 'fornitore', 'prepara'),
+    edge('e7', 'prepara', 'fattura'),
+    edge('e8', 'fattura', 'paga', { points: [[700, 500], [100, 500]] }),
+    edge('e9', 'paga', 'incasso'),
+    edge('e10', 'incasso', 'fine'),
+  ],
+}
+
 export const TEMPLATES: Template[] = [
   { id: 'flusso', name: 'Diagramma di flusso', hint: 'I passi di un procedimento, con le domande e le strade possibili', schema: flowchart },
   { id: 'mappa', name: 'Mappa concettuale', hint: 'Un concetto e quelli collegati, con le parole che li legano', schema: conceptMap },
   { id: 'albero', name: 'Albero', hint: 'Un argomento diviso in parti e dettagli, come una classificazione', schema: tree },
   { id: 'ciclo', name: 'Ciclo', hint: 'Fasi che si ripetono, una dopo l\'altra', schema: cycle },
   { id: 'linea', name: 'Linea del tempo', hint: 'Eventi in ordine, con il loro anno', schema: timeline },
+  { id: 'corsie', name: 'Processo con le corsie', hint: 'Chi fa cosa: i passi di un processo aziendale nelle corsie di chi li fa', schema: process },
   { id: 'er', name: 'Schema E-R', hint: 'Entità, relazione con le cardinalità e attributi (basi di dati)', schema: er },
   { id: 'tabelle', name: 'Tabelle', hint: 'Tabelle con chiavi primarie ed esterne (schema relazionale)', schema: tables },
 ]
