@@ -325,6 +325,31 @@ chiede i conti al motore; Glifo li controlla (✓, ✗ con il valore giusto, «n
 correggere quelli sbagliati e dice se l'ultimo arriva al suo risultato; «Inserisci nella nota» e
 «Rifai». Descritto nel README («Spiegami») e in ABBONAMENTI.md.
 
+**Prima prova vera (7 ottobre 2026, sera, sul sito di prova, con il modello predefinito).** Su
+`$\int_0^1 x^2 \, dx =$` le formule erano giuste (le controlla Glifo), ma il modello scriveva «Una frase
+breve:» in ogni passaggio (copiava lo schema del messaggio di sistema), due frasi erano sbagliate («si
+calcola sottraendo l'area sotto la curva»; «regola del confronto» invece della regola della potenza) e
+il primo e l'ultimo passaggio ripetevano solo la domanda e il risultato. Corretto la sera stessa: una riga
+d'esempio vera (una derivata) al posto dello schema, i nomi giusti delle regole nel messaggio di sistema,
+e Glifo toglie lo schema copiato e il «Risultato finale» senza conto (`tests/explain.test.ts`). Le frasi
+Glifo non le controlla: da riprovare sul sito di prova.
+
+**Chiesto dallo studente dopo la prova (7 ottobre 2026, sera):**
+- un pulsante con la sola icona dell'AI (✨) nella barra in alto, dopo `$$`: apre un pannello suo, al
+  posto di quello dei simboli, con l'elenco di quello che c'è nella nota; se ne sceglie uno e Glifo lo
+  spiega, senza mettere il cursore nella formula né aprire «Simboli». Deciso: icona sola, lì;
+- spiegare «qualsiasi cosa»: le formule anche senza un conto, i teoremi, i grafici (cosa mostrano, con i
+  numeri di Glifo: deciso sì), gli schemi e le tabelle. Dove Glifo non può controllare (le parole, un
+  teorema, uno schema) la spiegazione va segnata come non controllata;
+- una chat per gli approfondimenti, in fondo allo stesso pannello;
+- il dubbio che il modello piccolo non basti: ha chiesto se si può addestrare (anche su tutta
+  Wikipedia). Risposta data: Qwen3 l'ha già letta; aiutano di più le informazioni giuste date al momento
+  (regole, conti del motore, il contenuto della nota), il modello 4B e il controllo di Glifo; addestrarlo
+  davvero (migliaia di spiegazioni fatte bene in italiano, ore di scheda grafica, il modello rifatto per
+  WebLLM) è un progetto grosso, da valutare solo se le prove dicono che serve;
+- dove compare la spiegazione non era chiaro: gli è stata mandata una foto finta del pannello (pulsante,
+  elenco, spiegazione, chat) per decidere. Da fare dopo la sua risposta.
+
 Da fare:
 - provarlo davvero su un computer con WebGPU (Chrome o Edge), su esercizi veri, e scegliere il modello
   di partenza: finora è provato solo con un modello finto (nelle sessioni di Claude Hugging Face era

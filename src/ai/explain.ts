@@ -124,10 +124,12 @@ export function systemPrompt(tone: ExplainTone): string {
     'Regole:',
     '- I conti li fa il motore di Glifo, che non sbaglia: non fare conti a mente. Per un integrale, una derivata, una primitiva, un\'equazione o una semplificazione usa gli strumenti.',
     '- Glifo controlla ogni passaggio che scrivi e ti fa correggere quelli sbagliati.',
-    '- Quando hai i conti, scrivi solo la spiegazione, in questo formato:',
-    '1. Una frase breve: cosa si fa e perché. $$formula$$',
-    '2. Una frase breve. $$formula$$',
-    '- Ogni formula è un\'uguaglianza in LaTeX (a = b), senza parole dentro. Da 2 a 6 passaggi; l\'ultimo arriva al risultato di Glifo.',
+    // Un esempio vero, non uno schema da riempire: il 7 ottobre 2026 Qwen3 copiava «Una frase breve:» in
+    // ogni passaggio. È una derivata, così sugli integrali non copia il contenuto.
+    '- Quando hai i conti, scrivi solo la spiegazione: un elenco numerato, un passaggio per riga, con una frase (cosa fai e perché, con il nome giusto della regola) e poi la formula tra $$. Esempio di riga:',
+    '1. Per la regola del prodotto derivo un fattore alla volta. $$\\frac{d}{dx}(x^2 \\sin x) = 2x \\sin x + x^2 \\cos x$$',
+    '- Ogni formula è un\'uguaglianza in LaTeX (a = b), senza parole dentro. Da 2 a 6 passaggi: il primo fa già un conto (non ripetere la domanda), l\'ultimo arriva al risultato di Glifo (niente passaggio con il solo risultato).',
+    '- Nomi giusti: l\'integrale definito è l\'area con segno sotto la curva e vale F(b) - F(a), con F una primitiva (teorema fondamentale del calcolo integrale); la primitiva di x^n è x^{n+1}/(n+1) (regola della potenza); poi linearità, integrazione per parti, per sostituzione; nelle derivate le regole della somma, del prodotto, del quoziente e della catena.',
     '',
     toolsPrompt(),
   ].join('\n')
@@ -251,6 +253,8 @@ export function stepsIn(reply: string): { text: string; formula: string | null }
     if (step && (step.text || step.formula)) steps.push(step)
     if (steps.length >= MAX_STEPS) break
   }
+  // «Risultato finale: $1/3$» in fondo, senza un'uguaglianza, ripete solo il risultato.
+  while (steps.length > 1 && !steps[steps.length - 1].formula && /^risultato\b/i.test(steps[steps.length - 1].text)) steps.pop()
   return steps
 }
 
@@ -278,6 +282,8 @@ function stepOf(item: string): { text: string; formula: string | null } | null {
     .replace(/\*\*/g, '')
     .replace(/\s+/g, ' ')
     .trim()
+    // Lo schema del vecchio messaggio di sistema copiato così com'era (Qwen3, 7 ottobre 2026).
+    .replace(/^(?:una\s+)?frase\s+breve(?:\s*:\s*cosa\s+si\s+fa\s+e\s+perché)?\s*[:.]?\s*/i, '')
     // Il punto o i due punti rimasti soli dove c'era la formula: «il volume è .».
     .replace(/\s+[.:]$/, '')
     .replace(/\s*[:,;]$/, '')

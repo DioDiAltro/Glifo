@@ -109,6 +109,36 @@ describe('i passaggi scritti dal modello', () => {
     ])
   })
 
+  it('la spiegazione vera di Qwen3 (7 ottobre 2026): via «Una frase breve:» copiato dallo schema e il «Risultato finale» senza conto', () => {
+    const reply = [
+      r`1. Una frase breve: Calcoliamo l'integrale definito $\int_{0}^{1} x^2 \, dx$ e verifichiamo che il risultato sia $1/3$`,
+      r`2. Una frase breve: L'integrale definito si calcola sottraendo l'area sotto la curva $x^2$ tra $0$ e $1$`,
+      r`3. Una frase breve: Applichiamo la regola del confronto: $\int x^2 \, dx = \frac{x^3}{3} + c$`,
+      r`4. Una frase breve: Sostituiamo i limiti di integrazione: $\frac{1^3}{3} - \frac{0^3}{3} = \frac{1}{3}$`,
+      r`5. Risultato finale: $1/3$`,
+    ].join('\n')
+    expect(stepsIn(reply)).toEqual([
+      { text: r`Calcoliamo l'integrale definito $\int_{0}^{1} x^2 \, dx$ e verifichiamo che il risultato sia $1/3$`, formula: null },
+      { text: r`L'integrale definito si calcola sottraendo l'area sotto la curva $x^2$ tra $0$ e $1$`, formula: null },
+      { text: 'Applichiamo la regola del confronto', formula: r`\int x^2 \, dx = \frac{x^3}{3} + c` },
+      { text: 'Sostituiamo i limiti di integrazione', formula: r`\frac{1^3}{3} - \frac{0^3}{3} = \frac{1}{3}` },
+    ])
+    // Anche lo schema copiato tutto: resta solo la formula.
+    expect(stepsIn('1. Una frase breve: cosa si fa e perché. $$a = 1 + 1$$')).toEqual([{ text: '', formula: 'a = 1 + 1' }])
+  })
+
+  it('il messaggio di sistema dà una riga d\'esempio vera, non uno schema da copiare, e i nomi giusti delle regole', () => {
+    for (const tone of ['professore', 'semplice'] as const) {
+      const system = systemPrompt(tone)
+      expect(system).not.toMatch(/frase breve/i)
+      expect(system).toContain('teorema fondamentale del calcolo integrale')
+      expect(system).toContain('regola della potenza')
+      // La riga d'esempio si legge come un passaggio vero.
+      const example = system.split('\n').find((l) => /^1\. /.test(l))
+      expect(example && stepsIn(example)).toEqual([{ text: 'Per la regola del prodotto derivo un fattore alla volta.', formula: r`\frac{d}{dx}(x^2 \sin x) = 2x \sin x + x^2 \cos x` }])
+    }
+  })
+
   it('le chiamate agli strumenti, il ragionamento e l\'HTML non finiscono nei passaggi; 1.5 non è un passaggio', () => {
     const reply = '<think>\nragiono\n</think>\n1. Calcolo <b>bene</b>: $$1.5 + 1 = 2.5$$\n1.5 è un numero.\n<tool_call>{"name": "calcola", "arguments": {}}</tool_call>'
     expect(stepsIn(reply)).toEqual([{ text: 'Calcolo bene: 1.5 è un numero.', formula: '1.5 + 1 = 2.5' }])
