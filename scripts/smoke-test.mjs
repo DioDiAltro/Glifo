@@ -43,19 +43,24 @@ const check = (ok, msg) => {
 
 /**
  * Il worker di WebLLM finto, per «Spiegami» (src/ai/llmWorker.ts parla allo stesso modo): carica
- * subito, chiede al motore la primitiva e poi scrive due passaggi, un pezzo alla volta.
+ * subito, chiede al motore la primitiva e poi scrive due passaggi, un pezzo alla volta. Per un grafico
+ * (il pannello «Spiega con l'AI») scrive subito tre punti, con due formule giuste e una sbagliata.
  */
 function fakeLlmWorker() {
   const steps = String.raw`1. Porto fuori $\pi$, che è una costante. $$\int_{-R}^{R} \pi (R^2 - x^2) \, dx = \pi \int_{-R}^{R} (R^2 - x^2) \, dx$$
 2. Sostituisco gli estremi nella primitiva. $$\pi \left[R^2 x - \frac{x^3}{3}\right]_{-R}^{R} = \frac{4\pi R^3}{3}$$`
   const call = '<tool_call>{"name": "primitiva", "arguments": {"funzione": "R^2 - x^2", "variabile": "x"}}</tool_call>'
+  const graph = String.raw`1. È una parabola con il vertice nell'origine: vale zero in zero. $$f(0) = 0$$
+2. La derivata si annulla in zero, dove c'è il minimo. $$f'(x) = 2x$$
+3. In uno vale due. $$f(1) = 2$$`
   self.addEventListener('message', (ev) => {
     const msg = ev.data
     if (msg.type === 'load') {
       self.postMessage({ id: msg.id, type: 'progress', progress: 0.5, text: 'Fetching param cache[1/2]' })
       setTimeout(() => self.postMessage({ id: msg.id, type: 'done', value: `${msg.model}-q4f16_1-MLC` }), 100)
     } else if (msg.type === 'chat') {
-      const reply = msg.messages.at(-1).content.includes('<tool_response>') ? steps : call
+      const ask = msg.messages.find((m) => m.role === 'user')?.content ?? ''
+      const reply = ask.includes('```grafico') ? graph : msg.messages.at(-1).content.includes('<tool_response>') ? steps : call
       for (let i = 0; i < reply.length; i += 16) self.postMessage({ id: msg.id, type: 'delta', text: reply.slice(i, i + 16) })
       self.postMessage({ id: msg.id, type: 'done', value: reply })
     } else if (msg.type === 'remove') self.postMessage({ id: msg.id, type: 'done' })
@@ -2321,7 +2326,7 @@ try {
       }
     })
     check(
-      boardLayout.side && boardLayout.noPreview && boardLayout.handle && boardLayout.handleLabel === 'Divisione tra testo e lavagna' && boardLayout.tools && boardLayout.fit === 'medium' && boardLayout.checked === 'Lavagna' && boardLayout.focus,
+      boardLayout.side && boardLayout.noPreview && boardLayout.handle && boardLayout.handleLabel === 'Divisione tra testo e lavagna' && boardLayout.tools && ['medium', 'narrow'].includes(boardLayout.fit) && boardLayout.checked === 'Lavagna' && boardLayout.focus,
       `la vista «Lavagna» la apre accanto al testo, al posto dell'anteprima, con il bordo per allargarla (${JSON.stringify(boardLayout)})`,
     )
     // Con la penna lo spessore segue la pressione: piano una riga sottile, forte una spessa.
@@ -3290,15 +3295,34 @@ try {
     !sideLayout.topbar && sideLayout.top && sideLayout.foot && sideLayout.bottom && sideLayout.profileAtBottom && sideLayout.noTheme && sideLayout.subFits,
     `la barra in alto non c'è: sotto il logo subito gli appunti; in fondo una riga piena con «Apri .md», «Salva .md» e l'icona di «Condividi», poi account, «Come si usa» e impostazioni; niente pulsante del tema (${JSON.stringify(sideLayout)})`,
   )
+  // A 1440 con i due pannelli aperti (dal 7 ottobre 2026 c'è anche ✨) le viste vanno a destra, accanto
+  // ai simboli, e gli inserimenti a sinistra dopo la formattazione: sempre una riga sola.
+  const narrowRow = await side.evaluate(() => {
+    const bar = document.querySelector('.float-bar').getBoundingClientRect()
+    const row = [...document.querySelectorAll('.float-bar .tool, .float-bar .view-button, .float-bar .symbols-toggle')].map((el) => el.getBoundingClientRect()).filter((r) => r.width > 0)
+    const pill = document.querySelector('.float-bar .view-switch').getBoundingClientRect()
+    const symbols = document.querySelector('.float-bar .symbols-toggle').getBoundingClientRect()
+    return {
+      fit: document.querySelector('.float-bar').dataset.fit,
+      oneRow: row.every((r) => r.top >= bar.top && r.bottom <= bar.bottom),
+      right: pill.right <= symbols.left && Math.abs(symbols.right - (bar.right - 10)) < 2,
+    }
+  })
+  await side.setViewportSize({ width: 1536, height: 900 })
+  await side.waitForTimeout(300)
   const withPanels = await rowLayout()
   await side.locator('.symbols-toggle').click()
   const withoutSymbols = await rowLayout()
   await side.locator('.symbols-toggle').click()
+  await side.setViewportSize({ width: 1440, height: 900 })
   check(
     [withPanels, withoutSymbols].every((l) => l.oneRow && l.centered && l.apart && l.symbolsRight && l.previewBelow) &&
       withPanels.fit === 'medium' &&
-      withoutSymbols.fit === 'wide',
-    `sopra il testo una riga sola: le viste al centro, i simboli a destra, niente si sovrappone e l'anteprima comincia sotto (${JSON.stringify({ withPanels, withoutSymbols })})`,
+      withoutSymbols.fit === 'wide' &&
+      narrowRow.fit === 'narrow' &&
+      narrowRow.oneRow &&
+      narrowRow.right,
+    `sopra il testo una riga sola: le viste al centro dove c'è posto, i simboli a destra, niente si sovrappone e l'anteprima comincia sotto (${JSON.stringify({ narrowRow, withPanels, withoutSymbols })})`,
   )
   // Il logo apre e chiude la barra laterale, e sta nello stesso punto da aperta e da chiusa
   // (con il puntatore lontano: sopra il logo il colore cambia)
@@ -3539,6 +3563,60 @@ try {
     const tones = await settings.locator('.segmented label').allInnerTexts()
     await ex.keyboard.press('Escape')
     check(models.length === 3 && models[1].startsWith('Qwen3 1.7B') && tones.join() === 'Come il professore,Più semplice', `nelle impostazioni il modello e il tono delle spiegazioni (${JSON.stringify({ models, tones })})`)
+
+    // «Spiega con l'AI»: il pulsante ✨ dopo $$ apre, al posto dei simboli, l'elenco di quello che c'è
+    // nella nota; scelto il grafico, la spiegazione con le formule controllate da Glifo.
+    await ex.locator('.notes-head button[aria-label="Nuova nota"]').click()
+    await ex.keyboard.press('Control+a')
+    await ex.keyboard.type('$\\int_0^1 x^2 \\, dx =')
+    await ex.keyboard.press('End')
+    await ex.keyboard.press('Enter')
+    await ex.keyboard.press('Enter')
+    // Il grafico dal riquadro della formula, come lo mette chi scrive.
+    await ex.keyboard.type('$y = x^2')
+    await ex.locator('.formula-box button', { hasText: 'Inserisci il grafico' }).click()
+    const aiNext = await ex.locator('.editor-toolbar[aria-label="Inserisci"] button').evaluateAll((els) => els.slice(-2).map((b) => b.getAttribute('aria-label')))
+    await ex.locator('.ai-toggle').click()
+    await ex.waitForSelector('.ai-subject')
+    await ex.waitForFunction(() => document.querySelectorAll('.ai-subject').length === 2, null, { timeout: 5000 })
+    const aiOpen = await ex.evaluate(() => ({
+      kinds: [...document.querySelectorAll('.ai-subject')].map((b) => b.dataset.kind),
+      panel: document.querySelector('.app').dataset.panel,
+      search: getComputedStyle(document.querySelector('.panel-search')).display,
+      label: document.querySelector('#symbols-panel').getAttribute('aria-label'),
+    }))
+    check(
+      aiNext.join() === 'Formula a blocco (Ctrl+Maiusc+M),Spiega con l\'AI' && aiOpen.kinds.join() === 'conto,grafico' && aiOpen.panel === 'ai' && aiOpen.search === 'none' && aiOpen.label === 'Spiega con l\'AI',
+      `il pulsante ✨ dopo $$ apre «Spiega con l'AI» al posto dei simboli, con il conto e il grafico della nota (${JSON.stringify({ aiNext, aiOpen })})`,
+    )
+    await ex.locator('.ai-subject[data-kind="grafico"]').click()
+    await ex.waitForSelector('.ai-panel .explain-summary', { timeout: 15000 })
+    const aiShown = await ex.evaluate(() => ({
+      marks: [...document.querySelectorAll('.ai-panel .explain-step')].map((s) => s.className.replace('explain-step', '').trim()),
+      summary: document.querySelector('.ai-panel .explain-summary').textContent,
+      chosen: document.querySelector('.ai-subject[aria-pressed="true"]')?.dataset.kind,
+    }))
+    check(
+      aiShown.marks.join() === 'is-ok,is-ok,is-wrong' && aiShown.summary.startsWith('✗ Formule controllate da Glifo: 3 su 3, 1 sbagliata') && aiShown.chosen === 'grafico',
+      `scelto il grafico, la spiegazione con le formule controllate da Glifo (${JSON.stringify(aiShown)})`,
+    )
+    await ex.locator('.ai-panel .explain-box button', { hasText: 'Inserisci nella nota' }).click()
+    await ex.waitForFunction(() => document.querySelector('.cm-content').innerText.includes('1. È una parabola'), null, { timeout: 5000 })
+    const afterGraph = await ex.locator('.cm-content').innerText()
+    // «Simboli» torna ai simboli; ✨ di nuovo alla spiegazione, e un altro clic chiude il pannello.
+    await ex.locator('.symbols-toggle').click()
+    const backToSymbols = await ex.evaluate(() => [document.querySelector('.app').dataset.panel, getComputedStyle(document.querySelector('.ai-panel')).display, getComputedStyle(document.querySelector('.panel-search')).display])
+    await ex.locator('.ai-toggle').click()
+    const backToAi = await ex.evaluate(() => getComputedStyle(document.querySelector('.ai-panel')).display)
+    await ex.locator('.ai-toggle').click()
+    const closedPanel = await ex.evaluate(() => document.querySelector('.app').classList.contains('symbols-open'))
+    check(
+      afterGraph.indexOf('```', afterGraph.indexOf('y = x^2')) < afterGraph.indexOf('1. È una parabola') &&
+        backToSymbols.join() === 'symbols,none,flex' &&
+        backToAi === 'flex' &&
+        !closedPanel,
+      `«Inserisci nella nota» mette la spiegazione dopo il grafico; «Simboli» e ✨ cambiano vista, e un secondo clic chiude (${JSON.stringify({ backToSymbols, backToAi, closedPanel })})`,
+    )
     await exContext.close()
 
     // Con il worker vero: WebLLM si carica, ma qui manca WebGPU, e il pannello lo dice.

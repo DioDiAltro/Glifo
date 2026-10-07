@@ -12,6 +12,7 @@ import { CATEGORIES, symbolsInCategory, type CategoryId, type SymbolEntry, type 
 import { cardPreviewTex, formPreviewTex, templateText } from '../symbols/template'
 import type { Settings } from '../store/settings'
 import { ICONS, clear, h, icon } from './dom'
+import { AiPanel } from './aiPanel'
 import { ExplainPanel } from './explainPanel'
 
 export interface SidePanelDeps {
@@ -21,7 +22,12 @@ export interface SidePanelDeps {
   isDark: () => boolean
   openSettings: () => void
   toast: (message: string, kind?: 'info' | 'error') => void
+  /** Chiude il pannello (la ✕ di «Spiega con l'AI»). */
+  closePanel: () => void
 }
+
+/** Cosa mostra il pannello a destra: i simboli o «Spiega con l'AI» (src/ui/aiPanel.ts). */
+export type PanelView = 'symbols' | 'ai'
 
 type AiState =
   | { status: 'idle' }
@@ -69,9 +75,14 @@ export class SidePanel {
   private ai: AiState = { status: 'idle' }
   /** «Spiegami»: il pulsante nel riquadro della formula e la spiegazione sotto (src/ui/explainPanel.ts). */
   private readonly explain: ExplainPanel
+  /** «Spiega con l'AI»: l'altra vista del pannello, nello stesso posto (con la stessa larghezza). */
+  readonly aiPanel: AiPanel
+  private shown: PanelView = 'symbols'
+  private open = false
 
   constructor(private readonly deps: SidePanelDeps) {
     this.explain = new ExplainPanel({ editor: deps.editor, settings: deps.settings, openSettings: deps.openSettings, toast: deps.toast })
+    this.aiPanel = new AiPanel({ editor: deps.editor, settings: deps.settings, openSettings: deps.openSettings, toast: deps.toast, onClose: deps.closePanel })
     this.searchInput = h('input', {
       class: 'panel-search-input',
       attrs: {
@@ -147,6 +158,7 @@ export class SidePanel {
       ),
       this.explain.el,
       this.body,
+      this.aiPanel.el,
     )
 
     deps.editor.suggestions.subscribe(() => {
@@ -191,6 +203,29 @@ export class SidePanel {
   focusSearch(): void {
     this.searchInput.focus()
     this.searchInput.select()
+  }
+
+  /** Quale vista si vede quando il pannello è aperto. */
+  get view(): PanelView {
+    return this.shown
+  }
+
+  setView(view: PanelView): void {
+    this.shown = view
+    this.el.classList.toggle('view-ai', view === 'ai')
+    this.el.setAttribute('aria-label', view === 'ai' ? 'Spiega con l\'AI' : 'Pannello dei simboli')
+    this.syncAi()
+  }
+
+  /** Il pannello si apre o si chiude (main.ts, `setPanels`): l'elenco di «Spiega con l'AI» si fa solo se si vede. */
+  setOpen(open: boolean): void {
+    this.open = open
+    this.syncAi()
+  }
+
+  private syncAi(): void {
+    if (this.open && this.shown === 'ai') this.aiPanel.show()
+    else this.aiPanel.hide()
   }
 
   // ——— Anteprima della formula sotto il cursore ———

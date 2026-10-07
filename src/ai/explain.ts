@@ -44,6 +44,24 @@ export interface ExplainTarget {
   defs: string[]
 }
 
+/**
+ * Una cosa della nota da spiegare che non è un conto (il pannello «Spiega con l'AI», src/ui/aiPanel.ts):
+ * qui non c'è un risultato a cui arrivare, ma Glifo controlla le formule che il modello scrive.
+ */
+export type TopicKind = 'grafico' | 'formula' | 'teorema' | 'schema' | 'tabella'
+
+export interface ExplainTopic {
+  kind: TopicKind
+  /** In cima alla spiegazione: una formula (LaTeX) o un testo. */
+  title: { tex: string } | { text: string }
+  /** Quello che il modello legge della nota: il blocco, la formula, il testo. */
+  content: string
+  /** Quello che Glifo ha già calcolato (lo studio di una funzione, un'area…), un fatto per riga. */
+  facts: string[]
+  /** Le definizioni per gli strumenti e per controllare le formule: quelle della nota e le funzioni del grafico. */
+  defs: string[]
+}
+
 export interface ExplainStep {
   /** La frase, con le formule in linea tra $. */
   text: string
@@ -367,6 +385,96 @@ export function feedback(result: { steps: ExplainStep[]; reaches: boolean | null
   return ['Glifo ha controllato i passaggi:', ...lines, 'Correggi e riscrivi tutta la spiegazione nello stesso formato. Se ti serve un conto, usa gli strumenti.'].join('\n')
 }
 
+/** Cosa si chiede al modello per ogni tipo di cosa della nota. */
+const TOPIC_TASK: Record<TopicKind, string> = {
+  grafico: 'cosa mostra un grafico della sua nota: che funzioni ci sono, dove tagliano gli assi, dove crescono e decrescono, massimi e minimi, asintoti, le aree colorate e i punti',
+  formula: 'cosa significa una formula della sua nota: cosa sono i simboli, cosa dice e quando si usa',
+  teorema: 'un teorema o una definizione della sua nota: cosa dice, le ipotesi, a cosa serve, con un esempio',
+  schema: 'uno schema della sua nota: cosa rappresenta, le parti e come sono collegate',
+  tabella: 'una tabella della sua nota: cosa contiene, cosa calcolano le formule e cosa dicono i risultati',
+}
+
+const TOPIC_HEAD: Record<TopicKind, string> = {
+  grafico: 'Il grafico nella nota',
+  formula: 'La formula nella nota',
+  teorema: 'Dalla nota',
+  schema: 'Lo schema nella nota',
+  tabella: 'La tabella nella nota, con i valori calcolati da Glifo',
+}
+
+const TOPIC_ASK: Record<TopicKind, string> = {
+  grafico: 'Spiegami cosa mostra il grafico.',
+  formula: 'Spiegami cosa significa questa formula.',
+  teorema: 'Spiegami questo enunciato.',
+  schema: 'Spiegami cosa rappresenta lo schema.',
+  tabella: 'Spiegami cosa calcola la tabella.',
+}
+
+/** Quanto della nota si manda al modello: il contesto è di 4096 token. */
+const TOPIC_CHARS = 1600
+
+export function topicSystemPrompt(tone: ExplainTone, kind: TopicKind): string {
+  // Gli strumenti servono dove ci sono conti da fare (un grafico, una formula); altrove occupano posto.
+  const tools = kind === 'grafico' || kind === 'formula'
+  return [
+    `Sei il tutor di Glifo, l'app per prendere appunti di matematica. Spieghi in italiano allo studente ${TOPIC_TASK[kind]}.`,
+    TONES[tone],
+    '',
+    'Regole:',
+    `- I numeri li calcola il motore di Glifo, che non sbaglia: usa i fatti che ti dà Glifo${tools ? ' e, se ti serve un altro conto, gli strumenti' : ''}. Non inventare numeri.`,
+    '- Glifo controlla le formule che scrivi.',
+    '- Scrivi solo la spiegazione: un elenco numerato, un punto per riga. In ogni punto una o due frasi e, quando aiuta, alla fine una formula tra $$: un\'uguaglianza in LaTeX (a = b) senza parole dentro. Da 2 a 6 punti.',
+    ...(tools ? ['', toolsPrompt()] : []),
+  ].join('\n')
+}
+
+export function topicPrompt(topic: ExplainTopic): string {
+  const content = topic.content.length > TOPIC_CHARS ? `${topic.content.slice(0, TOPIC_CHARS)}\n…` : topic.content
+  const lines = [`${TOPIC_HEAD[topic.kind]}:`, content]
+  if (topic.defs.length) lines.push(`Definizioni: ${topic.defs.map((d) => `$${d}$`).join(', ')}`)
+  for (const fact of topic.facts) lines.push(`Dal motore di Glifo: ${fact}`)
+  lines.push(TOPIC_ASK[topic.kind])
+  return lines.join('\n')
+}
+
+/**
+ * Una formula di un punto: come i passaggi dei conti; in più f(x) = x^2 o f'(x) = 2x, con il nome
+ * davanti (che `checkFormula` toglie, perché di solito è una definizione) confrontato con la formula.
+ */
+function checkTopicFormula(tex: string, sheet: SheetFactory): FormulaCheck {
+  const check = checkFormula(tex, sheet, 'x', 'strict')
+  if (check) return check
+  const parts = splitEquals(tex)
+    .map((p) => p.trim())
+    .filter(Boolean)
+  if (parts.length !== 2 || !/^[A-Za-z]'*\(x\)$/.test(parts[0].replace(/\s+/g, ''))) return null
+  const same = sheet().same(parts[0], parts[1], 'x')
+  return same === null ? null : same ? { ok: true } : { ok: false }
+}
+
+/** I punti con il controllo di Glifo sulle formule; un ✗ con lettere che non sono della nota non è sicuro. */
+export function checkTopicSteps(raw: { text: string; formula: string | null }[], topic: ExplainTopic, sheet: SheetFactory): { steps: ExplainStep[]; reaches: null } {
+  const own = new Set(['x', 'y'])
+  for (const d of topic.defs) allNames(d).forEach((n) => own.add(n))
+  const steps = raw.map((s): ExplainStep => {
+    if (!s.formula) return { ...s, check: null }
+    let check = checkTopicFormula(s.formula, sheet)
+    if (check && !check.ok && [...formulaNames(s.formula)].some((n) => !own.has(n) && !['π', 'e', 'i'].includes(n))) check = null
+    return { ...s, check }
+  })
+  return { steps, reaches: null }
+}
+
+/** Il messaggio per il modello con le formule che Glifo ha trovato sbagliate; null se va tutto bene. */
+export function topicFeedback(result: { steps: ExplainStep[] }): string | null {
+  const lines: string[] = []
+  result.steps.forEach((s, i) => {
+    if (s.check && !s.check.ok) lines.push(`- La formula del punto ${i + 1} è sbagliata${s.check.value ? `: Glifo calcola $${s.check.value.tex}$` : ''}.`)
+  })
+  if (!lines.length) return null
+  return ['Glifo ha controllato le formule:', ...lines, 'Correggi e riscrivi tutta la spiegazione nello stesso formato.'].join('\n')
+}
+
 /** Quanti passaggi sbagliati (per tenere la spiegazione migliore tra quelle scritte). */
 function wrongs(e: Explanation): number {
   return e.steps.filter((s) => s.check && !s.check.ok).length + (e.reaches === false ? 1 : 0)
@@ -382,13 +490,56 @@ function said(reply: string): string {
   return reply.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').trim()
 }
 
-/** La spiegazione: il giro tra il modello (`chat`) e il motore, vedi in cima al file. */
+/** La spiegazione di un conto: il giro tra il modello (`chat`) e il motore, vedi in cima al file. */
 export async function explain(target: ExplainTarget, tone: ExplainTone, chat: ChatFn, events: ExplainEvents = {}): Promise<Explanation> {
   const sheet = sheetFactory(target.defs)
-  const messages: ChatMessage[] = [
-    { role: 'system', content: systemPrompt(tone) },
-    { role: 'user', content: questionPrompt(target, engineHints(target, sheet)) },
-  ]
+  return converse(
+    {
+      messages: [
+        { role: 'system', content: systemPrompt(tone) },
+        { role: 'user', content: questionPrompt(target, engineHints(target, sheet)) },
+      ],
+      sheet,
+      check: (raw) => checkSteps(raw, target, sheet),
+      feedback: (result) => feedback(result, target),
+      needsFormula: true,
+    },
+    chat,
+    events,
+  )
+}
+
+/** La spiegazione di un grafico (o di un'altra cosa della nota): lo stesso giro, senza un risultato a cui arrivare. */
+export async function explainTopic(topic: ExplainTopic, tone: ExplainTone, chat: ChatFn, events: ExplainEvents = {}): Promise<Explanation> {
+  const sheet = sheetFactory(topic.defs)
+  return converse(
+    {
+      messages: [
+        { role: 'system', content: topicSystemPrompt(tone, topic.kind) },
+        { role: 'user', content: topicPrompt(topic) },
+      ],
+      sheet,
+      check: (raw) => checkTopicSteps(raw, topic, sheet),
+      feedback: topicFeedback,
+      needsFormula: false,
+    },
+    chat,
+    events,
+  )
+}
+
+/** Cosa cambia tra un conto e le altre cose della nota; il giro con il modello è lo stesso. */
+interface Conversation {
+  messages: ChatMessage[]
+  sheet: SheetFactory
+  check(raw: { text: string; formula: string | null }[]): { steps: ExplainStep[]; reaches: boolean | null }
+  feedback(result: { steps: ExplainStep[]; reaches: boolean | null }): string | null
+  /** Un conto si spiega con le formule: senza nessuna, si chiede di riscrivere. Un grafico può bastare a parole. */
+  needsFormula: boolean
+}
+
+async function converse(c: Conversation, chat: ChatFn, events: ExplainEvents): Promise<Explanation> {
+  const { messages, sheet } = c
   let toolCalls = 0
   let toolRounds = 0
   let corrections = 0
@@ -423,16 +574,19 @@ export async function explain(target: ExplainTarget, tone: ExplainTone, chat: Ch
       continue
     }
     const raw = stepsIn(reply)
-    if (!raw.some((s) => s.formula)) {
+    if (c.needsFormula ? !raw.some((s) => s.formula) : !raw.length) {
       if (reminded) break
       reminded = true
-      messages.push({ role: 'assistant', content: said(reply) }, { role: 'user', content: 'Ora scrivi la spiegazione nel formato richiesto: 1. frase $$formula$$, un passaggio per riga.' })
+      const ask = c.needsFormula
+        ? 'Ora scrivi la spiegazione nel formato richiesto: un elenco numerato, un passaggio per riga, con la frase e la formula tra $$.'
+        : 'Ora scrivi la spiegazione nel formato richiesto: un elenco numerato, un punto per riga.'
+      messages.push({ role: 'assistant', content: said(reply) }, { role: 'user', content: ask })
       continue
     }
-    const { steps, reaches } = checkSteps(raw, target, sheet)
+    const { steps, reaches } = c.check(raw)
     const result: Explanation = { steps, reaches, toolCalls, corrections }
     if (!best || wrongs(result) <= wrongs(best)) best = result
-    const note = feedback(result, target)
+    const note = c.feedback(result)
     if (!note || corrections >= MAX_CORRECTIONS) break
     corrections++
     messages.push({ role: 'assistant', content: said(reply) }, { role: 'user', content: note })

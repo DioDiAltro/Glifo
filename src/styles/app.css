@@ -470,6 +470,24 @@ kbd {
   color: var(--on-accent);
 }
 
+/* «Spiega con l'AI»: solo l'icona, nella barra dopo $$. Il pannello a destra mostra una vista alla
+   volta: è acceso il pulsante di quella che si vede (`data-panel` su .app). */
+.ai-toggle {
+  color: var(--accent);
+}
+
+.app.symbols-open[data-panel='ai'] .ai-toggle {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.app.symbols-open[data-panel='ai'] .symbols-toggle {
+  background: var(--accent-soft);
+  border-color: var(--border);
+  color: var(--accent-text);
+}
+
 .view-switch {
   display: flex;
   padding: 3px;
@@ -1636,6 +1654,132 @@ kbd {
 
 .btn-explain:hover:not(:disabled) {
   background: color-mix(in srgb, var(--accent) 20%, var(--surface));
+}
+
+/* «Spiega con l'AI» (src/ui/aiPanel.ts): l'altra vista del pannello a destra, al posto dei simboli. */
+.symbols-panel.view-ai > :not(.ai-panel) {
+  display: none !important;
+}
+
+.symbols-panel:not(.view-ai) > .ai-panel {
+  display: none;
+}
+
+.ai-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 12px;
+}
+
+.ai-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 12px 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ai-panel-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--heading);
+}
+
+.ai-panel-title svg {
+  color: var(--accent);
+}
+
+.ai-panel-close {
+  margin-left: auto;
+}
+
+.ai-panel-label {
+  margin: 12px 16px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ai-subjects {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 12px 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-subject {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ai-subject:hover {
+  border-color: var(--border-strong);
+}
+
+.ai-subject.is-chosen {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.ai-subject-kind {
+  flex: none;
+  width: 60px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.ai-subject.is-chosen .ai-subject-kind {
+  color: var(--accent-text);
+}
+
+/* Una formula lunga si taglia: si vede l'inizio, che basta a riconoscerla. */
+.ai-subject-body {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  mask-image: linear-gradient(to right, #000 85%, transparent);
+}
+
+.ai-panel-empty {
+  margin: 0 16px 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.ai-panel-empty[hidden] {
+  display: none;
+}
+
+.ai-panel .explain-box {
+  max-height: none;
+}
+
+.explain-title-text {
+  font-weight: 600;
+  text-align: center;
 }
 
 /* La spiegazione: i passaggi del modello con il segno di Glifo, sotto il riquadro della formula. */

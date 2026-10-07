@@ -167,6 +167,8 @@ export interface ToolbarActions {
   onSheet(): void
   /** Mette nella nota un grafico di funzione. */
   onGraph(): void
+  /** Il pulsante ✨ di «Spiega con l'AI» (src/ui/aiPanel.ts), in fondo agli inserimenti, dopo $$. */
+  explain: HTMLElement
 }
 
 /**
@@ -197,6 +199,7 @@ export function createToolbar(editor: MarkdownEditor, more: ToolbarActions): { f
     'sep',
     { text: '$x$', title: 'Formula in linea (Ctrl+M)', run: () => editor.insertInlineMath() },
     { text: '$$', title: 'Formula a blocco (Ctrl+Maiusc+M)', run: () => editor.insertBlockMath() },
+    more.explain,
   ]
   return { format: toolbar('Formattazione', format), insert: toolbar('Inserisci', insert) }
 }

@@ -370,7 +370,26 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   `explainTone`, solo su questo dispositivo (`explainFieldset` in `src/ui/dialogs.ts`). Nella PWA il
   worker non è tra i file precaricati: alla prima spiegazione va nella cache `glifo-webllm`, per
   l'offline. Nelle prove nel browser il worker è sostituito da uno finto (`fakeLlmWorker` in
-  `scripts/smoke-test.mjs`).
+  `scripts/smoke-test.mjs`; per un grafico risponde con tre punti, uno sbagliato).
+  «Spiega con l'AI» (7 ottobre 2026, sul ramo `prova`): il pulsante ✨ dopo `$$` (`aiToggle` in main.ts,
+  in fondo agli inserimenti di `toolbar.ts`) mostra nel pannello a destra, al posto dei simboli, la vista
+  `ai` (`SidePanel.setView` e `setOpen`, `PanelView`; `data-panel` su `.app` dice quale pulsante è acceso;
+  il pulsante della vista che si vede chiude il pannello, l'altro cambia vista, Ctrl+K torna ai simboli):
+  `src/ui/aiPanel.ts`, con l'elenco di `subjectsIn` (`src/editor/explainSubjects.ts`: i conti, letti con un
+  foglio solo dall'alto in basso come i risultati, e i blocchi ```grafico chiusi con le definizioni scritte
+  prima; dall'albero completo di `ensureSyntaxTree`, che lo stato non restituisce: `formulasUntil` lo
+  prende come `tree`) e, scelto uno, la spiegazione in un `ExplainPanel` suo (`explainSubject` con un
+  `ExplainSubject`: un conto, o un `ExplainTopic` con il testo per ritrovarlo). L'elenco si rifà solo se
+  si vede, 300 ms dopo l'ultima modifica; cambiando nota `reset` chiude la spiegazione. Per un grafico
+  `graphTopic` (`src/ai/topics.ts`) dà al modello il blocco e i fatti di Glifo: per ogni funzione lo studio
+  di funzione (y = … prende un nome libero, f(x), g(x)…; y = f(x) con f della nota resta f), le aree, i
+  punti, gli slider. `explainTopic` fa lo stesso giro dei conti (`converse`) con un messaggio di sistema
+  per il tipo (`topicSystemPrompt`, gli strumenti solo per grafici e formule) e senza un risultato a cui
+  arrivare: `checkTopicSteps` controlla le formule dei punti (anche f(x) = … e f'(x) = …, con `Sheet.same`),
+  `topicFeedback` fa correggere quelle sbagliate, una spiegazione solo a parole va bene; il riepilogo dice
+  quante formule ha controllato Glifo e che le frasi le scrive il modello. «Inserisci nella nota» la mette
+  dopo il blocco (`insertAfterText`, cercando il testo del blocco vicino al suo inizio, non alla riga ```:
+  una formula uguale scritta appena prima sarebbe più vicina).
 - `src/account/`: account e sincronizzazione. `sync.ts` è il motore (manda, scarica, nei
   conflitti tiene tutte e due le versioni), `controller.ts` decide quando sincronizzare,
   `space.ts` tiene le note di ogni account in uno spazio a parte del browser (`glifo.u.<id>.…`),

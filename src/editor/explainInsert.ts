@@ -10,12 +10,17 @@ import { calculationRequest, solveRequest } from '../math/sheet'
 import { formulasUntil, sheetBefore } from './calcResults'
 import { mathRegionAt, type MathRegion } from './mathContext'
 
-/** La formula chiusa in cui è il cursore, se ha un «=» o un ⇒ (le altre non hanno un conto da spiegare). */
+/** Una formula con un «=» o un ⇒: le altre non hanno un conto da spiegare. */
+export function hasCalculation(tex: string): boolean {
+  return /=|\\(?:Rightarrow|implies|iff|Leftrightarrow)\b|[⇒⇔≈]|\\approx/.test(tex)
+}
+
+/** La formula chiusa in cui è il cursore, se ha un conto da spiegare. */
 export function regionToExplain(state: EditorState): MathRegion | null {
   const head = state.selection.main.head
   const region = mathRegionAt(state, head)
   if (!region || !region.closed || head < region.contentFrom || head > region.contentTo) return null
-  return /=|\\(?:Rightarrow|implies|iff|Leftrightarrow)\b|[⇒⇔≈]|\\approx/.test(region.tex) ? region : null
+  return hasCalculation(region.tex) ? region : null
 }
 
 /** Cosa c'è da spiegare nella formula: il conto di Glifo, con le definizioni scritte prima nella nota. */
@@ -49,10 +54,33 @@ export function insertExplanation(view: EditorView, markdown: string, tex: strin
     if (r.tex.trim() === tex && (!found || Math.abs(r.to - near) < Math.abs(found.to - near))) found = r
   }
   if (!found) return false
-  // Il blocco di primo livello che contiene la formula: la spiegazione va dopo, non a metà paragrafo.
-  let block = syntaxTree(state).resolveInner(found.from, 1)
+  insertAfterBlock(view, markdown, found.from, found.to)
+  return true
+}
+
+/**
+ * Mette la spiegazione dopo il blocco (un grafico, un paragrafo…) che contiene il testo spiegato: quello
+ * più vicino a `near`, se nella nota c'è più volte. false se il testo non c'è più.
+ */
+export function insertAfterText(view: EditorView, markdown: string, text: string, near: number): boolean {
+  const doc = view.state.doc.toString()
+  let best = -1
+  if (text) {
+    for (let i = doc.indexOf(text); i >= 0; i = doc.indexOf(text, i + 1)) {
+      if (best < 0 || Math.abs(i - near) < Math.abs(best - near)) best = i
+    }
+  }
+  if (best < 0) return false
+  insertAfterBlock(view, markdown, best, best + text.length)
+  return true
+}
+
+/** Dopo il blocco di primo livello che contiene da `from` a `to`: non a metà paragrafo o dentro un elenco. */
+function insertAfterBlock(view: EditorView, markdown: string, from: number, to: number): void {
+  const { state } = view
+  let block = syntaxTree(state).resolveInner(from, 1)
   while (block.parent && block.parent.name !== 'Document') block = block.parent
-  const end = block.parent ? Math.max(block.to, found.to) : found.to
+  const end = block.parent ? Math.max(block.to, to) : to
   const line = state.doc.lineAt(end)
   // Una riga vuota prima; dopo, se il testo continua subito (senza, sarebbe la coda dell'ultimo passaggio).
   const insert = `\n\n${markdown}${nextLineText(state.doc, line.number).trim() ? '\n' : ''}`
@@ -64,7 +92,6 @@ export function insertExplanation(view: EditorView, markdown: string, tex: strin
     userEvent: 'input',
   })
   view.focus()
-  return true
 }
 
 function nextLineText(doc: Text, line: number): string {

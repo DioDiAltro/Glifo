@@ -74,7 +74,7 @@ import { logoMark } from './ui/logo'
 import { NotesPanel } from './ui/notesPanel'
 import { Preview } from './ui/preview'
 import { PaneResizer } from './ui/resize'
-import { SidePanel } from './ui/sidePanel'
+import { SidePanel, type PanelView } from './ui/sidePanel'
 import { toast } from './ui/toast'
 import { leaveNotice, takeNotice } from './ui/notice'
 import { createToolbar } from './ui/toolbar'
@@ -336,6 +336,7 @@ const sidePanel = new SidePanel({
   isDark: () => isDark(),
   openSettings: () => openSettings(),
   toast,
+  closePanel: () => setPanels({ symbolsOpen: false }),
 })
 
 const notesPanel = new NotesPanel({
@@ -357,7 +358,18 @@ const editorPane = h('section', { class: 'editor-pane', attrs: { id: 'editor-pan
 // Una riga sola sopra il testo, con i pulsanti volanti: a sinistra la barra laterale (quando è
 // chiusa) e la formattazione, al centro le viste, a destra gli inserimenti e i simboli, vicino al
 // loro pannello. Quanto ci sta lo decide `fitBar`.
-const tools = createToolbar(editor, { onSchema: () => void openSchema(null), onSheet: () => void openSheet(null), onGraph: () => insertGraph() })
+// «Spiega con l'AI» (src/ui/aiPanel.ts): solo l'icona, dopo $$; il pannello va al posto dei simboli.
+const aiToggle = h(
+  'button',
+  {
+    class: 'tool ai-toggle',
+    title: 'Spiega con l\'AI: scegli nella nota cosa farti spiegare',
+    attrs: { type: 'button', 'aria-label': 'Spiega con l\'AI' },
+    on: { mousedown: (ev) => ev.preventDefault(), click: () => togglePanel('ai') },
+  },
+  icon(ICONS.sparkles, 17),
+)
+const tools = createToolbar(editor, { onSchema: () => void openSchema(null), onSheet: () => void openSheet(null), onGraph: () => insertGraph(), explain: aiToggle })
 const floatTools = h('div', { class: 'float-tools' }, tools.format)
 const floatRight = h(
   'div',
@@ -369,7 +381,7 @@ const floatRight = h(
       class: 'icon-button float-button symbols-toggle',
       title: 'Mostra/nascondi i simboli',
       attrs: { type: 'button', 'aria-label': 'Mostra o nascondi il pannello dei simboli' },
-      on: { click: () => setPanels({ symbolsOpen: !settings.symbolsOpen }) },
+      on: { click: () => togglePanel('symbols') },
     },
     icon(ICONS.panel),
     h('span', { class: 'symbols-toggle-label' }, 'Simboli'),
@@ -434,6 +446,7 @@ const workspace = h(
   backdrop,
 )
 const app = h('div', { class: 'app' }, workspace)
+app.dataset.panel = 'symbols'
 document.getElementById('app')!.replaceWith(app)
 
 preview.update(active.content, true)
@@ -506,10 +519,27 @@ function setPanels(next: Partial<Pick<Settings, 'notesOpen' | 'symbolsOpen'>>): 
   updateSettings(next)
   app.classList.toggle('notes-open', settings.notesOpen)
   app.classList.toggle('symbols-open', settings.symbolsOpen)
+  sidePanel.setOpen(settings.symbolsOpen)
   fitBar()
 }
 
+/** Il pannello a destra mostra i simboli o «Spiega con l'AI»: il pulsante della vista che si vede lo chiude, l'altro cambia vista. */
+function togglePanel(view: PanelView): void {
+  if (settings.symbolsOpen && sidePanel.view === view) {
+    setPanels({ symbolsOpen: false })
+    return
+  }
+  showPanelView(view)
+  if (!settings.symbolsOpen) setPanels({ symbolsOpen: true })
+}
+
+function showPanelView(view: PanelView): void {
+  sidePanel.setView(view)
+  app.dataset.panel = view
+}
+
 function focusSymbolSearch(): void {
+  showPanelView('symbols')
   if (!settings.symbolsOpen) setPanels({ symbolsOpen: true })
   sidePanel.focusSearch()
 }
@@ -620,6 +650,8 @@ function loadNote(id: string, focus = true): void {
   active = note
   store.activeId = id
   editor.setDoc(note.content)
+  // «Spiega con l'AI»: l'elenco è dell'altra nota, la spiegazione di prima non c'entra più.
+  sidePanel.aiPanel.reset()
   // Un'altra nota: l'anteprima torna a seguire l'editor (dopo le frecce era rimasta ferma).
   preview.release()
   preview.update(note.content, true)

@@ -4,12 +4,14 @@
  * del modello (la prima volta), il testo mentre il modello lo scrive, poi i passaggi con il segno di Glifo
  * (✓, ✗ con il valore giusto, o «non controllato»), «Inserisci nella nota» e «Rifai». La spiegazione resta
  * finché non se ne chiede un'altra o si chiude, anche spostando il cursore. Vedi src/ai/explain.ts.
+ * Lo stesso riquadro spiega anche quello che si sceglie nel pannello «Spiega con l'AI» (src/ui/aiPanel.ts):
+ * un conto o un grafico (`explainSubject`).
  */
-import { explain, REPLY_TOKENS, type Explanation, type ExplainTarget } from '../ai/explain'
+import { explain, explainTopic, REPLY_TOKENS, type ExplainEvents, type Explanation, type ExplainTarget, type ExplainTopic } from '../ai/explain'
 import { LocalAbort, localLlm, type ChatMessage, type ChatOptions, type LoadProgress } from '../ai/local'
 import { localModel, modelName } from '../ai/localModels'
 import type { MarkdownEditor } from '../editor/editor'
-import { explanationMarkdown, insertExplanation, regionToExplain, targetAt } from '../editor/explainInsert'
+import { explanationMarkdown, insertAfterText, insertExplanation, regionToExplain, targetAt } from '../editor/explainInsert'
 import type { MathRegion } from '../editor/mathContext'
 import { inClaudeViewer } from '../host'
 import { checkHtml } from '../render/check'
@@ -31,9 +33,12 @@ export interface ExplainPanelDeps {
   model?: () => ExplainModel
 }
 
-/** La formula spiegata: il conto e dove era nella nota (per rimetterci la spiegazione). */
+/** Cosa si spiega: un conto della nota, o un'altra cosa (un grafico…) con il testo per ritrovarla nella nota. */
+export type ExplainSubject = { kind: 'conto'; target: ExplainTarget } | { kind: 'topic'; topic: ExplainTopic; source: string }
+
+/** Quello che si spiega e dove era nella nota (per rimetterci la spiegazione). */
 interface Asked {
-  target: ExplainTarget
+  subject: ExplainSubject
   near: number
   controller: AbortController
 }
@@ -137,10 +142,18 @@ export class ExplainPanel {
 
   /** Spiega la formula sotto il cursore (o, con `again`, di nuovo quella già spiegata). */
   async start(again?: Asked): Promise<void> {
-    const target = again?.target ?? this.here?.target
-    if (!target) return
+    if (again) return this.run(again.subject, again.near)
+    if (this.here) return this.run({ kind: 'conto', target: this.here.target }, this.here.region.to)
+  }
+
+  /** Spiega quello che si è scelto nel pannello «Spiega con l'AI»; `near`: dov'è nella nota. */
+  explainSubject(subject: ExplainSubject, near: number): Promise<void> {
+    return this.run(subject, near)
+  }
+
+  private async run(subject: ExplainSubject, near: number): Promise<void> {
     if (this.state.status === 'loading' || this.state.status === 'writing') this.state.asked.controller.abort()
-    const asked: Asked = { target, near: again?.near ?? this.here!.region.to, controller: new AbortController() }
+    const asked: Asked = { subject, near, controller: new AbortController() }
     const settings = this.deps.settings()
     const chosen = localModel(settings.localModel)
     const model = this.model()
@@ -160,27 +173,29 @@ export class ExplainPanel {
       if (!this.current(asked)) return
       const name = modelName(loaded)
       this.set({ status: 'writing', asked, model: name, correcting: false, tools: 0 })
-      const explanation = await explain(
-        target,
-        settings.explainTone,
-        (messages, onDelta) => model.chat(messages, { maxTokens: REPLY_TOKENS }, onDelta, asked.controller.signal),
-        {
-          onStatus: (status) => {
-            if (!this.current(asked) || this.state.status !== 'writing') return
-            if (status === 'tool') return
-            this.set({ ...this.state, correcting: status === 'correcting' })
-          },
-          onDelta: (text) => this.write(asked, text),
-          onTool: () => {
-            if (this.current(asked) && this.state.status === 'writing') this.set({ ...this.state, tools: this.state.tools + 1 })
-          },
-        },
-      )
+      const chat = (messages: ChatMessage[], onDelta?: (text: string) => void) => model.chat(messages, { maxTokens: REPLY_TOKENS }, onDelta, asked.controller.signal)
+      const events = this.events(asked)
+      const explanation = await (subject.kind === 'conto' ? explain(subject.target, settings.explainTone, chat, events) : explainTopic(subject.topic, settings.explainTone, chat, events))
       if (this.current(asked)) this.set({ status: 'done', asked, model: name, explanation })
     } catch (err) {
       if (!this.current(asked)) return
       if (err instanceof LocalAbort || asked.controller.signal.aborted) this.set({ status: 'idle' })
       else this.set({ status: 'error', asked, message: err instanceof Error ? err.message : String(err) })
+    }
+  }
+
+  /** Cosa fa sapere il giro con il modello (src/ai/explain.ts) al riquadro. */
+  private events(asked: Asked): ExplainEvents {
+    return {
+      onStatus: (status) => {
+        if (!this.current(asked) || this.state.status !== 'writing') return
+        if (status === 'tool') return
+        this.set({ ...this.state, correcting: status === 'correcting' })
+      },
+      onDelta: (text) => this.write(asked, text),
+      onTool: () => {
+        if (this.current(asked) && this.state.status === 'writing') this.set({ ...this.state, tools: this.state.tools + 1 })
+      },
     }
   }
 
@@ -193,15 +208,19 @@ export class ExplainPanel {
     this.draft.scrollTop = this.draft.scrollHeight
   }
 
-  private close(): void {
+  /** Chiude la spiegazione (e ferma il modello, se sta scrivendo). */
+  close(): void {
     if (this.state.status === 'loading' || this.state.status === 'writing') this.state.asked.controller.abort()
     this.set({ status: 'idle' })
   }
 
   private insert(asked: Asked, explanation: Explanation): void {
-    const ok = insertExplanation(this.deps.editor.view, explanationMarkdown(explanation), asked.target.tex, asked.near)
+    const { view } = this.deps.editor
+    const markdown = explanationMarkdown(explanation)
+    const s = asked.subject
+    const ok = s.kind === 'conto' ? insertExplanation(view, markdown, s.target.tex, asked.near) : insertAfterText(view, markdown, s.source, asked.near)
     if (ok) this.deps.toast('Spiegazione inserita nella nota')
-    else this.deps.toast('La formula non c\'è più nella nota: la spiegazione non si può inserire', 'error')
+    else this.deps.toast(`${s.kind === 'conto' ? 'La formula' : 'Quello che hai fatto spiegare'} non c'è più nella nota: la spiegazione non si può inserire`, 'error')
   }
 
   private render(): void {
@@ -224,7 +243,7 @@ export class ExplainPanel {
         icon(ICONS.x, 15),
       ),
     )
-    const formula = h('div', { class: 'explain-formula', html: texHtml(s.asked.target.kind === 'solve' ? `${s.asked.target.question} \\Rightarrow` : s.asked.target.question, true) })
+    const formula = this.subjectView(s.asked.subject)
     const parts: (HTMLElement | null)[] = [head, formula]
     if (s.status === 'loading') {
       const chosen = localModel(this.deps.settings().localModel)
@@ -243,7 +262,13 @@ export class ExplainPanel {
           'div',
           { class: 'ai-loading', attrs: { role: 'status' } },
           h('span', { class: 'spinner', attrs: { 'aria-hidden': 'true' } }),
-          s.correcting ? 'Correggo i passaggi che Glifo ha segnato…' : 'Scrivo i passaggi…',
+          s.asked.subject.kind === 'conto'
+            ? s.correcting
+              ? 'Correggo i passaggi che Glifo ha segnato…'
+              : 'Scrivo i passaggi…'
+            : s.correcting
+              ? 'Correggo le formule che Glifo ha segnato…'
+              : 'Scrivo la spiegazione…',
         ),
         s.tools ? h('p', { class: 'ai-hint' }, `Conti fatti dal motore di Glifo: ${s.tools}`) : null,
         this.draft,
@@ -259,6 +284,16 @@ export class ExplainPanel {
       parts.push(...this.stepsView(s.asked, s.explanation))
     }
     this.el.replaceChildren(...parts.filter((p): p is HTMLElement => p !== null))
+  }
+
+  /** In cima alla spiegazione: il conto, o la formula o il nome di quello che si spiega. */
+  private subjectView(subject: ExplainSubject): HTMLElement {
+    if (subject.kind === 'conto') {
+      const { target } = subject
+      return h('div', { class: 'explain-formula', html: texHtml(target.kind === 'solve' ? `${target.question} \\Rightarrow` : target.question, true) })
+    }
+    const { title } = subject.topic
+    return 'tex' in title ? h('div', { class: 'explain-formula', html: texHtml(title.tex, true) }) : h('div', { class: 'explain-formula explain-title-text' }, title.text)
   }
 
   /** Annulla: la spiegazione si chiude subito (lo scaricamento del modello, se c'è, finisce nel worker e resta per la prossima volta). */
@@ -286,15 +321,25 @@ export class ExplainPanel {
     const formulas = e.steps.filter((s) => s.formula)
     const checked = formulas.filter((s) => s.check?.ok).length
     const wrong = formulas.filter((s) => s.check && !s.check.ok).length
-    const answer = texHtml(asked.target.answer.tex, false)
-    const summary = h('p', { class: `explain-summary${e.reaches === true && !wrong ? ' is-ok' : e.reaches === false || wrong ? ' is-wrong' : ''}`, attrs: { role: 'status' } })
-    summary.innerHTML = [
-      e.reaches === true ? `✓ Arriva al risultato di Glifo, ${answer}.` : e.reaches === false ? `✗ L'ultimo passaggio non arriva al risultato di Glifo, ${answer}.` : `Glifo non ha potuto confrontare l'ultimo passaggio con il suo risultato, ${answer}.`,
-      formulas.length ? ` Passaggi controllati da Glifo: ${checked} su ${formulas.length}${wrong ? `, ${wrong} sbagliat${wrong === 1 ? 'o' : 'i'}` : ''}.` : '',
-    ].join('')
+    const conto = asked.subject.kind === 'conto'
+    const summary = h('p', { class: `explain-summary${(conto ? e.reaches === true : checked > 0) && !wrong ? ' is-ok' : e.reaches === false || wrong ? ' is-wrong' : ''}`, attrs: { role: 'status' } })
+    if (asked.subject.kind === 'conto') {
+      const answer = texHtml(asked.subject.target.answer.tex, false)
+      summary.innerHTML = [
+        e.reaches === true ? `✓ Arriva al risultato di Glifo, ${answer}.` : e.reaches === false ? `✗ L'ultimo passaggio non arriva al risultato di Glifo, ${answer}.` : `Glifo non ha potuto confrontare l'ultimo passaggio con il suo risultato, ${answer}.`,
+        formulas.length ? ` Passaggi controllati da Glifo: ${checked} su ${formulas.length}${wrong ? `, ${wrong} sbagliat${wrong === 1 ? 'o' : 'i'}` : ''}.` : '',
+      ].join('')
+    } else {
+      // Qui non c'è un risultato a cui arrivare: Glifo controlla le formule, le frasi no.
+      summary.textContent = !formulas.length
+        ? 'Glifo non ha formule da controllare in questa spiegazione: le frasi le scrive il modello, e possono sbagliare.'
+        : !checked && !wrong
+          ? 'Glifo non ha potuto controllare le formule di questa spiegazione: le frasi le scrive il modello, e possono sbagliare.'
+          : `${wrong ? '✗' : '✓'} Formule controllate da Glifo: ${checked + wrong} su ${formulas.length}${wrong ? `, ${wrong} sbagliat${wrong === 1 ? 'a' : 'e'}` : ', tutte giuste'}. Le frasi le scrive il modello.`
+    }
     const notes = [
       e.toolCalls ? `il modello ha chiesto ${e.toolCalls === 1 ? 'un conto' : `${e.toolCalls} conti`} al motore` : '',
-      e.corrections ? `Glifo gli ha fatto correggere i passaggi ${e.corrections === 1 ? 'una volta' : `${e.corrections} volte`}` : '',
+      e.corrections ? `Glifo gli ha fatto correggere ${conto ? 'i passaggi' : 'le formule'} ${e.corrections === 1 ? 'una volta' : `${e.corrections} volte`}` : '',
     ].filter(Boolean)
     const parts: (HTMLElement | null)[] = [
       list,
@@ -307,7 +352,7 @@ export class ExplainPanel {
           'button',
           {
             class: 'btn btn-primary btn-small',
-            title: 'Mette i passaggi nella nota, dopo la formula: lì Glifo li controlla come le altre formule',
+            title: conto ? 'Mette i passaggi nella nota, dopo la formula: lì Glifo li controlla come le altre formule' : 'Mette la spiegazione nella nota, subito dopo: lì Glifo controlla le formule come le altre',
             attrs: { type: 'button' },
             on: { mousedown: preventFocusSteal, click: () => this.insert(asked, e) },
           },

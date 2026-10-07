@@ -348,7 +348,13 @@ Glifo non le controlla: da riprovare sul sito di prova.
   davvero (migliaia di spiegazioni fatte bene in italiano, ore di scheda grafica, il modello rifatto per
   WebLLM) è un progetto grosso, da valutare solo se le prove dicono che serve;
 - dove compare la spiegazione non era chiaro: gli è stata mandata una foto finta del pannello (pulsante,
-  elenco, spiegazione, chat) per decidere. Da fare dopo la sua risposta.
+  elenco, spiegazione, chat). Lo studente: «va bene il pannello, procedi in quell'ordine»: 1) i conti e
+  i grafici, 2) i teoremi e le formule senza conto, 3) gli schemi e le tabelle, 4) la chat.
+
+**Fatto il passo 1 (7 ottobre 2026, sera, sul ramo `prova`)**: il pulsante ✨ dopo `$$`, il pannello
+«Spiega con l'AI» al posto dei simboli con l'elenco dei conti e dei grafici della nota e, scelto uno, la
+spiegazione (per i grafici con lo studio di funzione di Glifo e le formule controllate). Descritto nel
+README e in ARCHITETTURA.md (`src/ui/aiPanel.ts`).
 
 Da fare:
 - provarlo davvero su un computer con WebGPU (Chrome o Edge), su esercizi veri, e scegliere il modello

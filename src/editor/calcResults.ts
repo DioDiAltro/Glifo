@@ -10,6 +10,7 @@
  * che il cursore esca dalla formula, per non comparire a metà di quello che si sta scrivendo.
  */
 import { syntaxTree } from '@codemirror/language'
+import type { Tree } from '@lezer/common'
 import { EditorSelection, type EditorState, type Range } from '@codemirror/state'
 import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from '@codemirror/view'
 import type { FormattedResult } from '../math/format'
@@ -39,10 +40,13 @@ export interface CalcCheck extends EqualityCheck {
   to: number
 }
 
-/** Le formule chiuse dall'inizio del testo fino a `to`, nell'ordine. */
-export function formulasUntil(state: EditorState, to: number): MathRegion[] {
+/**
+ * Le formule chiuse dall'inizio del testo fino a `to`, nell'ordine. `tree`: l'albero da leggere, se non
+ * è quello dello stato (quello completo di `ensureSyntaxTree`, che lo stato non restituisce).
+ */
+export function formulasUntil(state: EditorState, to: number, tree: Tree = syntaxTree(state)): MathRegion[] {
   const out: MathRegion[] = []
-  syntaxTree(state).iterate({
+  tree.iterate({
     from: 0,
     to,
     enter: (node) => {
