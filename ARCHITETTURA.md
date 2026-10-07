@@ -74,7 +74,7 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   ogni database (i test lo eseguono in PGlite e in SQLite). I modelli pronti sono in `templates.ts`, allinea e
   distribuisci in `arrange.ts`, PNG e «Copia come immagine» in `image.ts`. Menu e messaggi
   dentro l'editor vanno messi nella sua finestra (è modale: fuori restano sotto).
-- `src/spreadsheet/`: le tabelle con le formule, come Excel (6 ottobre 2026, sul ramo `prova`). Nella
+- `src/spreadsheet/`: le tabelle con le formule, come Excel (6 ottobre 2026). Nella
   nota sono blocchi ```tabella con una riga di testo per riga della tabella (`model.ts`: le celle tra
   |, `\|` per la barra; la riga con i trattini dopo la prima dice che c'è l'intestazione e non conta
   tra le righe: come in Excel la riga 1 è quella dei titoli; il grassetto `**…**`; il formato tra

@@ -658,7 +658,8 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
 - Con **Salva .md** la tabella finisce nel file come **tabella di Markdown con i risultati**, che
   si legge anche in VS Code, su GitHub o in Obsidian; le formule restano nel file, in un commento
   che non si vede, e riaprendolo con **Apri .md** la tabella torna da modificare.
-- Sul telefono un tocco sceglie la cella e un altro tocco ci scrive.
+- Sul telefono un tocco sceglie la cella e un altro tocco ci scrive; Invio conferma e sceglie la
+  cella sotto, dove basta un tocco per scrivere.
 
 **Lavagna**
 - La vista **Lavagna** (in alto, accanto a Editor, Diviso e Anteprima) apre accanto al testo,

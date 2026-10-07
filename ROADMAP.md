@@ -263,8 +263,9 @@ grafici. Tutto è descritto nel README. Se serviranno:
 
   Approvato dallo studente il 5 ottobre 2026 («sì a tutto»), gratis come i calcoli e i grafici. Si fa
   un pezzo alla volta:
-  - fatto, sul ramo `prova` (6 ottobre 2026, lo studente: «sì, parti dalla tabella con le formule»;
-    da vedere prima di pubblicarla): **la tabella con le formule**, non dentro gli schemi ma un blocco
+  - fatto (6 ottobre 2026, lo studente: «sì, parti dalla tabella con le formule»; vista sul ramo
+    `prova` e provata anche sul telefono, il 7 ottobre «carica tutto sul ramo principale»): **la
+    tabella con le formule**, non dentro gli schemi ma un blocco
     ```tabella a parte, che si apre a tutto schermo come gli schemi in un editor fatto come Excel:
     celle e formule all'italiana (=B2*C2, SOMMA, SE, CERCA.VERT, RATA, VAN…, con i nomi dell'Excel
     italiano), numeri in euro e in percentuale, i tasti di Excel, copia e incolla anche con Excel, la
