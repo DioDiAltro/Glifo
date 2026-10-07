@@ -479,6 +479,7 @@ export function chooseWindow(spec: GraphSpec, width: number, height: number): Vi
 
 function findWindow(spec: GraphSpec, width: number, height: number): Viewport {
   const items = spec.items
+  if (items.some((i) => i.kind === 'series')) return dataWindow(spec, width, height)
   // Anche le curve delle aree: la loro forma deve vedersi.
   const functions = items.filter((i): i is Extract<GraphItem, { kind: 'function' | 'area' }> => i.kind === 'function' || i.kind === 'area')
   // Le curve e le figure: con le stesse unità sui due assi, se no si deformano (e gli angoli non tornano).
@@ -618,6 +619,53 @@ function findWindow(spec: GraphSpec, width: number, height: number): Viewport {
   // Le curve (circonferenze, ellissi…) con le stesse unità sui due assi, se no si deformano; nel
   // piano di Gauss sempre (gli angoli dei numeri complessi si vedono giusti).
   if ((curves.length || spec.gauss) && !functions.length && !spec.x && !spec.y) [x, y] = sameUnits(x, ys.length ? [Math.min(...ys), Math.max(...ys)] : y, width, height)
+  return { x0: x[0], x1: x[1], y0: y[0], y1: y[1], width, height }
+}
+
+/**
+ * La finestra per i dati di una tabella: tutti i punti, con lo zero dell'asse y (come i grafici di
+ * Excel: le grandezze si confrontano dal basso) e lo spazio per i numeri delle tacche, a sinistra
+ * dell'asse y e sotto l'asse x.
+ */
+function dataWindow(spec: GraphSpec, width: number, height: number): Viewport {
+  const xs: number[] = []
+  const ys: number[] = [0]
+  for (const item of spec.items) {
+    if (item.kind === 'series') {
+      for (const [x, y] of item.points) {
+        xs.push(x)
+        ys.push(y)
+      }
+    } else if (item.kind === 'mark') {
+      xs.push(item.x)
+      ys.push(item.y)
+    }
+  }
+  let y: Range
+  if (spec.y) y = spec.y
+  else {
+    const lo = Math.min(...ys)
+    const hi = Math.max(...ys)
+    const span = hi - lo || Math.abs(hi) || 1
+    // Sopra un po' di aria; sotto, lo spazio per i numeri dell'asse x (e per il nome dell'asse y in alto).
+    const top = 26
+    const bottom = 24
+    const unit = span / Math.max(40, height - top - bottom)
+    y = [lo - bottom * unit, hi + top * unit]
+  }
+  let x: Range
+  if (spec.x) x = spec.x
+  else {
+    const lo = Math.min(...xs)
+    const hi = Math.max(...xs)
+    const span = hi - lo || Math.abs(hi) || 1
+    // A sinistra lo spazio per il numero più lungo dell'asse y.
+    const longest = Math.max(1, ...ticks(y[0], y[1], height, false, true).major.map((t) => t.label.length))
+    const left = 6.5 * longest + 16
+    const right = 16
+    const unit = span / Math.max(40, width - left - right)
+    x = [lo - left * unit, hi + right * unit]
+  }
   return { x0: x[0], x1: x[1], y0: y[0], y1: y[1], width, height }
 }
 
@@ -793,11 +841,19 @@ export interface Ticks {
 
 const SUPERSCRIPT = '⁰¹²³⁴⁵⁶⁷⁸⁹'
 
-/** Un numero per le tacche: con la virgola e il meno lungo (−0,5), le potenze di 10 per i molto grandi. */
-export function tickLabel(v: number, step: number): string {
+/**
+ * Un numero per le tacche: con la virgola e il meno lungo (−0,5), le potenze di 10 per i molto grandi.
+ * `grouped` (i dati di una tabella: euro, quantità) con i punti delle migliaia, come nella tabella: 20.000.
+ */
+export function tickLabel(v: number, step: number, grouped = false): string {
   if (v === 0) return '0'
   const minus = v < 0 ? '−' : ''
   const a = Math.abs(v)
+  if (grouped && a < 1e15) {
+    const decimals = Math.max(0, -Math.floor(Math.log10(step) + 1e-9))
+    const [int, dec] = a.toFixed(decimals).split('.')
+    return `${minus}${int.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}${dec ? `,${dec}` : ''}`
+  }
   if (a >= 1e5 || a < 1e-3) {
     const exp = Math.floor(Math.log10(a))
     const mant = Number((a / 10 ** exp).toPrecision(3))
@@ -827,7 +883,7 @@ function gcd(a: number, b: number): number {
   return a
 }
 
-export function ticks(lo: number, hi: number, pixels: number, pi = false): Ticks {
+export function ticks(lo: number, hi: number, pixels: number, pi = false, grouped = false): Ticks {
   const target = Math.max(2, pixels / 75)
   const span = hi - lo
   if (pi && span >= 2 && span <= 40 * Math.PI) {
@@ -869,7 +925,7 @@ export function ticks(lo: number, hi: number, pixels: number, pi = false): Ticks
   const minor: number[] = []
   for (let k = Math.ceil(lo / step - 1e-9); k * step <= hi + step * 1e-9; k++) {
     const value = Math.abs(k * step) < step * 1e-9 ? 0 : k * step
-    major.push({ value, label: tickLabel(value, step) })
+    major.push({ value, label: tickLabel(value, step, grouped) })
   }
   const sub = step / parts
   for (let k = Math.ceil(lo / sub - 1e-9); k * sub <= hi; k++) if (k % parts) minor.push(k * sub)

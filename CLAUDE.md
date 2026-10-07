@@ -71,7 +71,7 @@ documentazione, non codice: la regola di delegare all'esploratore vale per il co
 - `src/schema/`: schemi stile draw.io con maxGraph: editor a tutto schermo, file .md, codice SQL.
 - `src/spreadsheet/`: le tabelle con le formule come Excel (blocchi ```tabella), con il loro editor.
 - `src/math/`: le espressioni delle formule: lettura, calcoli e il «foglio» della nota con i controlli.
-- `src/graph/`: i grafici nella nota (2D e 3D, zone, piano di Gauss, statistica) con gli slider.
+- `src/graph/`: i grafici nella nota (2D e 3D, zone, piano di Gauss, statistica, i dati delle tabelle) con gli slider.
 - `src/board/`: la lavagna per scrivere a mano accanto al testo, con il registro dei tocchi.
 - `src/ai/`: assistente AI, con la chiave di chi lo usa.
 - `src/host.ts`: funzioni della demo dentro claude.ai.

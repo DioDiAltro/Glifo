@@ -34,6 +34,8 @@ import { labelHtml, labelPlain } from './labels'
 import { chooseWindow, type Viewport } from './plot'
 import { chooseBox, type Box } from './space'
 import { parseGraph, typedSliderValue, widenSlider, type GraphError, type GraphSlider, type GraphSpec, type Range } from './spec'
+import type { ChartData } from '../spreadsheet/chart'
+import { readChart } from './tableGraph'
 import { graphSvg, graphTitle, itemColors, PALETTES, pointName, type Palette } from './svg'
 import { buildScene, DEFAULT_CAMERA, MAX_ELEVATION, sceneSvg, type Camera, type Quality, type Scene } from './view3d'
 
@@ -142,9 +144,10 @@ const SWEEP = 5
 /** Si sta stampando: i grafici con i valori scritti nella nota. */
 let printing = false
 
-function specFor(key: string, source: string, defs: string[]): GraphSpec {
-  return remember(specs, key, () => parseGraph(source, defs))
+function specFor(key: string, source: string, defs: string[], chart: ChartData | null): GraphSpec {
+  return remember(specs, key, () => parseGraph(source, defs, undefined, chart))
 }
+
 
 function readDefs(block: HTMLElement): string[] {
   try {
@@ -239,9 +242,9 @@ function addLabel(add: NonNullable<GraphError['add']>): string {
 function swatchClass(item: GraphSpec['items'][number]): string {
   const kind = item.kind
   if (item.dashed) return 'graph-swatch is-dashed'
-  if (kind === 'point' || kind === 'point3' || kind === 'points' || (kind === 'complex' && !item.arrows)) return 'graph-swatch is-point'
+  if (kind === 'point' || kind === 'point3' || kind === 'points' || kind === 'mark' || (kind === 'complex' && !item.arrows)) return 'graph-swatch is-point'
   if (kind === 'polygon') return 'graph-swatch is-region'
-  if (kind === 'area' || kind === 'bars') return 'graph-swatch is-area'
+  if (kind === 'area' || kind === 'bars' || kind === 'gap') return 'graph-swatch is-area'
   if (kind === 'region') return 'graph-swatch is-region'
   if (kind === 'surface' || kind === 'implicit3' || kind === 'patch' || kind === 'solid') return 'graph-swatch is-surface'
   if (kind === 'field' || kind === 'field3' || kind === 'vector' || (kind === 'complex' && item.arrows)) return 'graph-swatch is-arrow'
@@ -314,6 +317,8 @@ class GraphView {
   private specValues = ''
   private readonly source: string
   private readonly defs: string[]
+  /** I numeri della tabella sopra, per la riga `dati:`. */
+  private readonly chart: ChartData | null
   private readonly key: string
   private readonly palette: Palette
   private readonly theme: Theme
@@ -364,8 +369,9 @@ class GraphView {
     this.scope = look.scope ?? ''
     this.source = block.dataset.graph ?? ''
     this.defs = readDefs(block)
-    this.key = `${this.source}\n\u0000${this.defs.join('\n')}`
-    this.written = specFor(this.key, this.source, this.defs)
+    this.chart = readChart(block)
+    this.key = `${this.source}\n\u0000${this.defs.join('\n')}${this.chart ? `\n\u0000${block.dataset.table}` : ''}`
+    this.written = specFor(this.key, this.source, this.defs, this.chart)
     this.spec = this.written
     this.explicit = explicitWindow(this.written)
     this.theme = look.theme
@@ -653,7 +659,7 @@ class GraphView {
     if (signature === this.specValues) return this.spec
     this.specValues = signature
     try {
-      this.spec = values.size ? parseGraph(this.source, this.defs, values) : this.written
+      this.spec = values.size ? parseGraph(this.source, this.defs, values, this.chart) : this.written
     } catch {
       this.spec = this.written
     }
@@ -684,7 +690,9 @@ class GraphView {
             ? `(${coord(item.x, 1e-3)}; ${coord(item.y, 1e-3)})`
             : item.kind === 'point3'
               ? `(${coord(item.x, 1e-3)}; ${coord(item.y, 1e-3)}; ${coord(item.z, 1e-3)})`
-              : ''
+              : item.kind === 'mark'
+                ? item.coords
+                : ''
         return `<li><span class="${swatchClass(item)}" style="--graph-color:${color}"></span>${label}${coords ? ` <span class="graph-coords">${escapeHtml(coords)}</span>` : ''}</li>`
       })
     if (!rows.length && !this.spec.errors.length) {
@@ -1074,9 +1082,24 @@ class GraphView {
     const v = this.view
     const x = v.x0 + (p.x / this.width) * (v.x1 - v.x0)
     const ky = this.height / (v.y1 - v.y0)
-    let best: { sx: number; sy: number; x: number; y: number; color: string } | null = null
+    let best: { sx: number; sy: number; x: number; y: number; color: string; text?: string } | null = null
     let bestDistance = 22
+    const sxOf = (px: number) => ((px - v.x0) / (v.x1 - v.x0)) * this.width
     this.spec.items.forEach((item, i) => {
+      if (item.kind === 'series' || item.kind === 'mark') {
+        // I dati di una tabella: il punto più vicino, con i valori scritti come nella tabella.
+        const list = item.kind === 'series' ? item.points.map((pt, k) => ({ pt, text: item.texts[k] })) : [{ pt: [item.x, item.y] as [number, number], text: item.coords }]
+        for (const { pt, text } of list) {
+          const sx = sxOf(pt[0])
+          const sy = (v.y1 - pt[1]) * ky
+          const d = Math.hypot(sx - p.x, sy - p.y)
+          if (d < Math.min(bestDistance, 16)) {
+            bestDistance = d
+            best = { sx, sy, x: pt[0], y: pt[1], color: this.colors[i], text }
+          }
+        }
+        return
+      }
       if (item.kind === 'function' || (item.kind === 'area' && item.curve)) {
         const y = item.f(x)
         if (!Number.isFinite(y)) return
@@ -1098,7 +1121,7 @@ class GraphView {
         }
       }
     })
-    const found = best as { sx: number; sy: number; x: number; y: number; color: string } | null
+    const found = best as { sx: number; sy: number; x: number; y: number; color: string; text?: string } | null
     if (!found || found.sy < 0 || found.sy > this.height) {
       this.hideTip()
       return
@@ -1113,7 +1136,7 @@ class GraphView {
     this.tip.hidden = false
     const yStep = (step * (v.y1 - v.y0)) / (v.x1 - v.x0)
     // Nel piano di Gauss il punto è un numero complesso: 1,5 + 2i.
-    this.tip.textContent = this.spec.gauss ? complexCoord(found.x, found.y, step, yStep) : `(${coord(found.x, step)}; ${coord(found.y, yStep)})`
+    this.tip.textContent = found.text ?? (this.spec.gauss ? complexCoord(found.x, found.y, step, yStep) : `(${coord(found.x, step)}; ${coord(found.y, yStep)})`)
     const right = left > (r.width || this.width) - 140
     this.tip.style.cssText = `left:${right ? left - 10 : left + 10}px;top:${top < 34 ? top + 12 : top - 34}px;${right ? 'transform:translateX(-100%)' : ''}`
   }

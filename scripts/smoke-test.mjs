@@ -2022,6 +2022,44 @@ try {
     await tp.locator('dialog[open] button', { hasText: 'Chiudi senza salvare' }).click()
     await sheetEditor.waitFor({ state: 'detached' })
     check(rata === '2.373,96 €' && residuo === '0,00 €', `il modello «Piano di ammortamento» fa i conti con RATA (${rata}, ${residuo})`)
+    // Il grafico del punto di pareggio: dal modello, «Grafico» (anche da una cella dei costi) mette
+    // sotto la tabella il blocco ```grafico con i dati e il pareggio; nell'anteprima le linee, le aree e
+    // il punto con le sue coordinate. Di nuovo «Grafico» rifà lo stesso blocco, non ne aggiunge un altro.
+    await tp.locator('.notes-head button[aria-label="Nuova nota"]').click()
+    await tp.keyboard.press('Control+a')
+    await tp.keyboard.type('# Pareggio\n\n')
+    await newSheet()
+    await tp.locator('.sheet-bar button', { hasText: 'Modelli' }).click()
+    await tp.locator('.sheet-menu-item', { hasText: 'Punto di pareggio' }).click()
+    await tp.locator('#sheet-1-1').click()
+    await tp.locator('.sheet-bar button', { hasText: 'Grafico' }).click()
+    await sheetEditor.waitFor({ state: 'detached' })
+    const chartNote = () =>
+      tp.evaluate(() => {
+        for (let i = 0; i < localStorage.length; i++) {
+          const value = localStorage.getItem(localStorage.key(i))
+          if (value?.startsWith('# Pareggio')) return value
+        }
+        return ''
+      })
+    const chartBlock = '```grafico\ntitolo: Punto di pareggio\nasse x: Quantità\nasse y: €\ndati: A8:D13\npareggio: Ricavi, Costi totali\n```'
+    await tp.waitForFunction((text) => [...Array(localStorage.length).keys()].some((i) => localStorage.getItem(localStorage.key(i))?.includes(text)), chartBlock, { timeout: 5000 })
+    await tp.waitForSelector('.preview-pane .graph-block .graph-legend', { timeout: 10000 })
+    const chartLegend = (await tp.locator('.preview-pane .graph-block .graph-legend').textContent()) ?? ''
+    const chartMarks = await tp.locator('.preview-pane .graph-block svg [data-item]').count()
+    const chartText = await chartNote()
+    check(
+      chartText.indexOf('```tabella') < chartText.indexOf(chartBlock) && chartLegend.includes('(2.000; 20.000,00 €)') && chartMarks > 10,
+      `«Grafico» mette sotto la tabella il diagramma del punto di pareggio, con le linee, le aree e il punto (${JSON.stringify({ chartLegend, chartMarks })})`,
+    )
+    await tp.locator('.cm-schema[data-kind="tabella"] button', { hasText: 'Modifica' }).click()
+    await sheetEditor.waitFor()
+    await tp.locator('#sheet-9-0').click()
+    await tp.locator('.sheet-bar button', { hasText: 'Grafico' }).click()
+    await sheetEditor.waitFor({ state: 'detached' })
+    await tp.waitForTimeout(400)
+    const chartsAgain = ((await chartNote()).match(/```grafico/g) ?? []).length
+    check(chartsAgain === 1, `di nuovo «Grafico» rifà lo stesso grafico, non ne aggiunge un altro (${chartsAgain})`)
     await tp.close()
     // Sul telefono: un tocco sceglie la cella, un altro ci scrive
     const phoneSheet = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })

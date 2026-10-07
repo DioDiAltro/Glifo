@@ -628,7 +628,10 @@ describe('tabelle: le modifiche dell\'editor', () => {
     const [fattura, pareggio, conto, piano] = TEMPLATES.map((t) => shown(t.source))
     expect(fattura[6][3]).toBe('75,64 €')
     expect(pareggio[4][1]).toBe('2000')
-    expect(pareggio[10][3]).toBe('0,00 €')
+    // Con 2000 pezzi i ricavi coprono i costi: l'utile è zero (e i costi fissi restano quelli).
+    expect(pareggio[10][1]).toBe('12.000 €')
+    expect(pareggio[10][3]).toBe('20.000,00 €')
+    expect(pareggio[10][4]).toBe('0,00 €')
     expect(conto[10][1]).toBe('7.200 €')
     expect(conto[11][1]).toBe('22.800 €')
     expect(conto[11][2]).toBe('9,1%')

@@ -528,6 +528,16 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
   grafico e `asse x: tempo $t$ (s)` (e `asse y:`, `asse z:`) il **nome dell'asse** al posto di x, con
   le formule tra `$`; dallo stesso pulsante, «Titolo e nomi degli assi…» li scrive per te. Nelle
   immagini titolo, nomi e legenda sono testo, non MathML: si leggono anche in Word e in Inkscape.
+- **I numeri di una tabella**: nel blocco `dati: A8:D13` disegna le celle della **tabella con le
+  formule scritta prima del grafico** nella nota, come i grafici di Excel: la prima colonna va
+  sull'asse x, le altre diventano linee con i pallini (i nomi vengono dalla prima riga, se è di
+  testo; i numeri sugli assi hanno i punti delle migliaia, come nella tabella). Cambiando i numeri
+  della tabella il grafico si rifà. Con `pareggio: Ricavi, Costi totali` è il **diagramma di
+  redditività**: l'area dell'**utile** dove i ricavi stanno sopra i costi, quella della **perdita**
+  dove stanno sotto e il **punto di pareggio** dove si incontrano, con le sue coordinate scritte come
+  nella tabella (anche se cade tra due righe) e le linee tratteggiate verso gli assi. Passando sopra
+  un punto si leggono i suoi valori. Il pulsante «Grafico» dell'editor delle tabelle scrive queste
+  righe da solo.
 
 ![Risultati dopo «=» e grafici nell'anteprima](docs/grafici.png)
 
@@ -647,8 +657,9 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
   somma dei numeri sopra (o a sinistra). Con il tasto destro (o i menu «Righe» e «Colonne») si
   aggiungono e tolgono righe e colonne, e le formule si aggiustano come in Excel.
 - **Modelli pronti** dal menu «Modelli»: fattura con l'IVA, punto di pareggio (con la tabella
-  dei costi e dei ricavi), conto economico con la percentuale sui ricavi, piano di ammortamento
-  con la rata costante. Si cambiano i numeri e i conti si rifanno.
+  dei costi fissi, dei costi totali e dei ricavi, da cui «Grafico» fa il diagramma), conto economico
+  con la percentuale sui ricavi, piano di ammortamento con la rata costante. Si cambiano i numeri e i
+  conti si rifanno.
 - Nella nota la tabella è un blocco ` ```tabella `, una riga di testo per ogni riga della tabella
   (`| Penne | 10 | 1,50 € | =B2*C2 |`): nell'**anteprima** si vede con i risultati, i numeri
   allineati a destra, l'intestazione e il grassetto; passando sopra una cella si legge la formula.
@@ -660,6 +671,13 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
   che non si vede, e riaprendolo con **Apri .md** la tabella torna da modificare.
 - Sul telefono un tocco sceglie la cella e un altro tocco ci scrive; Invio conferma e sceglie la
   cella sotto, dove basta un tocco per scrivere.
+- **Grafico** (nella barra dell'editor) fa il grafico delle celle scelte, sotto la tabella nella nota:
+  la prima colonna sull'asse x, le altre come linee. Con una cella sola prende il blocco di dati
+  attorno a lei (o il primo della tabella, se lì non ci sono numeri da disegnare). Se tra le colonne
+  ci sono i **ricavi** e i **costi totali** è il **grafico del punto di pareggio**, con l'utile e la
+  perdita colorati (la colonna dell'utile in fondo resta fuori: lo mostrano le aree). Premuto di
+  nuovo, rifà il grafico che c'è già sotto la tabella. Nella nota è un blocco ` ```grafico ` con la
+  riga `dati: A8:D13` (vedi i grafici): si può anche scrivere a mano.
 
 **Lavagna**
 - La vista **Lavagna** (in alto, accanto a Editor, Diviso e Anteprima) apre accanto al testo,

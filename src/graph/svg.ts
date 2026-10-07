@@ -23,6 +23,12 @@ export interface Palette {
   area: number
   /** Le linee della griglia sulle superfici 3D: un velo scuro sopra il loro colore. */
   mesh: string
+  /**
+   * L'area dell'utile e quella della perdita (il punto di pareggio): i colori di stato della skill
+   * dataviz (good e critical, uguali nei due temi), sempre con il nome scritto dentro e nella legenda.
+   */
+  gain: string
+  loss: string
 }
 
 export const PALETTES: Record<'light' | 'dark', Palette> = {
@@ -36,6 +42,8 @@ export const PALETTES: Record<'light' | 'dark', Palette> = {
     series: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'],
     area: 0.18,
     mesh: 'rgba(24, 28, 44, 0.3)',
+    gain: '#0ca30c',
+    loss: '#d03b3b',
   },
   dark: {
     surface: null,
@@ -47,13 +55,34 @@ export const PALETTES: Record<'light' | 'dark', Palette> = {
     series: ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767'],
     area: 0.28,
     mesh: 'rgba(0, 0, 0, 0.4)',
+    gain: '#0ca30c',
+    loss: '#d03b3b',
   },
 }
 
-/** Il colore di ogni riga: le curve nell'ordine delle righe, i punti con l'inchiostro del testo. */
+/**
+ * Il colore di ogni riga: le curve nell'ordine delle righe, i punti con l'inchiostro del testo,
+ * l'utile e la perdita con i loro colori.
+ */
 export function itemColors(items: readonly GraphItem[], palette: Palette): string[] {
-  return items.map((item) => (item.kind === 'point' || item.kind === 'point3' ? palette.axis : palette.series[Math.max(0, item.slot) % palette.series.length]))
+  return items.map((item) =>
+    item.tone
+      ? item.tone === 'gain'
+        ? palette.gain
+        : palette.loss
+      : item.kind === 'point' || item.kind === 'point3' || item.kind === 'mark'
+        ? palette.axis
+        : palette.series[Math.max(0, item.slot) % palette.series.length],
+  )
 }
+
+/** I dati di una tabella hanno i numeri delle tacche con i punti delle migliaia (20.000, non 2·10⁴). */
+export function hasTableData(spec: GraphSpec): boolean {
+  return spec.items.some((i) => i.kind === 'series')
+}
+
+/** Le linee dei dati con i pallini, se non sono troppi (con tante righe resta la linea). */
+const MAX_DOTS = 40
 
 const f1 = (v: number) => (Math.round(v * 10) / 10).toString()
 
@@ -256,8 +285,9 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
   if (palette.surface) out.push(`<rect width="${W}" height="${H}" fill="${palette.surface}"/>`)
 
   // Griglia
-  const tx = ticks(vp.x0, vp.x1, W, spec.trig)
-  const ty = ticks(vp.y0, vp.y1, H)
+  const grouped = hasTableData(spec)
+  const tx = ticks(vp.x0, vp.x1, W, spec.trig, grouped)
+  const ty = ticks(vp.y0, vp.y1, H, false, grouped)
   const vertical = (xs: number[]) => xs.map((x) => `M${f1(sx(x))} 0V${H}`).join('')
   const horizontal = (ys: number[]) => ys.map((y) => `M0 ${f1(sy(y))}H${W}`).join('')
   out.push(`<path d="${vertical(tx.minor)}${horizontal(ty.minor)}" stroke="${palette.gridMinor}" stroke-width="1" fill="none"/>`)
@@ -276,6 +306,7 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
       return
     } else if (item.kind === 'region' && !item.same) pieces = sampleRegion(item.M, vp)
     else if (item.kind === 'polygon') pieces = [item.points.flatMap((p) => [sx(p[0]), sy(p[1])])]
+    else if (item.kind === 'gap') pieces = item.polygons.map((poly) => poly.flatMap(([x, y]) => [sx(x), sy(y)]))
     else if (item.kind === 'angle') {
       const arc = angleArc(item, sx, sy)
       if (arc) areas.push(`<path d="${arc.sector}" fill="${colors[i]}" data-area="${i}"/>`)
@@ -426,6 +457,7 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
       }
     }
     else if (item.kind === 'segment') lines = [[sx(item.a[0]), sy(item.a[1]), sx(item.b[0]), sy(item.b[1])]]
+    else if (item.kind === 'series') lines = [item.points.flatMap(([x, y]) => [sx(x), sy(y)])]
     else if (item.kind === 'bars') {
       // Il bordo di ogni barra, sottile.
       const d = item.bars.map((b) => `M${f1(sx(b.x0))} ${f1(sy(0))}V${f1(sy(b.y))}H${f1(sx(b.x1))}V${f1(sy(0))}`).join('')
@@ -482,9 +514,9 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
     names.push(`<text x="${f1(ax + 9)}" y="14" ${axisFont}>${yName}</text>`)
     taken.push(textBox(ax + 9, 14, 'start', 9 * yName.length, 16))
   }
-  // Un punto con il nome nell'origine (A = (0, 0)) prende il posto della O.
+  // Un punto con il nome nell'origine (A = (0, 0)) prende il posto della O; i dati di una tabella non la scrivono.
   const named = spec.items.some((item) => item.kind === 'point' && item.name && Math.abs(sx(item.x) - ax) < 1 && Math.abs(sy(item.y) - ay) < 1)
-  if (xAxis && yAxis && !named) {
+  if (xAxis && yAxis && !named && !grouped) {
     const y = ay + 16 > H - 2 ? ay - 6 : ay + 16
     names.push(`<text x="${f1(ax - 6)}" y="${f1(y)}" text-anchor="end" ${math.replace('font-style="italic" ', '')}>O</text>`)
     taken.push(textBox(ax - 6, y, 'end', 12, 16))
@@ -497,6 +529,38 @@ function drawGraph(spec: GraphSpec, vp: Viewport, palette: Palette, options: Dra
 
   // Punti, con il nome
   const points: string[] = [...startDots]
+  // I dati di una tabella: i pallini sulle linee; le aree dell'utile e della perdita con il nome
+  // dentro (se c'è posto); il punto di pareggio con le linee verso gli assi e il nome accanto.
+  spec.items.forEach((item, i) => {
+    if (item.kind !== 'series' || item.points.length > MAX_DOTS) return
+    for (const [x0, y0] of item.points) {
+      const x = sx(x0)
+      const y = sy(y0)
+      if (x < -5 || x > W + 5 || y < -5 || y > H + 5) continue
+      points.push(`<circle cx="${f1(x)}" cy="${f1(y)}" r="4" fill="${colors[i]}" stroke="${palette.halo}" stroke-width="2" paint-order="stroke" data-item="${i}"/>`)
+    }
+  })
+  spec.items.forEach((item) => {
+    if (item.kind !== 'gap') return
+    for (const poly of item.polygons) {
+      const spot = insideSpot(poly.map(([x, y]) => [sx(x), sy(y)]), 7 * item.text.length + 6, 15, { W, H }, taken, drawn)
+      if (!spot) continue
+      points.push(`<text x="${f1(spot.x)}" y="${f1(spot.y + 4.5)}" text-anchor="middle" font-size="12.5" font-weight="600" fill="${palette.text}" ${halo}>${escapeXml(item.text)}</text>`)
+    }
+  })
+  spec.items.forEach((item, i) => {
+    if (item.kind !== 'mark') return
+    const x = sx(item.x)
+    const y = sy(item.y)
+    if (x < -5 || x > W + 5 || y < -5 || y > H + 5) return
+    // Le linee verso gli assi (dove si legge la quantità e il valore), sottili e tratteggiate.
+    const toX = xAxis ? ay : H
+    const toY = yAxis ? ax : 0
+    points.push(`<path d="M${f1(x)} ${f1(y)}V${f1(toX)}M${f1(x)} ${f1(y)}H${f1(toY)}" stroke="${palette.axis}" stroke-width="1" stroke-dasharray="4 4" opacity="0.8" fill="none"/>`)
+    points.push(`<circle cx="${f1(x)}" cy="${f1(y)}" r="5.5" fill="${colors[i]}" stroke="${palette.halo}" stroke-width="2" paint-order="stroke" data-item="${i}"/>`)
+    const spot = nameSpot(x, y, [-0.71, -0.71], 6.9 * item.text.length, { W, H, ax: xAxis || yAxis ? ax : NaN, ay, xAxis, yAxis }, taken, drawn)
+    points.push(`<text x="${f1(spot.x)}" y="${f1(spot.y)}" text-anchor="${spot.anchor}" font-size="12.5" font-weight="600" fill="${palette.text}" ${halo}>${escapeXml(item.text)}</text>`)
+  })
   for (const { x, y, text } of levelLabels) {
     points.push(`<text x="${f1(x)}" y="${f1(y + 4)}" text-anchor="middle" font-size="10.5" fill="${palette.text}" ${halo}>${escapeXml(text)}</text>`)
   }
@@ -699,6 +763,70 @@ function nameSpot(
   return best
 }
 
+/** Il punto (x, y) sta dentro il poligono (in pixel)? */
+function insidePolygon(x: number, y: number, poly: readonly [number, number][]): boolean {
+  let inside = false
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i]
+    const [xj, yj] = poly[j]
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside
+  }
+  return inside
+}
+
+/**
+ * Dove scrivere il nome di un'area (l'utile, la perdita) dentro di lei: il posto più vicino al centro
+ * dove la scritta, larga `width` e alta `height`, sta tutta dentro, lontana dalle linee e dalle altre
+ * scritte. Null se non c'è (l'area è troppo piccola: il nome resta nella legenda).
+ */
+function insideSpot(
+  poly: readonly [number, number][],
+  width: number,
+  height: number,
+  frame: { W: number; H: number },
+  taken: Box[],
+  drawn: readonly Polyline[],
+): { x: number; y: number } | null {
+  if (poly.length < 3) return null
+  const xs = poly.map((p) => p[0])
+  const ys = poly.map((p) => p[1])
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)]
+  if (x1 - x0 < width || y1 - y0 < height) return null
+  const cx = xs.reduce((t, v) => t + v, 0) / xs.length
+  const cy = ys.reduce((t, v) => t + v, 0) / ys.length
+  // I pezzi di linea vicini all'area (i pallini stanno sulle linee: il margine tiene lontani anche loro).
+  const segments: number[] = []
+  for (const line of drawn) {
+    for (let i = 0; i + 3 < line.length; i += 2) {
+      const [ax, ay, bx, by] = [line[i], line[i + 1], line[i + 2], line[i + 3]]
+      if (Math.max(ax, bx) < x0 - 10 || Math.min(ax, bx) > x1 + 10 || Math.max(ay, by) < y0 - 10 || Math.min(ay, by) > y1 + 10) continue
+      segments.push(ax, ay, bx, by)
+    }
+  }
+  const margin = 6
+  let best: { x: number; y: number; d: number } | null = null
+  const steps = 16
+  for (let i = 0; i <= steps; i++) {
+    for (let j = 0; j <= steps; j++) {
+      const x = x0 + ((x1 - x0) * i) / steps
+      const y = y0 + ((y1 - y0) * j) / steps
+      const box: Box = [x - width / 2, y - height / 2, x + width / 2, y + height / 2]
+      if (box[0] < 2 || box[2] > frame.W - 2 || box[1] < 2 || box[3] > frame.H - 2) continue
+      const corners: [number, number][] = [[box[0], box[1]], [box[2], box[1]], [box[0], box[3]], [box[2], box[3]]]
+      if (!corners.every(([px, py]) => insidePolygon(px, py, poly))) continue
+      const padded: Box = [box[0] - margin, box[1] - margin, box[2] + margin, box[3] + margin]
+      let free = true
+      for (let k = 0; k < segments.length && free; k += 4) if (crossesBox(segments[k], segments[k + 1], segments[k + 2], segments[k + 3], padded)) free = false
+      if (!free || taken.some((b) => box[0] < b[2] + 3 && b[0] < box[2] + 3 && box[1] < b[3] + 3 && b[1] < box[3] + 3)) continue
+      const d = Math.hypot(x - cx, y - cy)
+      if (!best || d < best.d) best = { x, y, d }
+    }
+  }
+  if (!best) return null
+  taken.push([best.x - width / 2, best.y - height / 2, best.x + width / 2, best.y + height / 2])
+  return { x: best.x, y: best.y }
+}
+
 /**
  * L'arco di un angolo nel suo vertice (in pixel): il settore da colorare, il bordo (un quadratino
  * per l'angolo retto) e dove scrivere l'ampiezza.
@@ -760,6 +888,7 @@ export function imaginaryLabel(label: string): string {
 
 /** La descrizione per chi non vede il disegno: «Grafico di y = x^2 e y = 2x». */
 export function graphTitle(spec: GraphSpec): string {
-  const labels = spec.items.filter((i) => i.kind !== 'point').map((i) => i.label)
+  // I nomi delle colonne di una tabella sono testo: senza il \text{…} della legenda.
+  const labels = spec.items.filter((i) => i.kind !== 'point').map((i) => i.label.replace(/\\text\{([^}]*)\}/g, '$1'))
   return labels.length ? `Grafico di ${labels.join(' e ')}` : 'Grafico'
 }

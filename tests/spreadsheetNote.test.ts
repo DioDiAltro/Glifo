@@ -6,6 +6,8 @@ import { schemaBlocks } from '../src/editor/schemaBlocks'
 import { renderMarkdown } from '../src/render/markdown'
 import { findSheetBlock } from '../src/spreadsheet/blocks'
 import { hydrateSheets } from '../src/spreadsheet/preview'
+import { graphImagesFor } from '../src/graph/file'
+import { readChart } from '../src/graph/tableGraph'
 
 // CodeMirror misura il testo sullo schermo: in jsdom bastano misure vuote.
 Range.prototype.getClientRects = () => [] as unknown as DOMRectList
@@ -114,5 +116,36 @@ describe('le tabelle nell\'editor del testo', () => {
   it('una tabella vuota lo dice', () => {
     const { view } = setup('```tabella\n```')
     expect(view.dom.querySelector('.cm-schema')!.textContent).toContain('Tabella · vuota')
+  })
+})
+
+describe('i grafici con i dati di una tabella della nota', () => {
+  const data = [
+    '| **Quantità** | **Costi totali** | **Ricavi** |',
+    '| 0 | 12.000 € | =10*A2 {0 €} |',
+    '| 2000 | =12000+4*A3 {0 €} | =10*A3 {0 €} |',
+    '| 4000 | =12000+4*A4 {0 €} | =10*A4 {0 €} |',
+  ].join('\n')
+  const graph = '```grafico\ndati: A1:C4\npareggio: Ricavi, Costi totali\n```'
+
+  it('il grafico prende i numeri dell\'ultima tabella prima di lui', () => {
+    const host = document.createElement('div')
+    host.innerHTML = renderMarkdown(`${graph}\n\n\`\`\`tabella\n| altro | 1 |\n\`\`\`\n\n\`\`\`tabella\n${data}\n\`\`\`\n\n${graph}\n\n\`\`\`grafico\ny = x\n\`\`\``)
+    const blocks = [...host.querySelectorAll<HTMLElement>('.graph-block')]
+    expect(blocks).toHaveLength(3)
+    // Prima di ogni tabella: lo dice.
+    expect(readChart(blocks[0])?.error).toMatch(/non c'è una tabella/)
+    // Dopo due tabelle: quella subito sopra.
+    expect(readChart(blocks[1])?.table?.names).toEqual(['Quantità', 'Costi totali', 'Ricavi'])
+    expect(readChart(blocks[1])?.table?.rows).toEqual([[0, 12000, 0], [2000, 20000, 20000], [4000, 28000, 40000]])
+    // Senza la riga dati: niente numeri.
+    expect(blocks[2].dataset.table).toBeUndefined()
+  })
+
+  it('nel file .md l\'immagine del grafico ha il punto di pareggio', () => {
+    const images = graphImagesFor(`\`\`\`tabella\n${data}\n\`\`\`\n\n${graph}`)
+    const image = [...images.values()][0]
+    expect(image).toContain('Punto di pareggio')
+    expect(image).toContain('(2.000; 20.000 €)')
   })
 })

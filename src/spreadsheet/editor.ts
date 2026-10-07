@@ -38,11 +38,17 @@ import {
 import { cellName, colName, parseCellName, rangeName } from './refs'
 import { TEMPLATES } from './templates'
 import { isError } from './values'
+import { chartLines, chartRange } from './chart'
 
 export interface SheetEditorOptions {
   sheet: SheetModel
   /** Mette la tabella nella nota: con «Fatto» e con Ctrl+S (che lascia aperto l'editor). */
   onSave(sheet: SheetModel): void
+  /**
+   * «Grafico»: mette la tabella nella nota e subito dopo il grafico delle sue celle (`lines`, le righe
+   * del blocco ```grafico, vedi chartLines); poi l'editor si chiude. Senza, il pulsante non c'è.
+   */
+  onChart?(sheet: SheetModel, lines: string[]): void
 }
 
 /** Apre l'editor; la promessa si risolve quando lo si chiude. */
@@ -59,6 +65,7 @@ const PATHS = {
   templates: '<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><path d="M17 14v6M14 17h6"/>',
   rows: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.5h18M3 14.5h18"/>',
   cols: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/>',
+  chart: '<path d="M4 4v16h16"/><path d="m7.5 15 4-5 3 3 5-6"/>',
 } as const
 
 /** Quante righe e colonne vuote si vedono dopo la tabella, per continuare a scrivere. */
@@ -179,6 +186,21 @@ class SheetEditor {
         sep(),
         this.menuButton('Righe', 'Aggiungi o togli righe', PATHS.rows, () => this.rowEntries()),
         this.menuButton('Colonne', 'Aggiungi o togli colonne', PATHS.cols, () => this.colEntries()),
+        ...(options.onChart
+          ? [
+              h(
+                'button',
+                {
+                  class: 'btn sheet-menu-button sheet-chart',
+                  title: 'Il grafico delle celle scelte, sotto la tabella nella nota: la prima colonna sull\'asse x, le altre come linee',
+                  attrs: { type: 'button' },
+                  on: { click: () => this.makeChart() },
+                },
+                icon(PATHS.chart, 16),
+                'Grafico',
+              ),
+            ]
+          : []),
       ),
       h('div', { class: 'schema-spacer' }),
       this.status,
@@ -1055,6 +1077,27 @@ class SheetEditor {
   private finish(): void {
     const model = this.current()
     if (serializeSheet(model) !== this.saved) this.options.onSave(cloneSheet(model))
+    this.close()
+  }
+
+  /**
+   * «Grafico»: le celle scelte (o, con una cella sola, il blocco di dati attorno, vedi chartRange)
+   * diventano un grafico sotto la tabella nella nota; con i ricavi e i costi totali è il diagramma
+   * del punto di pareggio. Se non si può, il motivo e l'editor resta aperto.
+   */
+  private makeChart(): void {
+    const onChart = this.options.onChart
+    if (!onChart) return
+    const model = this.current()
+    const made = chartLines(model, chartRange(model, this.range()))
+    if (!made.lines) {
+      // Sotto la barra della formula, che si vede anche sul telefono (il messaggio in alto no).
+      this.hint.replaceChildren(h('strong', { class: 'sheet-hint-error' }, 'Grafico'), ` — ${made.error}`)
+      this.say(made.error)
+      this.grid.focus({ preventScroll: true })
+      return
+    }
+    onChart(cloneSheet(model), made.lines)
     this.close()
   }
 

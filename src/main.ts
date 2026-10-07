@@ -29,6 +29,7 @@ import { remapGraphLines, renameGraphScope } from './graph/preview'
 import { schemasForFile, schemasFromFile } from './schema/file'
 import { parseSchema, SchemaError, serializeSchema, type Schema } from './schema/model'
 import { findSheetBlock, findSheetBySource } from './spreadsheet/blocks'
+import { dataRange } from './graph/tableGraph'
 import { sheetsForFile, sheetsFromFile } from './spreadsheet/file'
 import { emptySheet, parseSheet, serializeSheet, sheetBlockText, type SheetModel } from './spreadsheet/model'
 import { BLOCK_NAMES } from './ui/moveButtons'
@@ -969,6 +970,10 @@ async function openSheet(line: number | null, match?: { source?: string; hash?: 
         block = saveSheetBlock(block, near, next)
         if (block) near = block.from
       },
+      onChart: (next, lines) => {
+        block = saveSheetBlock(block, near, next)
+        if (block) placeChart(block, lines)
+      },
     })
   } catch {
     toast('L\'editor delle tabelle non si è aperto: riprova.', 'error')
@@ -1013,6 +1018,27 @@ function saveSheetBlock(block: { source: string; from: number } | null, near: nu
   view.dispatch({ changes: { from, insert }, selection: EditorSelection.cursor(from + insert.length), userEvent: 'input' })
   if (block) toast('La tabella non era più al suo posto nella nota: l\'ho rimessa qui.')
   return { source, from: from + prefix.length }
+}
+
+/**
+ * Il grafico della tabella (`block`), con le righe `lines`, subito sotto di lei: un blocco ```grafico
+ * nuovo o, se lì c'è già un grafico dei dati di una tabella (con la riga dati:), quello rifatto.
+ */
+function placeChart(block: { source: string; from: number }, lines: string[]): void {
+  const view = editor.view
+  const doc = view.state.doc.toString()
+  const table = findSheetBySource(doc, block.source, block.from)
+  if (!table) return
+  // Nella voce di un elenco il grafico ha il rientro della tabella.
+  const indent = /^[ \t]*/.exec(doc.slice(table.from))![0]
+  const body = lines.map((l) => indent + l).join('\n')
+  const next = findFencedBlocks(doc, 'grafico').find((g) => g.from >= table.to)
+  if (next?.closed && !doc.slice(table.to, next.from).trim() && dataRange(next.source) !== null) {
+    view.dispatch({ changes: { from: next.contentFrom, to: next.contentTo, insert: body }, selection: EditorSelection.cursor(next.contentFrom), scrollIntoView: true, userEvent: 'input' })
+    return
+  }
+  const insert = `\n\n${indent}\`\`\`grafico\n${body}\n${indent}\`\`\``
+  view.dispatch({ changes: { from: table.to, insert }, selection: EditorSelection.cursor(table.to + insert.length), scrollIntoView: true, userEvent: 'input' })
 }
 
 // ——— File ———

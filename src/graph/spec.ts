@@ -16,6 +16,8 @@
  *     x \in [-5, 5]               la parte da mostrare (anche -1 \le y \le 3)
  *     titolo: La parabola $y = x^2$   il titolo, sopra il grafico (anche nelle immagini)
  *     asse x: tempo $t$ (s)       il nome dell'asse x (e asse y, asse z), al posto di x
+ *     dati: A8:D13                i numeri della tabella scritta prima nella nota: una linea per colonna
+ *     pareggio: Ricavi, Costi totali   l'utile, la perdita e il punto di pareggio tra le due linee
  *     % commento                  non conta
  *
  * Con la z (o una funzione di x e y, o tre coordinate) il grafico è in 3D, e ogni equazione è
@@ -69,6 +71,8 @@ import { distributionOf, randomScope } from '../math/probability'
 import { odeOf, systemOf } from '../math/differential'
 import { calculusDims, calculusItems, vectorDefinition, type FieldContext } from './fields'
 import { gaussItem, isComplexLine, onlyComplex } from './gauss'
+import { dataLine, tableItems } from './tableGraph'
+import type { ChartData } from '../spreadsheet/chart'
 
 export type Range = [number, number]
 
@@ -104,6 +108,8 @@ interface ItemBase {
   extent?: Range
   /** Dei dati (\operatorname{dispersione}(x, y)): le unità sui due assi non devono essere uguali. */
   data?: boolean
+  /** L'area dell'utile o della perdita (il punto di pareggio): il colore dice quale, non l'ordine delle righe. */
+  tone?: 'gain' | 'loss'
 }
 
 export type GraphItem =
@@ -190,6 +196,15 @@ export type GraphItem =
   | (ItemBase & { kind: 'area'; f: (x: number) => number; from: number; to: number; value: number; curve: boolean })
   /** Delle barre (un istogramma, le probabilità dei valori di una variabile discreta): da x0 a x1, alte y. */
   | (ItemBase & { kind: 'bars'; bars: { x0: number; x1: number; y: number }[] })
+  /**
+   * Una colonna di una tabella della nota (`dati: A8:D13`, vedi tableGraph.ts): la linea per i suoi
+   * punti, con i pallini; `texts` i valori scritti come nella tabella, uno per punto.
+   */
+  | (ItemBase & { kind: 'series'; points: [number, number][]; texts: string[] })
+  /** Le aree tra due linee dei dati (l'utile o la perdita, con `tone`), con il nome da scrivere dentro. */
+  | (ItemBase & { kind: 'gap'; polygons: [number, number][][]; text: string })
+  /** Un punto dei dati con il nome scritto accanto (il punto di pareggio) e le coordinate come nella tabella. */
+  | (ItemBase & { kind: 'mark'; x: number; y: number; text: string; coords: string })
 
 export interface GraphError {
   line: number
@@ -904,16 +919,17 @@ function complexValue(node: MathNode, scope: ComplexScope): Complex | null {
 
 /**
  * Legge il blocco: `defs` sono le definizioni scritte prima nella nota (vedi Sheet.definitionsFor),
- * che le righe possono usare; `values` i numeri con un valore diverso da quello scritto (gli slider).
+ * che le righe possono usare; `values` i numeri con un valore diverso da quello scritto (gli slider);
+ * `chart` i numeri della tabella scritta prima del grafico, per la riga `dati:` (vedi tableGraph.ts).
  */
-export function parseGraph(source: string, defs: readonly string[] = [], values?: ReadonlyMap<string, number>): GraphSpec {
-  return withWorkLimit(GRAPH_WORK, () => readGraph(source, defs, values))
+export function parseGraph(source: string, defs: readonly string[] = [], values?: ReadonlyMap<string, number>, chart?: ChartData | null): GraphSpec {
+  return withWorkLimit(GRAPH_WORK, () => readGraph(source, defs, values, chart))
 }
 
 /** I passi di somme e integrali per leggere un grafico, e per ogni disegno: oltre, le curve si fermano. */
 export const GRAPH_WORK = 5e6
 
-function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap<string, number>): GraphSpec {
+function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap<string, number>, chart?: ChartData | null): GraphSpec {
   const sheet = new Sheet(values)
   for (const d of defs) sheet.define(d)
   const spec: GraphSpec = { dim: 2, items: [], errors: [], x: null, y: null, z: null, trig: false, sliders: [] }
@@ -938,6 +954,8 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   const lines: Line[] = []
   /** Le righe con seni e coseni: se sono funzioni di x, sull'asse x le tacche con π. */
   const trig = new Set<number>()
+  /** Le righe dati: e pareggio: (i numeri di una tabella della nota). */
+  const dataLines: { line: number; text: string; key: 'dati' | 'pareggio'; value: string }[] = []
   for (const l of blockLines(source)) {
     // titolo: …, asse x: …: non si disegnano.
     const label = labelLine(l.text)
@@ -945,6 +963,11 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
       if (!label.value) continue
       if (label.key === 'title') spec.title = label.value
       else spec.axes = { ...spec.axes, [label.key]: label.value }
+      continue
+    }
+    const data = dataLine(l.text)
+    if (data) {
+      dataLines.push({ ...l, ...data })
       continue
     }
     try {
@@ -1439,6 +1462,13 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
       return { name, line: `${nameLatex(name)} = ${value}` }
     })
   }
+  // I numeri di una tabella della nota: le linee dopo quelle delle altre righe, con i loro colori.
+  if (dataLines.length) {
+    const table = tableItems(dataLines, chart, Math.max(-1, ...spec.items.map((i) => i.slot)) + 1)
+    if (spec.dim === 3 && table.items.length) fail(dataLines[0], new MathError('I dati di una tabella si disegnano nel piano, non nello spazio'))
+    else spec.items.push(...table.items)
+    spec.errors.push(...table.errors)
+  }
   spec.errors.sort((a, b) => a.line - b.line)
   return spec
 }
@@ -1846,7 +1876,7 @@ function usesSymbolicFunction(node: MathNode): boolean {
 export function graphNames(source: string): Set<string> {
   const names = new Set<string>()
   for (const l of blockLines(source)) {
-    if (labelLine(l.text)) continue
+    if (labelLine(l.text) || dataLine(l.text)) continue
     try {
       const { main, cond } = parseLine(l.text)
       namesIn(main, names)

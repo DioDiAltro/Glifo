@@ -272,8 +272,12 @@ grafici. Tutto è descritto nel README. Se serviranno:
     maniglia per riempire, i modelli pronti (fattura con l'IVA, punto di pareggio, conto economico,
     piano di ammortamento); nella nota la tabella con i risultati, nei file .md una tabella di
     Markdown con i risultati. I conti li fa Glifo (`src/spreadsheet`). Descritta nel README;
-  - il grafico del punto di pareggio (costi totali e ricavi che si incontrano) con il blocco grafico,
-    dai numeri della tabella;
+  - fatto, sul ramo `prova` (7 ottobre 2026, lo studente: «sì, fai il grafico del punto di
+    pareggio»): **il grafico del punto di pareggio** con il blocco grafico, dai numeri della tabella:
+    la riga `dati: A8:D13` disegna le colonne della tabella sopra (come i grafici di Excel) e
+    `pareggio: Ricavi, Costi totali` colora l'utile e la perdita e segna il punto di pareggio; il
+    pulsante «Grafico» dell'editor delle tabelle le scrive da solo, e il modello «Punto di pareggio»
+    ha anche la colonna dei costi fissi;
   - il diagramma di Gantt per pianificare (attività, durate, chi le fa, il percorso critico);
   - i flussi con le corsie (chi fa cosa);
   - i file di Excel (.xlsx) e .csv da aprire e scaricare;

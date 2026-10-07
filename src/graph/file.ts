@@ -18,6 +18,8 @@ import { base64 } from '../schema/file'
 import { labelPlain, labelSvg, texSvg } from './labels'
 import { staticGraphSvg } from './picture'
 import { parseGraph, type GraphItem, type GraphSpec } from './spec'
+import type { ChartData } from '../spreadsheet/chart'
+import { readChart } from './tableGraph'
 import { areaColor, graphTitle, itemColors, PALETTES, escapeXml, type Palette } from './svg'
 
 const MARKER = 'glifo-grafico'
@@ -40,9 +42,10 @@ function unhide(source: string): string {
 /**
  * Il grafico come immagine SVG a sé, chiara su bianco, con la legenda sotto (le formule in
  * MathML, che i browser disegnano da soli) e i numeri degli slider con il valore scritto (a = 2).
+ * `chart`: i numeri della tabella sopra il grafico, per la riga `dati:`.
  */
-export function graphImage(source: string, defs: readonly string[] = []): string {
-  const spec = parseGraph(source, defs)
+export function graphImage(source: string, defs: readonly string[] = [], chart: ChartData | null = null): string {
+  const spec = parseGraph(source, defs, undefined, chart)
   const width = 640
   const height = 400
   const palette = { ...PALETTES.light, surface: '#ffffff', halo: '#ffffff' }
@@ -61,9 +64,9 @@ export function graphImage(source: string, defs: readonly string[] = []): string
     div.innerHTML = rows
       .map(({ item, color }) => {
         const swatch =
-          item.kind === 'point' || item.kind === 'point3' || item.kind === 'points' || (item.kind === 'complex' && !item.arrows)
+          item.kind === 'point' || item.kind === 'point3' || item.kind === 'points' || item.kind === 'mark' || (item.kind === 'complex' && !item.arrows)
             ? `<span style="width:9px;height:9px;border-radius:50%;background:${color}"></span>`
-            : item.kind === 'area' || item.kind === 'bars'
+            : item.kind === 'area' || item.kind === 'bars' || item.kind === 'gap'
               ? `<span style="width:18px;height:12px;box-sizing:border-box;border-top:3px solid ${color};border-radius:2px 2px 0 0;background:${areaColor(color, palette)}"></span>`
               : item.kind === 'region' || item.kind === 'polygon'
                 ? `<span style="width:14px;height:14px;box-sizing:border-box;border:2px solid ${color};border-radius:3px;background:${areaColor(color, palette)}"></span>`
@@ -72,7 +75,8 @@ export function graphImage(source: string, defs: readonly string[] = []): string
                 : item.kind === 'field' || item.kind === 'field3' || item.kind === 'vector' || (item.kind === 'complex' && item.arrows)
                   ? `<svg width="20" height="10" viewBox="0 0 20 10"><path d="M1 5H13" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/><path d="M19 5L12 1.5V8.5Z" fill="${color}"/></svg>`
                   : `<span style="width:18px;height:3px;border-radius:2px;background:${color}"></span>`
-        return `<div style="display:flex;align-items:center;gap:8px;height:28px">${swatch}${renderTexMathml(item.label)}</div>`
+        const coords = item.kind === 'mark' ? `<span style="font:14px system-ui, sans-serif;color:#52514e">${escapeXml(item.coords)}</span>` : ''
+        return `<div style="display:flex;align-items:center;gap:8px;height:28px">${swatch}${renderTexMathml(item.label)}${coords}</div>`
       })
       .concat(numbers.length ? [`<div style="display:flex;align-items:center;height:28px">${renderTexMathml(numbers.join(', \\quad '))}</div>`] : [])
       .join('')
@@ -103,8 +107,8 @@ function titleBand(spec: GraphSpec, width: number): { svg: string; height: numbe
 function swatchSvg(item: GraphItem, color: string, palette: Palette, x: number, y: number): string {
   const kind = item.kind
   if (item.dashed) return `<path d="M${x} ${y + 7}H${x + 20}" stroke="${color}" stroke-width="2.5" stroke-dasharray="5 3"/>`
-  if (kind === 'point' || kind === 'point3' || kind === 'points' || (kind === 'complex' && !item.arrows)) return `<circle cx="${x + 10}" cy="${y + 7}" r="4.5" fill="${color}"/>`
-  if (kind === 'area' || kind === 'bars') return `<rect x="${x + 1}" y="${y + 1}" width="18" height="12" fill="${areaColor(color, palette)}"/><path d="M${x + 1} ${y + 2.5}H${x + 19}" stroke="${color}" stroke-width="3"/>`
+  if (kind === 'point' || kind === 'point3' || kind === 'points' || kind === 'mark' || (kind === 'complex' && !item.arrows)) return `<circle cx="${x + 10}" cy="${y + 7}" r="4.5" fill="${color}"/>`
+  if (kind === 'area' || kind === 'bars' || kind === 'gap') return `<rect x="${x + 1}" y="${y + 1}" width="18" height="12" fill="${areaColor(color, palette)}"/><path d="M${x + 1} ${y + 2.5}H${x + 19}" stroke="${color}" stroke-width="3"/>`
   if (kind === 'region' || kind === 'polygon') return `<rect x="${x + 4}" y="${y + 1}" width="12" height="12" rx="2" fill="${areaColor(color, palette)}" stroke="${color}" stroke-width="2"/>`
   if (kind === 'surface' || kind === 'implicit3' || kind === 'patch' || kind === 'solid') return `<rect x="${x + 3}" y="${y}" width="14" height="14" rx="3" fill="${color}"/>`
   if (kind === 'field' || kind === 'field3' || kind === 'vector' || (kind === 'complex' && item.arrows)) return `<path d="M${x + 1} ${y + 7}H${x + 13}" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/><path d="M${x + 19} ${y + 7}L${x + 12} ${y + 3.5}V${y + 10.5}Z" fill="${color}"/>`
@@ -127,9 +131,13 @@ export function graphFigure(spec: GraphSpec, plot: string, width: number, height
   spec.items.forEach((item, i) => {
     if (((item.kind === 'point' || item.kind === 'point3') && !item.name) || item.label === '') return
     const text = texSvg(item.label, size)
-    const x = Math.max(8, (width - (28 + text.width)) / 2)
+    // Il punto di pareggio con le sue coordinate, scritte come nella tabella.
+    const coords = item.kind === 'mark' ? ` ${item.coords}` : ''
+    const coordsWidth = 7.2 * coords.length
+    const x = Math.max(8, (width - (28 + text.width + coordsWidth)) / 2)
     const y = rows.length * rowHeight
-    rows.push(`${swatchSvg(item, colors[i], palette, x, y + 6)}<text x="${(x + 28).toFixed(1)}" y="${y + 18}" ${font}>${text.svg}</text>`)
+    const extra = coords ? `<text x="${(x + 28 + text.width).toFixed(1)}" y="${y + 18}" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="13.5" fill="#52514e">${escapeXml(coords)}</text>` : ''
+    rows.push(`${swatchSvg(item, colors[i], palette, x, y + 6)}<text x="${(x + 28).toFixed(1)}" y="${y + 18}" ${font}>${text.svg}</text>${extra}`)
   })
   if (spec.sliders.length) {
     const numbers = spec.sliders.map((s) => `${nameLatex(s.name)} = ${formatNumber(s.value, { comma: true, decimal: true, digits: 6 })?.tex ?? s.value}`).join(', \quad ')
@@ -221,7 +229,7 @@ export function graphImagesFor(text: string): Map<number, string> {
     } catch {
       // Senza definizioni: il grafico usa solo le sue righe.
     }
-    images.set(Number(el.dataset.line), graphImage(el.dataset.graph ?? '', defs))
+    images.set(Number(el.dataset.line), graphImage(el.dataset.graph ?? '', defs, readChart(el)))
   }
   return images
 }

@@ -101,7 +101,12 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   fuoco dalla casella. Quando la finestra cambia misura (sul telefono anche perché si apre la
   tastiera) la scrittura resta aperta e la casella torna sopra la sua cella (`placeCellInput`):
   chiuderla chiudeva subito anche la tastiera. Col tocco le caselle in cui si scrive hanno i caratteri
-  da 16px, se no l'iPhone ingrandisce la pagina. Nella barra il pulsante della tabella è un menu (`tableMenu` in
+  da 16px, se no l'iPhone ingrandisce la pagina. I grafici dei dati (`chart.ts`): `chartData` legge un
+  intervallo (la prima colonna è l'asse x, la prima riga i nomi se è di testo, i numeri calcolati con il
+  formato della colonna); il pulsante «Grafico» dell'editor sceglie le celle (`chartRange`: con una cella
+  sola il blocco attorno, `currentRegion`, o il primo che ha dati) e scrive le righe del blocco
+  (`chartLines`, con `pareggio:` se ci sono i ricavi e i costi totali, senza l'utile in fondo); `main.ts`
+  le mette sotto la tabella o rifà il grafico che c'è già (`placeChart`). Nella barra il pulsante della tabella è un menu (`tableMenu` in
   `src/ui/toolbar.ts`): con le formule o di testo, perché la barra deve stare in una riga. Per le
   prove nel browser le celle della griglia hanno l'id `sheet-<riga>-<colonna>` (da 0).
 - `src/math/`: le espressioni delle formule (LaTeX o da calcolatrice): `parse.ts` le legge, `evaluate.ts`
@@ -191,6 +196,13 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   con salti e asintoti e la finestra scelta da sola (`plot.ts`), il disegno SVG (`svg.ts`, colori
   validati con la skill dataviz), l'anteprima interattiva (`preview.ts`) e i file .md (`file.ts`, come
   gli schemi). Le definizioni della nota arrivano al blocco in `data-defs` (vedi `render/markdown.ts`).
+  I numeri di una tabella (`tableGraph.ts`): la riga `dati: A8:D13` prende l'ultima tabella prima del
+  grafico (il renderer tiene il suo testo in `env.table` e scrive i dati in `data-table`, letti da
+  `readChart` nell'anteprima e nei file .md); le colonne sono elementi `series` (linee con i pallini,
+  `texts` i valori come nella tabella), `pareggio:` aggiunge le aree `gap` (utile e perdita, `tone`,
+  con i colori di stato `gain`/`loss` della palette e il nome dentro con `insideSpot`) e i punti `mark`
+  (`breakEven`). Con i dati la finestra parte da zero e lascia lo spazio ai numeri (`dataWindow` in
+  `plot.ts`), le tacche hanno i punti delle migliaia (`tickLabel` con `grouped`) e non c'è la O.
   Gli slider: ogni numero scritto con le cifre che il grafico usa ne ha uno (`spec.sliders`);
   `parseGraph(…, values)` rifà il grafico con altri valori senza cambiare la nota (file .md e stampa
   usano quelli scritti). Un integrale (`\int_0^2 x^2 \, dx`) è un'area (`kind: 'area'`, `sampleArea`
