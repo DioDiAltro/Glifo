@@ -44,7 +44,8 @@ const check = (ok, msg) => {
 /**
  * Il worker di WebLLM finto, per «Spiegami» (src/ai/llmWorker.ts parla allo stesso modo): carica
  * subito, chiede al motore la primitiva e poi scrive due passaggi, un pezzo alla volta. Per un grafico
- * (il pannello «Spiega con l'AI») scrive subito tre punti, con due formule giuste e una sbagliata.
+ * (il pannello «Spiega con l'AI») scrive subito tre punti, con due formule giuste e una sbagliata; per
+ * uno schema e una tabella due punti, se Glifo gli ha dato le frecce e i valori calcolati.
  */
 function fakeLlmWorker() {
   const steps = String.raw`1. Porto fuori $\pi$, che è una costante. $$\int_{-R}^{R} \pi (R^2 - x^2) \, dx = \pi \int_{-R}^{R} (R^2 - x^2) \, dx$$
@@ -55,6 +56,9 @@ function fakeLlmWorker() {
 3. In uno vale due. $$f(1) = 2$$`
   const theorem = String.raw`1. Dice che il quadrato dell'ipotenusa è la somma dei quadrati dei cateti.
 2. Per esempio con i lati 3, 4 e 5. $$3^2 + 4^2 = 5^2$$`
+  const schema = '1. Lo schema parte da «Inizio», passa da «Ordina» e arriva a «Fine».\n2. Ogni freccia dice cosa viene dopo.'
+  const table = String.raw`1. Nella colonna D il prezzo per la quantità. $$2 \cdot 3 = 6$$
+2. I quaderni costano di più.`
   self.addEventListener('message', (ev) => {
     const msg = ev.data
     if (msg.type === 'load') {
@@ -62,7 +66,17 @@ function fakeLlmWorker() {
       setTimeout(() => self.postMessage({ id: msg.id, type: 'done', value: `${msg.model}-q4f16_1-MLC` }), 100)
     } else if (msg.type === 'chat') {
       const ask = msg.messages.find((m) => m.role === 'user')?.content ?? ''
-      const reply = ask.includes('```grafico') ? graph : ask.startsWith('Dalla nota:') ? theorem : msg.messages.at(-1).content.includes('<tool_response>') ? steps : call
+      const reply = ask.includes('```grafico')
+        ? graph
+        : ask.startsWith('Dalla nota:')
+          ? theorem
+          : ask.startsWith('Lo schema nella nota')
+            ? ask.includes('«Inizio» → «Ordina»') ? schema : '1. Non vedo le frecce.'
+            : ask.startsWith('La tabella nella nota')
+              ? ask.includes('| 2 | Penne | 2 | 3 | 6 |') ? table : '1. Non vedo i valori.'
+              : msg.messages.at(-1).content.includes('<tool_response>')
+                ? steps
+                : call
       for (let i = 0; i < reply.length; i += 16) self.postMessage({ id: msg.id, type: 'delta', text: reply.slice(i, i + 16) })
       self.postMessage({ id: msg.id, type: 'done', value: reply })
     } else if (msg.type === 'remove') self.postMessage({ id: msg.id, type: 'done' })
@@ -3642,6 +3656,51 @@ try {
         backToAi === 'flex' &&
         !closedPanel,
       `«Inserisci nella nota» mette la spiegazione dopo il grafico; «Simboli» e ✨ cambiano vista, e un secondo clic chiude (${JSON.stringify({ backToSymbols, backToAi, closedPanel })})`,
+    )
+
+    // Uno schema e una tabella: Glifo li descrive al modello (le forme seguendo le frecce; la tabella con
+    // le lettere delle colonne e i valori calcolati) e la spiegazione va dopo il blocco.
+    const shopSchema = '{"v":1,"nodes":[{"id":"a","shape":"ellipse","x":40,"y":40,"w":120,"h":60,"text":"Inizio"},{"id":"b","shape":"rect","x":40,"y":160,"w":120,"h":60,"text":"Ordina"},{"id":"c","shape":"ellipse","x":40,"y":280,"w":120,"h":60,"text":"Fine"}],"edges":[{"id":"e1","from":"a","to":"b"},{"id":"e2","from":"b","to":"c"}]}'
+    const shopTable = ['| Prodotto | Prezzo | Quantità | Totale |', '| --- | --- | --- | --- |', '| Penne | 2 | 3 | =B2*C2 |', '| Quaderni | 4 | 5 | =B3*C3 |'].join('\n')
+    await ex.locator('.notes-head button[aria-label="Nuova nota"]').click()
+    await ex.keyboard.press('Control+a')
+    await ex.keyboard.insertText(`# Negozio\n\n\`\`\`schema\n${shopSchema}\n\`\`\`\n\n\`\`\`tabella\n${shopTable}\n\`\`\`\n\nFine.`)
+    await ex.locator('.ai-toggle').click()
+    await ex.waitForFunction(() => [...document.querySelectorAll('.ai-subject')].map((b) => b.dataset.kind).join() === 'schema,tabella', null, { timeout: 5000 })
+    const shopList = await ex.evaluate(() => [...document.querySelectorAll('.ai-subject')].map((b) => `${b.querySelector('.ai-subject-kind').textContent}: ${b.querySelector('.ai-subject-body').textContent}`))
+    await ex.locator('.ai-subject[data-kind="schema"]').click()
+    await ex.waitForFunction(() => document.querySelector('.ai-panel .explain-summary')?.textContent.startsWith('Glifo non ha formule da controllare'), null, { timeout: 15000 })
+    const schemaShown = await ex.evaluate(() => ({
+      title: document.querySelector('.ai-panel .explain-title-text')?.textContent,
+      first: document.querySelector('.ai-panel .explain-step')?.textContent,
+      steps: document.querySelectorAll('.ai-panel .explain-step').length,
+    }))
+    await ex.locator('.ai-subject[data-kind="tabella"]').click()
+    await ex.waitForFunction(() => document.querySelector('.ai-panel .explain-summary')?.textContent.includes('1 su 1'), null, { timeout: 15000 })
+    const tableShown = await ex.evaluate(() => ({
+      title: document.querySelector('.ai-panel .explain-title-text')?.textContent,
+      marks: [...document.querySelectorAll('.ai-panel .explain-step')].map((s) => s.className.replace('explain-step', '').trim()),
+      summary: document.querySelector('.ai-panel .explain-summary').textContent,
+    }))
+    await ex.locator('.ai-panel .explain-box button', { hasText: 'Inserisci nella nota' }).click()
+    await ex.waitForFunction(() => document.documentElement.dataset.save === 'salvato', null, { timeout: 5000 })
+    const shopSaved = await ex.evaluate(() => {
+      for (let i = 0; i < localStorage.length; i++) {
+        const value = localStorage.getItem(localStorage.key(i)) ?? ''
+        if (value.startsWith('# Negozio')) return value
+      }
+      return ''
+    })
+    check(
+      shopList.join() === 'Schema: Inizio · Ordina · Fine,Tabella: Prodotto · Prezzo · Quantità · Totale' &&
+        schemaShown.title === 'Inizio · Ordina · Fine' &&
+        schemaShown.steps === 2 &&
+        schemaShown.first.includes('Lo schema parte da «Inizio»') &&
+        tableShown.title === 'Prodotto · Prezzo · Quantità · Totale' &&
+        tableShown.marks.join() === 'is-ok,' &&
+        tableShown.summary.startsWith('✓ Formule controllate da Glifo: 1 su 1, tutte giuste') &&
+        shopSaved.endsWith('=B3*C3 |\n```\n\n1. Nella colonna D il prezzo per la quantità: $2 \\cdot 3 = 6$\n2. I quaderni costano di più.\n\nFine.'),
+      `uno schema e una tabella nell'elenco; Glifo li descrive al modello (le frecce, i valori calcolati) e la spiegazione va dopo la tabella (${JSON.stringify({ shopList, schemaShown, tableShown, end: shopSaved.slice(-160) })})`,
     )
     await exContext.close()
 

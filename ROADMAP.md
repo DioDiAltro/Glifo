@@ -359,6 +359,12 @@ README e in ARCHITETTURA.md (`src/ui/aiPanel.ts`).
 **Fatto il passo 2 (7 ottobre 2026, notte)**: nell'elenco anche le formule senza un conto e i teoremi, le
 definizioni e le proprietà scritti nel testo; Glifo controlla gli esempi con i numeri della spiegazione.
 
+**Fatto il passo 3 (7 ottobre 2026, notte)**: nell'elenco anche gli schemi e le tabelle. Per uno schema
+Glifo dà al modello una descrizione a parole (le forme seguendo le frecce, le corsie, i collegamenti con il
+loro testo; negli schemi E-R entità, relazioni, attributi e cardinalità; le tabelle con i campi e le
+chiavi); per una tabella i valori calcolati, con le lettere delle colonne, e le formule. Resta la chat
+(passo 4).
+
 Da fare:
 - provarlo davvero su un computer con WebGPU (Chrome o Edge), su esercizi veri, e scegliere il modello
   di partenza: finora è provato solo con un modello finto (nelle sessioni di Claude Hugging Face era

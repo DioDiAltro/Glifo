@@ -31,12 +31,15 @@ export function targetAt(state: EditorState, region: MathRegion): ExplainTarget 
   return explainTarget(tex, sheet, defs)
 }
 
-/** I passaggi come elenco numerato della nota: la frase e la formula in linea (che la nota poi controlla). */
+/**
+ * I passaggi come elenco numerato della nota: la frase e la formula in linea (che la nota poi controlla),
+ * dopo i due punti; una frase senza formula resta com'è, con il suo punto.
+ */
 export function explanationMarkdown(e: Explanation): string {
   return e.steps
     .map((s, i) => {
-      const text = s.text.replace(/\s*[:.]\s*$/, '')
       const formula = s.formula ? `$${s.formula}$` : ''
+      const text = formula ? s.text.replace(/\s*[:.]\s*$/, '') : s.text.trim()
       return `${i + 1}. ${text}${text && formula ? ': ' : ''}${formula}`
     })
     .join('\n')

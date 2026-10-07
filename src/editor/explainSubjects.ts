@@ -1,20 +1,21 @@
 /**
  * Il pannello «Spiega con l'AI» (src/ui/aiPanel.ts): quello che si può spiegare nella nota, in ordine. I
  * conti (le formule con un risultato di Glifo, come per «Spiegami»), i grafici, le formule senza un conto
- * (una definizione, un'identità con le lettere) e i teoremi, le definizioni e le proprietà scritti nel
- * testo. Le formule si leggono dall'alto in basso con le definizioni scritte prima, come i risultati
- * della nota: un foglio solo, una formula alla volta.
+ * (una definizione, un'identità con le lettere), i teoremi, le definizioni e le proprietà scritti nel
+ * testo, gli schemi e le tabelle. Le formule si leggono dall'alto in basso con le definizioni scritte
+ * prima, come i risultati della nota: un foglio solo, una formula alla volta.
  */
 import { ensureSyntaxTree, syntaxTree } from '@codemirror/language'
 import type { EditorState } from '@codemirror/state'
 import { explainTarget, formulaNames, type ExplainTarget } from '../ai/explain'
+import { schemaTitle, tableTitle } from '../ai/topics'
 import { graphNames } from '../graph/spec'
 import { calculationRequest, Sheet, solveRequest } from '../math/sheet'
 import { findFencedBlocks } from '../schema/blocks'
 import { formulasUntil } from './calcResults'
 import { hasCalculation } from './explainInsert'
 
-export type SubjectKind = 'conto' | 'grafico' | 'formula' | 'teorema'
+export type SubjectKind = 'conto' | 'grafico' | 'formula' | 'teorema' | 'schema' | 'tabella'
 
 export interface NoteSubject {
   kind: SubjectKind
@@ -27,8 +28,9 @@ export interface NoteSubject {
   target?: ExplainTarget
   /** Le definizioni della nota che il grafico o la formula usano. */
   defs?: string[]
-  /** Un teorema: che cos'è (Teorema, Definizione…) e il suo titolo, come si vedono nell'elenco. */
+  /** Un teorema: che cos'è (Teorema, Definizione…). */
   tag?: string
+  /** Come si vede nell'elenco un teorema (il titolo), uno schema (le forme) o una tabella (la prima riga). */
   title?: string
 }
 
@@ -160,5 +162,16 @@ export function subjectsIn(state: EditorState): NoteSubject[] {
     }
   }
   graphsBefore(Infinity)
+  // Gli schemi e le tabelle: i blocchi chiusi che si leggono (con qualcosa dentro).
+  const blocks = [
+    ['schema', schemaTitle],
+    ['tabella', tableTitle],
+  ] as const
+  for (const [kind, titleOf] of blocks) {
+    for (const b of findFencedBlocks(text, kind)) {
+      const title = b.closed && b.source.trim() ? titleOf(b.source) : null
+      if (title !== null) out.push({ kind, from: b.from, to: b.to, source: b.source, title })
+    }
+  }
   return out.sort((a, b) => a.from - b.from)
 }

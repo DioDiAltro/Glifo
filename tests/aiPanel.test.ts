@@ -2,9 +2,9 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { EditorState } from '@codemirror/state'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
-import { explainTopic, topicPrompt, type ChatFn } from '../src/ai/explain'
+import { explainTopic, topicPrompt, topicSystemPrompt, type ChatFn } from '../src/ai/explain'
 import type { ChatMessage, LoadProgress } from '../src/ai/local'
-import { formulaTopic, graphTopic, theoremTopic } from '../src/ai/topics'
+import { formulaTopic, graphTopic, schemaTopic, tableTopic, theoremTopic } from '../src/ai/topics'
 import { MarkdownEditor } from '../src/editor/editor'
 import { subjectsIn } from '../src/editor/explainSubjects'
 import { mathMarkdown } from '../src/editor/mathSyntax'
@@ -193,6 +193,160 @@ describe('la spiegazione di una formula senza conto e di un teorema', () => {
   })
 })
 
+/** Un flusso con le corsie: chi ordina e chi spedisce; una forma senza testo. */
+const FLOW = JSON.stringify({
+  v: 1,
+  nodes: [
+    { id: 'l', shape: 'lanes', x: 0, y: 0, w: 660, h: 420, text: 'Cliente\nNegozio' },
+    { id: 'e', shape: 'ellipse', x: 40, y: 330, w: 120, h: 60, text: 'Fine' },
+    { id: 'a', shape: 'ellipse', x: 40, y: 60, w: 120, h: 60, text: 'Inizio' },
+    { id: 'c', shape: 'rhombus', x: 380, y: 180, w: 120, h: 80, text: 'Disponibile?' },
+    { id: 'b', shape: 'rect', x: 40, y: 180, w: 120, h: 60, text: 'Ordina' },
+    { id: 'd', shape: 'rect', x: 380, y: 300, w: 120, h: 60, text: 'Spedisce' },
+    { id: 'f', shape: 'note', x: 380, y: 40, w: 120, h: 60, text: '' },
+  ],
+  edges: [
+    { id: 'e1', from: 'a', to: 'b' },
+    { id: 'e2', from: 'b', to: 'c' },
+    { id: 'e3', from: 'c', to: 'd', text: 'sì' },
+    { id: 'e4', from: 'c', to: 'e', text: 'no', dashed: true },
+    { id: 'e5', from: 'd', to: 'e' },
+  ],
+})
+const SHEET = [
+  '| Prodotto | Quantità | Prezzo | Totale |',
+  '| --- | --- | --- | --- |',
+  '| Penne | 10 | 1,50 € | =B2*C2 |',
+  '| Quaderni | 5 | 2,40 € | =B3*C3 |',
+  '| Gomme | 0 | 0,50 € | =b4*c4 |',
+  '| Totale | =SOMMA(B2:B4) | =SOMMA(C2:C4) | =SOMMA(D2:D4) |',
+  '| Per pezzo | | | =D5/B4 |',
+].join('\n')
+
+describe('gli schemi e le tabelle', () => {
+  it('nell\'elenco gli schemi e le tabelle chiusi che si leggono, con le forme o la prima riga', () => {
+    const note = [
+      '# Negozio',
+      '',
+      '```schema',
+      FLOW,
+      '```',
+      '',
+      '```tabella',
+      SHEET,
+      '```',
+      '',
+      '```schema',
+      'non è uno schema',
+      '```',
+      '',
+      '```schema',
+      '{"v":1,"nodes":[],"edges":[]}',
+      '```',
+      '',
+      '```tabella',
+      '| a | b |',
+    ].join('\n')
+    const subjects = subjectsIn(state(note))
+    expect(subjects.map((s) => [s.kind, s.title])).toEqual([
+      ['schema', 'Inizio · Ordina · Disponibile? · Spedisce · Fine'],
+      ['tabella', 'Prodotto · Quantità · Prezzo · Totale'],
+    ])
+    expect(note.slice(subjects[0].from, subjects[0].to)).toBe(`\`\`\`schema\n${FLOW}\n\`\`\``)
+    expect(subjects[1].source).toBe(SHEET)
+  })
+
+  it('uno schema a parole: le forme nell\'ordine delle frecce con la corsia, i collegamenti con il testo, da dove si parte e dove si arriva', () => {
+    const topic = schemaTopic(FLOW)
+    expect(topic.title).toEqual({ text: 'Inizio · Ordina · Disponibile? · Spedisce · Fine' })
+    expect(topic.content).toBe(
+      [
+        'Corsie: «Cliente», «Negozio»',
+        'Forme:',
+        '- «Inizio» (ellisse), nella corsia «Cliente»',
+        '- «Ordina» (rettangolo), nella corsia «Cliente»',
+        '- «Disponibile?» (rombo), nella corsia «Negozio»',
+        '- «Spedisce» (rettangolo), nella corsia «Negozio»',
+        '- «Fine» (ellisse), nella corsia «Cliente»',
+        '- nota n. 1, nella corsia «Negozio»',
+        'Collegamenti:',
+        '- «Inizio» → «Ordina»',
+        '- «Ordina» → «Disponibile?»',
+        '- «Disponibile?» → «Spedisce»: «sì»',
+        '- «Disponibile?» → «Fine»: «no» (tratteggiata)',
+        '- «Spedisce» → «Fine»',
+      ].join('\n'),
+    )
+    expect(topic.facts).toEqual(['lo schema ha 6 forme e 5 collegamenti, in 2 corsie', 'seguendo le frecce si parte da «Inizio»', 'seguendo le frecce si arriva a «Fine»'])
+    expect(topicPrompt(topic).startsWith('Lo schema nella nota, descritto da Glifo:\nCorsie:')).toBe(true)
+    // Senza gli strumenti, e le formule solo se sono nello schema.
+    const system = topicSystemPrompt('professore', 'schema')
+    expect(system).toContain('Una formula tra $$ solo se è già nello schema.')
+    expect(system).not.toContain('<tools>')
+  })
+
+  it('uno schema E-R: entità, relazioni e attributi, le cardinalità dalla parte dove sono scritte; le tabelle con i campi e le chiavi', () => {
+    const er = schemaTopic(
+      JSON.stringify({
+        v: 1,
+        nodes: [
+          { id: 'm', shape: 'keyAttribute', x: 0, y: 100, w: 20, h: 20, text: 'Matricola' },
+          { id: 's', shape: 'rect', x: 0, y: 0, w: 120, h: 60, text: 'Studente' },
+          { id: 'r', shape: 'rhombus', x: 200, y: 0, w: 120, h: 60, text: 'Iscrizione' },
+          { id: 'c', shape: 'rect', x: 400, y: 0, w: 120, h: 60, text: 'Corso' },
+        ],
+        edges: [
+          { id: 'e1', from: 's', to: 'r', arrows: 'none', text: '(0,N)', at: 'start' },
+          { id: 'e2', from: 'r', to: 'c', arrows: 'none', text: '(1,N)', at: 'end' },
+          { id: 'e3', from: 's', to: 'm', arrows: 'none' },
+        ],
+      }),
+    )
+    expect(er.title).toEqual({ text: 'Studente · Iscrizione · Corso' })
+    expect(er.content.split('\n')).toEqual([
+      'Forme:',
+      '- «Studente» (entità)',
+      '- «Iscrizione» (relazione)',
+      '- «Corso» (entità)',
+      '- «Matricola» (attributo chiave)',
+      'Collegamenti:',
+      '- «Studente» — «Iscrizione», con «(0,N)» dalla parte di «Studente»',
+      '- «Iscrizione» — «Corso», con «(1,N)» dalla parte di «Corso»',
+      '- «Studente» — «Matricola»',
+    ])
+    expect(er.facts).toEqual(['lo schema ha 4 forme e 3 collegamenti', 'è uno schema E-R: entità, relazioni e i loro attributi'])
+    const table = schemaTopic(JSON.stringify({ v: 1, nodes: [{ id: 't', shape: 'table', x: 0, y: 0, w: 160, h: 100, text: 'Studente\nPK Matricola: CHAR(6)\nNome\nPK FK Corso' }], edges: [] }))
+    expect(table.content).toBe('Forme:\n- «Studente» (tabella), campi: Matricola (CHAR(6), chiave primaria), Nome, Corso (chiave primaria ed esterna)')
+    expect(table.facts).toEqual(['lo schema ha 1 forma e nessun collegamento', 'c\'è una tabella di una base di dati, con i campi e le chiavi'])
+  })
+
+  it('una tabella: la griglia con le lettere e i valori di Glifo, le formule copiate dette una volta, gli errori con cosa vogliono dire', async () => {
+    const topic = tableTopic(SHEET)
+    expect(topic.title).toEqual({ text: 'Prodotto · Quantità · Prezzo · Totale' })
+    expect(topic.content.split('\n')).toEqual([
+      '|   | A | B | C | D |',
+      '|---|---|---|---|---|',
+      '| 1 | Prodotto | Quantità | Prezzo | Totale |',
+      '| 2 | Penne | 10 | 1,50 € | 15,00 € |',
+      '| 3 | Quaderni | 5 | 2,40 € | 12,00 € |',
+      '| 4 | Gomme | 0 | 0,50 € | 0,00 € |',
+      '| 5 | Totale | 15 | 4,40 € | 27,00 € |',
+      '| 6 | Per pezzo |  |  | #DIV/0! |',
+    ])
+    expect(topic.facts).toEqual([
+      'da D2 a D4 la stessa formula riga per riga: D2 =B2*C2 … D4 =B4*C4',
+      'da B5 a D5 la stessa formula colonna per colonna: B5 =SOMMA(B2:B4) … D5 =SOMMA(D2:D4)',
+      'in D6 la formula =D5/B4, che dà #DIV/0!',
+      'in D6 c\'è l\'errore #DIV/0! (divisione per zero)',
+    ])
+    expect(topicPrompt(topic)).toContain('La tabella nella nota, con i valori calcolati da Glifo:\n|   | A |')
+    // Glifo controlla i conti con i numeri della spiegazione.
+    const e = await explainTopic(topic, 'semplice', async () => r`1. Il totale delle penne è il prezzo per la quantità. $$10 \cdot 1{,}5 = 15$$
+2. I quaderni costano di più. $$5 \cdot 2{,}4 = 13$$`)
+    expect(e.steps.map((s) => s.check)).toEqual([{ ok: true }, { ok: false, value: { tex: '12', text: '12' } }])
+  })
+})
+
 let editor: MarkdownEditor | null = null
 afterEach(() => {
   editor?.view.destroy()
@@ -200,13 +354,14 @@ afterEach(() => {
   document.body.replaceChildren()
 })
 
-function fakeModel(replies: string[]): ExplainModel {
+function fakeModel(replies: string[], seen: ChatMessage[][] = []): ExplainModel {
   return {
     load: async (model: string, onProgress?: (p: LoadProgress) => void) => {
       onProgress?.({ progress: 1, text: 'Finish loading' })
       return `${model}-q4f16_1-MLC`
     },
-    chat: async (_messages, _options, onDelta) => {
+    chat: async (messages, _options, onDelta) => {
+      seen.push(messages.map((m) => ({ ...m })))
       const reply = replies.shift() ?? ''
       onDelta?.(reply)
       return reply
@@ -214,7 +369,7 @@ function fakeModel(replies: string[]): ExplainModel {
   }
 }
 
-function setup(doc: string, replies: string[]) {
+function setup(doc: string, replies: string[], seen: ChatMessage[][] = []) {
   const host = document.createElement('div')
   document.body.append(host)
   editor = new MarkdownEditor(host, doc, { onDocChange: () => {}, onScroll: () => {}, onSave: () => {}, onFocusSearch: () => {}, onEditSchema: () => {} })
@@ -226,7 +381,7 @@ function setup(doc: string, replies: string[]) {
     openSettings: () => {},
     toast: (m) => toasts.push(m),
     onClose: () => closed++,
-    model: () => fakeModel(replies),
+    model: () => fakeModel(replies, seen),
   })
   document.body.append(panel.el)
   return { editor, panel, toasts, closed: () => closed }
@@ -254,6 +409,28 @@ describe('il pannello «Spiega con l\'AI»', () => {
     insert.click()
     expect(toasts).toEqual(['Spiegazione inserita nella nota'])
     expect(editor.getDoc()).toBe(`# Parabola\n\nLa funzione $y = x^2$.\n\n${GRAPH}\n\n1. È una parabola con il vertice nell'origine: $f(0) = 0$\n2. La derivata si annulla in zero, dove c'è il minimo: $f'(x) = 2x$\n3. In uno vale uno: $f(1) = 1$\n\nFine.`)
+  })
+
+  it('uno schema e una tabella: nell\'elenco con il loro nome; la tabella al modello con i valori, e la spiegazione dopo il blocco', async () => {
+    const table = `\`\`\`tabella\n${SHEET}\n\`\`\``
+    const doc = `# Negozio\n\n\`\`\`schema\n${FLOW}\n\`\`\`\n\n${table}\n\nFine.`
+    const seen: ChatMessage[][] = []
+    const { editor, panel } = setup(doc, [r`1. In D si moltiplica la quantità per il prezzo. $$10 \cdot 1{,}5 = 15$$` + '\n2. In fondo ci sono i totali.'], seen)
+    panel.show()
+    const items = [...panel.el.querySelectorAll<HTMLButtonElement>('.ai-subject')]
+    expect(items.map((b) => [b.dataset.kind, b.querySelector('.ai-subject-kind')?.textContent, b.querySelector('.ai-subject-body')?.textContent])).toEqual([
+      ['schema', 'Schema', 'Inizio · Ordina · Disponibile? · Spedisce · Fine'],
+      ['tabella', 'Tabella', 'Prodotto · Quantità · Prezzo · Totale'],
+    ])
+    items[1].click()
+    await settle()
+    expect(seen[0][1].content).toContain('| 2 | Penne | 10 | 1,50 € | 15,00 € |')
+    expect(seen[0][1].content).toContain('Dal motore di Glifo: da D2 a D4 la stessa formula riga per riga')
+    expect(panel.el.querySelector('.explain-title-text')?.textContent).toBe('Prodotto · Quantità · Prezzo · Totale')
+    expect(panel.el.querySelector('.explain-summary')?.textContent).toBe('✓ Formule controllate da Glifo: 1 su 1, tutte giuste. Le frasi le scrive il modello.')
+    ;[...panel.el.querySelectorAll('button')].find((b) => b.textContent === 'Inserisci nella nota')!.click()
+    // La frase senza formula tiene il suo punto.
+    expect(editor.getDoc()).toBe(doc.replace(`${table}\n\n`, `${table}\n\n1. In D si moltiplica la quantità per il prezzo: $10 \\cdot 1{,}5 = 15$\n2. In fondo ci sono i totali.\n\n`))
   })
 
   it('senza niente da spiegare lo dice; l\'elenco si rifà solo se si vede, e cambiando nota la spiegazione si chiude', async () => {

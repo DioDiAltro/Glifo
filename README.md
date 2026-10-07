@@ -898,13 +898,16 @@ come elenco numerato (e lì Glifo li controlla come le altre formule); **Rifai**
 
 **Spiega con l'AI** (in prova): il pulsante ✨, nella barra sopra il testo dopo `$$`, apre al posto
 dei simboli l'elenco di quello che nella nota si può spiegare: i conti, i grafici, le formule senza un
-conto (una definizione, un'identità come $a^2 + b^2 = c^2$) e i teoremi, le definizioni e le proprietà
-scritti nel testo (un titolo o un paragrafo che comincia con «Teorema», «Definizione», «Proprietà»…).
-Ne scegli uno e Glifo te lo spiega lì sotto, senza mettere il cursore nella formula. Per un grafico il
-modello racconta cosa mostra (dove taglia gli assi, dove cresce, massimi e minimi, asintoti, l'area
-colorata) con i numeri dello studio di funzione di Glifo; per una formula o un teorema cosa dice, con un
-esempio. Glifo controlla le formule che il modello scrive (anche gli esempi con i numeri): ✓, ✗ o «non
-controllato»; le frasi le scrive il modello. **Simboli** torna ai simboli; il pulsante della vista
+conto (una definizione, un'identità come $a^2 + b^2 = c^2$), i teoremi, le definizioni e le proprietà
+scritti nel testo (un titolo o un paragrafo che comincia con «Teorema», «Definizione», «Proprietà»…),
+gli schemi e le tabelle. Ne scegli uno e Glifo te lo spiega lì sotto, senza mettere il cursore nella
+formula. Per un grafico il modello racconta cosa mostra (dove taglia gli assi, dove cresce, massimi e
+minimi, asintoti, l'area colorata) con i numeri dello studio di funzione di Glifo; per una formula o un
+teorema cosa dice, con un esempio; per uno schema cosa rappresenta (Glifo gli descrive le forme seguendo
+le frecce, le corsie, i collegamenti con il loro testo, e negli schemi E-R entità, relazioni, attributi e
+cardinalità); per una tabella cosa calcola (Glifo gli dà i valori calcolati, con le lettere delle colonne,
+e le formule). Glifo controlla le formule che il modello scrive (anche gli esempi con i numeri): ✓, ✗ o
+«non controllato»; le frasi le scrive il modello. **Simboli** torna ai simboli; il pulsante della vista
 aperta chiude il pannello.
 
 In **Impostazioni → Spiegazioni (prova)** si sceglie il modello (Qwen3 0.6B, il più leggero, circa 0,4 GB;

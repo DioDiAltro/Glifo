@@ -370,7 +370,8 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   `explainTone`, solo su questo dispositivo (`explainFieldset` in `src/ui/dialogs.ts`). Nella PWA il
   worker non è tra i file precaricati: alla prima spiegazione va nella cache `glifo-webllm`, per
   l'offline. Nelle prove nel browser il worker è sostituito da uno finto (`fakeLlmWorker` in
-  `scripts/smoke-test.mjs`; per un grafico risponde con tre punti, uno sbagliato).
+  `scripts/smoke-test.mjs`; per un grafico risponde con tre punti, uno sbagliato, per uno schema e una
+  tabella con due punti se Glifo gli ha dato le frecce e i valori).
   «Spiega con l'AI» (7 ottobre 2026, sul ramo `prova`): il pulsante ✨ dopo `$$` (`aiToggle` in main.ts,
   in fondo agli inserimenti di `toolbar.ts`) mostra nel pannello a destra, al posto dei simboli, la vista
   `ai` (`SidePanel.setView` e `setOpen`, `PanelView`; `data-panel` su `.app` dice quale pulsante è acceso;
@@ -380,7 +381,8 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   prima, le formule senza un conto che dicono qualcosa, una volta sola (`worthExplaining`: una relazione o
   delle operazioni, non $x$, $\alpha$ o $\mathbb{R}$), e i teoremi del testo (`theoremsIn`: un titolo o un
   paragrafo, anche in un elenco, che comincia con Teorema, Definizione, Lemma, Proprietà…, fuori dai
-  blocchi di codice; le formule dentro le spiega lui); dall'albero completo di `ensureSyntaxTree`, che lo
+  blocchi di codice; le formule dentro le spiega lui), e i blocchi ```schema e ```tabella chiusi che si
+  leggono, con il nome da mostrare (`schemaTitle`, `tableTitle`); dall'albero completo di `ensureSyntaxTree`, che lo
   stato non restituisce: `formulasUntil` lo prende come `tree`) e, scelto uno, la spiegazione in un `ExplainPanel` suo (`explainSubject` con un
   `ExplainSubject`: un conto, o un `ExplainTopic` con il testo per ritrovarlo). L'elenco si rifà solo se
   si vede, 300 ms dopo l'ultima modifica; cambiando nota `reset` chiude la spiegazione. Per un grafico
@@ -388,7 +390,15 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   di funzione (y = … prende un nome libero, f(x), g(x)…; y = f(x) con f della nota resta f), le aree, i
   punti, gli slider. Per una formula `formulaTopic` (se definisce una funzione, anche un pezzo del suo
   studio), per un teorema `theoremTopic` (il testo così com'è, senza gli strumenti): lì Glifo controlla gli
-  esempi con i numeri che il modello scrive, e la formula ripetuta con le lettere non si giudica. `explainTopic` fa lo stesso giro dei conti (`converse`) con un messaggio di sistema
+  esempi con i numeri che il modello scrive, e la formula ripetuta con le lettere non si giudica. Per uno
+  schema `schemaTopic` lo descrive a parole (il modello non legge le coordinate del JSON): le corsie, le
+  forme nell'ordine delle frecce (`flowOrder`) con il loro tipo (`SHAPE_NAMES`; in uno schema E-R entità,
+  relazioni e attributi; le tabelle con i campi e le chiavi) e la corsia (`laneAt`), i collegamenti con il
+  verso e il testo (le cardinalità dalla parte dove sono scritte); i fatti sono quante forme, da dove si
+  parte e dove si arriva, e nel messaggio di sistema le formule vanno solo se sono nello schema. Per una
+  tabella `tableTopic`: la griglia con le lettere delle colonne, i numeri delle righe e i valori di
+  `SheetEvaluator`; i fatti sono le formule (quelle copiate riga per riga o colonna per colonna, che
+  `shiftFormula` riconosce, dette una volta) e gli errori con cosa vogliono dire. `explainTopic` fa lo stesso giro dei conti (`converse`) con un messaggio di sistema
   per il tipo (`topicSystemPrompt`, gli strumenti solo per grafici e formule) e senza un risultato a cui
   arrivare: `checkTopicSteps` controlla le formule dei punti (anche f(x) = … e f'(x) = …, con `Sheet.same`),
   `topicFeedback` fa correggere quelle sbagliate, una spiegazione solo a parole va bene; il riepilogo dice

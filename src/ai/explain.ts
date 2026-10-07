@@ -398,7 +398,7 @@ const TOPIC_HEAD: Record<TopicKind, string> = {
   grafico: 'Il grafico nella nota',
   formula: 'La formula nella nota',
   teorema: 'Dalla nota',
-  schema: 'Lo schema nella nota',
+  schema: 'Lo schema nella nota, descritto da Glifo',
   tabella: 'La tabella nella nota, con i valori calcolati da Glifo',
 }
 
@@ -423,7 +423,9 @@ export function topicSystemPrompt(tone: ExplainTone, kind: TopicKind): string {
     'Regole:',
     `- I numeri li calcola il motore di Glifo, che non sbaglia: usa i fatti che ti dà Glifo${tools ? ' e, se ti serve un altro conto, gli strumenti' : ''}. Non inventare numeri.`,
     '- Glifo controlla le formule che scrivi.',
-    '- Scrivi solo la spiegazione: un elenco numerato, un punto per riga. In ogni punto una o due frasi e, quando aiuta, alla fine una formula tra $$: un\'uguaglianza in LaTeX (a = b) senza parole dentro. Da 2 a 6 punti.',
+    kind === 'schema'
+      ? '- Scrivi solo la spiegazione: un elenco numerato, un punto per riga, con una o due frasi. Una formula tra $$ solo se è già nello schema. Da 2 a 6 punti.'
+      : '- Scrivi solo la spiegazione: un elenco numerato, un punto per riga. In ogni punto una o due frasi e, quando aiuta, alla fine una formula tra $$: un\'uguaglianza in LaTeX (a = b) senza parole dentro. Da 2 a 6 punti.',
     ...(tools ? ['', toolsPrompt()] : []),
   ].join('\n')
 }

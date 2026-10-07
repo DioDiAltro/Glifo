@@ -4,11 +4,19 @@
  * `explainTopic`). I grafici: per ogni funzione lo studio di funzione (dominio, zeri, segno, asintoti,
  * massimi e minimi…), le aree colorate, i punti, gli slider. Le formule senza un conto (una definizione,
  * un'identità come a^2 + b^2 = c^2) e i teoremi scritti nel testo: lì Glifo controlla gli esempi con i
- * numeri che il modello scrive.
+ * numeri che il modello scrive. Gli schemi, descritti a parole (le forme nell'ordine delle frecce, le
+ * corsie, i collegamenti), e le tabelle con i valori calcolati e le formule.
  */
 import { parseGraph, type GraphSpec } from '../graph/spec'
 import { formatNumber } from '../math/format'
 import { Sheet } from '../math/sheet'
+import { DB_SHAPES, insideLanes, laneAt, laneNames, parseSchema, parseTable, SHAPE_NAMES, type Schema, type SchemaEdge, type SchemaNode, type ShapeKind, type TableField } from '../schema/model'
+import { SheetEvaluator, type CellResult } from '../spreadsheet/evaluate'
+import { formatValue } from '../spreadsheet/format'
+import { isFormula, normalizeFormula, shiftFormula } from '../spreadsheet/formula'
+import { parseSheet, sheetSize, type SheetModel } from '../spreadsheet/model'
+import { cellName, colName } from '../spreadsheet/refs'
+import { isError } from '../spreadsheet/values'
 import type { ExplainTopic } from './explain'
 
 /** I nomi da dare alle funzioni scritte come y = …, perché il modello e i controlli le possano chiamare. */
@@ -118,4 +126,311 @@ const THEOREM_CHARS = 1400
 export function theoremTopic(text: string, title: string): ExplainTopic {
   const content = text.length > THEOREM_CHARS ? `${text.slice(0, THEOREM_CHARS)}…` : text
   return { kind: 'teorema', title: { text: title }, content, facts: [], defs: [] }
+}
+
+// ——— Schemi e tabelle ———
+
+/** Quanto testo al massimo per uno schema o una tabella (il resto si conta in fondo) e per il nome nell'elenco. */
+const BLOCK_CHARS = 1400
+const LABEL_CHARS = 60
+
+function cut(text: string, max = LABEL_CHARS): string {
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text
+}
+
+/** 1 forma, 3 forme. */
+function count(n: number, one: string, many: string): string {
+  return `${n} ${n === 1 ? one : many}`
+}
+
+/** «A», «A e B», «A, B e C». */
+function listText(items: string[]): string {
+  return items.length < 2 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} e ${items[items.length - 1]}`
+}
+
+/** Le righe che stanno in `max` caratteri (la prima sempre); quante ne restano si dice in fondo. */
+function fitLines(lines: string[], max: number): string[] {
+  let used = 0
+  for (let i = 0; i < lines.length; i++) {
+    used += lines[i].length + 1
+    if (used > max && i > 1) return [...lines.slice(0, i), `… e altre ${lines.length - i} righe`]
+  }
+  return lines
+}
+
+/** Le forme degli schemi E-R che sono attributi (nell'elenco del pannello vengono dopo entità e relazioni). */
+const ATTRIBUTES = new Set<ShapeKind>(['keyAttribute', 'multiAttribute', 'derivedAttribute', 'attribute', 'identifier'])
+/** Le forme che dicono che lo schema è un E-R (non le tabelle, che sono lo schema logico). */
+const ER_SHAPES = new Set<ShapeKind>(DB_SHAPES.filter((s) => s !== 'table'))
+
+function readSchema(source: string): Schema | null {
+  try {
+    return parseSchema(source)
+  } catch {
+    return null
+  }
+}
+
+/** Il testo di una forma su una riga; di una tabella il nome. */
+function shapeText(n: SchemaNode): string {
+  return (n.shape === 'table' ? parseTable(n.text).name : n.text).replace(/\s*\n\s*/g, ' ').trim()
+}
+
+/** Che forma è, in minuscolo: in uno schema E-R i rettangoli sono le entità e i rombi le relazioni. */
+function shapeKindName(n: SchemaNode, er: boolean): string {
+  if (er && n.shape === 'rect') return 'entità'
+  if (er && n.shape === 'rhombus') return 'relazione'
+  return SHAPE_NAMES[n.shape].replace(/\s*\(.*\)$/, '').toLowerCase()
+}
+
+/**
+ * Le forme nell'ordine del flusso: dalle forme dove le frecce partono (e non arrivano), seguendo le
+ * frecce; le altre (e tutte, se non ci sono frecce con la punta) dall'alto in basso e da sinistra a destra.
+ */
+function flowOrder(nodes: SchemaNode[], edges: SchemaEdge[]): SchemaNode[] {
+  const key = (n: SchemaNode) => [Math.round((n.y + n.h / 2) / 40), n.x + n.w / 2]
+  const byPos = [...nodes].sort((a, b) => {
+    const [ra, xa] = key(a)
+    const [rb, xb] = key(b)
+    return ra - rb || xa - xb
+  })
+  const rank = new Map(byPos.map((n, i) => [n.id, i]))
+  const next = new Map<string, string[]>()
+  const incoming = new Set<string>()
+  for (const e of edges) {
+    if (e.arrows !== 'end' || !rank.has(e.from) || !rank.has(e.to)) continue
+    next.set(e.from, [...(next.get(e.from) ?? []), e.to])
+    incoming.add(e.to)
+  }
+  const order: SchemaNode[] = []
+  const seen = new Set<string>()
+  const byId = new Map(nodes.map((n) => [n.id, n]))
+  const visit = (start: SchemaNode) => {
+    const queue = [start]
+    seen.add(start.id)
+    while (queue.length) {
+      const n = queue.shift()!
+      order.push(n)
+      const after = (next.get(n.id) ?? []).filter((id) => !seen.has(id)).sort((a, b) => rank.get(a)! - rank.get(b)!)
+      for (const id of after) {
+        seen.add(id)
+        queue.push(byId.get(id)!)
+      }
+    }
+  }
+  for (const n of byPos) if (next.has(n.id) && !incoming.has(n.id) && !seen.has(n.id)) visit(n)
+  // Un giro senza inizio (A → B → A): si parte dalla prima forma in alto.
+  for (const n of byPos) if (next.has(n.id) && !seen.has(n.id)) visit(n)
+  for (const n of byPos) if (!seen.has(n.id)) order.push(n)
+  return order
+}
+
+/** La corsia in cui sta una forma: «Cliente», o il numero se la corsia non ha nome. */
+function laneOf(n: SchemaNode, lanes: SchemaNode[]): string | null {
+  for (const l of lanes) {
+    if (!insideLanes(l, n)) continue
+    const at = laneAt(l, n.x + n.w / 2, n.y + n.h / 2)
+    if (!at) continue
+    const name = laneNames(l.text)[at.lane]?.trim()
+    return name ? `«${name}»` : `n. ${at.lane + 1}`
+  }
+  return null
+}
+
+function fieldText(f: TableField): string {
+  const keys = f.pk && f.fk ? 'chiave primaria ed esterna' : f.pk ? 'chiave primaria' : f.fk ? 'chiave esterna' : ''
+  const more = [f.type.trim(), keys].filter(Boolean).join(', ')
+  return `${f.name.trim()}${more ? ` (${more})` : ''}`
+}
+
+/** I nomi da mostrare nell'elenco del pannello: entità, relazioni e passi prima degli attributi e dei testi. */
+function schemaLabel(schema: Schema): string {
+  const lanes = schema.nodes.filter((n) => n.shape === 'lanes')
+  const shapes = flowOrder(schema.nodes.filter((n) => n.shape !== 'lanes'), schema.edges)
+  const main = shapes.filter((n) => !ATTRIBUTES.has(n.shape) && n.shape !== 'text' && n.shape !== 'note').map(shapeText).filter(Boolean)
+  const texts = main.length ? main : shapes.map(shapeText).filter(Boolean)
+  const parts = texts.length ? texts : lanes.flatMap((l) => laneNames(l.text).map((t) => t.trim())).filter(Boolean)
+  return parts.length ? cut(parts.slice(0, 8).join(' · ').replace(/\$/g, '')) : count(schema.nodes.length, 'forma', 'forme')
+}
+
+/** Il nome di uno schema nell'elenco del pannello; null se il blocco non è uno schema o è vuoto. */
+export function schemaTitle(source: string): string | null {
+  const schema = readSchema(source)
+  return schema?.nodes.length ? schemaLabel(schema) : null
+}
+
+/**
+ * Uno schema della nota (il JSON del blocco ```schema), descritto a parole: il modello non legge le
+ * coordinate. Le corsie, le forme nell'ordine del flusso con il loro tipo (in uno schema E-R entità,
+ * relazioni, attributi; le tabelle con i campi e le chiavi) e la corsia, i collegamenti con il verso e
+ * il testo (anche le cardinalità, dalla parte dove sono scritte). I fatti: quante forme, da dove si
+ * parte e dove si arriva.
+ */
+export function schemaTopic(source: string): ExplainTopic {
+  const schema = readSchema(source) ?? { nodes: [], edges: [] }
+  const lanes = schema.nodes.filter((n) => n.shape === 'lanes')
+  const shapes = flowOrder(schema.nodes.filter((n) => n.shape !== 'lanes'), schema.edges)
+  const er = shapes.some((n) => ER_SHAPES.has(n.shape))
+  const names = new Map<string, string>(lanes.map((l) => [l.id, 'le corsie']))
+  const unnamed = new Map<string, number>()
+  for (const n of shapes) {
+    const text = shapeText(n)
+    if (text) names.set(n.id, `«${text}»`)
+    else {
+      const kind = shapeKindName(n, er)
+      const k = (unnamed.get(kind) ?? 0) + 1
+      unnamed.set(kind, k)
+      names.set(n.id, `${kind} n. ${k}`)
+    }
+  }
+  const laneList = lanes.flatMap((l) => laneNames(l.text).map((t) => t.trim())).filter(Boolean)
+  const lines: string[] = []
+  if (laneList.length) lines.push(`Corsie: ${laneList.map((t) => `«${t}»`).join(', ')}`)
+  lines.push('Forme:')
+  for (const n of shapes) {
+    const name = names.get(n.id)!
+    let line = name.startsWith('«') ? `${name} (${shapeKindName(n, er)})` : name
+    const fields = n.shape === 'table' ? parseTable(n.text).fields.filter((f) => f.name.trim()) : []
+    if (fields.length) line += `, campi: ${fields.map(fieldText).join(', ')}`
+    const lane = lanes.length ? laneOf(n, lanes) : null
+    if (lane) line += `, nella corsia ${lane}`
+    lines.push(`- ${line}`)
+  }
+  if (schema.edges.length) {
+    lines.push('Collegamenti:')
+    for (const e of schema.edges) {
+      const a = names.get(e.from) ?? 'una forma'
+      const b = names.get(e.to) ?? 'una forma'
+      let line = `${a} ${e.arrows === 'both' ? '↔' : e.arrows === 'none' ? '—' : '→'} ${b}`
+      const text = e.text.replace(/\s*\n\s*/g, ' ').trim()
+      if (text) line += e.at === 'start' ? `, con «${text}» dalla parte di ${a}` : e.at === 'end' ? `, con «${text}» dalla parte di ${b}` : `: «${text}»`
+      if (e.dashed) line += ' (tratteggiata)'
+      lines.push(`- ${line}`)
+    }
+  }
+  const links = schema.edges.length ? count(schema.edges.length, 'collegamento', 'collegamenti') : 'nessun collegamento'
+  const facts = [`lo schema ha ${count(shapes.length, 'forma', 'forme')} e ${links}${laneList.length ? `, in ${count(laneList.length, 'corsia', 'corsie')}` : ''}`]
+  if (er) facts.push('è uno schema E-R: entità, relazioni e i loro attributi')
+  const tables = shapes.filter((n) => n.shape === 'table').length
+  if (tables) facts.push(`${tables === 1 ? 'c\'è una tabella' : `ci sono ${tables} tabelle`} di una base di dati, con i campi e le chiavi`)
+  const arrows = schema.edges.filter((e) => e.arrows === 'end')
+  if (arrows.length) {
+    const from = new Set(arrows.map((e) => e.from))
+    const to = new Set(arrows.map((e) => e.to))
+    const starts = shapes.filter((n) => from.has(n.id) && !to.has(n.id)).map((n) => names.get(n.id)!)
+    const ends = shapes.filter((n) => to.has(n.id) && !from.has(n.id)).map((n) => names.get(n.id)!)
+    if (starts.length && starts.length <= 3) facts.push(`seguendo le frecce si parte da ${listText(starts)}`)
+    if (ends.length && ends.length <= 3) facts.push(`seguendo le frecce si arriva a ${listText(ends)}`)
+  }
+  const title = schema.nodes.length ? schemaLabel(schema) : 'Lo schema'
+  return { kind: 'schema', title: { text: title }, content: fitLines(lines, BLOCK_CHARS).join('\n'), facts, defs: [] }
+}
+
+/** Quante colonne della tabella si mandano al modello, e quante formule e quanti errori si dicono. */
+const GRID_COLS = 12
+const MAX_FORMULAS = 9
+const MAX_ERRORS = 3
+
+function readSheet(source: string): SheetModel | null {
+  try {
+    return parseSheet(source)
+  } catch {
+    return null
+  }
+}
+
+/** Il valore come lo mostra la tabella; un errore con il suo codice (e, se serve, cosa vuol dire). */
+function valueText(result: CellResult, why = false): string {
+  if (isError(result.value)) return why ? `${result.value.error} (${result.value.message.toLowerCase()})` : result.value.error
+  return formatValue(result.value, result.format)
+}
+
+/** La formula come la riscrive Excel (=somma(b2:b5) → =SOMMA(B2:B5)). */
+function formulaText(input: string): string {
+  try {
+    return normalizeFormula(input.trim())
+  } catch {
+    return input.trim()
+  }
+}
+
+/** Il nome di una tabella nell'elenco del pannello (la prima riga); null se il blocco è vuoto. */
+export function tableTitle(source: string): string | null {
+  const model = readSheet(source)
+  if (!model) return null
+  const { rows, cols } = sheetSize(model)
+  if (!rows || !cols) return null
+  const head = (model.cells[0] ?? [])
+    .slice(0, cols)
+    .map((c) => (c && !isFormula(c.input) ? c.input.trim() : ''))
+    .filter(Boolean)
+  return head.length ? cut(head.join(' · ').replace(/\$/g, '')) : `${count(rows, 'riga', 'righe')} e ${count(cols, 'colonna', 'colonne')}`
+}
+
+/**
+ * Una tabella della nota (il testo del blocco ```tabella): la griglia con le lettere delle colonne e i
+ * numeri delle righe, come nell'editor, con i valori calcolati da Glifo; i fatti sono le formule (quelle
+ * copiate riga per riga o colonna per colonna, come D2 = B2*C2 … D6 = B6*C6, dette una volta sola) e
+ * gli errori, con cosa vogliono dire.
+ */
+export function tableTopic(source: string): ExplainTopic {
+  const model = readSheet(source)
+  const title = { text: tableTitle(source) ?? 'La tabella' }
+  if (!model) return { kind: 'tabella', title, content: source, facts: [], defs: [] }
+  const { rows, cols } = sheetSize(model)
+  const evaluator = new SheetEvaluator(model)
+  const shown = Math.min(cols, GRID_COLS)
+  const columns = Array.from({ length: shown }, (_, c) => c)
+  const lines = [`|   | ${columns.map(colName).join(' | ')} |`, `|${'---|'.repeat(shown + 1)}`]
+  for (let r = 0; r < rows; r++) lines.push(`| ${r + 1} | ${columns.map((c) => valueText(evaluator.result(r, c)).replace(/\|/g, '\\|')).join(' | ')} |`)
+  const content = [...fitLines(lines, BLOCK_CHARS), ...(cols > shown ? [`… e altre ${cols - shown} colonne`] : [])].join('\n')
+
+  const formulas: { row: number; col: number; input: string }[] = []
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = model.cells[r]?.[c]
+      if (cell && isFormula(cell.input)) formulas.push({ row: r, col: c, input: cell.input })
+    }
+  }
+  const at = new Map(formulas.map((f) => [`${f.row},${f.col}`, f]))
+  const told = new Set<(typeof formulas)[number]>()
+  // La formula di `f` copiata nella cella di `g` è quella di `g`.
+  const copied = (f: (typeof formulas)[number], g: (typeof formulas)[number]) => {
+    try {
+      return formulaText(shiftFormula(f.input, g.row - f.row, g.col - f.col)) === formulaText(g.input)
+    } catch {
+      return false
+    }
+  }
+  const run = (f: (typeof formulas)[number], dr: number, dc: number) => {
+    const out = [f]
+    for (let k = 1; ; k++) {
+      const g = at.get(`${f.row + dr * k},${f.col + dc * k}`)
+      if (!g || told.has(g) || !copied(f, g)) return out
+      out.push(g)
+    }
+  }
+  const said: string[] = []
+  for (const f of formulas) {
+    if (told.has(f)) continue
+    const down = run(f, 1, 0)
+    const same = down.length > 1 ? down : run(f, 0, 1)
+    same.forEach((g) => told.add(g))
+    const first = cellName(f.row, f.col)
+    if (same.length === 1) {
+      said.push(`in ${first} la formula ${formulaText(f.input)}, che dà ${valueText(evaluator.result(f.row, f.col))}`)
+      continue
+    }
+    const last = same[same.length - 1]
+    const end = cellName(last.row, last.col)
+    said.push(`da ${first} a ${end} la stessa formula ${down.length > 1 ? 'riga per riga' : 'colonna per colonna'}: ${first} ${formulaText(f.input)} … ${end} ${formulaText(last.input)}`)
+  }
+  const errors = formulas
+    .filter((f) => isError(evaluator.result(f.row, f.col).value))
+    .map((f) => `in ${cellName(f.row, f.col)} c'è l'errore ${valueText(evaluator.result(f.row, f.col), true)}`)
+  const facts = [
+    ...(said.length > MAX_FORMULAS ? [...said.slice(0, MAX_FORMULAS - 1), `e altre ${said.length - MAX_FORMULAS + 1} formule`] : said),
+    ...(errors.length > MAX_ERRORS ? [...errors.slice(0, MAX_ERRORS - 1), `e altri ${errors.length - MAX_ERRORS + 1} errori`] : errors),
+  ]
+  return { kind: 'tabella', title, content, facts, defs: [] }
 }
