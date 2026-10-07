@@ -356,6 +356,9 @@ Glifo non le controlla: da riprovare sul sito di prova.
 spiegazione (per i grafici con lo studio di funzione di Glifo e le formule controllate). Descritto nel
 README e in ARCHITETTURA.md (`src/ui/aiPanel.ts`).
 
+**Fatto il passo 2 (7 ottobre 2026, notte)**: nell'elenco anche le formule senza un conto e i teoremi, le
+definizioni e le proprietà scritti nel testo; Glifo controlla gli esempi con i numeri della spiegazione.
+
 Da fare:
 - provarlo davvero su un computer con WebGPU (Chrome o Edge), su esercizi veri, e scegliere il modello
   di partenza: finora è provato solo con un modello finto (nelle sessioni di Claude Hugging Face era

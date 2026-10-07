@@ -1,12 +1,13 @@
 /**
  * «Spiega con l'AI» (il pulsante ✨ sopra il testo, 7 ottobre 2026): nel posto del pannello dei simboli,
- * l'elenco di quello che si può spiegare nella nota (src/editor/explainSubjects.ts: i conti e i grafici)
+ * l'elenco di quello che si può spiegare nella nota (src/editor/explainSubjects.ts: i conti, i grafici, le
+ * formule senza un conto, i teoremi e le definizioni)
  * e, scelto uno, la sua spiegazione, nello stesso riquadro di «Spiegami» (src/ui/explainPanel.ts: il modello
  * nel browser, Glifo che controlla le formule). L'elenco si rifà quando cambia la nota, solo se si vede.
  */
 import type { Text } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
-import { graphTopic } from '../ai/topics'
+import { formulaTopic, graphTopic, theoremTopic } from '../ai/topics'
 import type { MarkdownEditor } from '../editor/editor'
 import { subjectsIn, type NoteSubject, type SubjectKind } from '../editor/explainSubjects'
 import { escapeHtml, renderTex } from '../render/katex'
@@ -25,7 +26,7 @@ export interface AiPanelDeps {
   model?: () => ExplainModel
 }
 
-const KIND_NAMES: Record<SubjectKind, string> = { conto: 'Conto', grafico: 'Grafico' }
+const KIND_NAMES: Record<SubjectKind, string> = { conto: 'Conto', grafico: 'Grafico', formula: 'Formula', teorema: 'Teorema' }
 
 /** Dopo quanto, smesso di scrivere, l'elenco si rifà (in millisecondi). */
 const REFRESH_MS = 300
@@ -62,9 +63,9 @@ export class AiPanel {
     this.empty = h(
       'p',
       { class: 'ai-panel-empty', attrs: { hidden: true } },
-      'In questa nota non c\'è ancora niente da spiegare: scrivi un conto in una formula, con «=» alla fine (per esempio ',
+      'In questa nota non c\'è ancora niente da spiegare: scrivi una formula (anche un conto, con «=» alla fine: ',
       h('span', { html: texInline('\\int_0^1 x^2 \\, dx =') }),
-      '), o inserisci un grafico.',
+      '), un teorema o una definizione, o inserisci un grafico.',
     )
     this.el = h(
       'section',
@@ -131,7 +132,7 @@ export class AiPanel {
     this.list.replaceChildren(
       ...this.subjects.map((s) => {
         const chosen = this.key(s) === this.chosen
-        const body = s.kind === 'conto' ? texInline(s.source) : graphLabel(s.source)
+        const body = s.kind === 'grafico' ? graphLabel(s.source) : s.kind === 'teorema' ? escapeHtml(s.title ?? '') : texInline(s.source)
         return h(
           'li',
           {},
@@ -142,7 +143,7 @@ export class AiPanel {
               attrs: { type: 'button', 'aria-pressed': String(chosen), 'data-kind': s.kind },
               on: { click: () => void this.choose(s) },
             },
-            h('span', { class: 'ai-subject-kind' }, KIND_NAMES[s.kind]),
+            h('span', { class: 'ai-subject-kind' }, s.kind === 'teorema' && s.tag ? s.tag : KIND_NAMES[s.kind]),
             h('span', { class: 'ai-subject-body', html: body }),
           ),
         )
@@ -155,11 +156,12 @@ export class AiPanel {
     this.chosen = this.key(s)
     this.render()
     this.deps.editor.view.dispatch({ effects: EditorView.scrollIntoView(s.from, { y: 'center' }) })
-    const subject: ExplainSubject | null =
-      s.kind === 'conto' && s.target ? { kind: 'conto', target: s.target } : s.kind === 'grafico' ? { kind: 'topic', topic: graphTopic(s.source, s.defs ?? []), source: s.source } : null
-    // Dove ritrovarla per inserire la spiegazione: la fine del conto, o l'inizio del testo del blocco (non la
-    // riga ```, più vicina a una formula uguale scritta appena prima).
-    const near = s.kind === 'conto' ? s.to : s.from + this.deps.editor.view.state.sliceDoc(s.from, s.to).indexOf(s.source)
+    const topic =
+      s.kind === 'grafico' ? graphTopic(s.source, s.defs ?? []) : s.kind === 'formula' ? formulaTopic(s.source, s.defs ?? []) : s.kind === 'teorema' ? theoremTopic(s.source, s.title ?? '') : null
+    const subject: ExplainSubject | null = s.kind === 'conto' && s.target ? { kind: 'conto', target: s.target } : topic ? { kind: 'topic', topic, source: s.source } : null
+    // Dove ritrovarla per inserire la spiegazione: la fine del conto, o l'inizio del suo testo (per un grafico
+    // non la riga ```, più vicina a una formula uguale scritta appena prima).
+    const near = s.kind === 'conto' ? s.to : s.from + Math.max(0, this.deps.editor.view.state.sliceDoc(s.from, s.to).indexOf(s.source))
     if (subject) await this.explain.explainSubject(subject, near)
   }
 }

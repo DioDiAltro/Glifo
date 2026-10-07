@@ -53,6 +53,8 @@ function fakeLlmWorker() {
   const graph = String.raw`1. È una parabola con il vertice nell'origine: vale zero in zero. $$f(0) = 0$$
 2. La derivata si annulla in zero, dove c'è il minimo. $$f'(x) = 2x$$
 3. In uno vale due. $$f(1) = 2$$`
+  const theorem = String.raw`1. Dice che il quadrato dell'ipotenusa è la somma dei quadrati dei cateti.
+2. Per esempio con i lati 3, 4 e 5. $$3^2 + 4^2 = 5^2$$`
   self.addEventListener('message', (ev) => {
     const msg = ev.data
     if (msg.type === 'load') {
@@ -60,7 +62,7 @@ function fakeLlmWorker() {
       setTimeout(() => self.postMessage({ id: msg.id, type: 'done', value: `${msg.model}-q4f16_1-MLC` }), 100)
     } else if (msg.type === 'chat') {
       const ask = msg.messages.find((m) => m.role === 'user')?.content ?? ''
-      const reply = ask.includes('```grafico') ? graph : msg.messages.at(-1).content.includes('<tool_response>') ? steps : call
+      const reply = ask.includes('```grafico') ? graph : ask.startsWith('Dalla nota:') ? theorem : msg.messages.at(-1).content.includes('<tool_response>') ? steps : call
       for (let i = 0; i < reply.length; i += 16) self.postMessage({ id: msg.id, type: 'delta', text: reply.slice(i, i + 16) })
       self.postMessage({ id: msg.id, type: 'done', value: reply })
     } else if (msg.type === 'remove') self.postMessage({ id: msg.id, type: 'done' })
@@ -3572,22 +3574,33 @@ try {
     await ex.keyboard.press('End')
     await ex.keyboard.press('Enter')
     await ex.keyboard.press('Enter')
-    // Il grafico dal riquadro della formula, come lo mette chi scrive.
+    // Il grafico dal riquadro della formula, come lo mette chi scrive; poi un teorema, in fondo.
     await ex.keyboard.type('$y = x^2')
     await ex.locator('.formula-box button', { hasText: 'Inserisci il grafico' }).click()
+    await ex.keyboard.press('Control+End')
+    await ex.keyboard.press('Enter')
+    await ex.keyboard.type('## Teorema di Pitagora')
+    await ex.keyboard.press('Enter')
+    await ex.keyboard.type('In un triangolo rettangolo la somma dei quadrati dei cateti è il quadrato dell\'ipotenusa.')
     const aiNext = await ex.locator('.editor-toolbar[aria-label="Inserisci"] button').evaluateAll((els) => els.slice(-2).map((b) => b.getAttribute('aria-label')))
     await ex.locator('.ai-toggle').click()
     await ex.waitForSelector('.ai-subject')
-    await ex.waitForFunction(() => document.querySelectorAll('.ai-subject').length === 2, null, { timeout: 5000 })
+    await ex.waitForFunction(() => document.querySelectorAll('.ai-subject').length === 4, null, { timeout: 5000 })
     const aiOpen = await ex.evaluate(() => ({
       kinds: [...document.querySelectorAll('.ai-subject')].map((b) => b.dataset.kind),
+      tags: [...document.querySelectorAll('.ai-subject-kind')].map((t) => t.textContent),
       panel: document.querySelector('.app').dataset.panel,
       search: getComputedStyle(document.querySelector('.panel-search')).display,
       label: document.querySelector('#symbols-panel').getAttribute('aria-label'),
     }))
     check(
-      aiNext.join() === 'Formula a blocco (Ctrl+Maiusc+M),Spiega con l\'AI' && aiOpen.kinds.join() === 'conto,grafico' && aiOpen.panel === 'ai' && aiOpen.search === 'none' && aiOpen.label === 'Spiega con l\'AI',
-      `il pulsante ✨ dopo $$ apre «Spiega con l'AI» al posto dei simboli, con il conto e il grafico della nota (${JSON.stringify({ aiNext, aiOpen })})`,
+      aiNext.join() === 'Formula a blocco (Ctrl+Maiusc+M),Spiega con l\'AI' &&
+        aiOpen.kinds.join() === 'conto,formula,grafico,teorema' &&
+        aiOpen.tags.join() === 'Conto,Formula,Grafico,Teorema' &&
+        aiOpen.panel === 'ai' &&
+        aiOpen.search === 'none' &&
+        aiOpen.label === 'Spiega con l\'AI',
+      `il pulsante ✨ dopo $$ apre «Spiega con l'AI» al posto dei simboli, con il conto, la formula, il grafico e il teorema della nota (${JSON.stringify({ aiNext, aiOpen })})`,
     )
     await ex.locator('.ai-subject[data-kind="grafico"]').click()
     await ex.waitForSelector('.ai-panel .explain-summary', { timeout: 15000 })
@@ -3603,6 +3616,19 @@ try {
     await ex.locator('.ai-panel .explain-box button', { hasText: 'Inserisci nella nota' }).click()
     await ex.waitForFunction(() => document.querySelector('.cm-content').innerText.includes('1. È una parabola'), null, { timeout: 5000 })
     const afterGraph = await ex.locator('.cm-content').innerText()
+    // Il teorema: a parole, con l'esempio con i numeri controllato da Glifo.
+    await ex.locator('.ai-subject[data-kind="teorema"]').click()
+    await ex.waitForFunction(() => document.querySelector('.ai-panel .explain-summary')?.textContent.includes('1 su 1'), null, { timeout: 15000 })
+    const theoremShown = await ex.evaluate(() => ({
+      title: document.querySelector('.ai-panel .explain-title-text')?.textContent,
+      steps: document.querySelectorAll('.ai-panel .explain-step').length,
+      ok: document.querySelectorAll('.ai-panel .explain-step.is-ok').length,
+      summary: document.querySelector('.ai-panel .explain-summary').textContent,
+    }))
+    check(
+      theoremShown.title === 'Teorema di Pitagora' && theoremShown.steps === 2 && theoremShown.ok === 1 && theoremShown.summary.startsWith('✓ Formule controllate da Glifo: 1 su 1, tutte giuste'),
+      `scelto il teorema, la spiegazione a parole con l'esempio controllato da Glifo (${JSON.stringify(theoremShown)})`,
+    )
     // «Simboli» torna ai simboli; ✨ di nuovo alla spiegazione, e un altro clic chiude il pannello.
     await ex.locator('.symbols-toggle').click()
     const backToSymbols = await ex.evaluate(() => [document.querySelector('.app').dataset.panel, getComputedStyle(document.querySelector('.ai-panel')).display, getComputedStyle(document.querySelector('.panel-search')).display])

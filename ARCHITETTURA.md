@@ -376,14 +376,19 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   `ai` (`SidePanel.setView` e `setOpen`, `PanelView`; `data-panel` su `.app` dice quale pulsante è acceso;
   il pulsante della vista che si vede chiude il pannello, l'altro cambia vista, Ctrl+K torna ai simboli):
   `src/ui/aiPanel.ts`, con l'elenco di `subjectsIn` (`src/editor/explainSubjects.ts`: i conti, letti con un
-  foglio solo dall'alto in basso come i risultati, e i blocchi ```grafico chiusi con le definizioni scritte
-  prima; dall'albero completo di `ensureSyntaxTree`, che lo stato non restituisce: `formulasUntil` lo
-  prende come `tree`) e, scelto uno, la spiegazione in un `ExplainPanel` suo (`explainSubject` con un
+  foglio solo dall'alto in basso come i risultati, i blocchi ```grafico chiusi con le definizioni scritte
+  prima, le formule senza un conto che dicono qualcosa, una volta sola (`worthExplaining`: una relazione o
+  delle operazioni, non $x$, $\alpha$ o $\mathbb{R}$), e i teoremi del testo (`theoremsIn`: un titolo o un
+  paragrafo, anche in un elenco, che comincia con Teorema, Definizione, Lemma, Proprietà…, fuori dai
+  blocchi di codice; le formule dentro le spiega lui); dall'albero completo di `ensureSyntaxTree`, che lo
+  stato non restituisce: `formulasUntil` lo prende come `tree`) e, scelto uno, la spiegazione in un `ExplainPanel` suo (`explainSubject` con un
   `ExplainSubject`: un conto, o un `ExplainTopic` con il testo per ritrovarlo). L'elenco si rifà solo se
   si vede, 300 ms dopo l'ultima modifica; cambiando nota `reset` chiude la spiegazione. Per un grafico
   `graphTopic` (`src/ai/topics.ts`) dà al modello il blocco e i fatti di Glifo: per ogni funzione lo studio
   di funzione (y = … prende un nome libero, f(x), g(x)…; y = f(x) con f della nota resta f), le aree, i
-  punti, gli slider. `explainTopic` fa lo stesso giro dei conti (`converse`) con un messaggio di sistema
+  punti, gli slider. Per una formula `formulaTopic` (se definisce una funzione, anche un pezzo del suo
+  studio), per un teorema `theoremTopic` (il testo così com'è, senza gli strumenti): lì Glifo controlla gli
+  esempi con i numeri che il modello scrive, e la formula ripetuta con le lettere non si giudica. `explainTopic` fa lo stesso giro dei conti (`converse`) con un messaggio di sistema
   per il tipo (`topicSystemPrompt`, gli strumenti solo per grafici e formule) e senza un risultato a cui
   arrivare: `checkTopicSteps` controlla le formule dei punti (anche f(x) = … e f'(x) = …, con `Sheet.same`),
   `topicFeedback` fa correggere quelle sbagliate, una spiegazione solo a parole va bene; il riepilogo dice

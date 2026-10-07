@@ -1,8 +1,10 @@
 /**
  * Le cose della nota da spiegare che non sono conti (il pannello «Spiega con l'AI», src/ui/aiPanel.ts),
  * con i fatti che Glifo sa già calcolare: il modello li racconta, non li inventa (src/ai/explain.ts,
- * `explainTopic`). Per ora i grafici: per ogni funzione lo studio di funzione (dominio, zeri, segno,
- * asintoti, massimi e minimi…), le aree colorate, i punti, gli slider.
+ * `explainTopic`). I grafici: per ogni funzione lo studio di funzione (dominio, zeri, segno, asintoti,
+ * massimi e minimi…), le aree colorate, i punti, gli slider. Le formule senza un conto (una definizione,
+ * un'identità come a^2 + b^2 = c^2) e i teoremi scritti nel testo: lì Glifo controlla gli esempi con i
+ * numeri che il modello scrive.
  */
 import { parseGraph, type GraphSpec } from '../graph/spec'
 import { formatNumber } from '../math/format'
@@ -25,13 +27,13 @@ function definedName(def: string): string | null {
 }
 
 /** Lo studio di funzione di Glifo, come lo scrive la nota (`\operatorname{studio}(f) =`); null se non lo sa fare. */
-function studyOf(defs: string[], name: string): string | null {
+function studyOf(defs: string[], name: string, chars = STUDY_CHARS): string | null {
   try {
     const sheet = new Sheet()
     for (const d of defs) sheet.add(d)
     const text = sheet.add(`\\operatorname{studio}(${name}) =`)?.text ?? null
     if (!text) return null
-    return text.length > STUDY_CHARS ? `${text.slice(0, STUDY_CHARS)}…` : text
+    return text.length > chars ? `${text.slice(0, chars)}…` : text
   } catch {
     return null
   }
@@ -89,4 +91,31 @@ export function graphTopic(source: string, defs: string[]): ExplainTopic {
   for (const s of spec?.sliders ?? []) facts.push(`lo slider ${s.name} vale ${numberText(s.value)} (da ${s.ends[0]} a ${s.ends[1]})`)
   const title = spec?.title ? { text: spec.title.replace(/\$/g, '') } : firstLabel.length ? { tex: firstLabel[0] } : { text: 'Il grafico' }
   return { kind: 'grafico', title, content: `\`\`\`grafico\n${source.trim()}\n\`\`\``, facts: facts.slice(0, MAX_FACTS), defs: own }
+}
+
+/**
+ * Una formula della nota senza un conto (src/editor/explainSubjects.ts): una definizione (f(x) = x^2,
+ * a = 2), un'identità o una relazione con le lettere (a^2 + b^2 = c^2). Se definisce una funzione,
+ * Glifo dà anche un pezzo del suo studio; il resto lo spiega il modello, con gli esempi che Glifo controlla.
+ */
+export function formulaTopic(tex: string, defs: string[]): ExplainTopic {
+  const facts: string[] = []
+  const own = [...defs]
+  const name = definedName(tex)
+  if (name) {
+    facts.push(`è la definizione di una funzione: $$${tex}$$`)
+    own.push(tex)
+    const study = studyOf(own, name, 400)
+    if (study) facts.push(`studio di ${name}: ${study}`)
+  }
+  return { kind: 'formula', title: { tex }, content: `$$${tex}$$`, facts, defs: own }
+}
+
+/** Quanto di un teorema si manda al modello (il resto del paragrafo si taglia). */
+const THEOREM_CHARS = 1400
+
+/** Un teorema, una definizione, una proprietà scritti nel testo della nota: il modello lo legge così com'è. */
+export function theoremTopic(text: string, title: string): ExplainTopic {
+  const content = text.length > THEOREM_CHARS ? `${text.slice(0, THEOREM_CHARS)}…` : text
+  return { kind: 'teorema', title: { text: title }, content, facts: [], defs: [] }
 }
