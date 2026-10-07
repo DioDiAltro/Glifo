@@ -39,6 +39,7 @@ import { migrateKeyPrefix, storageAvailable } from './store/storage'
 import { ICONS, h, icon } from './ui/dom'
 import { confirmDialog, openHelpDialog, openSettingsDialog, openTouchLogDialog, promptDialog } from './ui/dialogs'
 import { inClaudeViewer } from './host'
+import { accountOffMessage, type Site } from './site'
 import { SpellClient } from './spell/client'
 import type { SpellLanguage } from './spell/engine'
 import { AccountSync } from './account/controller'
@@ -83,8 +84,8 @@ import { touchLog } from './board/touchlog'
 import { BoardStore } from './board/store'
 import { newStrokeId } from './board/strokes'
 
-/** La build per claude.ai (`GLIFO_NO_PWA=1`, vedi vite.config.ts): l'account è spento. */
-declare const __GLIFO_DEMO__: boolean
+/** Quale Glifo è (src/site.ts): nella build per claude.ai e sul sito di prova l'account è spento. */
+declare const __GLIFO_SITE__: Site
 
 // Il registro dei tocchi della lavagna, se era acceso, riprende da qui (src/board/touchlog.ts).
 touchLog.resume()
@@ -173,11 +174,11 @@ const viewSwitch = h(
 )
 
 const accountButton = new AccountButton(() => openAccount())
-// Nella build per claude.ai e dentro claude.ai (la demo e le prove della grafica, vedi CLAUDE.md)
-// l'account è spento, così gli appunti veri non si toccano: Accedi e Condividi si vedono come sul
-// sito, ma la finestra di accesso spiega che lì non si entra.
-const accountOff = __GLIFO_DEMO__ || inClaudeViewer()
-const ACCOUNT_OFF = 'In questa copia di Glifo dentro claude.ai l\'accesso è spento, così gli appunti veri non si toccano: sul sito di Glifo funziona.'
+// Nella build per claude.ai, dentro claude.ai (la demo e le prove della grafica, vedi CLAUDE.md) e
+// sul sito di prova su Cloudflare Pages l'account è spento, così gli appunti veri non si toccano:
+// Accedi e Condividi si vedono come sul sito, ma la finestra di accesso spiega che lì non si entra.
+const accountOff = __GLIFO_SITE__ !== 'online' || inClaudeViewer()
+const ACCOUNT_OFF = accountOffMessage(inClaudeViewer() ? 'claude' : __GLIFO_SITE__)
 
 /**
  * Apre o chiude la barra laterale: è il logo, come nella barra laterale di Gemini, e sta nello

@@ -374,6 +374,11 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   `supabase.ts` fa l'accesso con Google o via email (il link aperto qui o incollato, o il
   codice) e controlla che l'accesso salvato nel browser sia dell'account aperto prima di
   sincronizzare, scaricare o eliminare. Il client di Supabase si carica solo se si accede.
+  Nella build per claude.ai (`GLIFO_NO_PWA=1`), dentro claude.ai (`inClaudeViewer`) e sul sito di
+  prova su Cloudflare Pages l'account è spento (`accountOff` in main.ts): quale Glifo si costruisce lo
+  decide vite.config.ts (su Cloudflare, dove la build ha `CF_PAGES`, è sempre il sito di prova, senza
+  service worker) e lo passa in `__GLIFO_SITE__`; `src/site.ts` ha i nomi e il messaggio della
+  finestra di Accedi (`accountOffMessage`).
 - `src/share/`: le note condivise con un link, come in Gemini (una fotografia della nota): `link.ts`
   (il link `nota.html#codice`; la nota si legge con la sola chiave pubblica, senza il client di
   Supabase), `dialog.ts` (la finestra «Condividi», come quelle di Google), `page.ts` (la pagina

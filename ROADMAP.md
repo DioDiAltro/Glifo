@@ -340,19 +340,23 @@ Da fare:
 **Come si riprende (7 ottobre 2026, sera).** Il codice è tutto sul ramo `prova`, già su GitHub. Lo
 studente ha scelto di provarlo su un **sito di prova a parte su Cloudflare Pages** (gratis, l'account
 c'è già), da fare:
-- lo studente ha ricollegato il connettore Cloudflare («Cloudflare Developer Platform»): i connettori si
-  caricano all'avvio della sessione, quindi va guardato in una sessione nuova se i suoi strumenti
-  sanno creare un sito Pages e caricarci la build. Probabilmente no (ha account, KV, Workers da
-  leggere, R2, D1, Hyperdrive e la documentazione), e dalle sessioni `api.cloudflare.com` è bloccato,
-  quindi niente `wrangler` da lì;
-- se il connettore non basta, lo collega lo studente dal sito di Cloudflare: «Workers & Pages» →
-  «Create» → «Pages» → «Import an existing Git repository» → GitHub, repository di Glifo (ora
-  `DioDiAltro/Glifo`) → Project name `glifo-prova`, Production branch `prova`, Framework preset None,
-  Build command `npm run build`, Build output directory `dist`, variabili `NODE_VERSION` = `24` e
-  `GLIFO_NO_PWA` = `1` (account spento: gli appunti veri restano fuori) → «Save and Deploy». Si
-  aggiorna da solo a ogni push su `prova`; l'indirizzo è `glifo-prova.pages.dev`;
-- con `GLIFO_NO_PWA=1` la finestra di Accedi dice che l'accesso è spento «dentro claude.ai»
-  (`ACCOUNT_OFF` in `src/main.ts`): sul sito di prova va detto in un altro modo;
+- da Claude non si crea: nella sessione nuova (7 ottobre sera) il connettore Cloudflare risultava da
+  autorizzare (le sessioni nel cloud non possono fare l'accesso, quindi i suoi strumenti non si sono
+  potuti vedere; da quanto se ne sa, account, KV, Workers da leggere, R2, D1, Hyperdrive e
+  documentazione, non creano siti Pages), e la rete delle sessioni blocca `api.cloudflare.com`,
+  `dash.cloudflare.com` e `*.pages.dev`: niente `wrangler` e niente controllo del sito da lì;
+- il ramo `prova` è pronto (7 ottobre sera): su Cloudflare, dove la build ha `CF_PAGES`, Glifo è da
+  solo il sito di prova (`src/site.ts`: senza service worker e con l'account spento, anche senza
+  `GLIFO_NO_PWA`; la finestra di Accedi dice «Questo è il sito di prova di Glifo…» invece di «dentro
+  claude.ai»), con Node 24 come su GitHub (`.node-version`). Costruito così da una copia pulita del
+  ramo: 223 file, il più grande 5,7 MB (WebLLM), sotto i limiti di Pages (20.000 file, 25 MiB);
+- lo collega lo studente dal sito di Cloudflare: «Workers & Pages» → «Create» → «Pages» (se si vede solo
+  Workers, in fondo alla pagina «Looking to deploy Pages? Get started») → «Import an existing Git
+  repository» → GitHub, repository `DioDiAltro/Glifo` → Project name `glifo-prova`, Production branch
+  `prova`, Framework preset None, Build command `npm run build`, Build output directory `dist`, nessuna
+  variabile → «Save and Deploy». Poi, nel progetto, «Settings» → «Build» → «Branch control»: Preview
+  branch «None», se no Cloudflare costruisce anche gli altri rami (il principale e `gh-pages`, dove la
+  build fallisce). Si aggiorna da solo a ogni push su `prova`; l'indirizzo è `glifo-prova.pages.dev`;
 - poi lo studente prova «Spiegami» sul suo computer (Chrome o Edge, con WebGPU) e dice com'è andata.
 
 ### Aiuto con gli esercizi

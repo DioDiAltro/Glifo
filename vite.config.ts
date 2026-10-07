@@ -3,20 +3,23 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 declare const process: { env: Record<string, string | undefined> }
 
-// GLIFO_NO_PWA=1 crea la build per claude.ai (la demo e le prove della grafica, vedi CLAUDE.md):
-// senza service worker, che dentro un'altra pagina non sono ammessi, e senza account, così gli
-// appunti veri non si toccano.
-const forClaude = Boolean(process.env.GLIFO_NO_PWA)
-const withPwa = !process.env.VITEST && !forClaude
+// Quale Glifo si costruisce (i nomi sono in src/site.ts): il sito, la build per claude.ai
+// (GLIFO_NO_PWA=1: la demo e le prove della grafica, vedi CLAUDE.md) o il sito di prova su
+// Cloudflare Pages, dove Cloudflare mette CF_PAGES nella build. Le ultime due senza service worker,
+// che dentro un'altra pagina non sono ammessi e sul sito di prova terrebbero le versioni vecchie, e
+// senza account, così gli appunti veri non si toccano: su Cloudflare anche senza GLIFO_NO_PWA.
+const site = process.env.CF_PAGES ? 'prova' : process.env.GLIFO_NO_PWA ? 'claude' : 'online'
+const withPwa = !process.env.VITEST && site === 'online'
 
 export default defineConfig({
   // Percorsi relativi: il sito funziona anche da una sottocartella
   // (es. GitHub Pages su /glifo/) o aprendo la build da un altro host.
   base: './',
   define: {
-    __GLIFO_DEMO__: JSON.stringify(forClaude),
-    // Nel registro dei tocchi (src/ui/touchLogPanel.ts): quale Glifo si stava provando.
-    __GLIFO_VERSION__: JSON.stringify(`${(process.env.GITHUB_SHA ?? '').slice(0, 7) || 'locale'}, ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`),
+    __GLIFO_SITE__: JSON.stringify(site),
+    // Nel registro dei tocchi (src/ui/touchLogPanel.ts): quale Glifo si stava provando (il commit
+    // arriva da GitHub o da Cloudflare).
+    __GLIFO_VERSION__: JSON.stringify(`${(process.env.GITHUB_SHA || process.env.CF_PAGES_COMMIT_SHA || '').slice(0, 7) || 'locale'}, ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`),
   },
   build: {
     target: 'es2022',

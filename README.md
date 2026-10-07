@@ -842,7 +842,10 @@ compila l'app (`npm run build`) e copia la cartella `dist/` nel branch `gh-pages
 quello pubblicato da GitHub Pages. Si può anche rilanciare a mano dalla scheda *Actions*.
 
 `dist/` è un normale sito statico, quindi funziona anche su altri hosting gratuiti come
-**Cloudflare Pages** o **Netlify** (comando di build `npm run build`, cartella `dist`).
+**Netlify** (comando di build `npm run build`, cartella `dist`). Su **Cloudflare Pages** c'è il
+sito di prova (`glifo-prova.pages.dev`, dal ramo `prova`, stesso comando e stessa cartella): lì la
+build, che Cloudflare segna con `CF_PAGES`, è senza service worker e con l'account spento, come
+quella per claude.ai (vedi `vite.config.ts` e `src/site.ts`).
 
 ## Assistente AI
 
