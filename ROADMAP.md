@@ -350,7 +350,9 @@ c'è già), da fare:
   `GLIFO_NO_PWA`; la finestra di Accedi dice «Questo è il sito di prova di Glifo…» invece di «dentro
   claude.ai»), con Node 24 come su GitHub (`.node-version`). Costruito così da una copia pulita del
   ramo: 223 file, il più grande 5,7 MB (WebLLM), sotto i limiti di Pages (20.000 file, 25 MiB);
-- lo collega lo studente dal sito di Cloudflare: «Workers & Pages» → «Create» → «Pages» (se si vede solo
+- **fatto dallo studente il 7 ottobre sera**: il sito è su https://glifo-prova.pages.dev e la finestra di
+  Accedi dice «Questo è il sito di prova di Glifo…». Come l'ha collegato (per rifarlo): dal sito di
+  Cloudflare, «Workers & Pages» → «Create» → «Pages» (se si vede solo
   Workers, in fondo alla pagina «Looking to deploy Pages? Get started») → «Import an existing Git
   repository» → GitHub, repository `DioDiAltro/Glifo` → Project name `glifo-prova`, Production branch
   `prova`, Framework preset None, Build command `npm run build`, Build output directory `dist`, nessuna

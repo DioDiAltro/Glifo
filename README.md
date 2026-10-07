@@ -896,7 +896,7 @@ torna, Glifo lo fa correggere al modello prima di mostrare la spiegazione; sotto
 passaggio arriva al risultato di Glifo. **Inserisci nella nota** mette i passaggi dopo la formula,
 come elenco numerato (e lì Glifo li controlla come le altre formule); **Rifai** ne chiede un'altra.
 
-In **Impostazioni → Spiegazioni** si sceglie il modello (Qwen3 0.6B, il più leggero, circa 0,4 GB;
+In **Impostazioni → Spiegazioni (prova)** si sceglie il modello (Qwen3 0.6B, il più leggero, circa 0,4 GB;
 1.7B, consigliato, circa 1 GB; 4B, il più bravo, circa 2,3 GB) e il tono (come il professore o più
 semplice). Il modello si scarica da Hugging Face la prima volta che premi Spiegami e poi resta nel
 browser: le spiegazioni funzionano anche offline; dalle impostazioni lo puoi togliere. Dentro
