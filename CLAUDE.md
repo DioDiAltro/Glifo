@@ -121,8 +121,9 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
   2026, fatto il link, lo studente ha chiesto di tenerlo per dopo e di sistemare prima la
   grafica: le idee sono al passo 5 di ROADMAP.md.
 - Provare «Spiegami» (sul ramo `prova`, 7 ottobre 2026) su un computer con Chrome o Edge, su esercizi
-  veri: quale Qwen3 va meglio (0.6B, 1.7B o 4B, nelle impostazioni) e se i passaggi sono chiari. Va
-  deciso come provarlo: dentro claude.ai il modello non si scarica (vedi «Spiegami» nella ROADMAP).
+  veri: quale Qwen3 va meglio (0.6B, 1.7B o 4B, nelle impostazioni) e se i passaggi sono chiari. Si
+  prova sul sito di prova su Cloudflare Pages, ancora da creare: i passi sono in «Come si riprende»,
+  nella voce «Spiegami» della ROADMAP (dentro claude.ai il modello non si scarica).
 - Provare la lavagna sull'iPad con la Apple Pencil, quando l'avrà di nuovo: le correzioni del 5
   ottobre 2026 sono già online. Prima accendere il registro dei tocchi (Impostazioni, in fondo).
   Scrivendo non si deve selezionare niente, a tutto schermo la lavagna non si deve chiudere e la

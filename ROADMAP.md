@@ -337,6 +337,24 @@ Da fare:
   Gauss) e il primo argomento da curare (la proposta è gli integrali);
 - poi, se va bene, il tutor («Aiuto con gli esercizi»), con lo stesso controllo dei passaggi.
 
+**Come si riprende (7 ottobre 2026, sera).** Il codice è tutto sul ramo `prova`, già su GitHub. Lo
+studente ha scelto di provarlo su un **sito di prova a parte su Cloudflare Pages** (gratis, l'account
+c'è già), da fare:
+- lo studente ha ricollegato il connettore Cloudflare («Cloudflare Developer Platform»): i connettori si
+  caricano all'avvio della sessione, quindi va guardato in una sessione nuova se i suoi strumenti
+  sanno creare un sito Pages e caricarci la build. Probabilmente no (ha account, KV, Workers da
+  leggere, R2, D1, Hyperdrive e la documentazione), e dalle sessioni `api.cloudflare.com` è bloccato,
+  quindi niente `wrangler` da lì;
+- se il connettore non basta, lo collega lo studente dal sito di Cloudflare: «Workers & Pages» →
+  «Create» → «Pages» → «Import an existing Git repository» → GitHub, repository di Glifo (ora
+  `DioDiAltro/Glifo`) → Project name `glifo-prova`, Production branch `prova`, Framework preset None,
+  Build command `npm run build`, Build output directory `dist`, variabili `NODE_VERSION` = `24` e
+  `GLIFO_NO_PWA` = `1` (account spento: gli appunti veri restano fuori) → «Save and Deploy». Si
+  aggiorna da solo a ogni push su `prova`; l'indirizzo è `glifo-prova.pages.dev`;
+- con `GLIFO_NO_PWA=1` la finestra di Accedi dice che l'accesso è spento «dentro claude.ai»
+  (`ACCOUNT_OFF` in `src/main.ts`): sul sito di prova va detto in un altro modo;
+- poi lo studente prova «Spiegami» sul suo computer (Chrome o Edge, con WebGPU) e dice com'è andata.
+
 ### Aiuto con gli esercizi
 
 - Una modalità dell'assistente che aiuta senza dare subito la soluzione: chiede cosa hai
