@@ -374,6 +374,14 @@ delle risposte e fa correggere quelle sbagliate, come nella spiegazione. La chat
 un'altra ricomincia, e non si salva. Fatti così i quattro passi chiesti dallo studente: ora va provato sul
 sito di prova con il modello vero.
 
+**Seconda prova vera (8 ottobre 2026, sul sito di prova)**, sullo stesso `$\int_0^1 x^2 \, dx =$`: i
+passaggi sono giusti, con i nomi giusti (regola della potenza, teorema fondamentale del calcolo integrale), e
+«Una frase breve» non c'è più. Restavano un ultimo passaggio con il solo risultato («Il risultato finale è:
+$\frac{1}{3}$», senza uguale), che ora Glifo toglie come il «Risultato finale» senza formula (`checkSteps`,
+non nelle equazioni, dove le soluzioni da sole sono la risposta; `tests/explain.test.ts`), e «limiti di
+integrazione» al posto di «estremi»: il nome giusto ora è nel messaggio di sistema. Da sapere ancora: con
+quale modello (0.6B, 1.7B o 4B) e in quanto tempo; il pannello ✨ con schemi, tabelle e chat è da provare.
+
 Da fare:
 - provarlo davvero su un computer con WebGPU (Chrome o Edge), su esercizi veri, e scegliere il modello
   di partenza: finora è provato solo con un modello finto (nelle sessioni di Claude Hugging Face era

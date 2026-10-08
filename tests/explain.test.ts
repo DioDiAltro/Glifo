@@ -127,12 +127,29 @@ describe('i passaggi scritti dal modello', () => {
     expect(stepsIn('1. Una frase breve: cosa si fa e perché. $$a = 1 + 1$$')).toEqual([{ text: '', formula: 'a = 1 + 1' }])
   })
 
+  it('la seconda spiegazione vera di Qwen3 (8 ottobre 2026): giusta, ma in fondo il solo risultato, senza uguale, che si toglie', () => {
+    const reply = [
+      r`1. Per la regola della potenza, la primitiva di $x^n$ è $\frac{x^{n+1}}{n+1}$, con $n \neq -1$. $$\int x^{2} \, dx = \frac{x^{3}}{3} + c$$`,
+      r`2. Applico il teorema fondamentale del calcolo integrale per calcolare l'integrale definito. $$\int_{0}^{1} x^{2} \, dx = \left[ \frac{x^{3}}{3} \right]_{0}^{1}$$`,
+      r`3. Sostituisco i limiti di integrazione. $$\left[ \frac{x^{3}}{3} \right]_{0}^{1} = \frac{1^{3}}{3} - \frac{0^{3}}{3}$$`,
+      r`4. Calcolo i valori nei limiti. $$\frac{1^{3}}{3} - \frac{0^{3}}{3} = \frac{1}{3} - 0$$`,
+      r`5. Il risultato finale è: $$\frac{1}{3}$$`,
+    ].join('\n')
+    const { steps, reaches } = checkSteps(stepsIn(reply), target(r`\int_0^1 x^2 \, dx =`), sheet)
+    expect(steps.map((s) => s.check)).toEqual([{ ok: true }, { ok: true }, { ok: true }, { ok: true }])
+    expect(reaches).toBe(true)
+    // Nelle equazioni le soluzioni scritte da sole restano: sono la risposta.
+    const solve = checkSteps(stepsIn('1. Scompongo. $$x^2 - 5x + 6 = (x - 2)(x - 3)$$\n2. Le soluzioni sono $$2, 3$$'), target(r`x^2 - 5x + 6 = 0 \Rightarrow`), sheet)
+    expect(solve.steps).toHaveLength(2)
+  })
+
   it('il messaggio di sistema dà una riga d\'esempio vera, non uno schema da copiare, e i nomi giusti delle regole', () => {
     for (const tone of ['professore', 'semplice'] as const) {
       const system = systemPrompt(tone)
       expect(system).not.toMatch(/frase breve/i)
       expect(system).toContain('teorema fondamentale del calcolo integrale')
       expect(system).toContain('regola della potenza')
+      expect(system).toContain('gli estremi di integrazione')
       // La riga d'esempio si legge come un passaggio vero.
       const example = system.split('\n').find((l) => /^1\. /.test(l))
       expect(example && stepsIn(example)).toEqual([{ text: 'Per la regola del prodotto derivo un fattore alla volta.', formula: r`\frac{d}{dx}(x^2 \sin x) = 2x \sin x + x^2 \cos x` }])

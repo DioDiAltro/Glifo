@@ -147,7 +147,7 @@ export function systemPrompt(tone: ExplainTone): string {
     '- Quando hai i conti, scrivi solo la spiegazione: un elenco numerato, un passaggio per riga, con una frase (cosa fai e perché, con il nome giusto della regola) e poi la formula tra $$. Esempio di riga:',
     '1. Per la regola del prodotto derivo un fattore alla volta. $$\\frac{d}{dx}(x^2 \\sin x) = 2x \\sin x + x^2 \\cos x$$',
     '- Ogni formula è un\'uguaglianza in LaTeX (a = b), senza parole dentro. Da 2 a 6 passaggi: il primo fa già un conto (non ripetere la domanda), l\'ultimo arriva al risultato di Glifo (niente passaggio con il solo risultato).',
-    '- Nomi giusti: l\'integrale definito è l\'area con segno sotto la curva e vale F(b) - F(a), con F una primitiva (teorema fondamentale del calcolo integrale); la primitiva di x^n è x^{n+1}/(n+1) (regola della potenza); poi linearità, integrazione per parti, per sostituzione; nelle derivate le regole della somma, del prodotto, del quoziente e della catena.',
+    '- Nomi giusti: l\'integrale definito è l\'area con segno sotto la curva e vale F(b) - F(a), con F una primitiva e a, b gli estremi di integrazione (teorema fondamentale del calcolo integrale); la primitiva di x^n è x^{n+1}/(n+1) (regola della potenza); poi linearità, integrazione per parti, per sostituzione; nelle derivate le regole della somma, del prodotto, del quoziente e della catena.',
     '',
     toolsPrompt(),
   ].join('\n')
@@ -343,8 +343,21 @@ function sameSolutions(written: string, glifo: string, sheet: SheetFactory): boo
   return ab === false || ba === false ? false : ab && ba ? true : null
 }
 
+/** Una relazione in una formula: con questa non è un'espressione da sola. */
+const RELATION = /[<>≤≥≠≈∈∉⊂⊆⇒⇔]|\\(?:le|ge|leq|geq|lt|gt|neq|ne|approx|in|notin|subset|subseteq|Rightarrow|iff|implies|lor|land|vee|wedge)(?![a-zA-Z])/
+
+/** Un passaggio con un'espressione da sola, senza uguale: il risultato ripetuto («Il risultato finale è: $$\frac{1}{3}$$»). */
+function bareResult(s: { formula: string | null }): boolean {
+  return !!s.formula && splitEquals(s.formula).length < 2 && !RELATION.test(s.formula)
+}
+
 /** I passaggi con il controllo di Glifo e se l'ultimo arriva al risultato. */
 export function checkSteps(raw: { text: string; formula: string | null }[], target: ExplainTarget, sheet: SheetFactory): { steps: ExplainStep[]; reaches: boolean | null } {
+  // In fondo il solo risultato, senza uguale (Qwen3, 8 ottobre 2026): ripete quello a cui l'ultimo passaggio
+  // è già arrivato, come «Risultato finale» senza formula (vedi `stepsIn`), e si toglie. Nelle equazioni no:
+  // le soluzioni scritte da sole sono la risposta.
+  let kept = raw
+  while (target.kind !== 'solve' && kept.length > 1 && bareResult(kept[kept.length - 1]) && kept.slice(0, -1).some((s) => s.formula && !bareResult(s))) kept = kept.slice(0, -1)
   const question = parsed(target.question)
   const variable = integralsIn(question)[0]?.v ?? null
   // Le lettere che la formula e le definizioni usano: un ✗ con altre lettere (u = x^2, c, a, b) non è sicuro.
@@ -352,7 +365,7 @@ export function checkSteps(raw: { text: string; formula: string | null }[], targ
   for (const d of target.defs) allNames(d).forEach((n) => own.add(n))
   // Nelle equazioni le parti non sono uguali per ogni x: lì un confronto con le lettere dice solo ✓.
   const identities = target.kind === 'solve' ? 'soft' : 'strict'
-  const steps = raw.map((s): ExplainStep => {
+  const steps = kept.map((s): ExplainStep => {
     if (!s.formula) return { ...s, check: null }
     let check = checkFormula(s.formula, sheet, variable, identities)
     if (check && !check.ok && [...formulaNames(s.formula)].some((n) => !own.has(n) && !['π', 'e', 'i'].includes(n))) check = null
