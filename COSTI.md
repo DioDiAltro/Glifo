@@ -12,7 +12,7 @@ ottobre 2026 (i piani, i prezzi per chi usa Glifo e il resto sono in [ABBONAMENT
 
 | Cosa | Piano | Da tenere d'occhio |
 |---|---|---|
-| Il sito, su GitHub Pages | gratis | non si può usare per un servizio a pagamento: prima di far pagare si passa a Cloudflare Pages |
+| Il sito, su GitHub Pages | gratis | non si può usare per un servizio a pagamento: si passa a Cloudflare Pages (trasloco deciso l'8 ottobre 2026, vedi ROADMAP.md) |
 | Account e note, su Supabase | gratuito | 500 MB di database e 50.000 utenti attivi al mese; va in pausa dopo 7 giorni con poco uso |
 | Accesso con Google | gratis | |
 | Cloudflare (l'account c'è già) | gratuito | |
@@ -30,7 +30,7 @@ ottobre 2026 (i piani, i prezzi per chi usa Glifo e il resto sono in [ABBONAMENT
 
 | Cosa | Quanto | Quando servirebbe | Intanto, gratis |
 |---|---|---|---|
-| **Dominio** (per esempio glifo.app) | 10-20 € l'anno | prima di aprire l'account a tutti, se il sito cambia indirizzo | se Glifo passa sotto S&Z, `glifo.seznet.net` non costa niente in più |
+| **Dominio** tutto di Glifo (deciso dallo studente l'8 ottobre 2026: non `seznet.net`) | 10-20 € l'anno, su Cloudflare a prezzo di costo (il rinnovo costa come il primo anno) | per il trasloco del sito, prima di aprire l'account a tutti | — |
 | **Supabase Pro** | 25 $ al mese | con utenti che pagano: niente pausa e i backup | il piano gratuito |
 | **Cloudflare Workers a pagamento** | 5 $ al mese, più 0,011 $ ogni 1.000 «neuroni» oltre i 10.000 gratis al giorno | quando il modello piccolo deve servire tanta gente | i 10.000 neuroni gratis al giorno |
 | **L'AI di Glifo** (la chiave sul server) | a consumo, per milione di token (ingresso / uscita): Haiku 4.5 1 $ / 5 $, Sonnet 5.5 2 $ / 10 $, Opus 5.5 4 $ / 20 $; si caricano crediti in anticipo e si mette un tetto di spesa al mese | con i piani a pagamento | la propria chiave, anche quella gratuita di Gemini |

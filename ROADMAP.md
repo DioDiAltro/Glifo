@@ -16,6 +16,47 @@ possano mostrare, più che coprire ogni argomento dei corsi.
 
 ## In programma
 
+### Trasloco: il sito su Cloudflare, con un dominio tutto di Glifo
+
+**Deciso l'8 ottobre 2026.** Il sito lascia GitHub Pages, che non permette un servizio a
+pagamento, e passa su Cloudflare Pages con un dominio tutto di Glifo: lo studente ha scelto di
+non metterlo sotto `seznet.net`, per non dover più cambiare indirizzo. Account e note restano su
+Supabase: portarli su Cloudflare vorrebbe dire riscrivere da zero l'accesso e le regole di
+accesso. I vantaggi (niente pausa, i backup, 5 $ al mese invece di 25) si riconsiderano quando
+servirà Supabase Pro o quando si farà lo scrivere insieme (con i Durable Objects).
+
+**Perché con cura:** il browser tiene separati i dati di ogni indirizzo, quindi al nuovo
+indirizzo Glifo si apre vuoto. Chi non ha l'account ha le note solo nel browser; chi ce l'ha
+ritrova note, cartelle, dizionario e impostazioni principali, ma non le lavagne (non vanno mai sul
+server) né la chiave dell'AI. Per questo l'indirizzo si cambia una volta sola: con un dominio
+tutto suo, poi, chi ospita il sito si può cambiare senza che nessuno se ne accorga.
+
+**Il piano** (proposto l'8 ottobre 2026):
+1. lo studente compra il dominio su Cloudflare (a prezzo di costo, con il rinnovo automatico) e
+   ne dice il nome;
+2. Claude prepara:
+   - la regola di `vite.config.ts` che oggi fa di ogni build su Cloudflare il sito di prova
+     (`CF_PAGES`, con i test di `tests/deploy.test.ts`);
+   - «Ripristina backup» che riconosce le note già presenti (oggi le aggiunge sempre, quindi
+     raddoppiano) e riattacca le lavagne alle note sincronizzate;
+   - «Porta i miei appunti nel nuovo Glifo»: apre il sito nuovo e gli passa note, cartelle,
+     dizionario e lavagne, con o senza account;
+   - sul vecchio sito l'avviso con la data, il pulsante, «Scarica backup» e il link; dalla data,
+     da sola, la pagina a tutto schermo con le stesse cose e l'invito a reinstallare l'app; i link
+     condivisi (`nota.html#…`) mandati al nuovo indirizzo;
+   - l'informativa (sito ospitato da Cloudflare, contatto `privacy@` del dominio) e la
+     pubblicazione (il ramo principale su Cloudflare, su GitHub solo la pagina del trasloco);
+   - prima di pubblicare, le foto dell'avviso e della pagina finale;
+3. lo studente, con i passi scritti da Claude: il progetto Cloudflare Pages del ramo principale
+   (come per `prova`) con il dominio; `privacy@` con l'Email Routing di Cloudflare (gratis) verso
+   la sua Gmail; il nuovo indirizzo in Supabase (Site URL e Redirect URLs) e in Google
+   (Authorized JavaScript origins);
+4. le date: con il dominio entro sabato 10 ottobre, avviso dal 12 e trasloco domenica 18 ottobre
+   2026; se il dominio arriva dopo, tutto slitta di altrettanto (sempre almeno una settimana di
+   avviso);
+5. il vecchio sito resta aperto almeno fino a fine febbraio 2027, per chi riapre gli appunti solo
+   per gli esami.
+
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
 **Cosa:** ognuno ha il suo account e ritrova gli stessi appunti su PC, tablet e telefono.
@@ -102,17 +143,18 @@ Perché non gli altri:
    - i test usano le vere migrazioni in un Postgres in memoria (PGlite), anche nella prova
      nel browser con un Supabase finto (`scripts/fake-supabase.mjs`).
 4. **Aprire l'account a tutti** (il prossimo, gratis). **In attesa** dal 2 ottobre 2026: si
-   riprende quando lo studente ha deciso su S&Z. Come si riprende:
-   1. lo studente decide su S&Z (vedi sotto) e dà un'email di contatto per l'informativa
-      (va bene anche una sua, provvisoria);
+   riprende con il dominio (deciso l'8 ottobre 2026: tutto di Glifo, vedi «Trasloco»). Come si
+   riprende:
+   1. lo studente compra il dominio: l'email di contatto per l'informativa sarà `privacy@` del
+      dominio (Email Routing di Cloudflare, gratis); resta da dire chi è il titolare;
    2. Claude aggiorna l'informativa (titolare e contatto) e rivede i limiti di spazio: oggi
       20 MB di note per account, ma il database gratuito ha 500 MB in tutto;
    3. lo studente preme «Publish app» (Google Auth Platform → Audience): da lì entra con
       Google chiunque, non solo i «Test users».
 
-   Dopo viene l'email per tutti: servizio di posta nostro e CAPTCHA insieme, meglio con il
-   dominio, quindi dopo la decisione su S&Z. La condivisione (passo 5) non dipende da S&Z: si
-   può iniziare anche prima.
+   Dopo viene l'email per tutti: servizio di posta nostro e CAPTCHA insieme, con il dominio,
+   quindi dopo il trasloco. La condivisione (passo 5) non dipende dal dominio: si può iniziare
+   anche prima.
 
    Le singole parti:
    - fatto (2 ottobre 2026): accesso con Google, attivo («Continua con Google» nella finestra
@@ -125,18 +167,13 @@ Perché non gli altri:
      database: con l'utente spariscono note, cartelle, impostazioni e sessioni). Come
      titolare per ora c'è «DioDiAltro». Manca l'indirizzo email di contatto, da aggiungere
      prima di aprire a tutti;
-   - da decidere: forse Glifo passa sotto **S&Z**, con il dominio `seznet.net` che lo
-     studente ha già con un amico. Cambierebbe tre cose:
-     - titolare nell'informativa: S&Z se è una società, altrimenti le due persone come
-       contitolari, con un accordo scritto su chi risponde alle richieste; come contatto, per
-       esempio, `privacy@seznet.net`;
-     - email di accesso: si possono mandare da `glifo@seznet.net` con un servizio di posta
-       che ha un piano gratuito (Resend o Brevo), dopo aver aggiunto alcuni record DNS al
-       dominio. Arriverebbero a tutti e con il codice di 6 cifre;
-     - indirizzo: `glifo.seznet.net` è gratis con GitHub Pages. Attenzione: le note salvate
-       solo nel browser restano legate al vecchio indirizzo, quindi prima del cambio serve un
-       modo per portarle (l'account o un backup), e vanno aggiornati Site URL e Redirect URLs
-       di Supabase e le «Authorized JavaScript origins» del client Google;
+   - deciso l'8 ottobre 2026: niente `seznet.net` (il dominio di S&Z, che lo studente ha con
+     un amico): Glifo avrà un dominio tutto suo (vedi «Trasloco»). Resta da decidere chi è il
+     titolare nell'informativa e chi incassa: S&Z, se è una società (oppure lo studente e
+     l'amico come contitolari, con un accordo scritto su chi risponde alle richieste), o lo
+     studente da solo. Le email di accesso potranno partire da `glifo@` del dominio con un
+     servizio di posta che ha un piano gratuito (Resend o Brevo), dopo aver aggiunto alcuni
+     record DNS: arriveranno a tutti e con il codice di 6 cifre;
    - CAPTCHA contro le iscrizioni automatiche (Cloudflare Turnstile, gratis) e limiti di
      spazio da rivedere (oggi 20 MB di note per account);
    - un servizio di posta nostro (SMTP): serve per scrivere a chi non è nel team e per

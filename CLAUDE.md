@@ -112,10 +112,12 @@ documentazione, non codice: la regola di delegare all'esploratore vale per il co
 
 Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui quando sono fatte):
 
-- Decidere se Glifo passa sotto S&Z (dominio `seznet.net`) e dare un'email di contatto per
-  l'informativa (`privacy.html`). Poi, aggiornata l'informativa, premere «Publish app» nella
-  Google Auth Platform (Audience) per aprire a tutti l'accesso con Google. I passi sono in
-  «Come si riprende», al passo 4 di ROADMAP.md.
+- Comprare il dominio di Glifo su Cloudflare e dire il nome a Claude: l'8 ottobre 2026 ha deciso
+  un dominio tutto suo (non `seznet.net`), per non cambiare più indirizzo. Da lì partono il
+  trasloco del sito («Trasloco» in ROADMAP.md, con le date) e l'email di contatto per
+  l'informativa (`privacy@` del dominio). Poi, aggiornata l'informativa, premere «Publish app»
+  nella Google Auth Platform (Audience) per aprire a tutti l'accesso con Google (passo 4 di
+  ROADMAP.md).
 - Riparlare della condivisione: le cartelle condivise con persone scelte e i loro permessi (come
   nella finestra «Condividi» di NotebookLM) e lo scrivere insieme senza conflitti. Il 4 ottobre
   2026, fatto il link, lo studente ha chiesto di tenerlo per dopo e di sistemare prima la
