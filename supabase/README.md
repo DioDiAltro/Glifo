@@ -21,6 +21,7 @@ Le tabelle sono in `migrations/`:
 - `folders`, `notes` e `user_settings`: cartelle, note, impostazioni e dizionario personale di
   ogni account.
 - `shared_notes`: le note condivise con un link (vedi «Note condivise con un link», sotto).
+- `feedback`: i commenti di chi prova Glifo (vedi «Commenti di chi prova Glifo», sotto).
 - **Regole di accesso:**
   - ognuno legge e modifica solo le sue righe, e chi non ha fatto l'accesso non vede niente;
   - una nota può stare solo in una cartella dello stesso account.
@@ -115,6 +116,23 @@ occupano al massimo 20 MB (`hint = 'quota'`). Le funzioni che scrivono stanno in
 (`security definer`, controllano `auth.uid()`); quelle in `public` le chiamano con i permessi
 di chi chiama. I test sono in `tests/condivisione.test.sql`.
 
+## Commenti di chi prova Glifo
+
+Dal fumetto in fondo alla barra laterale («Mandaci un commento», `src/ui/feedback.ts`) chi usa
+Glifo, anche senza account, manda un problema, un'idea o altro. Il messaggio va nella tabella
+`feedback` (migrazione «commenti»), con la sola chiave pubblica, senza l'accesso:
+
+- colonne: `kind` (`problema`, `idea`, `altro`), `message` (al massimo 4000 caratteri, non solo
+  spazi), `email` (facoltativa, per rispondere), `site` (`online`, `prova` o `claude`), `version`
+  (lo sha della build e quando), `browser` (il browser e la misura della finestra), `created_at`;
+- dal browser si può solo **inserire** (le colonne del messaggio; id e data li mette il database):
+  nessuno li legge, li cambia o li cancella dall'app, nemmeno con l'accesso;
+- al massimo 60 commenti all'ora in tutto (`private.feedback_limit`, errore con `hint = 'quota'`).
+
+**Per leggerli:** dashboard di Supabase → progetto `glifo` → **Table Editor** → `feedback` (i più
+nuovi in fondo, o ordinati per `created_at`). Da lì si cancellano anche quelli che non servono più o
+che qualcuno chiede di togliere. I test sono in `tests/commenti.test.sql`.
+
 ## Nell'app
 
 - `src/account/sync.ts` usa queste due funzioni: manda le modifiche, poi scarica le novità.
@@ -189,7 +207,7 @@ un dominio personalizzato per Supabase, che però è a pagamento.
 1. Ogni modifica è un file nuovo in `migrations/`. Quelli già applicati non si toccano.
 2. Si applica con il connettore Supabase (`apply_migration`), poi si rinomina il file con
    la versione che dà `list_migrations`. Con la CLI: `supabase db push`.
-3. Si eseguono i test di `tests/` (`database.test.sql` e `condivisione.test.sql`). `npm test` li esegue già in un Postgres
+3. Si eseguono i test di `tests/` (`database.test.sql`, `condivisione.test.sql` e `commenti.test.sql`). `npm test` li esegue già in un Postgres
    in memoria (PGlite), con `tests/supabase-stub.sql` al posto delle parti di Supabase. Sul
    progetto vero si eseguono dal SQL editor di Supabase, con `psql` o con `execute_sql` del
    connettore. Tutto viene annullato alla fine, e il risultato giusto è l'errore

@@ -189,6 +189,21 @@ Perché non gli altri:
 
 ## Più avanti
 
+### Commenti di chi prova Glifo
+
+**Fatto sul ramo `prova` (8 ottobre 2026)**, lo studente: «vorrei fare che chi prova Glifo possa darmi
+dei feedback… possibilmente non nel pannello dove scrivo». In fondo alla barra laterale, accanto
+all'account, il fumetto «Mandaci un commento» apre una finestra: un problema, un'idea o altro, il testo
+e l'email facoltativa. Va nella tabella `feedback` di Supabase con la sola chiave pubblica (si può solo
+inserire; al massimo 60 all'ora), con il sito, la versione di Glifo e il browser; lo studente li legge
+nella dashboard (Table Editor → `feedback`). Informativa aggiornata. Da decidere: se va sul sito vero.
+
+Idee per dopo:
+- un avviso quando arriva un commento (un'email o una notifica: serve un servizio di posta, da
+  scegliere tra quelli gratuiti);
+- allegare, se chi scrive vuole, il registro dei tocchi o una foto della pagina;
+- rispondere da Glifo a chi ha lasciato l'email.
+
 ### La lavagna: idee in più
 
 La lavagna base, senza AI, è fatta e pubblicata (5 ottobre 2026: lo studente ha detto «fai la

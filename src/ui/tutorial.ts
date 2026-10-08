@@ -44,7 +44,7 @@ export const TUTORIAL_PAGES: readonly TutorialPage[] = [
   {
     id: 'barra',
     title: 'Viste, appunti e account',
-    text: 'In alto al centro scegli Editor, Diviso, Anteprima o Lavagna, per scrivere a mano accanto al testo. Il logo in alto a sinistra apre la barra laterale con gli appunti e le cartelle; in fondo ci sono «Condividi» (anche per stampare), l\'account, per ritrovare tutto su ogni dispositivo, «Come si usa» e le impostazioni.',
+    text: 'In alto al centro scegli Editor, Diviso, Anteprima o Lavagna, per scrivere a mano accanto al testo. Il logo in alto a sinistra apre la barra laterale con gli appunti e le cartelle; in fondo ci sono «Condividi» (anche per stampare), l\'account, per ritrovare tutto su ogni dispositivo, il fumetto per mandarci un commento, «Come si usa» e le impostazioni.',
   },
 ]
 

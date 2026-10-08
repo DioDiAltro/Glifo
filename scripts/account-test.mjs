@@ -103,6 +103,41 @@ try {
   await pc.page.keyboard.type('Appunti di prova')
   await typeAtEnd(pc.page, 'scritti prima di accedere')
 
+  // «Mandaci un commento» (8 ottobre 2026), anche senza account: il fumetto in fondo alla barra laterale
+  // apre la finestra, e il messaggio va nella tabella feedback (con le regole vere del database) con il
+  // sito, la versione di Glifo e il browser. Senza rete non parte, e il testo resta.
+  await pc.page.locator('.side-profile button[aria-label="Mandaci un commento"]').click()
+  const feedback = pc.page.locator('dialog.dialog-feedback')
+  await feedback.locator('.feedback-kinds label', { hasText: 'Un problema' }).click()
+  await feedback.locator('textarea.feedback-message').fill('L\'editor delle tabelle non si apriva')
+  await feedback.locator('input[type=email]').fill(EMAIL)
+  // Senza rete: la richiesta non arriva (il Supabase finto, collegato con route, risponderebbe anche offline).
+  const noNetwork = (route) => route.abort('internetdisconnected')
+  await pc.page.route('**/rest/v1/feedback', noNetwork)
+  await feedback.locator('button[type=submit]').click()
+  await feedback.locator('.prompt-error:not([hidden])').waitFor()
+  const offlineError = await feedback.locator('.prompt-error').innerText()
+  const keptText = await feedback.locator('textarea.feedback-message').inputValue()
+  await pc.page.unroute('**/rest/v1/feedback', noNetwork)
+  await feedback.locator('button[type=submit]').click()
+  await feedback.waitFor({ state: 'detached' })
+  const feedbackSent = await poll(async () => (await fake.feedback()).length === 1)
+  const [feedbackRow] = await fake.feedback()
+  const thanks = await pc.page.locator('.toast').last().innerText()
+  check(
+    offlineError.startsWith('Senza connessione il messaggio non parte') &&
+      keptText === 'L\'editor delle tabelle non si apriva' &&
+      feedbackSent &&
+      feedbackRow?.kind === 'problema' &&
+      feedbackRow.message === 'L\'editor delle tabelle non si apriva' &&
+      feedbackRow.email === EMAIL &&
+      feedbackRow.site === 'online' &&
+      /^(locale|[0-9a-f]{7}), \d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(feedbackRow.version) &&
+      feedbackRow.browser.endsWith('· finestra 1440×900') &&
+      thanks === 'Grazie! Il messaggio è arrivato.',
+    `«Mandaci un commento»: senza rete non parte e il testo resta; poi arriva nella tabella con il tipo, l'email, il sito, la versione e il browser (${JSON.stringify({ offlineError, feedbackRow, thanks })})`,
+  )
+
   // Codice sbagliato: si resta nella finestra, con un messaggio.
   await pc.page.locator('.account-button').click()
   const dialog = pc.page.locator('dialog.dialog-login')

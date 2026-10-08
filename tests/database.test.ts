@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createDatabase, databaseTests, shareTests } from './support/database'
+import { createDatabase, databaseTests, feedbackTests, shareTests } from './support/database'
 
 // Le regole di accesso e le funzioni di sincronizzazione, con le stesse migrazioni del
 // progetto Supabase, in un Postgres in memoria (PGlite).
@@ -14,6 +14,12 @@ describe('database degli account', () => {
   it('supera i test delle note condivise con un link', async () => {
     const db = await createDatabase()
     await expect(db.exec(shareTests())).rejects.toThrow(/TEST OK: \d+ controlli/)
+    await db.close()
+  }, 60_000)
+
+  it('supera i test dei commenti di chi prova Glifo', async () => {
+    const db = await createDatabase()
+    await expect(db.exec(feedbackTests())).rejects.toThrow(/TEST OK: \d+ controlli/)
     await db.close()
   }, 60_000)
 })

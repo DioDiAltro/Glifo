@@ -71,7 +71,7 @@ documentazione, non codice: la regola di delegare all'esploratore vale per il co
 - `src/lists/`: i marcatori degli elenchi (`markers.ts`), usati da editor e anteprima.
 - `src/spell/`: controllo ortografico (Hunspell in WebAssembly in un worker).
 - `src/render/`: KaTeX e anteprima Markdown; i conti per spostare schemi e grafici con le frecce ↑ ↓.
-- `src/ui/`: interfaccia: barra laterale, pulsanti volanti, barra di formattazione, anteprima, tutorial.
+- `src/ui/`: interfaccia: barra laterale, pulsanti volanti, barra di formattazione, anteprima, tutorial, «Mandaci un commento».
 - `src/store/`: note, cartelle, impostazioni e misure delle sezioni nel browser (chiavi `glifo.*`).
 - `src/schema/`: schemi stile draw.io con maxGraph: editor a tutto schermo, corsie dei processi, file .md, codice SQL.
 - `src/spreadsheet/`: le tabelle con le formule come Excel (blocchi ```tabella), con il loro editor e i file .xlsx e .csv.
@@ -124,6 +124,9 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
   mette a rispondere: l'8 ottobre 2026 ha usato il 4B e ha detto «ora funziona tutto», e «Spiegami» con
   il pannello ✨ è andato sul sito vero. Le prove nuove si fanno ancora sul sito di prova
   https://glifo-prova.pages.dev (Cloudflare Pages, dal ramo `prova`; lì l'account è spento).
+- Leggere ogni tanto i commenti di chi prova Glifo (il fumetto «Mandaci un commento» in fondo alla
+  barra laterale, dall'8 ottobre 2026 sul ramo `prova`): dashboard di Supabase → progetto `glifo` →
+  Table Editor → `feedback`. Lì si cancellano anche quelli che non servono più.
 - Provare la lavagna sull'iPad con la Apple Pencil, quando l'avrà di nuovo: le correzioni del 5
   ottobre 2026 sono già online. Prima accendere il registro dei tocchi (Impostazioni, in fondo).
   Scrivendo non si deve selezionare niente, a tutto schermo la lavagna non si deve chiudere e la

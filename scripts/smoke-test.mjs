@@ -3851,6 +3851,17 @@ try {
   await viewer.locator('.share-button').click()
   // Dentro claude.ai la stampa non c'è
   const viewerPrint = await viewer.locator('dialog.dialog-share .share-print').count()
+  // «Mandaci un commento»: dentro claude.ai i messaggi non partono, e la finestra lo dice.
+  await viewer.keyboard.press('Escape')
+  await viewer.locator('.side-profile button[aria-label="Mandaci un commento"]').click()
+  const viewerFeedback = viewer.locator('dialog.dialog-feedback')
+  await viewerFeedback.locator('textarea.feedback-message').fill('Prova da claude.ai')
+  const viewerFeedbackOff = {
+    note: await viewerFeedback.locator('.feedback-off').innerText(),
+    disabled: await viewerFeedback.locator('button[type=submit]').isDisabled(),
+  }
+  await viewerFeedback.locator('button', { hasText: 'Annulla' }).click()
+  await viewer.locator('.share-button').click()
   await viewer.locator('dialog.dialog-share .btn-primary', { hasText: 'Accedi' }).click()
   const login = viewer.locator('dialog.dialog-login')
   await login.locator('.login-google').click()
@@ -3864,10 +3875,12 @@ try {
     viewerButtons &&
       viewerPrint === 0 &&
       offMessage.includes('accesso è spento') &&
+      viewerFeedbackOff.note.includes('claude.ai') &&
+      viewerFeedbackOff.disabled &&
       stillEmail &&
       !viewerRequests.some((u) => /supabase|google/.test(u)) &&
       viewer.url().startsWith(url),
-    `dentro claude.ai Accedi e Condividi si vedono, ma l'accesso è spento e la finestra lo dice (${JSON.stringify({ viewerButtons, offMessage, stillEmail })})`,
+    `dentro claude.ai Accedi e Condividi si vedono, ma l'accesso è spento e la finestra lo dice; i commenti non partono (${JSON.stringify({ viewerButtons, offMessage, stillEmail, viewerFeedbackOff })})`,
   )
   await viewer.close()
 

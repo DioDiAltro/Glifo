@@ -315,6 +315,13 @@ kbd {
   margin-left: auto;
 }
 
+/* Con il fumetto dei commenti i pulsanti sono tre: un po' più stretti, così sotto «Accedi» si legge
+   ancora tutto «Senza account». */
+.side-profile .icon-button {
+  min-width: 30px;
+  padding: 0 6px;
+}
+
 .icon-button {
   display: inline-flex;
   align-items: center;
@@ -2703,6 +2710,40 @@ kbd {
 .prompt-error {
   margin: 0;
   color: var(--danger);
+  font-size: 13px;
+}
+
+/* «Mandaci un commento» (src/ui/feedback.ts), dal fumetto in fondo alla barra laterale. */
+.dialog-feedback {
+  width: min(480px, calc(100vw - 32px));
+}
+
+.feedback-intro {
+  margin: 0;
+  color: var(--muted);
+}
+
+.feedback-kinds {
+  align-self: flex-start;
+  margin: 0;
+}
+
+.dialog textarea.feedback-message {
+  min-height: 120px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.feedback-form .field-help {
+  margin: 0;
+}
+
+.feedback-off {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface-2);
   font-size: 13px;
 }
 

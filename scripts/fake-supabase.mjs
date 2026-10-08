@@ -201,6 +201,27 @@ export async function createFakeSupabase() {
         return reply(400, { code: err.code ?? 'P0001', message: err.message, details: err.detail ?? null, hint: err.hint ?? null })
       }
     }
+    // I commenti di chi prova Glifo (src/ui/feedback.ts): si scrivono soltanto, come anon o con l'accesso.
+    if (path === '/rest/v1/feedback' && request.method() === 'POST') {
+      const userId = userIdFrom(request.headers().authorization ?? '')
+      const columns = Object.keys(body).filter((c) => /^[a-z_]+$/.test(c))
+      try {
+        await db.transaction(async (tx) => {
+          if (userId) {
+            await tx.query(`select set_config('role', 'authenticated', true), set_config('request.jwt.claims', $1, true)`, [
+              JSON.stringify({ sub: userId, role: 'authenticated' }),
+            ])
+          } else await tx.query(`select set_config('role', 'anon', true), set_config('request.jwt.claims', '', true)`)
+          await tx.query(
+            `insert into public.feedback (${columns.join(', ')}) values (${columns.map((_, i) => `$${i + 1}`).join(', ')})`,
+            columns.map((c) => body[c]),
+          )
+        })
+        return reply(201)
+      } catch (err) {
+        return reply(err.code === '42501' ? 401 : 400, { code: err.code ?? 'P0001', message: err.message, details: err.detail ?? null, hint: err.hint ?? null })
+      }
+    }
     return reply(404, { message: `Non previsto dal Supabase finto: ${path}` })
   }
 
@@ -238,6 +259,11 @@ export async function createFakeSupabase() {
         [id],
       )
       return rows[0]
+    },
+    /** I commenti arrivati (come li vede chi fa Glifo nella dashboard). */
+    async feedback() {
+      const { rows } = await db.query('select * from public.feedback order by created_at')
+      return rows
     },
     /** Le note dell'account salvate nel database. */
     async notes(email) {

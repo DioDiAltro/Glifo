@@ -38,6 +38,7 @@ import { loadPaneSizes, savePaneSizes } from './store/layout'
 import { migrateKeyPrefix, storageAvailable } from './store/storage'
 import { ICONS, h, icon } from './ui/dom'
 import { confirmDialog, openHelpDialog, openSettingsDialog, openTouchLogDialog, promptDialog } from './ui/dialogs'
+import { openFeedbackDialog } from './ui/feedback'
 import { inClaudeViewer } from './host'
 import { accountOffMessage, type Site } from './site'
 import { SpellClient } from './spell/client'
@@ -87,6 +88,8 @@ import { newStrokeId } from './board/strokes'
 
 /** Quale Glifo è (src/site.ts): nella build per claude.ai e sul sito di prova l'account è spento. */
 declare const __GLIFO_SITE__: Site
+/** La versione di Glifo (il commit pubblicato e quando, vedi vite.config.ts). */
+declare const __GLIFO_VERSION__: string
 
 // Il registro dei tocchi della lavagna, se era acceso, riprende da qui (src/board/touchlog.ts).
 touchLog.resume()
@@ -211,16 +214,28 @@ const shareButton = h(
   icon(ICONS.share, 15),
 )
 
-// In fondo, come nell'app di Claude: l'account, poi «Come si usa» e le impostazioni (anche il tema).
+// In fondo, come nell'app di Claude: l'account, poi «Mandaci un commento», «Come si usa» e le
+// impostazioni (anche il tema). I commenti stanno qui, lontano dagli strumenti della nota.
 const helpButton = h(
   'button',
   { class: 'icon-button side-help', title: 'Come si usa', attrs: { type: 'button', 'aria-label': 'Come si usa' }, on: { click: () => openGuide() } },
   icon(ICONS.help),
 )
+const feedbackButton = h(
+  'button',
+  {
+    class: 'icon-button side-feedback',
+    title: 'Mandaci un commento: un problema, un\'idea',
+    attrs: { type: 'button', 'aria-label': 'Mandaci un commento' },
+    on: { click: () => openFeedback() },
+  },
+  icon(ICONS.message),
+)
 const sidebarBottom = h(
   'div',
   { class: 'side-profile' },
   accountButton.el,
+  feedbackButton,
   helpButton,
   h(
     'button',
@@ -556,6 +571,16 @@ function openGuide(first = false): void {
     dark: isDark(),
     onShortcuts: () => openHelpDialog().addEventListener('close', pointToGuide),
     onClose: first ? pointToGuide : undefined,
+  })
+}
+
+/** «Mandaci un commento» (src/ui/feedback.ts): dentro claude.ai i messaggi non partono. */
+function openFeedback(): void {
+  const inClaude = __GLIFO_SITE__ === 'claude' || inClaudeViewer()
+  openFeedbackDialog({
+    site: inClaude ? 'claude' : __GLIFO_SITE__,
+    version: __GLIFO_VERSION__,
+    off: inClaude ? 'Dentro claude.ai i messaggi non partono: mandalo dal sito di Glifo.' : undefined,
   })
 }
 
