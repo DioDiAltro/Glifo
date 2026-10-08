@@ -47560,7 +47560,7 @@
       "node_kind": "heading",
       "norm_label": "aggiungere un simbolo",
       "source_file": "README.md",
-      "source_location": "L1133"
+      "source_location": "L1134"
     },
     {
       "id": "readme_assistente_ai",
@@ -47584,7 +47584,7 @@
       "node_kind": "heading",
       "norm_label": "com'e fatto",
       "source_file": "README.md",
-      "source_location": "L958"
+      "source_location": "L959"
     },
     {
       "id": "readme_come_viene_pubblicata",
@@ -47620,7 +47620,7 @@
       "node_kind": "heading",
       "norm_label": "compatibilita con vs code",
       "source_file": "README.md",
-      "source_location": "L940"
+      "source_location": "L941"
     },
     {
       "id": "readme_condividere_una_nota_con_un_link",
@@ -47668,7 +47668,7 @@
       "node_kind": "heading",
       "norm_label": "idee per il futuro",
       "source_file": "README.md",
-      "source_location": "L1161"
+      "source_location": "L1162"
     },
     {
       "id": "readme_licenze",
@@ -47680,7 +47680,7 @@
       "node_kind": "heading",
       "norm_label": "licenze",
       "source_file": "README.md",
-      "source_location": "L1148"
+      "source_location": "L1149"
     },
     {
       "id": "readme_provarlo_sul_tuo_computer",
@@ -217993,7 +217993,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L1133",
+      "source_location": "L1134",
       "weight": 1.0
     },
     {
@@ -218004,7 +218004,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L1148",
+      "source_location": "L1149",
       "weight": 1.0
     },
     {
@@ -218015,7 +218015,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L1161",
+      "source_location": "L1162",
       "weight": 1.0
     },
     {
@@ -218092,7 +218092,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L940",
+      "source_location": "L941",
       "weight": 1.0
     },
     {
@@ -218103,7 +218103,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L958",
+      "source_location": "L959",
       "weight": 1.0
     },
     {
@@ -264773,7 +264773,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L1165",
+      "source_location": "L1166",
       "weight": 1.0
     },
     {
@@ -268452,7 +268452,7 @@
       "confidence_score": 0.95,
       "context": "AiPanel",
       "source_file": "ARCHITETTURA.md",
-      "source_location": "L435",
+      "source_location": "L436",
       "weight": 1.0
     },
     {
@@ -268488,7 +268488,7 @@
       "confidence_score": 0.95,
       "context": "ExplainChat",
       "source_file": "ARCHITETTURA.md",
-      "source_location": "L435",
+      "source_location": "L436",
       "weight": 1.0
     },
     {
@@ -268668,7 +268668,7 @@
       "confidence_score": 0.95,
       "context": "SidePanel",
       "source_file": "ARCHITETTURA.md",
-      "source_location": "L435",
+      "source_location": "L436",
       "weight": 1.0
     },
     {
@@ -268740,7 +268740,7 @@
       "confidence_score": 0.95,
       "context": "accountOffMessage",
       "source_file": "ARCHITETTURA.md",
-      "source_location": "L448",
+      "source_location": "L449",
       "weight": 1.0
     },
     {
@@ -268812,7 +268812,7 @@
       "confidence_score": 0.95,
       "context": "aiShown",
       "source_file": "ARCHITETTURA.md",
-      "source_location": "L435",
+      "source_location": "L436",
       "weight": 1.0
     },
     {
@@ -269856,7 +269856,7 @@
       "confidence_score": 0.95,
       "context": "inClaudeViewer",
       "source_file": "ARCHITETTURA.md",
-      "source_location": "L444",
+      "source_location": "L445",
       "weight": 1.0
     },
     {
@@ -270912,7 +270912,7 @@
       "confidence_score": 0.95,
       "context": "setPanels",
       "source_file": "ARCHITETTURA.md",
-      "source_location": "L436",
+      "source_location": "L437",
       "weight": 1.0
     },
     {
@@ -270984,7 +270984,7 @@
       "confidence_score": 0.95,
       "context": "shareNote",
       "source_file": "ARCHITETTURA.md",
-      "source_location": "L452",
+      "source_location": "L453",
       "weight": 1.0
     },
     {
@@ -270996,7 +270996,7 @@
       "confidence_score": 0.95,
       "context": "sharedLinks",
       "source_file": "ARCHITETTURA.md",
-      "source_location": "L453",
+      "source_location": "L454",
       "weight": 1.0
     },
     {
@@ -271092,7 +271092,7 @@
       "confidence_score": 0.95,
       "context": "showPanelView",
       "source_file": "ARCHITETTURA.md",
-      "source_location": "L436",
+      "source_location": "L437",
       "weight": 1.0
     },
     {
@@ -271913,5 +271913,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "1e6a9b13a435e1b4fadb7f569af771d9bd94bd87"
+  "built_at_commit": "62a0b5e3bc1948f4701c0d66ed0646cb91c6205e"
 }

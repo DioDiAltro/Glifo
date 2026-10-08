@@ -1,7 +1,7 @@
 # Graph Report - matherdown  (2026-10-08)
 
 ## Corpus Check
-- 310 files · ~598,529 words
+- 310 files · ~598,644 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 6 file(s) not represented in the graph (top: (none) 5, .css 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `1e6a9b13`
+- Built from commit: `62a0b5e3`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -650,9 +650,9 @@ Nodes (10): devDependencies, @electric-sql/pglite, fake-indexeddb, jsdom, playwr
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Dove sono le cose` connect `Dove sono le cose` to `touchlog.ts`, `graph/file.ts`, `main.ts`, `compile`, `linsys.ts`, `spec.ts`, `parse.ts`, `num`, `graph/preview.ts`, `parseGraph`, `svg.ts`, `SchemaEditor`, `Board`, `SheetEditor`, `numerical.ts`, `arithmetic.ts`, `escapeHtml`, `explainPanel.ts`, `topics.ts`, `sidePanel.ts`, `MathError`, `assistant.ts`, `dialogs.ts`, `h`, `page.ts`, `gantt.ts`, `toLatex`, `editor/editor.ts`, `logic.ts`, `NotesStore`, `complex.ts`, `namesIn`, `view3d.ts`, `statsShown.ts`, `Stroke`, `functions.ts`, `finite.ts`, `statsGraph.ts`, `latex.ts`, `distributions.ts`, `board/shapes.ts`, `BoardStore`, `renderTex`, `MarkdownEditor`, `vitest`, `graph.ts`, `ui/preview.ts`, `selection.ts`, `explainSubjects.ts`, `odesolve.ts`, `schema/shapes.ts`, `storage.test.ts`, `spreadsheet.test.ts`, `smoke-test.mjs`, `toolbar.ts`, `symbolic.ts`, `schemaGuard.test.ts`, `schema/editor.ts`, `blockMove.ts`, `board.ts`, `supabase.ts`, `planPreview.ts`, `formatNumber`, `localModels.ts`, `xlsx.ts`, `aiPanel.test.ts`, `markdown.ts`, `spreadsheet/editor.ts`, `ExplainPanel`, `Rational`, `toast`, `Sheet`?**
-  _High betweenness centrality (0.189) - this node is a cross-community bridge._
+  _High betweenness centrality (0.190) - this node is a cross-community bridge._
 - **Why does `vitest` connect `vitest` to `touchlog.ts`, `parse.ts`, `main.ts`, `compile`, `linsys.ts`, `graph/file.ts`, `sync.ts`, `num`, `Dove sono le cose`, `parseGraph`, `editor/lists.ts`, `svg.ts`, `editor.test.ts`, `store.ts`, `MathError`, `assistant.ts`, `dialogs.ts`, `sidePanel.ts`, `page.ts`, `gantt.ts`, `sheet.ts`, `search.ts`, `editor/editor.ts`, `toLatex`, `NotesStore`, `h`, `view3d.ts`, `resize.ts`, `distributions.ts`, `board/shapes.ts`, `MarkdownEditor`, `ui/preview.ts`, `selection.ts`, `storage.test.ts`, `spreadsheet.test.ts`, `schemaGuard.test.ts`, `schema/editor.ts`, `parseSchema`, `blockMove.ts`, `board.ts`, `supabase.ts`, `database.ts`, `localModels.ts`, `xlsx.ts`, `aiPanel.test.ts`, `markdown.ts`, `spreadsheet/editor.ts`, `toast`, `Sheet`, `sql.ts`?**
-  _High betweenness centrality (0.100) - this node is a cross-community bridge._
+  _High betweenness centrality (0.098) - this node is a cross-community bridge._
 - **Why does `h()` connect `h` to `touchlog.ts`, `main.ts`, `graph/preview.ts`, `SchemaEditor`, `Board`, `SheetEditor`, `escapeHtml`, `explainPanel.ts`, `sidePanel.ts`, `dialogs.ts`, `page.ts`, `resize.ts`, `Stroke`, `renderTex`, `vitest`, `graph.ts`, `ui/preview.ts`, `explainSubjects.ts`, `storage.test.ts`, `toolbar.ts`, `schema/editor.ts`, `board.ts`, `spellcheck.ts`, `planPreview.ts`, `aiPanel.test.ts`, `spreadsheet/editor.ts`, `ExplainPanel`, `toast`?**
   _High betweenness centrality (0.047) - this node is a cross-community bridge._
 - **Are the 274 inferred relationships involving `Dove sono le cose` (e.g. with `fakeLlmWorker()` and `adoptGuestNotes()`) actually correct?**
