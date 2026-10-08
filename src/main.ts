@@ -38,7 +38,7 @@ import { loadPaneSizes, savePaneSizes } from './store/layout'
 import { migrateKeyPrefix, storageAvailable } from './store/storage'
 import { ICONS, h, icon } from './ui/dom'
 import { confirmDialog, openHelpDialog, openSettingsDialog, openTouchLogDialog, promptDialog } from './ui/dialogs'
-import { openFeedbackDialog } from './ui/feedback'
+import { openCommentsDialog } from './ui/comments'
 import { inClaudeViewer } from './host'
 import { accountOffMessage, type Site } from './site'
 import { SpellClient } from './spell/client'
@@ -214,8 +214,8 @@ const shareButton = h(
   icon(ICONS.share, 15),
 )
 
-// In fondo, come nell'app di Claude: l'account, poi «Mandaci un commento», «Come si usa» e le
-// impostazioni (anche il tema). I commenti stanno qui, lontano dagli strumenti della nota.
+// In fondo, come nell'app di Claude: l'account, poi i «Commenti», «Come si usa» e le impostazioni
+// (anche il tema). I commenti stanno qui, lontano dagli strumenti della nota.
 const helpButton = h(
   'button',
   { class: 'icon-button side-help', title: 'Come si usa', attrs: { type: 'button', 'aria-label': 'Come si usa' }, on: { click: () => openGuide() } },
@@ -225,9 +225,9 @@ const feedbackButton = h(
   'button',
   {
     class: 'icon-button side-feedback',
-    title: 'Mandaci un commento: un problema, un\'idea',
-    attrs: { type: 'button', 'aria-label': 'Mandaci un commento' },
-    on: { click: () => openFeedback() },
+    title: 'Commenti: leggi quelli di chi prova Glifo e scrivi il tuo',
+    attrs: { type: 'button', 'aria-label': 'Commenti' },
+    on: { click: () => openComments() },
   },
   icon(ICONS.message),
 )
@@ -574,13 +574,16 @@ function openGuide(first = false): void {
   })
 }
 
-/** «Mandaci un commento» (src/ui/feedback.ts): dentro claude.ai i messaggi non partono. */
-function openFeedback(): void {
+/** La pagina «Commenti» (src/ui/comments.ts): dentro claude.ai non si leggono e non partono. */
+function openComments(): void {
   const inClaude = __GLIFO_SITE__ === 'claude' || inClaudeViewer()
-  openFeedbackDialog({
-    site: inClaude ? 'claude' : __GLIFO_SITE__,
-    version: __GLIFO_VERSION__,
-    off: inClaude ? 'Dentro claude.ai i messaggi non partono: mandalo dal sito di Glifo.' : undefined,
+  openCommentsDialog({
+    off: inClaude ? 'Dentro claude.ai i commenti non si vedono: aprili dal sito di Glifo.' : undefined,
+    feedback: {
+      site: inClaude ? 'claude' : __GLIFO_SITE__,
+      version: __GLIFO_VERSION__,
+      off: inClaude ? 'Dentro claude.ai i messaggi non partono: mandalo dal sito di Glifo.' : undefined,
+    },
   })
 }
 

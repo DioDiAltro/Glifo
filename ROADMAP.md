@@ -194,13 +194,29 @@ Perché non gli altri:
 **Fatto sul ramo `prova` (8 ottobre 2026)**, lo studente: «vorrei fare che chi prova Glifo possa darmi
 dei feedback… possibilmente non nel pannello dove scrivo». In fondo alla barra laterale, accanto
 all'account, il fumetto «Mandaci un commento» apre una finestra: un problema, un'idea o altro, il testo
-e l'email facoltativa. Va nella tabella `feedback` di Supabase con la sola chiave pubblica (si può solo
-inserire; al massimo 60 all'ora), con il sito, la versione di Glifo e il browser; lo studente li legge
-nella dashboard (Table Editor → `feedback`). Informativa aggiornata. Da decidere: se va sul sito vero.
+e l'email facoltativa. Va nella tabella `feedback` di Supabase con la sola chiave pubblica (al massimo
+60 all'ora), con il sito, la versione di Glifo e il browser; lo studente li legge nella dashboard
+(Table Editor → `feedback`). Informativa aggiornata.
+
+**La pagina «Commenti», sul ramo `prova` (8 ottobre 2026)**, lo studente: «una pagina in Glifo tipo
+forum, così ci sono tutti i commenti mandati divisi in problemi/idee/altro con la possibilità di far
+vedere il nome di chi manda il commento; le persone potrebbero vedere cosa è già stato scritto e cosa
+no». Il fumetto ora apre la pagina: le schede Problemi, Idee e Altro con quanti sono, e ogni commento
+con il nome (o «Anonimo»), la data e la risposta di chi fa Glifo. «Scrivi un commento» parte dalla
+scheda aperta e ha in più il nome facoltativo e la spunta «Fallo vedere a tutti» (senza, lo legge solo
+lo studente). A tutti il database dà solo i commenti visibili, e solo tipo, nome, testo, data e
+risposta (migrazione «commenti pubblici»); quelli arrivati prima restano privati. Lo studente risponde
+(`reply`) e nasconde (`visible`) dalla dashboard. Informativa aggiornata. Da decidere: se va sul sito
+vero.
 
 Idee per dopo:
+- rispondere e nascondere i commenti da Glifo, con l'account di chi lo fa, invece che dalla dashboard;
 - un avviso quando arriva un commento (un'email o una notifica: serve un servizio di posta, da
   scegliere tra quelli gratuiti);
+- quando saranno tanti: cercare tra i commenti e un «Anche a me» per dire che un problema capita anche
+  a sé, invece di riscriverlo;
+- le risposte di chi prova Glifo sotto un commento, come in un forum vero (servirebbe controllare
+  quello che si scrive);
 - allegare, se chi scrive vuole, il registro dei tocchi o una foto della pagina;
 - rispondere da Glifo a chi ha lasciato l'email.
 

@@ -23,7 +23,8 @@ Le tabelle sono in `migrations/`:
 - `shared_notes`: le note condivise con un link (vedi «Note condivise con un link», sotto).
 - `feedback`: i commenti di chi prova Glifo (vedi «Commenti di chi prova Glifo», sotto).
 - **Regole di accesso:**
-  - ognuno legge e modifica solo le sue righe, e chi non ha fatto l'accesso non vede niente;
+  - ognuno legge e modifica solo le sue righe, e chi non ha fatto l'accesso non vede niente
+    (tranne una nota condivisa, con il suo link, e i commenti visibili: sotto);
   - una nota può stare solo in una cartella dello stesso account.
 - **Niente si cancella dal browser.** Una nota o una cartella eliminata resta con
   `deleted_at` e senza testo, così anche gli altri dispositivi la tolgono. Tutto sparisce
@@ -118,20 +119,29 @@ di chi chiama. I test sono in `tests/condivisione.test.sql`.
 
 ## Commenti di chi prova Glifo
 
-Dal fumetto in fondo alla barra laterale («Mandaci un commento», `src/ui/feedback.ts`) chi usa
-Glifo, anche senza account, manda un problema, un'idea o altro. Il messaggio va nella tabella
-`feedback` (migrazione «commenti»), con la sola chiave pubblica, senza l'accesso:
+Il fumetto in fondo alla barra laterale apre la pagina «Commenti» (`src/ui/comments.ts`): i commenti
+che chi scrive ha fatto vedere a tutti, divisi in problemi, idee e altro. Da lì «Scrivi un commento»
+(`src/ui/feedback.ts`) manda un problema, un'idea o altro, anche senza account. Tutto passa dalla
+tabella `feedback` (migrazioni «commenti» e «commenti pubblici»), con la sola chiave pubblica, senza
+l'accesso:
 
 - colonne: `kind` (`problema`, `idea`, `altro`), `message` (al massimo 4000 caratteri, non solo
-  spazi), `email` (facoltativa, per rispondere), `site` (`online`, `prova` o `claude`), `version`
-  (lo sha della build e quando), `browser` (il browser e la misura della finestra), `created_at`;
-- dal browser si può solo **inserire** (le colonne del messaggio; id e data li mette il database):
-  nessuno li legge, li cambia o li cancella dall'app, nemmeno con l'accesso;
+  spazi), `author` (il nome, facoltativo: al massimo 40 caratteri, su una riga), `email`
+  (facoltativa, per rispondere), `visible` (se si vede nella pagina; quelli arrivati prima della
+  pagina sono `false`, perché la finestra diceva che li leggeva solo chi fa Glifo), `reply` (la
+  risposta di chi fa Glifo), `site` (`online`, `prova` o `claude`), `version` (lo sha della build e
+  quando), `browser` (il browser e la misura della finestra), `created_at`;
+- dal browser si **inseriscono** le colonne del messaggio (non `reply`; id e data li mette il
+  database) e si **leggono** solo i commenti con `visible`, e di questi solo `id`, `created_at`,
+  `kind`, `author`, `message` e `reply`: mai email, sito, versione e browser (`select=*` e i filtri
+  su quelle colonne danno errore). Nessuno li cambia o li cancella dall'app, nemmeno con l'accesso;
 - al massimo 60 commenti all'ora in tutto (`private.feedback_limit`, errore con `hint = 'quota'`).
 
 **Per leggerli:** dashboard di Supabase → progetto `glifo` → **Table Editor** → `feedback` (i più
-nuovi in fondo, o ordinati per `created_at`). Da lì si cancellano anche quelli che non servono più o
-che qualcuno chiede di togliere. I test sono in `tests/commenti.test.sql`.
+nuovi in fondo, o ordinati per `created_at`): lì ci sono tutti, anche quelli privati. Da lì si
+**risponde** (si scrive in `reply`: compare sotto il commento), si **nasconde** un commento dalla
+pagina (`visible` → `false`) e si cancellano quelli che non servono più o che qualcuno chiede di
+togliere. I test sono in `tests/commenti.test.sql`.
 
 ## Nell'app
 

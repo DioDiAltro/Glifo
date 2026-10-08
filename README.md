@@ -99,16 +99,21 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
 - Il link apre una pagina di Glifo (`nota.html`) che non mostra chi l'ha condivisa. Il codice
   nel link è casuale e non si indovina.
 
-### Mandaci un commento
+### Commenti
 
-Un problema, un'idea, una cosa che ti è piaciuta: il **fumetto** in fondo alla barra laterale,
-accanto all'account, apre una finestra in cui scegliere il tipo (un problema, un'idea o altro),
-scrivere il messaggio e, se vuoi una risposta, la tua email. Serve la connessione, non l'account.
-Con il messaggio arrivano anche la versione di Glifo e il browser, per capire i problemi; mai le
-note. Se non parte, il testo resta lì finché non riprovi, anche chiudendo la finestra.
+Il **fumetto** in fondo alla barra laterale, accanto all'account, apre la pagina **Commenti**: quello
+che chi prova Glifo ha scritto, diviso in **Problemi**, **Idee** e **Altro** (con quanti sono), con il
+nome (o «Anonimo»), la data e la risposta di chi fa Glifo, se c'è. Prima di scrivere si guarda se
+qualcuno l'ha già detto. **Scrivi un commento** apre una finestra in cui scegliere il tipo (parte da
+quello della scheda aperta), scrivere il messaggio e, se vuoi, il tuo nome e la tua email per una
+risposta. Con la spunta «Fallo vedere a tutti» (c'è già) il commento compare nella pagina; senza, lo
+legge solo chi fa Glifo. L'email non si vede mai. Serve la connessione, non l'account. Con il
+messaggio arrivano anche la versione di Glifo e il browser, per capire i problemi; mai le note. Se non
+parte, il testo resta lì finché non riprovi, anche chiudendo la finestra.
 
-Chi fa Glifo li legge nella dashboard di Supabase: progetto `glifo` → **Table Editor** →
-`feedback` (vedi `supabase/README.md`, «Commenti di chi prova Glifo»).
+Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: progetto `glifo` →
+**Table Editor** → `feedback`. Lì risponde e nasconde un commento dalla pagina (vedi
+`supabase/README.md`, «Commenti di chi prova Glifo»).
 
 ## Funzionalità
 
@@ -805,8 +810,8 @@ Chi fa Glifo li legge nella dashboard di Supabase: progetto `glifo` → **Table 
 - Stampa / PDF dell'anteprima (da «Condividi»), backup di tutti gli appunti (con le lavagne).
 - Niente barra in alto, come nell'app di Claude: a sinistra la **barra laterale**, che si apre e
   si chiude con il logo in alto a sinistra (come in Gemini); sotto il logo subito gli appunti, in
-  fondo una riga con «Apri .md», «Salva .md» e l'icona di «Condividi», poi l'account, il fumetto per
-  **mandarci un commento**, «Come si usa» e le impostazioni (lì c'è anche il tema). Sopra il testo una riga sola: a sinistra i pulsanti per
+  fondo una riga con «Apri .md», «Salva .md» e l'icona di «Condividi», poi l'account, il fumetto dei
+  **Commenti**, «Come si usa» e le impostazioni (lì c'è anche il tema). Sopra il testo una riga sola: a sinistra i pulsanti per
   formattare, al centro le viste (Editor, Diviso, Anteprima, Lavagna), a destra quelli per inserire e i
   **Simboli**, vicino al loro pannello.
 - **Tutorial** la prima volta che si entra: poche pagine, ognuna con un video e due righe, da

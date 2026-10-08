@@ -97,14 +97,19 @@ export async function createFakeSupabase() {
   /** Quelle che si possono chiamare anche senza accesso (come anon). */
   const PUBLIC_CALLS = new Set(['shared_note'])
 
+  /** Come l'API di Supabase: dentro la transazione della richiesta, l'utente del token (o anon). */
+  async function actAs(tx, userId) {
+    if (userId) {
+      await tx.query(`select set_config('role', 'authenticated', true), set_config('request.jwt.claims', $1, true)`, [
+        JSON.stringify({ sub: userId, role: 'authenticated' }),
+      ])
+    } else await tx.query(`select set_config('role', 'anon', true), set_config('request.jwt.claims', '', true)`)
+  }
+
   /** Come l'API di Supabase: una transazione per richiesta, con l'utente preso dal token (o anon). */
   function rpc(name, userId, body) {
     return db.transaction(async (tx) => {
-      if (userId) {
-        await tx.query(`select set_config('role', 'authenticated', true), set_config('request.jwt.claims', $1, true)`, [
-          JSON.stringify({ sub: userId, role: 'authenticated' }),
-        ])
-      } else await tx.query(`select set_config('role', 'anon', true), set_config('request.jwt.claims', '', true)`)
+      await actAs(tx, userId)
       const [sql, args] = CALLS[name](body)
       const { rows } = await tx.query(sql, args)
       return rows[0].r ?? null
@@ -201,23 +206,41 @@ export async function createFakeSupabase() {
         return reply(400, { code: err.code ?? 'P0001', message: err.message, details: err.detail ?? null, hint: err.hint ?? null })
       }
     }
-    // I commenti di chi prova Glifo (src/ui/feedback.ts): si scrivono soltanto, come anon o con l'accesso.
+    // I commenti di chi prova Glifo (src/ui/feedback.ts): si scrivono come anon o con l'accesso.
     if (path === '/rest/v1/feedback' && request.method() === 'POST') {
       const userId = userIdFrom(request.headers().authorization ?? '')
       const columns = Object.keys(body).filter((c) => /^[a-z_]+$/.test(c))
       try {
         await db.transaction(async (tx) => {
-          if (userId) {
-            await tx.query(`select set_config('role', 'authenticated', true), set_config('request.jwt.claims', $1, true)`, [
-              JSON.stringify({ sub: userId, role: 'authenticated' }),
-            ])
-          } else await tx.query(`select set_config('role', 'anon', true), set_config('request.jwt.claims', '', true)`)
+          await actAs(tx, userId)
           await tx.query(
             `insert into public.feedback (${columns.join(', ')}) values (${columns.map((_, i) => `$${i + 1}`).join(', ')})`,
             columns.map((c) => body[c]),
           )
         })
         return reply(201)
+      } catch (err) {
+        return reply(err.code === '42501' ? 401 : 400, { code: err.code ?? 'P0001', message: err.message, details: err.detail ?? null, hint: err.hint ?? null })
+      }
+    }
+    // La pagina «Commenti» (src/ui/comments.ts): si leggono con i permessi di chi chiede, così valgono
+    // le colonne concesse e la regola dei soli visibili. Di PostgREST solo select, order e limit.
+    if (path === '/rest/v1/feedback' && request.method() === 'GET') {
+      const userId = userIdFrom(request.headers().authorization ?? '')
+      const columns = (url.searchParams.get('select') ?? '*').split(',')
+      const order = /^([a-z_]+)\.(asc|desc)$/.exec(url.searchParams.get('order') ?? 'id.asc')
+      const limit = Number(url.searchParams.get('limit') ?? 1000)
+      const known = [...url.searchParams.keys()].every((k) => ['select', 'order', 'limit'].includes(k))
+      if (!known || !order || !Number.isInteger(limit) || !columns.every((c) => c === '*' || /^[a-z_]+$/.test(c))) {
+        return reply(400, { code: 'PGRST100', message: `Richiesta non prevista dal Supabase finto: ${url.search}` })
+      }
+      try {
+        const rows = await db.transaction(async (tx) => {
+          await actAs(tx, userId)
+          const { rows } = await tx.query(`select ${columns.join(', ')} from public.feedback order by ${order[1]} ${order[2]} limit ${limit}`)
+          return rows
+        })
+        return reply(200, rows)
       } catch (err) {
         return reply(err.code === '42501' ? 401 : 400, { code: err.code ?? 'P0001', message: err.message, details: err.detail ?? null, hint: err.hint ?? null })
       }
@@ -264,6 +287,22 @@ export async function createFakeSupabase() {
     async feedback() {
       const { rows } = await db.query('select * from public.feedback order by created_at')
       return rows
+    },
+    /** Per le prove: un commento scritto come dalla dashboard (anche con la risposta di chi fa Glifo). */
+    async addFeedback(row) {
+      const columns = Object.keys(row)
+      await db.query(
+        `insert into public.feedback (${columns.join(', ')}) values (${columns.map((_, i) => `$${i + 1}`).join(', ')})`,
+        columns.map((c) => row[c]),
+      )
+    },
+    /** Per le prove: cambia dalla dashboard i commenti con questo testo (rispondere, nascondere). */
+    async updateFeedback(message, changes) {
+      const columns = Object.keys(changes)
+      await db.query(`update public.feedback set ${columns.map((c, i) => `${c} = $${i + 2}`).join(', ')} where message = $1`, [
+        message,
+        ...columns.map((c) => changes[c]),
+      ])
     },
     /** Le note dell'account salvate nel database. */
     async notes(email) {

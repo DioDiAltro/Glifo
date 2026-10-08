@@ -103,39 +103,121 @@ try {
   await pc.page.keyboard.type('Appunti di prova')
   await typeAtEnd(pc.page, 'scritti prima di accedere')
 
-  // «Mandaci un commento» (8 ottobre 2026), anche senza account: il fumetto in fondo alla barra laterale
-  // apre la finestra, e il messaggio va nella tabella feedback (con le regole vere del database) con il
-  // sito, la versione di Glifo e il browser. Senza rete non parte, e il testo resta.
-  await pc.page.locator('.side-profile button[aria-label="Mandaci un commento"]').click()
-  const feedback = pc.page.locator('dialog.dialog-feedback')
-  await feedback.locator('.feedback-kinds label', { hasText: 'Un problema' }).click()
-  await feedback.locator('textarea.feedback-message').fill('L\'editor delle tabelle non si apriva')
-  await feedback.locator('input[type=email]').fill(EMAIL)
-  // Senza rete: la richiesta non arriva (il Supabase finto, collegato con route, risponderebbe anche offline).
+  // La pagina «Commenti» (8 ottobre 2026), anche senza account: il fumetto in fondo alla barra laterale
+  // apre i commenti che chi scrive ha fatto vedere a tutti, divisi in problemi, idee e altro, letti con le
+  // regole vere del database (solo i visibili, mai l'email). Lì «Scrivi un commento» manda il messaggio
+  // nella tabella feedback con il nome, il sito, la versione di Glifo e il browser; senza rete non parte e
+  // il testo resta. Chi fa Glifo risponde e nasconde dalla dashboard.
+  const hourAgo = (hours) => new Date(Date.now() - hours * 3_600_000).toISOString()
+  await fake.addFeedback({ kind: 'problema', message: 'La lavagna si chiudeva da sola', author: 'Anna', email: 'anna@example.com', visible: true, site: 'online', reply: 'Sistemato, grazie!', created_at: hourAgo(26) })
+  await fake.addFeedback({ kind: 'idea', message: 'Le formule anche nei titoli', visible: true, site: 'prova', created_at: hourAgo(3) })
+  await fake.addFeedback({ kind: 'problema', message: 'Questo lo legge solo chi fa Glifo', email: 'bruno@example.com', visible: false, site: 'online', created_at: hourAgo(2) })
+  const commentReads = []
+  pc.page.on('request', (r) => {
+    if (r.method() === 'GET' && r.url().includes('/rest/v1/feedback')) commentReads.push(new URL(r.url()).searchParams.get('select'))
+  })
   const noNetwork = (route) => route.abort('internetdisconnected')
-  await pc.page.route('**/rest/v1/feedback', noNetwork)
+  // Senza rete la richiesta non arriva (il Supabase finto, collegato con route, risponderebbe anche offline).
+  await pc.page.route('**/rest/v1/feedback*', noNetwork)
+  await pc.page.locator('.side-profile button[aria-label="Commenti"]').click()
+  // Solo la finestra aperta: chiusa, se ne va al giro dopo.
+  const comments = pc.page.locator('dialog.dialog-comments[open]')
+  await comments.locator('.comments-body button', { hasText: 'Riprova' }).waitFor()
+  const commentsOffline = await comments.locator('.comments-state').innerText()
+  await pc.page.unroute('**/rest/v1/feedback*', noNetwork)
+  await comments.locator('.comments-body button', { hasText: 'Riprova' }).click()
+  await comments.locator('.comments-tabs label', { hasText: 'Problemi' }).click()
+  await comments.locator('.comment').first().waitFor()
+  const tabsShown = await comments.locator('.comments-tabs label').allInnerTexts()
+  const problemsShown = await comments.locator('.comment').allInnerTexts()
+  const replyShown = await comments.locator('.comment-reply').allInnerTexts()
+  await comments.locator('.comments-tabs label', { hasText: 'Idee' }).click()
+  const ideasShown = await comments.locator('.comment-author').allInnerTexts()
+  // Quello che chiede la pagina; poi l'email di chi scrive non si legge nemmeno chiedendola apposta.
+  const appReads = [...commentReads]
+  const emailRead = await pc.page.evaluate(async (base) => (await fetch(`${base}/rest/v1/feedback?select=email`)).status, 'https://fgsuonetdmcgojbvrsxi.supabase.co')
+  check(
+    commentsOffline === 'Non riesco a caricare i commenti: controlla la connessione e riprova.' &&
+      tabsShown.join('|') === 'Problemi1|Idee1|Altro0' &&
+      problemsShown.length === 1 &&
+      problemsShown[0].includes('Anna') &&
+      problemsShown[0].includes('La lavagna si chiudeva da sola') &&
+      !problemsShown.join().includes('solo chi fa Glifo') &&
+      replyShown[0]?.includes('Sistemato, grazie!') &&
+      ideasShown.join() === 'Anonimo' &&
+      emailRead === 401 &&
+      appReads.length > 0 &&
+      appReads.every((select) => select === 'id,created_at,kind,author,message,reply'),
+    `«Commenti»: senza rete lo dice e «Riprova» li carica; si vedono solo quelli visibili, divisi per tipo, con il nome (o «Anonimo») e la risposta; l'email non si legge (${JSON.stringify({ commentsOffline, tabsShown, problemsShown, replyShown, ideasShown, emailRead, appReads })})`,
+  )
+
+  await comments.locator('.comments-tabs label', { hasText: 'Problemi' }).click()
+  await comments.locator('.comments-write').click()
+  const feedback = pc.page.locator('dialog.dialog-feedback')
+  const kindFromTab = await feedback.locator('input[value="problema"]').isChecked()
+  await feedback.locator('textarea.feedback-message').fill('L\'editor delle tabelle non si apriva')
+  await feedback.locator('input[autocomplete="nickname"]').fill('Studente')
+  await feedback.locator('input[type=email]').fill(EMAIL)
+  await pc.page.route('**/rest/v1/feedback*', noNetwork)
   await feedback.locator('button[type=submit]').click()
   await feedback.locator('.prompt-error:not([hidden])').waitFor()
   const offlineError = await feedback.locator('.prompt-error').innerText()
   const keptText = await feedback.locator('textarea.feedback-message').inputValue()
-  await pc.page.unroute('**/rest/v1/feedback', noNetwork)
+  await pc.page.unroute('**/rest/v1/feedback*', noNetwork)
   await feedback.locator('button[type=submit]').click()
   await feedback.waitFor({ state: 'detached' })
-  const feedbackSent = await poll(async () => (await fake.feedback()).length === 1)
-  const [feedbackRow] = await fake.feedback()
+  const feedbackSent = await poll(async () => (await fake.feedback()).length === 4)
+  const feedbackRow = (await fake.feedback()).find((row) => row.author === 'Studente')
   const thanks = await pc.page.locator('.toast').last().innerText()
+  // Mandato a tutti: la pagina si aggiorna e il commento è il primo dei problemi.
+  const listed = await waitFor(pc.page, () => document.querySelectorAll('dialog.dialog-comments[open] .comment').length === 2)
+  const firstProblem = await comments.locator('.comment').first().innerText()
   check(
-    offlineError.startsWith('Senza connessione il messaggio non parte') &&
+    kindFromTab &&
+      offlineError.startsWith('Senza connessione il messaggio non parte') &&
       keptText === 'L\'editor delle tabelle non si apriva' &&
       feedbackSent &&
       feedbackRow?.kind === 'problema' &&
       feedbackRow.message === 'L\'editor delle tabelle non si apriva' &&
       feedbackRow.email === EMAIL &&
+      feedbackRow.visible === true &&
       feedbackRow.site === 'online' &&
       /^(locale|[0-9a-f]{7}), \d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(feedbackRow.version) &&
       feedbackRow.browser.endsWith('· finestra 1440×900') &&
-      thanks === 'Grazie! Il messaggio è arrivato.',
-    `«Mandaci un commento»: senza rete non parte e il testo resta; poi arriva nella tabella con il tipo, l'email, il sito, la versione e il browser (${JSON.stringify({ offlineError, feedbackRow, thanks })})`,
+      thanks === 'Grazie! Il messaggio è arrivato.' &&
+      listed &&
+      firstProblem.startsWith('Studente') &&
+      firstProblem.includes('oggi alle'),
+    `«Scrivi un commento»: parte dalla scheda aperta; senza rete non parte e il testo resta; poi arriva nella tabella con il tipo, il nome, l'email, il sito, la versione e il browser, e si vede subito nella pagina (${JSON.stringify({ kindFromTab, offlineError, feedbackRow, thanks, listed, firstProblem })})`,
+  )
+
+  // Un commento solo per chi fa Glifo: arriva, ma la pagina non lo mostra.
+  await comments.locator('.comments-write').click()
+  const nameKept = await feedback.locator('input[autocomplete="nickname"]').inputValue()
+  await feedback.locator('textarea.feedback-message').fill('Vorrei usarlo a scuola, scrivetemi')
+  await feedback.locator('.feedback-visible input').uncheck()
+  await feedback.locator('button[type=submit]').click()
+  await feedback.waitFor({ state: 'detached' })
+  const privateSent = await poll(async () => (await fake.feedback()).length === 5)
+  const privateRow = (await fake.feedback()).find((row) => row.message.startsWith('Vorrei usarlo a scuola'))
+  // Chi fa Glifo nasconde un commento dalla dashboard: riaprendo la pagina non c'è più.
+  await fake.updateFeedback('La lavagna si chiudeva da sola', { visible: false })
+  await comments.locator('.dialog-actions button', { hasText: 'Chiudi' }).click()
+  await pc.page.locator('.side-profile button[aria-label="Commenti"]').click()
+  await waitFor(pc.page, () => {
+    const count = document.querySelector('dialog.dialog-comments[open] .comments-count')
+    return !!count && count.textContent !== ''
+  })
+  const problemsAfter = await comments.locator('.comment').allInnerTexts()
+  await comments.locator('.dialog-actions button', { hasText: 'Chiudi' }).click()
+  check(
+    nameKept === 'Studente' &&
+      privateSent &&
+      privateRow?.visible === false &&
+      privateRow.author === 'Studente' &&
+      problemsAfter.length === 1 &&
+      problemsAfter[0].includes('L\'editor delle tabelle non si apriva'),
+    `un commento solo per chi fa Glifo arriva ma non si vede; uno nascosto dalla dashboard sparisce dalla pagina (${JSON.stringify({ nameKept, privateRow, problemsAfter })})`,
   )
 
   // Codice sbagliato: si resta nella finestra, con un messaggio.

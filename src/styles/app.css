@@ -2713,7 +2713,7 @@ kbd {
   font-size: 13px;
 }
 
-/* «Mandaci un commento» (src/ui/feedback.ts), dal fumetto in fondo alla barra laterale. */
+/* «Scrivi un commento» (src/ui/feedback.ts), dalla pagina «Commenti». */
 .dialog-feedback {
   width: min(480px, calc(100vw - 32px));
 }
@@ -2745,6 +2745,140 @@ kbd {
   border-radius: 8px;
   background: var(--surface-2);
   font-size: 13px;
+}
+
+.feedback-form .check {
+  margin: 0;
+}
+
+/* La pagina «Commenti» (src/ui/comments.ts), dal fumetto in fondo alla barra laterale: le schede e i
+   pulsanti restano fermi, scorre solo l'elenco. */
+.dialog-comments {
+  width: min(640px, calc(100vw - 32px));
+}
+
+.dialog-comments[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.dialog-comments .dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.comments-intro {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.comments-tabs {
+  align-self: flex-start;
+  margin: 0;
+}
+
+/* Il numero dei commenti accanto al nome della scheda (non un altro pulsante del .segmented). */
+.comments-tabs .comments-count {
+  display: inline-block;
+  min-width: 20px;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--border);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.comments-tabs input:checked + span .comments-count {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.comments-tabs .comments-count:empty {
+  display: none;
+}
+
+.comments-body {
+  flex: 1 1 auto;
+  min-height: 120px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.comment {
+  padding: 10px 14px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.comment-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.comment-author {
+  font-weight: 600;
+}
+
+.comment-author.is-anonymous {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.comment-head time {
+  color: var(--muted);
+}
+
+/* Il testo come l'hanno scritto, con gli a capo; le parole lunghe vanno a capo. */
+.comment-text,
+.comment-reply p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.comment-reply {
+  margin-top: 10px;
+  padding: 6px 10px 8px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--accent-soft);
+}
+
+.comment-reply-label {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--accent-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.comments-state {
+  margin: 14px 0 10px;
+  color: var(--muted);
+}
+
+.comments-more {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
 }
 
 .confirm-message {

@@ -41,9 +41,11 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   alto: la barra laterale è l'elenco degli appunti (`notesPanel.ts`) con sopra il logo (niente
   titolo della nota) e in fondo la riga `foot` con «Apri .md» e «Salva .md» (icona e testo, larghi
   uguali) e l'icona di «Condividi», senza spazi vuoti (la stampa è nella finestra «Condividi»), poi
-  l'account, il fumetto di «Mandaci un commento» (`feedback.ts`: tipo, testo ed email facoltativa,
-  nella tabella `feedback` di Supabase con la sola chiave pubblica, senza il client; il testo resta
-  finché non parte; dentro claude.ai non parte niente), «Come si usa» e
+  l'account, il fumetto dei «Commenti» (`comments.ts`: la pagina con i commenti visibili divisi in
+  problemi, idee e altro, letti dalla tabella `feedback` di Supabase con la sola chiave pubblica,
+  senza il client, e solo le colonne che il database dà a tutti; da lì «Scrivi un commento» apre
+  `feedback.ts`, sopra la pagina: tipo, testo, nome ed email facoltativi e la spunta per farlo vedere,
+  e il testo resta finché non parte; dentro claude.ai non si leggono e non partono), «Come si usa» e
   le impostazioni (`sidebarTop`, `shareButton` e `sidebarBottom` in `main.ts`; il tema si cambia
   solo nelle impostazioni; con tre pulsanti sono larghi 30 px, così sotto «Accedi» si legge tutto). Lo stato del salvataggio non si vede: è in `data-save` sulla pagina,
   per le prove nel browser. Il logo apre e chiude la
