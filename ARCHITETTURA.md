@@ -53,6 +53,16 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   la prima volta e da «Come si usa»; le prove nel browser lo segnano come visto, tranne la sua);
   chiuso quello della prima volta, o lasciato per le scorciatoie, `showTutorialHint` mostra un
   fumetto che punta al «?» (o al logo, se la barra è chiusa) e se ne va da solo dopo 8 secondi.
+  I messaggi brevi in basso sono `toast.ts`; con un pulsante (per esempio «Ricarica») restano finché
+  non lo si preme o non li si chiude. `siteUpdate.ts` (8 ottobre 2026) serve quando il sito si aggiorna con
+  la pagina aperta: i file delle parti caricate solo quando servono (gli editor di schemi e tabelle, i
+  file Excel) hanno nel nome un'impronta e la versione nuova toglie quelli vecchi. Ogni `import()` per
+  un'azione dello studente passa da `loadPart`, che dice perché non arriva (Glifo aggiornato, senza
+  rete) e offre «Ricarica» (`reloadForUpdate` in main.ts salva prima la nota). `watchSiteUpdates`
+  avvisa della versione nuova quando si torna sulla pagina (non con un editor aperto, non dentro
+  claude.ai). In main.ts `loadingEditor` dice «Apro l'editor…» se l'editor tarda, e `warmEditors`
+  carica in anticipo l'editor degli schemi o delle tabelle della nota aperta, così «Modifica» lo apre
+  subito anche dopo una pubblicazione.
   `src/store/`: note, cartelle (`folders.ts`), impostazioni e misure delle sezioni (`layout.ts`,
   solo su quel dispositivo) nel browser (chiavi `glifo.*`).
   Glifo può essere aperto in più schede: ogni modifica parte da quello salvato, non dalla copia
@@ -100,7 +110,7 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   dei fence di `src/render/markdown.ts`): il testo delle celle passa da `md.renderInline` e poi da
   DOMPurify come il resto, i testi che escono dalle formule si scappano; `preview.ts` aggiunge
   «Modifica» e le frecce (`hydrateSheets`, solo nella propria nota). `main.ts` apre l'editor
-  (`openSheet`, caricato solo quando serve) e rimette il blocco con `saveSheetBlock`, ritrovandolo
+  (`openSheet`, caricato solo quando serve, con `loadPart`) e rimette il blocco con `saveSheetBlock`, ritrovandolo
   dal testo o dall'impronta dell'anteprima (`findSheetBlock`, `findSheetBySource` in `blocks.ts`). Nei
   file .md (`file.ts`) la tabella di Markdown con i risultati (`sheetMarkdown`) e il blocco in un
   commento `glifo-tabella` (& e > scappati). L'editor (`editor.ts`) lavora su una copia della

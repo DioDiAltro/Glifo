@@ -3739,6 +3739,99 @@ try {
     const realError = await real.locator('.explain-box .ai-error').innerText()
     check(/WebGPU/.test(realError), `senza WebGPU il pannello dice che cosa manca (${JSON.stringify(realError)})`)
     await real.close()
+
+    // Il sito si aggiorna con la pagina aperta (8 ottobre 2026). Sul sito di prova (Cloudflare Pages, senza
+    // service worker) i file degli editor della versione vecchia non ci sono più e al loro posto arriva la
+    // pagina iniziale: «Modifica» diceva solo «riprova», e riprovare non serviva. Ora Glifo dice di
+    // ricaricare, con «Ricarica» (la nota resta); se la nota ha uno schema o una tabella i loro editor sono
+    // pronti prima del clic, anche se dopo il sito cambia; tornando sulla pagina avvisa della versione nuova;
+    // e un editor che tarda (la rete occupata dal modello di «Spiegami») dice che si sta aprendo.
+    const upContext = await browser.newContext({ viewport: { width: 1280, height: 800 }, serviceWorkers: 'block' })
+    const up = await upContext.newPage()
+    up.on('pageerror', (e) => errors.push(e.message))
+    await up.goto(url)
+    await up.waitForSelector('.cm-editor')
+    const editorFiles = /\/assets\/editor-[\w-]+\.js$/
+    await up.route(editorFiles, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      await route.continue()
+    })
+    await up.locator('.editor-toolbar button[aria-label^="Schema"]').click()
+    await up.waitForSelector('.toast', { timeout: 3000 })
+    const loadingText = await up.locator('.toast').last().textContent()
+    await up.waitForSelector('dialog.schema-editor[open]', { timeout: 10000 })
+    const loadingGone = await up.waitForFunction(() => ![...document.querySelectorAll('.toast')].some((t) => t.textContent.startsWith('Apro')), null, { timeout: 3000 }).then(() => true, () => false)
+    await up.locator('dialog.schema-editor[open] button', { hasText: /^Chiudi$/ }).click()
+    await up.unroute(editorFiles)
+    check(loadingText === 'Apro l\'editor degli schemi…' && loadingGone, `un editor che tarda ad arrivare dice «Apro l'editor degli schemi…», e l'avviso va via quando si apre (${JSON.stringify({ loadingText, loadingGone })})`)
+
+    // Il sito cambia: un'altra pagina iniziale, e i file degli editor non ci sono più.
+    const startPage = await up.evaluate(() => fetch(location.href).then((r) => r.text()))
+    const newerPage = startPage.replace(/assets\/main-[\w-]+\.js/, 'assets/main-NUOVO.js')
+    const isStartPage = (u) => u.pathname === '/' || u.pathname === '/index.html'
+    const siteChanges = async () => {
+      await up.route(isStartPage, (route) => route.fulfill({ contentType: 'text/html', body: newerPage }))
+      await up.route(editorFiles, (route) => route.fulfill({ contentType: 'text/html', body: newerPage }))
+    }
+    const siteBack = async () => {
+      await up.unroute(isStartPage)
+      await up.unroute(editorFiles)
+    }
+    await siteChanges()
+    await up.locator('.notes-head button[aria-label="Nuova nota"]').click()
+    await up.keyboard.press('Control+a')
+    await up.keyboard.insertText(`# Negozio\n\n\`\`\`schema\n${shopSchema}\n\`\`\`\n\n\`\`\`tabella\n${shopTable}\n\`\`\`\n`)
+    // L'editor delle tabelle non era ancora nella pagina: non si apre, e Glifo dice perché.
+    await up.locator('.cm-schema[data-kind="tabella"] button', { hasText: 'Modifica' }).click()
+    await up.waitForFunction(() => document.querySelector('.toast.has-action:not(.is-leaving) .toast-text')?.textContent.includes('editor delle tabelle'), null, { timeout: 5000 }).catch(() => {})
+    const stale = await up.evaluate(() => {
+      const shown = document.querySelector('.toast.has-action:not(.is-leaving)')
+      return {
+        text: shown?.querySelector('.toast-text')?.textContent,
+        action: shown?.querySelector('.toast-action')?.textContent,
+        error: shown?.classList.contains('is-error'),
+        others: [...document.querySelectorAll('.toast:not(.has-action)')].map((t) => t.textContent),
+        open: document.querySelectorAll('dialog[open]').length,
+      }
+    })
+    // Quello degli schemi invece si apre: era già nella pagina.
+    await up.locator('.cm-schema[data-kind="schema"] button', { hasText: 'Modifica' }).click()
+    const schemaStillOpens = await up.waitForSelector('dialog.schema-editor[open]', { timeout: 5000 }).then(() => true, () => false)
+    if (schemaStillOpens) await up.locator('dialog.schema-editor[open] button', { hasText: /^Chiudi$/ }).click()
+    check(
+      stale.text === 'Glifo è stato aggiornato mentre la pagina era aperta e non riesco più a caricare l\'editor delle tabelle: ricarica la pagina. Le note restano salvate.' &&
+        stale.action === 'Ricarica' &&
+        stale.error &&
+        !stale.others.some((t) => t.includes('riprova')) &&
+        stale.open === 0 &&
+        schemaStillOpens,
+      `con il sito aggiornato e la pagina vecchia l'editor delle tabelle non si apre e Glifo dice di ricaricare, con «Ricarica»; quello degli schemi, già nella pagina, si apre (${JSON.stringify({ ...stale, schemaStillOpens })})`,
+    )
+
+    // «Ricarica»: la nota resta. Dopo, la nota ha uno schema e una tabella e i loro editor si caricano subito:
+    // si aprono anche se intanto il sito cambia di nuovo, e tornando sulla pagina Glifo avvisa della versione nuova.
+    await siteBack()
+    await Promise.all([up.waitForEvent('load'), up.locator('.toast.has-action:not(.is-leaving) .toast-action').click()])
+    await up.waitForSelector('.cm-editor')
+    const reloaded = await up.evaluate(() => [...document.querySelectorAll('.cm-schema')].map((w) => w.dataset.kind).join())
+    await up.waitForFunction(() => performance.getEntriesByType('resource').filter((e) => /\/assets\/editor-[\w-]+\.js$/.test(e.name)).length >= 2, null, { timeout: 10000 })
+    await up.waitForTimeout(300)
+    await siteChanges()
+    const opened = []
+    for (const kind of ['tabella', 'schema']) {
+      await up.locator(`.cm-schema[data-kind="${kind}"] button`, { hasText: 'Modifica' }).click()
+      opened.push(await up.waitForSelector('dialog[open]', { timeout: 5000 }).then((d) => d.getAttribute('class'), () => null))
+      await up.locator('dialog[open] button', { hasText: /^(Chiudi|Annulla)$/ }).first().click()
+      await up.waitForFunction(() => !document.querySelector('dialog[open]'), null, { timeout: 3000 })
+    }
+    await up.evaluate(() => window.dispatchEvent(new Event('focus')))
+    const update = await up.waitForSelector('.toast.has-action:not(.is-leaving) .toast-text', { timeout: 5000 }).then((t) => t.textContent(), () => null)
+    check(
+      reloaded === 'schema,tabella' && opened.join() === 'sheet-editor,schema-editor' && update === 'C\'è una versione nuova di Glifo: ricarica la pagina per usarla. Le note restano salvate.',
+      `dopo «Ricarica» la nota c'è ancora; i suoi editor, già pronti, si aprono anche con il sito cambiato; tornando sulla pagina Glifo dice che c'è una versione nuova (${JSON.stringify({ reloaded, opened, update })})`,
+    )
+    await siteBack()
+    await upContext.close()
   }
   // Dentro claude.ai (la demo e le prove della grafica) Accedi e Condividi si vedono come sul
   // sito, ma l'accesso è spento: la finestra lo dice e non va da nessuna parte

@@ -4946,6 +4946,61 @@ kbd {
   transform: none;
 }
 
+/* Con un pulsante (es. «Ricarica», src/ui/siteUpdate.ts): resta finché non lo si preme o lo si chiude. */
+.toast.has-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 8px 7px 16px;
+  pointer-events: auto;
+}
+
+.toast-text {
+  flex: 1;
+}
+
+.toast-action {
+  flex: none;
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--heading);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toast.is-error .toast-action {
+  background: #fff;
+  color: var(--danger);
+}
+
+.toast-close {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.toast-close:hover {
+  opacity: 1;
+}
+
+.toast-action:focus-visible,
+.toast-close:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
 .backdrop {
   display: none;
 }

@@ -382,6 +382,20 @@ non nelle equazioni, dove le soluzioni da sole sono la risposta; `tests/explain.
 integrazione» al posto di «estremi»: il nome giusto ora è nel messaggio di sistema. Da sapere ancora: con
 quale modello (0.6B, 1.7B o 4B) e in quanto tempo; il pannello ✨ con schemi, tabelle e chat è da provare.
 
+**Gli editor che non si aprivano (8 ottobre 2026, sul sito di prova)**: lo studente, con il 4B, non riusciva
+ad aprire l'editor né degli schemi né delle tabelle, con il pannello ✨ aperto mentre il modello si caricava.
+Il pannello non c'entrava (provato: gli editor si aprono anche con il modello che carica). La pagina era
+quella di prima di una pubblicazione: gli editor si caricano solo quando servono, i loro file hanno
+nel nome un'impronta del contenuto, e ogni pubblicazione toglie quelli vecchi. Sul sito di prova (senza
+service worker) al loro posto arriva la pagina iniziale, e «Modifica» diceva solo «L'editor non si è
+aperto: riprova», ma riprovare non serviva. Sul sito vero succede lo stesso quando il service worker nuovo
+svuota la cache. Ora (`src/ui/siteUpdate.ts`): «Modifica» dice che Glifo è stato aggiornato e offre
+«Ricarica», con la nota salvata prima. Senza rete dice che manca la connessione, e lì non propone di
+ricaricare. Quando si torna sulla pagina, se sul sito c'è una versione nuova Glifo lo dice. Se la nota ha uno
+schema o una tabella, il loro editor si carica appena il browser è libero (`warmEditors` in main.ts), così
+si apre subito anche dopo una pubblicazione. Se un editor tarda (per esempio con la rete occupata dal
+modello), un avviso dice «Apro l'editor…» invece di non mostrare niente.
+
 Da fare:
 - provarlo davvero su un computer con WebGPU (Chrome o Edge), su esercizi veri, e scegliere il modello
   di partenza: finora è provato solo con un modello finto (nelle sessioni di Claude Hugging Face era

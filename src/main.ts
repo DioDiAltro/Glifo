@@ -75,7 +75,8 @@ import { NotesPanel } from './ui/notesPanel'
 import { Preview } from './ui/preview'
 import { PaneResizer } from './ui/resize'
 import { SidePanel, type PanelView } from './ui/sidePanel'
-import { toast } from './ui/toast'
+import { dismissToast, toast } from './ui/toast'
+import { loadPart, PartNotLoaded, watchSiteUpdates } from './ui/siteUpdate'
 import { leaveNotice, takeNotice } from './ui/notice'
 import { createToolbar } from './ui/toolbar'
 import { openTutorial, showTutorialHint, tutorialSeen } from './ui/tutorial'
@@ -263,6 +264,7 @@ const editor = new MarkdownEditor(editorHost, active.content, {
     saveState('da-salvare')
     scheduleSave()
     preview.update(doc)
+    warmEditors(doc)
   },
   onScroll: (line, fraction) => {
     if (settings.view === 'split') preview.syncTo(line, fraction)
@@ -650,6 +652,7 @@ function loadNote(id: string, focus = true): void {
   active = note
   store.activeId = id
   editor.setDoc(note.content)
+  warmEditors(note.content)
   // «Spiega con l'AI»: l'elenco è dell'altra nota, la spiegazione di prima non c'entra più.
   sidePanel.aiPanel.reset()
   // Un'altra nota: l'anteprima torna a seguire l'editor (dopo le frecce era rimasta ferma).
@@ -888,6 +891,43 @@ function moveBlockInNote(kind: BlockKind, line: number, hash: string, dir: MoveD
   return result.move.line
 }
 
+// ——— Gli editor degli schemi e delle tabelle: si caricano solo quando servono ———
+
+/**
+ * Se un editor tarda ad arrivare (la prima volta che serve, con la rete occupata per esempio dal modello di
+ * «Spiegami»), un avviso dice che lo si sta aprendo: prima il clic non mostrava niente e quelli dopo non
+ * facevano niente. `done` lo toglie.
+ */
+function loadingEditor(what: string): { done: () => void } {
+  let shown: HTMLElement | null = null
+  const timer = window.setTimeout(() => (shown = toast(`Apro ${what}…`, 'info', { sticky: true })), 400)
+  return {
+    done: () => {
+      clearTimeout(timer)
+      if (shown) dismissToast(shown)
+      shown = null
+    },
+  }
+}
+
+/**
+ * Se la nota ha uno schema o una tabella, il suo editor si carica appena il browser è libero (8 ottobre
+ * 2026): così «Modifica» lo apre subito anche con la rete occupata, e anche se intanto il sito si è
+ * aggiornato e i file della versione vecchia non ci sono più (src/ui/siteUpdate.ts). Se non arriva, niente
+ * avvisi: al clic ci riprova `loadPart`, che dice perché.
+ */
+const warmed = { schema: false, tabella: false }
+function warmEditors(text: string): void {
+  for (const kind of ['schema', 'tabella'] as const) {
+    if (warmed[kind] || !navigator.onLine || !text.includes('```' + kind)) continue
+    warmed[kind] = true
+    const load = () => void (kind === 'schema' ? import('./schema/editor') : import('./spreadsheet/editor')).catch(() => {})
+    // Safari non ha requestIdleCallback.
+    if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(load, { timeout: 5000 })
+    else setTimeout(load, 2000)
+  }
+}
+
 // ——— Schemi (stile draw.io) ———
 
 let schemaOpen = false
@@ -921,8 +961,10 @@ async function openSchema(line: number | null, source?: string): Promise<void> {
     near = found.from
   }
   schemaOpen = true
+  const loading = loadingEditor('l\'editor degli schemi')
   try {
-    const { openSchemaEditor } = await import('./schema/editor')
+    const { openSchemaEditor } = await loadPart(() => import('./schema/editor'), 'l\'editor degli schemi')
+    loading.done()
     await openSchemaEditor({
       schema,
       theme: isDark() ? 'dark' : 'light',
@@ -933,9 +975,10 @@ async function openSchema(line: number | null, source?: string): Promise<void> {
         if (block) near = block.from
       },
     })
-  } catch {
-    toast('L\'editor degli schemi non si è aperto: riprova.', 'error')
+  } catch (err) {
+    if (!(err instanceof PartNotLoaded)) toast('L\'editor degli schemi non si è aperto: riprova.', 'error')
   } finally {
+    loading.done()
     schemaOpen = false
   }
   editor.focus()
@@ -996,8 +1039,10 @@ async function openSheet(line: number | null, match?: { source?: string; hash?: 
     near = found.from
   }
   sheetOpen = true
+  const loading = loadingEditor('l\'editor delle tabelle')
   try {
-    const { openSheetEditor } = await import('./spreadsheet/editor')
+    const { openSheetEditor } = await loadPart(() => import('./spreadsheet/editor'), 'l\'editor delle tabelle')
+    loading.done()
     await openSheetEditor({
       sheet,
       onSave: (next) => {
@@ -1010,9 +1055,10 @@ async function openSheet(line: number | null, match?: { source?: string; hash?: 
       },
       title: active.title,
     })
-  } catch {
-    toast('L\'editor delle tabelle non si è aperto: riprova.', 'error')
+  } catch (err) {
+    if (!(err instanceof PartNotLoaded)) toast('L\'editor delle tabelle non si è aperto: riprova.', 'error')
   } finally {
+    loading.done()
     sheetOpen = false
   }
   editor.focus()
@@ -1124,11 +1170,11 @@ async function openFiles(): Promise<void> {
  */
 async function tablesNote(f: OpenedFile): Promise<{ text: string; note?: string } | null> {
   try {
-    const { baseName, xlsxSheets } = await import('./spreadsheet/xlsx')
+    const { baseName, xlsxSheets } = await loadPart(() => import('./spreadsheet/xlsx'), 'la parte che apre i file Excel')
     const block = (model: SheetModel) => sheetBlockText(serializeSheet(model))
     const title = `# ${baseName(f.name)}\n\n`
     if (!f.bytes) {
-      const { csvToSheet } = await import('./spreadsheet/csv')
+      const { csvToSheet } = await loadPart(() => import('./spreadsheet/csv'), 'la parte che apre i file .csv')
       const { model, cut } = csvToSheet(f.content)
       return { text: `${title}${block(model)}\n`, ...(cut && { note: 'Le righe in più sono rimaste fuori' }) }
     }
@@ -1145,7 +1191,7 @@ async function tablesNote(f: OpenedFile): Promise<{ text: string; note?: string 
     ].filter(Boolean).join('. ')
     return { text: title + parts.join('\n'), ...(note && { note }) }
   } catch (err) {
-    toast(err instanceof Error && err.name === 'XlsxError' ? err.message : `«${f.name}» non si riesce ad aprire.`, 'error')
+    if (!(err instanceof PartNotLoaded)) toast(err instanceof Error && err.name === 'XlsxError' ? err.message : `«${f.name}» non si riesce ad aprire.`, 'error')
     return null
   }
 }
@@ -1534,6 +1580,16 @@ function reloadPage(): void {
   location.reload()
 }
 
+/** Ricarica per la versione nuova di Glifo (src/ui/siteUpdate.ts): questa volta la nota si salva prima. */
+function reloadForUpdate(): void {
+  flushSave()
+  if (store.get(active.id)?.content !== editor.getDoc()) {
+    toast('Prima salva la nota come file .md: il browser non ha più spazio per tenerla.', 'error')
+    return
+  }
+  location.reload()
+}
+
 if (sync && account) {
   sync.onStatus((status) => accountButton.show({ email: account.email, status }))
   accountButton.show({ email: account.email, status: sync.status })
@@ -1543,6 +1599,11 @@ if (sync && account) {
 // Un avviso lasciato prima di ricaricare la pagina (per esempio «account eliminato»).
 const notice = takeNotice()
 if (notice) toast(notice)
+
+// L'editor degli schemi o delle tabelle della nota aperta, pronto prima del clic.
+warmEditors(active.content)
+// Se il sito si aggiorna con la pagina aperta, Glifo lo dice, con «Ricarica» (dentro claude.ai non c'è un sito).
+if (__GLIFO_SITE__ !== 'claude' && !inClaudeViewer()) watchSiteUpdates({ reload: reloadForUpdate, busy: () => schemaOpen || sheetOpen })
 
 // Ritorno dal link nell'email o dalla pagina di Google.
 if (/[?&#](code|access_token|error_description)=/.test(location.search + location.hash)) {
