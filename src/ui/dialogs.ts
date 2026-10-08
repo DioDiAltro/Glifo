@@ -417,8 +417,8 @@ export function openSettingsDialog(deps: SettingsDialogDeps): void {
         'p',
         { class: 'field-help' },
         deps.accountEmail
-          ? `Gli appunti sono salvati nel tuo account (${deps.accountEmail}) e in questo browser. Il backup resta utile per averne una copia tutta tua. Per scaricare tutti i dati dell'account o eliminarlo, apri l'account dal pulsante in alto.`
-          : 'Gli appunti sono salvati nel browser. Se cancelli i dati di navigazione li perdi: scarica ogni tanto un backup, o salva le note come file .md. Con l\'account (in alto, «Accedi») li ritrovi su ogni dispositivo.',
+          ? `Gli appunti sono salvati nel tuo account (${deps.accountEmail}) e in questo browser; le lavagne solo in questo browser. Il backup resta utile per averne una copia tutta tua, lavagne comprese. Per scaricare tutti i dati dell'account o eliminarlo, apri l'account dal pulsante in fondo alla barra laterale.`
+          : 'Gli appunti sono salvati nel browser. Se cancelli i dati di navigazione li perdi: scarica ogni tanto un backup, o salva le note come file .md. Con l\'account («Accedi», in fondo alla barra laterale) ritrovi le note su ogni dispositivo.',
       ),
       h(
         'div',
