@@ -175,6 +175,14 @@ describe('i passaggi scritti dal modello', () => {
     expect(checkSteps(stepsIn('1. Le soluzioni: $$x = 1 \\lor x = 6$$'), t, sheet).reaches).toBe(false)
   })
 
+  it('checkFormula e Sheet.same: una divisione per zero non si giudica (dava ✓)', () => {
+    for (const tex of ['1 / 0 = 5', '27 : 0 = 0', r`\frac{27}{0} = 0`, r`27 \div 0 = 0`, '0 / 0 = 5']) expect(checkFormula(tex, sheet)).toBeNull()
+    expect(sheet().same('1/0', '5')).toBeNull()
+    expect(sheet().same('0/0', '5')).toBeNull()
+    expect(sheet().same(r`\frac{1}{x - x}`, '5')).toBeNull()
+    expect(sheet().same('6 : 2', '3')).toBe(true)
+  })
+
   it('checkFormula: il nome davanti si toglie, e «soft» non dice mai ✗', () => {
     expect(checkFormula(r`V = \pi \cdot 2 = 2\pi`, sheet)).toEqual({ ok: true })
     expect(checkFormula('(x + 1)^2 = x^2 + 1', sheet, null, 'soft')).toBeNull()

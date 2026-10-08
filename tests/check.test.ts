@@ -40,6 +40,19 @@ describe('il controllo delle uguaglianze scritte (✓/✗)', () => {
     expect(check(r`\binom{5}{2} = 10`)).toBe('✓')
   })
 
+  it('una divisione per zero non ha un valore: né ✓ né ✗ (1/0 = 5 aveva il ✓, 0/0 = 5 il ✗ «fa 5»)', () => {
+    expect(check('1 / 0 = 5')).toBeNull()
+    expect(check('5 = 1 / 0')).toBeNull()
+    expect(check(r`\frac{27}{0} = 0`)).toBeNull()
+    expect(check('27 : 0 = 0')).toBeNull()
+    expect(check(r`27 \div 0 = 0`)).toBeNull()
+    expect(check('0 / 0 = 5')).toBeNull()
+    expect(check(r`\frac{1{,}5}{0} = 2`)).toBeNull()
+    // Le divisioni che si fanno restano controllate.
+    expect(check('6 : 2 = 4')).toBe('✗ 3')
+    expect(check(r`\frac{27}{3} = 9`)).toBe('✓')
+  })
+
   it('i numeri con la virgola: arrotondati o troncati alle cifre scritte', () => {
     expect(check(r`\sqrt{2} = 1{,}414`)).toBe('✓≈')
     expect(check(r`\sqrt{2} = 1{,}415`)).toBe('✗ 1,414213…')

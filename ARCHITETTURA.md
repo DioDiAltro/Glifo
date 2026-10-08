@@ -213,7 +213,9 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   (`$\int_0^1 x^2 \, dx = \frac{1}{3}$`) c'è il controllo (`Sheet.read`, `check`): la domanda è la prima
   parte che si sa calcolare (`resultOf`), le altre valgono quanto lei (con le lettere per tre scelte di
   numeri, i decimali arrotondati o troncati con `writtenSlack`, la primitiva tra gli estremi
-  `\left[…\right]_a^b` con `bracketValue`); definizioni, equazioni e formule con ⇒ no. Il segno ✓/✗ è in
+  `\left[…\right]_a^b` con `bracketValue`); definizioni, equazioni e formule con ⇒ no. Una parte senza un
+  valore (1/0, 0/0: in JavaScript ∞ e NaN) non si giudica, né ✓ né ✗ (`sameAs`, `sameScalar`, `same`; il 7
+  ottobre 2026 `$1/0 = 5$` aveva il ✓). Il segno ✓/✗ è in
   `src/render/check.ts` (nell'editor il ✗ aspetta che il cursore esca dalla formula); i controlli fatti
   li ricorda `checks`, con l'impronta delle definizioni (`state`). `\log` è il logaritmo naturale.
   π, e o un numero della nota davanti a una parentesi sono un prodotto (`callsUnknown`: \pi \left(…\right)

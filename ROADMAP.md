@@ -363,7 +363,10 @@ definizioni e le proprietà scritti nel testo; Glifo controlla gli esempi con i 
 Glifo dà al modello una descrizione a parole (le forme seguendo le frecce, le corsie, i collegamenti con il
 loro testo; negli schemi E-R entità, relazioni, attributi e cardinalità; le tabelle con i campi e le
 chiavi); per una tabella i valori calcolati, con le lettere delle colonne, e le formule. Resta la chat
-(passo 4).
+(passo 4). Provando, è venuto fuori un difetto del controllo, anche nelle note sul sito: una divisione per
+zero passava per giusta (`$1/0 = 5$` con il ✓, e lo stesso nei passaggi delle spiegazioni). Corretto sul
+ramo `prova`: una parte senza un valore non si giudica (`tests/check.test.ts`); sul sito va con il resto
+di `prova`, o prima se lo studente lo chiede.
 
 Da fare:
 - provarlo davvero su un computer con WebGPU (Chrome o Edge), su esercizi veri, e scegliere il modello

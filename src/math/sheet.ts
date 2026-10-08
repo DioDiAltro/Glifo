@@ -817,6 +817,8 @@ export class Sheet {
         const w = this.evaluate(written) ?? this.realOf(written)
         if (!w) return null
         if (value.exact && w.exact && value.exact.cmp(w.exact) === 0) return true
+        // 1/0 o 0/0 non hanno un valore (in JavaScript sono ∞ e NaN): non si giudica.
+        if (!Number.isFinite(value.float) || !Number.isFinite(w.float)) return null
         const decimals = writtenDecimals(written)
         if (decimals !== null) return digitsMatch(value.float, w.float, decimals, tol)
         target = [value.float]
@@ -848,7 +850,7 @@ export class Sheet {
         }
       }
       const got = read(written)
-      if (!got || got.length !== target.length) return null
+      if (!got || got.length !== target.length || ![...target, ...got].every(Number.isFinite)) return null
       const slack = this.writtenSlack(written, read, got)
       // Con ≈ si controllano solo le cifre scritte.
       if (approx && !slack) return null
@@ -988,6 +990,7 @@ export class Sheet {
       const b = this.evaluate(written)
       if (!a || !b) return null
       if (a.exact && b.exact) return a.exact.cmp(b.exact) === 0
+      if (!Number.isFinite(a.float) || !Number.isFinite(b.float)) return null
       const decimals = writtenDecimals(written)
       return decimals === null ? close(a.float, b.float, tol) : !!digitsMatch(a.float, b.float, decimals, tol)
     }
@@ -2158,7 +2161,9 @@ export class Sheet {
         const p = this.evaluate(x) ?? this.realOf(x)
         const q = this.evaluate(y) ?? this.realOf(y)
         if (!p || !q) return null
-        return p.exact && q.exact ? p.exact.cmp(q.exact) === 0 : close(p.float, q.float, 1e-9)
+        if (p.exact && q.exact) return p.exact.cmp(q.exact) === 0
+        // Una divisione per zero non ha un valore: non è uguale né diversa.
+        return Number.isFinite(p.float) && Number.isFinite(q.float) ? close(p.float, q.float, 1e-9) : null
       }
       const f = this.compileWith(x, letters)
       const g = this.compileWith(y, letters)
