@@ -38,6 +38,7 @@ import { loadPaneSizes, savePaneSizes } from './store/layout'
 import { migrateKeyPrefix, storageAvailable } from './store/storage'
 import { ICONS, h, icon } from './ui/dom'
 import { confirmDialog, openHelpDialog, openSettingsDialog, openTouchLogDialog, promptDialog } from './ui/dialogs'
+import { aiActivity } from './ui/aiActivity'
 import { openCommentsDialog } from './ui/comments'
 import { inClaudeViewer } from './host'
 import { accountOffMessage, type Site } from './site'
@@ -354,6 +355,8 @@ const sidePanel = new SidePanel({
   openSettings: () => openSettings(),
   toast,
   closePanel: () => setPanels({ symbolsOpen: false }),
+  // Il pulsante ✨ si fa più sotto, con la barra: qui basta che ci sia quando l'AI comincia.
+  aiActivity: { start: () => aiWork.start() },
 })
 
 const notesPanel = new NotesPanel({
@@ -386,6 +389,8 @@ const aiToggle = h(
   },
   icon(ICONS.sparkles, 17),
 )
+// Mentre l'AI lavora il pulsante sfuma i colori; se finisce con il pannello AI che non si vede, un pallino.
+const aiWork = aiActivity(aiToggle, () => settings.symbolsOpen && sidePanel.view === 'ai')
 const tools = createToolbar(editor, { onSchema: () => void openSchema(null), onSheet: () => void openSheet(null), onGraph: () => insertGraph(), explain: aiToggle })
 const floatTools = h('div', { class: 'float-tools' }, tools.format)
 const floatRight = h(
@@ -538,6 +543,7 @@ function setPanels(next: Partial<Pick<Settings, 'notesOpen' | 'symbolsOpen'>>): 
   app.classList.toggle('symbols-open', settings.symbolsOpen)
   sidePanel.setOpen(settings.symbolsOpen)
   fitBar()
+  aiShown()
 }
 
 /** Il pannello a destra mostra i simboli o «Spiega con l'AI»: il pulsante della vista che si vede lo chiude, l'altro cambia vista. */
@@ -553,6 +559,12 @@ function togglePanel(view: PanelView): void {
 function showPanelView(view: PanelView): void {
   sidePanel.setView(view)
   app.dataset.panel = view
+  aiShown()
+}
+
+/** Il pannello AI si vede (aperto, con la vista ✨): il pallino del pulsante se ne va. */
+function aiShown(): void {
+  if (settings.symbolsOpen && sidePanel.view === 'ai') aiWork.seen()
 }
 
 function focusSymbolSearch(): void {

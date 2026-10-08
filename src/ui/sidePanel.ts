@@ -12,6 +12,7 @@ import { CATEGORIES, symbolsInCategory, type CategoryId, type SymbolEntry, type 
 import { cardPreviewTex, formPreviewTex, templateText } from '../symbols/template'
 import type { Settings } from '../store/settings'
 import { ICONS, clear, h, icon } from './dom'
+import type { AiWork } from './aiActivity'
 import { AiPanel } from './aiPanel'
 import { ExplainPanel } from './explainPanel'
 
@@ -24,6 +25,8 @@ export interface SidePanelDeps {
   toast: (message: string, kind?: 'info' | 'error') => void
   /** Chiude il pannello (la ✕ di «Spiega con l'AI»). */
   closePanel: () => void
+  /** Il pulsante ✨ (src/ui/aiActivity.ts): sa quando il pannello «Spiega con l'AI» lavora. */
+  aiActivity?: AiWork
 }
 
 /** Cosa mostra il pannello a destra: i simboli o «Spiega con l'AI» (src/ui/aiPanel.ts). */
@@ -82,7 +85,7 @@ export class SidePanel {
 
   constructor(private readonly deps: SidePanelDeps) {
     this.explain = new ExplainPanel({ editor: deps.editor, settings: deps.settings, openSettings: deps.openSettings, toast: deps.toast })
-    this.aiPanel = new AiPanel({ editor: deps.editor, settings: deps.settings, openSettings: deps.openSettings, toast: deps.toast, onClose: deps.closePanel })
+    this.aiPanel = new AiPanel({ editor: deps.editor, settings: deps.settings, openSettings: deps.openSettings, toast: deps.toast, onClose: deps.closePanel, activity: deps.aiActivity })
     this.searchInput = h('input', {
       class: 'panel-search-input',
       attrs: {

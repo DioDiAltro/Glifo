@@ -15,6 +15,7 @@ import { explanationMarkdown, insertAfterText, insertExplanation, regionToExplai
 import type { MathRegion } from '../editor/mathContext'
 import { inClaudeViewer } from '../host'
 import type { Settings } from '../store/settings'
+import type { AiWork } from './aiActivity'
 import { ICONS, h, icon } from './dom'
 import { ExplainChat } from './explainChat'
 import { formulasSummary, stepsList, texHtml } from './explainSteps'
@@ -33,6 +34,8 @@ export interface ExplainPanelDeps {
   model?: () => ExplainModel
   /** Sotto la spiegazione, la chat per le domande (nel pannello «Spiega con l'AI»). */
   chat?: boolean
+  /** Il pulsante ✨ (src/ui/aiActivity.ts): sfuma mentre il modello lavora, con il pallino se finisce a pannello chiuso. */
+  activity?: AiWork
 }
 
 /** Cosa si spiega: un conto della nota, o un'altra cosa (un grafico…) con il testo per ritrovarla nella nota. */
@@ -140,6 +143,9 @@ export class ExplainPanel {
       return
     }
     this.set({ status: 'loading', asked, progress: 0, fetching: false })
+    const end = this.deps.activity?.start()
+    // Il pallino solo per una spiegazione o un errore da leggere: non se è stata chiusa o rifatta.
+    let news = false
     try {
       const loaded = await model.load(chosen.id, (p) => {
         if (!this.current(asked) || this.state.status !== 'loading') return
@@ -156,13 +162,19 @@ export class ExplainPanel {
       if (!this.current(asked)) return
       if (this.deps.chat) {
         const context = chatContext(subject.kind === 'conto' ? subject.target : subject.topic, explanation)
-        this.chat = { asked, view: new ExplainChat({ context, settings: this.deps.settings, model: () => this.model() }) }
+        this.chat = { asked, view: new ExplainChat({ context, settings: this.deps.settings, model: () => this.model(), activity: this.deps.activity }) }
       }
       this.set({ status: 'done', asked, model: name, explanation })
+      news = true
     } catch (err) {
       if (!this.current(asked)) return
       if (err instanceof LocalAbort || asked.controller.signal.aborted) this.set({ status: 'idle' })
-      else this.set({ status: 'error', asked, message: err instanceof Error ? err.message : String(err) })
+      else {
+        this.set({ status: 'error', asked, message: err instanceof Error ? err.message : String(err) })
+        news = true
+      }
+    } finally {
+      end?.(news)
     }
   }
 

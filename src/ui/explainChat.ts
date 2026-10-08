@@ -11,12 +11,15 @@ import { localModel } from '../ai/localModels'
 import type { Settings } from '../store/settings'
 import { h } from './dom'
 import type { ExplainModel } from './explainPanel'
+import type { AiWork } from './aiActivity'
 import { formulasSummary, stepsList } from './explainSteps'
 
 export interface ExplainChatDeps {
   context: ChatContext
   settings: () => Settings
   model: () => ExplainModel
+  /** Il pulsante ✨ (src/ui/aiActivity.ts): sfuma mentre il modello risponde. */
+  activity?: AiWork
 }
 
 interface Turn {
@@ -76,6 +79,7 @@ export class ExplainChat {
     this.reveal()
     const settings = this.deps.settings()
     const model = this.deps.model()
+    const end = this.deps.activity?.start()
     try {
       // Il modello è già nel browser (ha scritto la spiegazione): qui si riprende.
       await model.load(localModel(settings.localModel).id)
@@ -87,6 +91,9 @@ export class ExplainChat {
         this.turns.splice(this.turns.indexOf(turn), 1)
         if (!this.input.value) this.input.value = text
       } else turn.error = err instanceof Error ? err.message : String(err)
+    } finally {
+      // Una risposta (o un errore) da leggere, se non l'ha fermata chi scrive e la chat c'è ancora.
+      end?.(!controller.signal.aborted && this.controller === controller)
     }
     if (this.controller !== controller) return
     this.controller = null

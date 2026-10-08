@@ -28,6 +28,11 @@
   --link: #4338ca;
   --danger: #c62845;
   --danger-soft: #fdecef;
+  --ai-1: #0284c7;
+  --ai-2: #4f46e5;
+  --ai-3: #9333ea;
+  --ai-4: #db2777;
+  --badge: #e5383b;
   --ok: #16a34a;
   --selection: #d7dcff;
   --shadow: 0 10px 30px rgba(20, 24, 40, 0.14);
@@ -85,6 +90,11 @@
     --link: #a9b1ff;
     --danger: #ff7a90;
     --danger-soft: rgba(255, 122, 144, 0.12);
+    --ai-1: #38bdf8;
+    --ai-2: #8b8cf8;
+    --ai-3: #c084fc;
+    --ai-4: #f472b6;
+    --badge: #ff5c5c;
     --ok: #4ade80;
     --selection: rgba(139, 140, 248, 0.32);
     --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
@@ -130,6 +140,11 @@
   --link: #a9b1ff;
   --danger: #ff7a90;
   --danger-soft: rgba(255, 122, 144, 0.12);
+  --ai-1: #38bdf8;
+  --ai-2: #8b8cf8;
+  --ai-3: #c084fc;
+  --ai-4: #f472b6;
+  --badge: #ff5c5c;
   --ok: #4ade80;
   --selection: rgba(139, 140, 248, 0.32);
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
@@ -493,6 +508,99 @@ kbd {
   background: var(--accent-soft);
   border-color: var(--border);
   color: var(--accent-text);
+}
+
+/* Mentre l'AI lavora (`.is-working`, da aiActivity.ts) l'icona cambia colore sfumando, dall'azzurro al
+   rosa e indietro (in fila sul cerchio dei colori: tra due lontani la sfumatura passerebbe dal grigio);
+   con il pannello AI aperto, che lo accende, sfuma lo sfondo. Se finisce mentre il pannello AI non si
+   vede, un pallino come quello dei messaggi (`.has-news`), finché non lo si riapre. */
+.ai-toggle {
+  position: relative;
+}
+
+.ai-toggle.is-working svg {
+  animation: ai-working 3s ease-in-out infinite alternate;
+}
+
+.app.symbols-open[data-panel='ai'] .ai-toggle.is-working {
+  animation: ai-working-on 3s ease-in-out infinite alternate;
+}
+
+.app.symbols-open[data-panel='ai'] .ai-toggle.is-working svg {
+  animation: none;
+}
+
+@keyframes ai-working {
+  0% {
+    color: var(--ai-1);
+  }
+  33% {
+    color: var(--ai-2);
+  }
+  67% {
+    color: var(--ai-3);
+  }
+  100% {
+    color: var(--ai-4);
+  }
+}
+
+@keyframes ai-working-on {
+  0% {
+    background-color: var(--ai-1);
+    border-color: var(--ai-1);
+  }
+  33% {
+    background-color: var(--ai-2);
+    border-color: var(--ai-2);
+  }
+  67% {
+    background-color: var(--ai-3);
+    border-color: var(--ai-3);
+  }
+  100% {
+    background-color: var(--ai-4);
+    border-color: var(--ai-4);
+  }
+}
+
+.ai-toggle.has-news::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--badge);
+  box-shadow: 0 0 0 2px var(--surface);
+  animation: ai-news 0.35s ease-out;
+}
+
+@keyframes ai-news {
+  from {
+    transform: scale(0);
+  }
+  60% {
+    transform: scale(1.3);
+  }
+}
+
+/* Senza animazioni: un colore fermo dice che lavora, il pallino compare e basta. */
+@media (prefers-reduced-motion: reduce) {
+  .ai-toggle.is-working svg,
+  .app.symbols-open[data-panel='ai'] .ai-toggle.is-working,
+  .ai-toggle.has-news::after {
+    animation: none;
+  }
+
+  .ai-toggle.is-working svg {
+    color: var(--ai-3);
+  }
+
+  .app.symbols-open[data-panel='ai'] .ai-toggle.is-working svg {
+    color: inherit;
+  }
 }
 
 .view-switch {

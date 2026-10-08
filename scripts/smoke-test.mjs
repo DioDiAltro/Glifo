@@ -48,7 +48,8 @@ const check = (ok, msg) => {
  * uno schema e una tabella due punti, se Glifo gli ha dato le frecce e i valori calcolati; a una domanda
  * della chat risponde con un punto, se rilegge la spiegazione della tabella.
  */
-function fakeLlmWorker() {
+/** Il worker finto di WebLLM; con `delay` risponde dopo tanti millisecondi (per il pulsante ✨ mentre lavora). */
+function fakeLlmWorker(delay = 0) {
   const steps = String.raw`1. Porto fuori $\pi$, che è una costante. $$\int_{-R}^{R} \pi (R^2 - x^2) \, dx = \pi \int_{-R}^{R} (R^2 - x^2) \, dx$$
 2. Sostituisco gli estremi nella primitiva. $$\pi \left[R^2 x - \frac{x^3}{3}\right]_{-R}^{R} = \frac{4\pi R^3}{3}$$`
   const call = '<tool_call>{"name": "primitiva", "arguments": {"funzione": "R^2 - x^2", "variabile": "x"}}</tool_call>'
@@ -76,8 +77,12 @@ function fakeLlmWorker() {
         if (ask.startsWith('La tabella nella nota')) return ask.includes('| 2 | Penne | 2 | 3 | 6 |') ? table : '1. Non vedo i valori.'
         return msg.messages.at(-1).content.includes('<tool_response>') ? steps : call
       })()
-      for (let i = 0; i < reply.length; i += 16) self.postMessage({ id: msg.id, type: 'delta', text: reply.slice(i, i + 16) })
-      self.postMessage({ id: msg.id, type: 'done', value: reply })
+      const send = () => {
+        for (let i = 0; i < reply.length; i += 16) self.postMessage({ id: msg.id, type: 'delta', text: reply.slice(i, i + 16) })
+        self.postMessage({ id: msg.id, type: 'done', value: reply })
+      }
+      if (delay) setTimeout(send, delay)
+      else send()
     } else if (msg.type === 'remove') self.postMessage({ id: msg.id, type: 'done' })
   })
 }
@@ -3724,6 +3729,55 @@ try {
       `la chat sotto la spiegazione: la domanda con Invio, la risposta (il modello rilegge la spiegazione) con la formula controllata da Glifo (${JSON.stringify(chatShown)})`,
     )
     await exContext.close()
+
+    // Il pulsante ✨ (8 ottobre 2026): mentre l'AI lavora l'icona sfuma i colori (con il pannello AI aperto,
+    // lo sfondo del pulsante acceso); se finisce con il pannello chiuso, un pallino come quello dei messaggi,
+    // che se ne va riaprendo il pannello. Qui il modello finto risponde dopo un secondo e mezzo: il tempo
+    // di chiudere il pannello.
+    const slowContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block' })
+    const slow = await slowContext.newPage()
+    slow.on('pageerror', (e) => errors.push(e.message))
+    await slow.route('**/assets/llmWorker-*.js', (route) => route.fulfill({ contentType: 'text/javascript', body: `(${fakeLlmWorker})(1500)` }))
+    await slow.goto(url)
+    await slow.waitForSelector('.cm-editor')
+    await slow.locator('.notes-head button[aria-label="Nuova nota"]').click()
+    await slow.keyboard.press('Control+a')
+    await slow.keyboard.insertText('# Parabola\n\n```grafico\ny = x^2\n```\n')
+    const aiButton = () =>
+      slow.evaluate(() => {
+        const b = document.querySelector('.ai-toggle')
+        return {
+          working: b.classList.contains('is-working'),
+          news: b.classList.contains('has-news'),
+          label: b.getAttribute('aria-label'),
+          button: getComputedStyle(b).animationName,
+          icon: getComputedStyle(b.querySelector('svg')).animationName,
+          dot: getComputedStyle(b, '::after').content,
+        }
+      })
+    const idle = await aiButton()
+    await slow.locator('.ai-toggle').click()
+    await slow.locator('.ai-subject[data-kind="grafico"]').click()
+    const whileOpen = await aiButton()
+    await slow.locator('.ai-toggle').click()
+    const whileClosed = await aiButton()
+    const finishedInTime = await slow
+      .waitForFunction(() => document.querySelector('.ai-toggle').classList.contains('has-news'), null, { timeout: 20000 })
+      .then(() => true, () => false)
+    const finished = await aiButton()
+    await slow.locator('.ai-toggle').click()
+    const reopened = await aiButton()
+    const explained = await slow.locator('.ai-panel .explain-box .explain-step').count()
+    check(
+      !idle.working && !idle.news && idle.icon === 'none' && idle.dot === 'none' &&
+        whileOpen.working && whileOpen.button === 'ai-working-on' && whileOpen.icon === 'none' &&
+        whileClosed.working && whileClosed.icon === 'ai-working' && whileClosed.label === 'Spiega con l\'AI, sta lavorando' &&
+        finishedInTime && !finished.working && finished.news && finished.dot === '""' && finished.label === 'Spiega con l\'AI, ha finito' &&
+        !reopened.news && reopened.dot === 'none' && reopened.label === 'Spiega con l\'AI' &&
+        explained === 3,
+      `il pulsante ✨ sfuma mentre l'AI lavora; finito a pannello chiuso, il pallino, che se ne va riaprendolo (${JSON.stringify({ idle, whileOpen, whileClosed, finished, reopened, explained })})`,
+    )
+    await slowContext.close()
 
     // Con il worker vero: WebLLM si carica, ma qui manca WebGPU, e il pannello lo dice.
     const real = await browser.newPage({ viewport: { width: 1440, height: 900 } })

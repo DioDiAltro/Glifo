@@ -9,6 +9,7 @@ import { MarkdownEditor } from '../src/editor/editor'
 import { subjectsIn } from '../src/editor/explainSubjects'
 import { mathMarkdown } from '../src/editor/mathSyntax'
 import { DEFAULT_SETTINGS } from '../src/store/settings'
+import { aiActivity, type AiWork } from '../src/ui/aiActivity'
 import { AiPanel } from '../src/ui/aiPanel'
 import type { ExplainModel } from '../src/ui/explainPanel'
 import { fullyParsed } from './support/editorState'
@@ -451,7 +452,7 @@ function fakeModel(replies: string[], seen: ChatMessage[][] = []): ExplainModel 
   }
 }
 
-function setup(doc: string, replies: string[], seen: ChatMessage[][] = []) {
+function setup(doc: string, replies: string[], seen: ChatMessage[][] = [], activity?: AiWork) {
   const host = document.createElement('div')
   document.body.append(host)
   editor = new MarkdownEditor(host, doc, { onDocChange: () => {}, onScroll: () => {}, onSave: () => {}, onFocusSearch: () => {}, onEditSchema: () => {} })
@@ -464,6 +465,7 @@ function setup(doc: string, replies: string[], seen: ChatMessage[][] = []) {
     toast: (m) => toasts.push(m),
     onClose: () => closed++,
     model: () => fakeModel(replies, seen),
+    activity,
   })
   document.body.append(panel.el)
   return { editor, panel, toasts, closed: () => closed }
@@ -559,6 +561,45 @@ describe('il pannello «Spiega con l\'AI»', () => {
     await settle()
     expect(panel.el.querySelectorAll('.ai-chat')).toHaveLength(1)
     expect(turns()).toHaveLength(0)
+  })
+
+  it('il pulsante ✨ sfuma mentre spiega e risponde; finito a pannello chiuso, il pallino, che se ne va riaprendolo; chiuso a metà, niente', async () => {
+    const button = document.createElement('button')
+    button.setAttribute('aria-label', 'Spiega con l\'AI')
+    let visible = true
+    const activity = aiActivity(button, () => visible)
+    const working = () => button.classList.contains('is-working')
+    const news = () => button.classList.contains('has-news')
+    const { panel } = setup(`# Parabola\n\n${GRAPH}`, [GRAPH_STEPS, GRAPH_FIXED, '1. Perché il quadrato non è mai negativo.', GRAPH_STEPS, GRAPH_FIXED], [], activity)
+    panel.show()
+    const item = () => panel.el.querySelector<HTMLButtonElement>('.ai-subject')!
+    item().click()
+    expect(working()).toBe(true)
+    // Si chiude il pannello mentre il modello scrive: finito, il pallino.
+    visible = false
+    await settle()
+    expect(working()).toBe(false)
+    expect(news()).toBe(true)
+    visible = true
+    activity.seen()
+    expect(news()).toBe(false)
+    // La chat: sfuma mentre risponde; con il pannello aperto, finito, niente pallino.
+    const input = panel.el.querySelector<HTMLTextAreaElement>('.ai-chat-input')!
+    input.value = 'Perché è sempre positiva?'
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    expect(working()).toBe(true)
+    await settle()
+    expect(panel.el.querySelectorAll('.ai-chat-turn')).toHaveLength(1)
+    expect(working()).toBe(false)
+    expect(news()).toBe(false)
+    // Un'altra nota mentre il modello scrive, con il pannello chiuso: la spiegazione si chiude, niente pallino.
+    visible = false
+    item().click()
+    expect(working()).toBe(true)
+    panel.reset()
+    await settle()
+    expect(working()).toBe(false)
+    expect(news()).toBe(false)
   })
 
   it('senza niente da spiegare lo dice; l\'elenco si rifà solo se si vede, e cambiando nota la spiegazione si chiude', async () => {

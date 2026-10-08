@@ -433,6 +433,15 @@ schema o una tabella, il loro editor si carica appena il browser è libero (`war
 si apre subito anche dopo una pubblicazione. Se un editor tarda (per esempio con la rete occupata dal
 modello), un avviso dice «Apro l'editor…» invece di non mostrare niente.
 
+**Il pulsante ✨ mentre lavora (8 ottobre 2026, sul ramo `prova`)**, lo studente: «vorrei che quando è in
+funzione abbia un'animazione: l'icona che sta ora ma che cambia colore sfumando… quando finisce di pensare
+esce un pallino per dire che ha finito, stile messaggio, senza numero dentro». Mentre il pannello AI scarica
+il modello, pensa o scrive (una spiegazione o una risposta della chat) l'icona sfuma dall'azzurro al rosa e
+indietro; con il pannello aperto sfuma il pulsante acceso. Se finisce con il pannello chiuso (o con i
+simboli), sul pulsante un pallino rosso senza numero, che se ne va riaprendo il pannello; niente pallino se
+la spiegazione è stata chiusa, fermata o lasciata cambiando nota. Con «riduci animazioni» il colore resta
+fermo (viola) mentre lavora (`src/ui/aiActivity.ts`).
+
 Da fare:
 - provarlo davvero su un computer con WebGPU (Chrome o Edge), su esercizi veri, e scegliere il modello
   di partenza: finora è provato solo con un modello finto (nelle sessioni di Claude Hugging Face era

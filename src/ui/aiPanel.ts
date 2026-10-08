@@ -15,6 +15,7 @@ import { subjectsIn, type NoteSubject, type SubjectKind } from '../editor/explai
 import { escapeHtml, renderTex } from '../render/katex'
 import type { Settings } from '../store/settings'
 import { ICONS, h, icon } from './dom'
+import type { AiWork } from './aiActivity'
 import { ExplainPanel, type ExplainModel, type ExplainSubject } from './explainPanel'
 
 export interface AiPanelDeps {
@@ -26,6 +27,8 @@ export interface AiPanelDeps {
   onClose: () => void
   /** Il modello: nei test uno finto. */
   model?: () => ExplainModel
+  /** Il pulsante ✨ (src/ui/aiActivity.ts): sa quando la spiegazione e la chat lavorano. */
+  activity?: AiWork
 }
 
 const KIND_NAMES: Record<SubjectKind, string> = { conto: 'Conto', grafico: 'Grafico', formula: 'Formula', teorema: 'Teorema', schema: 'Schema', tabella: 'Tabella' }
@@ -78,7 +81,15 @@ export class AiPanel {
   private timer = 0
 
   constructor(private readonly deps: AiPanelDeps) {
-    this.explain = new ExplainPanel({ editor: deps.editor, settings: deps.settings, openSettings: deps.openSettings, toast: deps.toast, chat: true, ...(deps.model && { model: deps.model }) })
+    this.explain = new ExplainPanel({
+      editor: deps.editor,
+      settings: deps.settings,
+      openSettings: deps.openSettings,
+      toast: deps.toast,
+      chat: true,
+      activity: deps.activity,
+      ...(deps.model && { model: deps.model }),
+    })
     this.list = h('ul', { class: 'ai-subjects', attrs: { 'aria-label': 'Quello che si può spiegare nella nota' } })
     this.empty = h(
       'p',

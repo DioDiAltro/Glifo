@@ -429,6 +429,11 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   (le più vecchie si lasciano se il contesto non basta); Glifo controlla le formule della risposta
   (`checkFormulas`, lo stesso controllo dei grafici e dei teoremi) e fa correggere quelle sbagliate. Con
   un'altra spiegazione, «Rifai» o chiudendo, la chat ricomincia (`endChat` ferma il modello); non si salva.
+  Mentre la spiegazione o la chat del pannello lavorano il pulsante ✨ sfuma i colori (`.is-working`), e se
+  finiscono con il pannello AI che non si vede ha un pallino finché non lo si riapre (`.has-news`), ma non
+  se la spiegazione è stata chiusa o fermata (`src/ui/aiActivity.ts`, 8 ottobre 2026: `activity` passa da
+  `SidePanel` ad `AiPanel`, `ExplainPanel` ed `ExplainChat`; in main.ts `aiWork` e `aiShown`, chiamata da
+  `setPanels` e `showPanelView`). Il «Spiegami» del riquadro della formula non lo tocca.
   I passaggi e il riepilogo si disegnano con `src/ui/explainSteps.ts`, per la spiegazione e per la chat.
 - `src/account/`: account e sincronizzazione. `sync.ts` è il motore (manda, scarica, nei
   conflitti tiene tutte e due le versioni), `controller.ts` decide quando sincronizzare,
