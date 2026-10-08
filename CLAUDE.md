@@ -125,7 +125,7 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
   il pannello ✨ è andato sul sito vero. Le prove nuove si fanno ancora sul sito di prova
   https://glifo-prova.pages.dev (Cloudflare Pages, dal ramo `prova`; lì l'account è spento).
 - Leggere ogni tanto i commenti di chi prova Glifo (il fumetto in fondo alla barra laterale apre la
-  pagina «Commenti», dall'8 ottobre 2026 sul ramo `prova`): dashboard di Supabase → progetto `glifo` →
+  pagina «Commenti», online dall'8 ottobre 2026): dashboard di Supabase → progetto `glifo` →
   Table Editor → `feedback`, dove ci sono anche quelli privati. Lì si risponde (colonna `reply`: si
   vede sotto il commento), si nasconde dalla pagina un commento che non va (`visible` → false) e si
   cancellano quelli che non servono più; oppure lo si chiede a Claude.

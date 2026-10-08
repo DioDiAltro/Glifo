@@ -191,14 +191,14 @@ Perché non gli altri:
 
 ### Commenti di chi prova Glifo
 
-**Fatto sul ramo `prova` (8 ottobre 2026)**, lo studente: «vorrei fare che chi prova Glifo possa darmi
+**Online dall'8 ottobre 2026**, lo studente: «vorrei fare che chi prova Glifo possa darmi
 dei feedback… possibilmente non nel pannello dove scrivo». In fondo alla barra laterale, accanto
 all'account, il fumetto «Mandaci un commento» apre una finestra: un problema, un'idea o altro, il testo
 e l'email facoltativa. Va nella tabella `feedback` di Supabase con la sola chiave pubblica (al massimo
 60 all'ora), con il sito, la versione di Glifo e il browser; lo studente li legge nella dashboard
 (Table Editor → `feedback`). Informativa aggiornata.
 
-**La pagina «Commenti», sul ramo `prova` (8 ottobre 2026)**, lo studente: «una pagina in Glifo tipo
+**La pagina «Commenti» (online dall'8 ottobre 2026)**, lo studente: «una pagina in Glifo tipo
 forum, così ci sono tutti i commenti mandati divisi in problemi/idee/altro con la possibilità di far
 vedere il nome di chi manda il commento; le persone potrebbero vedere cosa è già stato scritto e cosa
 no». Il fumetto ora apre la pagina: le schede Problemi, Idee e Altro con quanti sono, e ogni commento
@@ -206,8 +206,8 @@ con il nome (o «Anonimo»), la data e la risposta di chi fa Glifo. «Scrivi un 
 scheda aperta e ha in più il nome facoltativo e la spunta «Fallo vedere a tutti» (senza, lo legge solo
 lo studente). A tutti il database dà solo i commenti visibili, e solo tipo, nome, testo, data e
 risposta (migrazione «commenti pubblici»); quelli arrivati prima restano privati. Lo studente risponde
-(`reply`) e nasconde (`visible`) dalla dashboard. Informativa aggiornata. Da decidere: se va sul sito
-vero.
+(`reply`) e nasconde (`visible`) dalla dashboard. Informativa aggiornata. Vista sul sito di prova, lo
+studente ha detto «va bene» ed è andata sul sito vero con il pulsante ✨ nuovo.
 
 Idee per dopo:
 - rispondere e nascondere i commenti da Glifo, con l'account di chi lo fa, invece che dalla dashboard;
@@ -433,7 +433,7 @@ schema o una tabella, il loro editor si carica appena il browser è libero (`war
 si apre subito anche dopo una pubblicazione. Se un editor tarda (per esempio con la rete occupata dal
 modello), un avviso dice «Apro l'editor…» invece di non mostrare niente.
 
-**Il pulsante ✨ mentre lavora (8 ottobre 2026, sul ramo `prova`)**, lo studente: «vorrei che quando è in
+**Il pulsante ✨ mentre lavora (online dall'8 ottobre 2026)**, lo studente: «vorrei che quando è in
 funzione abbia un'animazione: l'icona che sta ora ma che cambia colore sfumando… quando finisce di pensare
 esce un pallino per dire che ha finito, stile messaggio, senza numero dentro». Mentre il pannello AI scarica
 il modello, pensa o scrive (una spiegazione o una risposta della chat) l'icona sfuma dall'azzurro al rosa e
