@@ -3752,6 +3752,8 @@ try {
           label: b.getAttribute('aria-label'),
           button: getComputedStyle(b).animationName,
           icon: getComputedStyle(b.querySelector('svg')).animationName,
+          glow: getComputedStyle(b.querySelector('svg')).filter.includes('drop-shadow'),
+          lit: getComputedStyle(b).boxShadow.includes('inset'),
           dot: getComputedStyle(b, '::after').content,
         }
       })
@@ -3769,13 +3771,14 @@ try {
     const reopened = await aiButton()
     const explained = await slow.locator('.ai-panel .explain-box .explain-step').count()
     check(
-      !idle.working && !idle.news && idle.icon === 'none' && idle.dot === 'none' &&
-        whileOpen.working && whileOpen.button === 'ai-working-on' && whileOpen.icon === 'none' &&
-        whileClosed.working && whileClosed.icon === 'ai-working' && whileClosed.label === 'Spiega con l\'AI, sta lavorando' &&
+      !idle.working && !idle.news && idle.icon === 'none' && !idle.glow && !idle.lit && idle.dot === 'none' &&
+        whileOpen.working && whileOpen.button === 'ai-working-on' && whileOpen.icon === 'none' && whileOpen.lit &&
+        whileClosed.working && whileClosed.icon === 'ai-working' && whileClosed.glow && whileClosed.label === 'Spiega con l\'AI, sta lavorando' &&
+        !finished.glow &&
         finishedInTime && !finished.working && finished.news && finished.dot === '""' && finished.label === 'Spiega con l\'AI, ha finito' &&
         !reopened.news && reopened.dot === 'none' && reopened.label === 'Spiega con l\'AI' &&
         explained === 3,
-      `il pulsante ✨ sfuma mentre l'AI lavora; finito a pannello chiuso, il pallino, che se ne va riaprendolo (${JSON.stringify({ idle, whileOpen, whileClosed, finished, reopened, explained })})`,
+      `il pulsante ✨ sfuma mentre l'AI lavora, con l'alone del neon; finito a pannello chiuso, il pallino, che se ne va riaprendolo (${JSON.stringify({ idle, whileOpen, whileClosed, finished, reopened, explained })})`,
     )
     await slowContext.close()
 

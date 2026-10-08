@@ -28,11 +28,11 @@
   --link: #4338ca;
   --danger: #c62845;
   --danger-soft: #fdecef;
-  --ai-1: #0284c7;
-  --ai-2: #4f46e5;
-  --ai-3: #9333ea;
-  --ai-4: #db2777;
-  --badge: #e5383b;
+  --ai-1: #0091ff;
+  --ai-2: #5b5bff;
+  --ai-3: #a63dff;
+  --ai-4: #ff2d8f;
+  --badge: #ff3b30;
   --ok: #16a34a;
   --selection: #d7dcff;
   --shadow: 0 10px 30px rgba(20, 24, 40, 0.14);
@@ -90,11 +90,11 @@
     --link: #a9b1ff;
     --danger: #ff7a90;
     --danger-soft: rgba(255, 122, 144, 0.12);
-    --ai-1: #38bdf8;
-    --ai-2: #8b8cf8;
-    --ai-3: #c084fc;
-    --ai-4: #f472b6;
-    --badge: #ff5c5c;
+    --ai-1: #2ee6ff;
+    --ai-2: #7c7cff;
+    --ai-3: #c86bff;
+    --ai-4: #ff4fb3;
+    --badge: #ff5f57;
     --ok: #4ade80;
     --selection: rgba(139, 140, 248, 0.32);
     --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
@@ -140,11 +140,11 @@
   --link: #a9b1ff;
   --danger: #ff7a90;
   --danger-soft: rgba(255, 122, 144, 0.12);
-  --ai-1: #38bdf8;
-  --ai-2: #8b8cf8;
-  --ai-3: #c084fc;
-  --ai-4: #f472b6;
-  --badge: #ff5c5c;
+  --ai-1: #2ee6ff;
+  --ai-2: #7c7cff;
+  --ai-3: #c86bff;
+  --ai-4: #ff4fb3;
+  --badge: #ff5f57;
   --ok: #4ade80;
   --selection: rgba(139, 140, 248, 0.32);
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
@@ -511,9 +511,11 @@ kbd {
 }
 
 /* Mentre l'AI lavora (`.is-working`, da aiActivity.ts) l'icona cambia colore sfumando, dall'azzurro al
-   rosa e indietro (in fila sul cerchio dei colori: tra due lontani la sfumatura passerebbe dal grigio);
-   con il pannello AI aperto, che lo accende, sfuma lo sfondo. Se finisce mentre il pannello AI non si
-   vede, un pallino come quello dei messaggi (`.has-news`), finché non lo si riapre. */
+   rosa e indietro (in fila sul cerchio dei colori: tra due lontani la sfumatura passerebbe dal grigio),
+   con un alone dello stesso colore, come un neon; con il pannello AI aperto, che lo accende, sfuma il
+   pulsante, con la luce dentro. Gli aloni restano dentro il pulsante: la barra, che scorre quando non
+   c'è posto, taglierebbe quello che esce. Se finisce mentre il pannello AI non si vede, un pallino come
+   quello dei messaggi (`.has-news`), finché non lo si riapre. */
 .ai-toggle {
   position: relative;
 }
@@ -524,43 +526,47 @@ kbd {
 
 .app.symbols-open[data-panel='ai'] .ai-toggle.is-working {
   animation: ai-working-on 3s ease-in-out infinite alternate;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35), inset 0 0 8px rgba(255, 255, 255, 0.45);
 }
 
 .app.symbols-open[data-panel='ai'] .ai-toggle.is-working svg {
   animation: none;
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.9));
 }
 
+/* Il neon: il colore pieno e due aloni, uno stretto e uno largo (al massimo 5 px, dentro il pulsante),
+   che respirano un poco. */
 @keyframes ai-working {
   0% {
     color: var(--ai-1);
+    filter: drop-shadow(0 0 1px var(--ai-1)) drop-shadow(0 0 3px var(--ai-1));
   }
   33% {
     color: var(--ai-2);
+    filter: drop-shadow(0 0 1px var(--ai-2)) drop-shadow(0 0 5px var(--ai-2));
   }
   67% {
     color: var(--ai-3);
+    filter: drop-shadow(0 0 1px var(--ai-3)) drop-shadow(0 0 3px var(--ai-3));
   }
   100% {
     color: var(--ai-4);
+    filter: drop-shadow(0 0 1px var(--ai-4)) drop-shadow(0 0 5px var(--ai-4));
   }
 }
 
 @keyframes ai-working-on {
   0% {
     background-color: var(--ai-1);
-    border-color: var(--ai-1);
   }
   33% {
     background-color: var(--ai-2);
-    border-color: var(--ai-2);
   }
   67% {
     background-color: var(--ai-3);
-    border-color: var(--ai-3);
   }
   100% {
     background-color: var(--ai-4);
-    border-color: var(--ai-4);
   }
 }
 
@@ -586,7 +592,7 @@ kbd {
   }
 }
 
-/* Senza animazioni: un colore fermo dice che lavora, il pallino compare e basta. */
+/* Senza animazioni: il neon fermo, viola, dice che lavora; il pallino compare e basta. */
 @media (prefers-reduced-motion: reduce) {
   .ai-toggle.is-working svg,
   .app.symbols-open[data-panel='ai'] .ai-toggle.is-working,
@@ -596,10 +602,12 @@ kbd {
 
   .ai-toggle.is-working svg {
     color: var(--ai-3);
+    filter: drop-shadow(0 0 1px var(--ai-3)) drop-shadow(0 0 4px var(--ai-3));
   }
 
   .app.symbols-open[data-panel='ai'] .ai-toggle.is-working svg {
     color: inherit;
+    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.9));
   }
 }
 

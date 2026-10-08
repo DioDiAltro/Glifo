@@ -927,7 +927,8 @@ e le formule). Glifo controlla le formule che il modello scrive (anche gli esemp
 (Invio la manda, Maiusc+Invio va a capo) e lo stesso modello risponde rileggendo la cosa spiegata, la
 spiegazione e le ultime domande; Glifo controlla le formule anche nelle risposte. Con un'altra spiegazione
 la chat ricomincia, e non si salva. **Simboli** torna ai simboli; il pulsante della vista aperta chiude il
-pannello. Mentre l'AI lavora (scarica il modello, pensa, scrive) l'icona ✨ cambia colore sfumando: puoi
+pannello. Mentre l'AI lavora (scarica il modello, pensa, scrive) l'icona ✨ si accende come un neon e cambia
+colore sfumando: puoi
 chiudere il pannello e continuare a scrivere, e quando ha finito sul pulsante compare un pallino, come per i
 messaggi, che se ne va riaprendo il pannello.
 

@@ -440,7 +440,11 @@ il modello, pensa o scrive (una spiegazione o una risposta della chat) l'icona s
 indietro; con il pannello aperto sfuma il pulsante acceso. Se finisce con il pannello chiuso (o con i
 simboli), sul pulsante un pallino rosso senza numero, che se ne va riaprendo il pannello; niente pallino se
 la spiegazione è stata chiusa, fermata o lasciata cambiando nota. Con «riduci animazioni» il colore resta
-fermo (viola) mentre lavora (`src/ui/aiActivity.ts`).
+fermo (viola) mentre lavora (`src/ui/aiActivity.ts`). Poi, visto, lo studente: «aggiungi anche un effetto al
+pulsante stile neon e metti colori più visibili sia nel tema chiaro che scuro»: colori più accesi (azzurro
+elettrico, indaco, viola, rosa shocking; nel tema scuro più luminosi) con un alone dello stesso colore, e il
+pulsante acceso con la luce dentro. Gli aloni stanno dentro il pulsante: la barra sopra il testo scorre quando
+non c'è posto, e taglierebbe quello che esce.
 
 Da fare:
 - provarlo davvero su un computer con WebGPU (Chrome o Edge), su esercizi veri, e scegliere il modello
