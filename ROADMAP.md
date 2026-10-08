@@ -317,6 +317,12 @@ attiva solo quando lo dice lo studente, è in [COSTI.md](COSTI.md).
 
 ### Spiegami: le spiegazioni dei conti (in prova)
 
+**Online dall'8 ottobre 2026**: provato sul sito di prova, lo studente ha detto «ora funziona tutto,
+caricalo sul ramo principale», e il ramo `prova` (Spiegami, il pannello ✨ «Spiega con l'AI» con la
+chat, la divisione per zero, gli editor dopo un aggiornamento) è andato sul ramo principale. Il sito di
+prova resta per le prove dopo. Da sapere ancora: quale modello tenere all'inizio (lo studente ha usato
+il 4B) e in quanto tempo risponde.
+
 **In prova sul ramo `prova` (7 ottobre 2026)**, lo studente: «sul ramo di prova possiamo provare ad
 integrare il modello piccolo di Qwen3 con WebLLM per le spiegazioni che possa usare il motore
 matematico di Glifo?». Fatto: con il cursore su un conto, «Spiegami» sotto l'anteprima della formula;

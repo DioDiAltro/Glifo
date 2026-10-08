@@ -352,7 +352,7 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   indirizzo; `askCompatible` in `assistant.ts` chiede lo schema, poi un oggetto JSON, poi niente, e legge la
   risposta con `jsonIn`). Chiave, modello e indirizzo di ogni servizio restano nel browser (`aiKeys`,
   `aiModels`, `aiUrls` nelle impostazioni). `src/host.ts`: funzioni della demo dentro claude.ai.
-  «Spiegami» (in prova sul ramo `prova`, 7 ottobre 2026; il disegno è in ABBONAMENTI.md, «Le
+  «Spiegami» (7 ottobre 2026, online dall'8; il disegno è in ABBONAMENTI.md, «Le
   spiegazioni, come funzionano»): un Qwen3 piccolo che gira nel browser con WebLLM scrive i passaggi di
   un conto e il motore li firma. `localModels.ts` i modelli (Qwen3 0.6B, 1.7B, 4B: `webllmId` sceglie
   q4f16 o q4f32 secondo `shader-f16`), se sono già nella Cache Storage di WebLLM (`modelInBrowser`, senza
@@ -384,7 +384,7 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   l'offline. Nelle prove nel browser il worker è sostituito da uno finto (`fakeLlmWorker` in
   `scripts/smoke-test.mjs`; per un grafico risponde con tre punti, uno sbagliato, per uno schema e una
   tabella con due punti se Glifo gli ha dato le frecce e i valori).
-  «Spiega con l'AI» (7 ottobre 2026, sul ramo `prova`): il pulsante ✨ dopo `$$` (`aiToggle` in main.ts,
+  «Spiega con l'AI» (7 e 8 ottobre 2026, online dall'8): il pulsante ✨ dopo `$$` (`aiToggle` in main.ts,
   in fondo agli inserimenti di `toolbar.ts`) mostra nel pannello a destra, al posto dei simboli, la vista
   `ai` (`SidePanel.setView` e `setOpen`, `PanelView`; `data-panel` su `.app` dice quale pulsante è acceso;
   il pulsante della vista che si vede chiude il pannello, l'altro cambia vista, Ctrl+K torna ai simboli):

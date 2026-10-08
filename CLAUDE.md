@@ -120,14 +120,10 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
   nella finestra «Condividi» di NotebookLM) e lo scrivere insieme senza conflitti. Il 4 ottobre
   2026, fatto il link, lo studente ha chiesto di tenerlo per dopo e di sistemare prima la
   grafica: le idee sono al passo 5 di ROADMAP.md.
-- Provare «Spiegami» (sul ramo `prova`, 7 ottobre 2026) su un computer con Chrome o Edge, su esercizi
-  veri: quale Qwen3 va meglio (0.6B, 1.7B o 4B, nelle impostazioni) e se i passaggi sono chiari. Si
-  prova sul sito di prova https://glifo-prova.pages.dev (Cloudflare Pages, dal ramo `prova`, creato
-  dallo studente il 7 ottobre 2026; lì l'account è spento, ed è giusto così): in una nota un conto in
-  una formula con «=» alla fine, il cursore lì, e «Spiegami» sotto «Anteprima formula», nel pannello
-  a destra (dentro claude.ai il modello non si scarica). Oppure il pulsante ✨ dopo `$$`: l'elenco di
-  conti, grafici, formule, teoremi, schemi e tabelle della nota, e sotto la spiegazione la chat per le
-  domande (8 ottobre 2026).
+- Dire quale modello di «Spiegami» tenere all'inizio (0.6B, 1.7B o 4B, nelle impostazioni) e quanto ci
+  mette a rispondere: l'8 ottobre 2026 ha usato il 4B e ha detto «ora funziona tutto», e «Spiegami» con
+  il pannello ✨ è andato sul sito vero. Le prove nuove si fanno ancora sul sito di prova
+  https://glifo-prova.pages.dev (Cloudflare Pages, dal ramo `prova`; lì l'account è spento).
 - Provare la lavagna sull'iPad con la Apple Pencil, quando l'avrà di nuovo: le correzioni del 5
   ottobre 2026 sono già online. Prima accendere il registro dei tocchi (Impostazioni, in fondo).
   Scrivendo non si deve selezionare niente, a tutto schermo la lavagna non si deve chiudere e la

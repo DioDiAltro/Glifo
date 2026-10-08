@@ -1,7 +1,7 @@
 /**
  * «Spiegami»: i passaggi di un conto della nota, scritti da un modello AI e controllati dal motore di
- * Glifo (ABBONAMENTI.md, «Le spiegazioni, come funzionano»). Per ora (prova sul ramo `prova`, 7 ottobre
- * 2026) con un Qwen3 piccolo che gira nel browser (src/ai/local.ts):
+ * Glifo (ABBONAMENTI.md, «Le spiegazioni, come funzionano»). Per ora (dal 7 ottobre 2026, online dall'8)
+ * con un Qwen3 piccolo che gira nel browser (src/ai/local.ts):
  *
  * 1. Glifo manda al modello la formula, il risultato che ha già calcolato, le definizioni della nota e
  *    quello che il motore sa già dire (la primitiva della funzione da integrare);
