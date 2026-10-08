@@ -125,7 +125,9 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
   prova sul sito di prova https://glifo-prova.pages.dev (Cloudflare Pages, dal ramo `prova`, creato
   dallo studente il 7 ottobre 2026; lì l'account è spento, ed è giusto così): in una nota un conto in
   una formula con «=» alla fine, il cursore lì, e «Spiegami» sotto «Anteprima formula», nel pannello
-  a destra (dentro claude.ai il modello non si scarica).
+  a destra (dentro claude.ai il modello non si scarica). Oppure il pulsante ✨ dopo `$$`: l'elenco di
+  conti, grafici, formule, teoremi, schemi e tabelle della nota, e sotto la spiegazione la chat per le
+  domande (8 ottobre 2026).
 - Provare la lavagna sull'iPad con la Apple Pencil, quando l'avrà di nuovo: le correzioni del 5
   ottobre 2026 sono già online. Prima accendere il registro dei tocchi (Impostazioni, in fondo).
   Scrivendo non si deve selezionare niente, a tutto schermo la lavagna non si deve chiudere e la

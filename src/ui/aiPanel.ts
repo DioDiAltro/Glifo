@@ -3,7 +3,8 @@
  * l'elenco di quello che si può spiegare nella nota (src/editor/explainSubjects.ts: i conti, i grafici, le
  * formule senza un conto, i teoremi e le definizioni, gli schemi e le tabelle)
  * e, scelto uno, la sua spiegazione, nello stesso riquadro di «Spiegami» (src/ui/explainPanel.ts: il modello
- * nel browser, Glifo che controlla le formule). L'elenco si rifà quando cambia la nota, solo se si vede.
+ * nel browser, Glifo che controlla le formule), con sotto la chat per le domande (src/ui/explainChat.ts).
+ * L'elenco si rifà quando cambia la nota, solo se si vede.
  */
 import type { Text } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
@@ -77,7 +78,7 @@ export class AiPanel {
   private timer = 0
 
   constructor(private readonly deps: AiPanelDeps) {
-    this.explain = new ExplainPanel({ editor: deps.editor, settings: deps.settings, openSettings: deps.openSettings, toast: deps.toast, ...(deps.model && { model: deps.model }) })
+    this.explain = new ExplainPanel({ editor: deps.editor, settings: deps.settings, openSettings: deps.openSettings, toast: deps.toast, chat: true, ...(deps.model && { model: deps.model }) })
     this.list = h('ul', { class: 'ai-subjects', attrs: { 'aria-label': 'Quello che si può spiegare nella nota' } })
     this.empty = h(
       'p',

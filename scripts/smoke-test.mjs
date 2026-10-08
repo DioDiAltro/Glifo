@@ -45,7 +45,8 @@ const check = (ok, msg) => {
  * Il worker di WebLLM finto, per «Spiegami» (src/ai/llmWorker.ts parla allo stesso modo): carica
  * subito, chiede al motore la primitiva e poi scrive due passaggi, un pezzo alla volta. Per un grafico
  * (il pannello «Spiega con l'AI») scrive subito tre punti, con due formule giuste e una sbagliata; per
- * uno schema e una tabella due punti, se Glifo gli ha dato le frecce e i valori calcolati.
+ * uno schema e una tabella due punti, se Glifo gli ha dato le frecce e i valori calcolati; a una domanda
+ * della chat risponde con un punto, se rilegge la spiegazione della tabella.
  */
 function fakeLlmWorker() {
   const steps = String.raw`1. Porto fuori $\pi$, che è una costante. $$\int_{-R}^{R} \pi (R^2 - x^2) \, dx = \pi \int_{-R}^{R} (R^2 - x^2) \, dx$$
@@ -59,6 +60,7 @@ function fakeLlmWorker() {
   const schema = '1. Lo schema parte da «Inizio», passa da «Ordina» e arriva a «Fine».\n2. Ogni freccia dice cosa viene dopo.'
   const table = String.raw`1. Nella colonna D il prezzo per la quantità. $$2 \cdot 3 = 6$$
 2. I quaderni costano di più.`
+  const followUp = String.raw`1. Costano 4 euro l'uno e ne servono 5. $$4 \cdot 5 = 20$$`
   self.addEventListener('message', (ev) => {
     const msg = ev.data
     if (msg.type === 'load') {
@@ -66,17 +68,14 @@ function fakeLlmWorker() {
       setTimeout(() => self.postMessage({ id: msg.id, type: 'done', value: `${msg.model}-q4f16_1-MLC` }), 100)
     } else if (msg.type === 'chat') {
       const ask = msg.messages.find((m) => m.role === 'user')?.content ?? ''
-      const reply = ask.includes('```grafico')
-        ? graph
-        : ask.startsWith('Dalla nota:')
-          ? theorem
-          : ask.startsWith('Lo schema nella nota')
-            ? ask.includes('«Inizio» → «Ordina»') ? schema : '1. Non vedo le frecce.'
-            : ask.startsWith('La tabella nella nota')
-              ? ask.includes('| 2 | Penne | 2 | 3 | 6 |') ? table : '1. Non vedo i valori.'
-              : msg.messages.at(-1).content.includes('<tool_response>')
-                ? steps
-                : call
+      const reply = (() => {
+        if (msg.messages[0].content.includes('ora rispondi')) return msg.messages.some((m) => m.role === 'assistant' && m.content.startsWith('1. Nella colonna D')) ? followUp : '1. Non vedo la spiegazione.'
+        if (ask.includes('```grafico')) return graph
+        if (ask.startsWith('Dalla nota:')) return theorem
+        if (ask.startsWith('Lo schema nella nota')) return ask.includes('«Inizio» → «Ordina»') ? schema : '1. Non vedo le frecce.'
+        if (ask.startsWith('La tabella nella nota')) return ask.includes('| 2 | Penne | 2 | 3 | 6 |') ? table : '1. Non vedo i valori.'
+        return msg.messages.at(-1).content.includes('<tool_response>') ? steps : call
+      })()
       for (let i = 0; i < reply.length; i += 16) self.postMessage({ id: msg.id, type: 'delta', text: reply.slice(i, i + 16) })
       self.postMessage({ id: msg.id, type: 'done', value: reply })
     } else if (msg.type === 'remove') self.postMessage({ id: msg.id, type: 'done' })
@@ -3701,6 +3700,28 @@ try {
         tableShown.summary.startsWith('✓ Formule controllate da Glifo: 1 su 1, tutte giuste') &&
         shopSaved.endsWith('=B3*C3 |\n```\n\n1. Nella colonna D il prezzo per la quantità: $2 \\cdot 3 = 6$\n2. I quaderni costano di più.\n\nFine.'),
       `uno schema e una tabella nell'elenco; Glifo li descrive al modello (le frecce, i valori calcolati) e la spiegazione va dopo la tabella (${JSON.stringify({ shopList, schemaShown, tableShown, end: shopSaved.slice(-160) })})`,
+    )
+    // La chat sotto la spiegazione: la domanda con Invio, la risposta con il segno di Glifo; il modello
+    // rilegge la tabella e la spiegazione.
+    await ex.locator('.ai-chat-input').fill('Perché i quaderni costano di più?')
+    await ex.locator('.ai-chat-input').press('Enter')
+    await ex.waitForSelector('.ai-chat-turn .explain-summary', { timeout: 15000 })
+    const chatShown = await ex.evaluate(() => ({
+      question: document.querySelector('.ai-chat-question')?.textContent,
+      marks: [...document.querySelectorAll('.ai-chat-turn .explain-step')].map((s) => s.className.replace('explain-step', '').trim()),
+      first: document.querySelector('.ai-chat-turn .explain-text')?.textContent,
+      summary: document.querySelector('.ai-chat-turn .explain-summary')?.textContent,
+      input: document.querySelector('.ai-chat-input').value,
+      button: document.querySelector('.ai-chat-send').textContent,
+    }))
+    check(
+      chatShown.question === 'Perché i quaderni costano di più?' &&
+        chatShown.marks.join() === 'is-ok' &&
+        chatShown.first?.startsWith('Costano 4 euro') &&
+        chatShown.summary.startsWith('✓ Formule controllate da Glifo: 1 su 1') &&
+        chatShown.input === '' &&
+        chatShown.button === 'Chiedi',
+      `la chat sotto la spiegazione: la domanda con Invio, la risposta (il modello rilegge la spiegazione) con la formula controllata da Glifo (${JSON.stringify(chatShown)})`,
     )
     await exContext.close()
 

@@ -5,19 +5,19 @@
  * (✓, ✗ con il valore giusto, o «non controllato»), «Inserisci nella nota» e «Rifai». La spiegazione resta
  * finché non se ne chiede un'altra o si chiude, anche spostando il cursore. Vedi src/ai/explain.ts.
  * Lo stesso riquadro spiega anche quello che si sceglie nel pannello «Spiega con l'AI» (src/ui/aiPanel.ts):
- * un conto o un grafico (`explainSubject`).
+ * un conto o un grafico (`explainSubject`); lì, sotto la spiegazione, la chat (src/ui/explainChat.ts).
  */
-import { explain, explainTopic, REPLY_TOKENS, type ExplainEvents, type Explanation, type ExplainTarget, type ExplainTopic } from '../ai/explain'
+import { chatContext, explain, explainTopic, REPLY_TOKENS, type ExplainEvents, type Explanation, type ExplainTarget, type ExplainTopic } from '../ai/explain'
 import { LocalAbort, localLlm, type ChatMessage, type ChatOptions, type LoadProgress } from '../ai/local'
 import { localModel, modelName } from '../ai/localModels'
 import type { MarkdownEditor } from '../editor/editor'
 import { explanationMarkdown, insertAfterText, insertExplanation, regionToExplain, targetAt } from '../editor/explainInsert'
 import type { MathRegion } from '../editor/mathContext'
 import { inClaudeViewer } from '../host'
-import { checkHtml } from '../render/check'
-import { escapeHtml, renderTex } from '../render/katex'
 import type { Settings } from '../store/settings'
 import { ICONS, h, icon } from './dom'
+import { ExplainChat } from './explainChat'
+import { formulasSummary, stepsList, texHtml } from './explainSteps'
 
 /** Il modello: quello nel browser (src/ai/local.ts), o uno finto nei test. */
 export interface ExplainModel {
@@ -31,6 +31,8 @@ export interface ExplainPanelDeps {
   openSettings: () => void
   toast: (message: string, kind?: 'info' | 'error') => void
   model?: () => ExplainModel
+  /** Sotto la spiegazione, la chat per le domande (nel pannello «Spiega con l'AI»). */
+  chat?: boolean
 }
 
 /** Cosa si spiega: un conto della nota, o un'altra cosa (un grafico…) con il testo per ritrovarla nella nota. */
@@ -54,34 +56,6 @@ function preventFocusSteal(ev: MouseEvent): void {
   ev.preventDefault()
 }
 
-/**
- * Una frase con le formule in linea ($…$): il testo sempre come testo, le formule con KaTeX. La
- * punteggiatura subito dopo una formula resta attaccata a lei: da sola andrebbe a capo.
- */
-function sentenceHtml(text: string): string {
-  const parts = text.split(/(\$[^$]+\$)/g)
-  let out = ''
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i]
-    if (!/^\$[^$]+\$$/.test(part)) {
-      out += escapeHtml(part)
-      continue
-    }
-    const tex = part.slice(1, -1)
-    const { html, error } = renderTex(tex, false)
-    const drawn = error ? `<code>${escapeHtml(tex)}</code>` : html
-    const punct = /^[.,;:!?)]+/.exec(parts[i + 1] ?? '')?.[0] ?? ''
-    if (punct) parts[i + 1] = parts[i + 1].slice(punct.length)
-    out += punct ? `<span class="explain-nowrap">${drawn}${escapeHtml(punct)}</span>` : drawn
-  }
-  return out
-}
-
-function texHtml(tex: string, display: boolean): string {
-  const { html, error } = renderTex(tex, display)
-  return error ? `<code>${escapeHtml(tex)}</code>` : html
-}
-
 export class ExplainPanel {
   /** «Spiegami», nel riquadro della formula. */
   readonly button: HTMLButtonElement
@@ -94,6 +68,8 @@ export class ExplainPanel {
   /** Il testo che il modello sta scrivendo (si aggiorna senza ridisegnare il resto). */
   private draft: HTMLElement | null = null
   private draftText = ''
+  /** La chat della spiegazione che si vede (con `deps.chat`). */
+  private chat: { asked: Asked; view: ExplainChat } | null = null
 
   constructor(private readonly deps: ExplainPanelDeps) {
     this.button = h(
@@ -153,6 +129,7 @@ export class ExplainPanel {
 
   private async run(subject: ExplainSubject, near: number): Promise<void> {
     if (this.state.status === 'loading' || this.state.status === 'writing') this.state.asked.controller.abort()
+    this.endChat()
     const asked: Asked = { subject, near, controller: new AbortController() }
     const settings = this.deps.settings()
     const chosen = localModel(settings.localModel)
@@ -176,7 +153,12 @@ export class ExplainPanel {
       const chat = (messages: ChatMessage[], onDelta?: (text: string) => void) => model.chat(messages, { maxTokens: REPLY_TOKENS }, onDelta, asked.controller.signal)
       const events = this.events(asked)
       const explanation = await (subject.kind === 'conto' ? explain(subject.target, settings.explainTone, chat, events) : explainTopic(subject.topic, settings.explainTone, chat, events))
-      if (this.current(asked)) this.set({ status: 'done', asked, model: name, explanation })
+      if (!this.current(asked)) return
+      if (this.deps.chat) {
+        const context = chatContext(subject.kind === 'conto' ? subject.target : subject.topic, explanation)
+        this.chat = { asked, view: new ExplainChat({ context, settings: this.deps.settings, model: () => this.model() }) }
+      }
+      this.set({ status: 'done', asked, model: name, explanation })
     } catch (err) {
       if (!this.current(asked)) return
       if (err instanceof LocalAbort || asked.controller.signal.aborted) this.set({ status: 'idle' })
@@ -211,7 +193,14 @@ export class ExplainPanel {
   /** Chiude la spiegazione (e ferma il modello, se sta scrivendo). */
   close(): void {
     if (this.state.status === 'loading' || this.state.status === 'writing') this.state.asked.controller.abort()
+    this.endChat()
     this.set({ status: 'idle' })
+  }
+
+  /** La chat della spiegazione di prima non serve più: se il modello sta rispondendo, si ferma. */
+  private endChat(): void {
+    this.chat?.view.destroy()
+    this.chat = null
   }
 
   private insert(asked: Asked, explanation: Explanation): void {
@@ -282,6 +271,7 @@ export class ExplainPanel {
       parts.push(actions)
     } else {
       parts.push(...this.stepsView(s.asked, s.explanation))
+      if (this.chat?.asked === s.asked) parts.push(this.chat.view.el)
     }
     this.el.replaceChildren(...parts.filter((p): p is HTMLElement => p !== null))
   }
@@ -302,40 +292,22 @@ export class ExplainPanel {
   }
 
   private stepsView(asked: Asked, e: Explanation): HTMLElement[] {
-    const list = h('ol', { class: 'explain-steps' })
-    for (const step of e.steps) {
-      const mark = step.formula
-        ? step.check
-          ? checkHtml(step.check.ok ? { ok: true, ...(step.check.rounded && { rounded: true }) } : { ok: false, ...(step.check.value && { value: step.check.value }) })
-          : '<span class="explain-unchecked" title="Glifo non sa controllare questo passaggio">non controllato</span>'
-        : ''
-      list.append(
-        h(
-          'li',
-          { class: `explain-step${step.check ? (step.check.ok ? ' is-ok' : ' is-wrong') : ''}` },
-          step.text ? h('div', { class: 'explain-text', html: sentenceHtml(step.text) }) : null,
-          step.formula ? h('div', { class: 'explain-math' }, h('div', { class: 'explain-math-render', html: texHtml(step.formula, true) }), h('div', { class: 'explain-mark', html: mark })) : null,
-        ),
-      )
-    }
-    const formulas = e.steps.filter((s) => s.formula)
-    const checked = formulas.filter((s) => s.check?.ok).length
-    const wrong = formulas.filter((s) => s.check && !s.check.ok).length
+    const list = stepsList(e)
     const conto = asked.subject.kind === 'conto'
-    const summary = h('p', { class: `explain-summary${(conto ? e.reaches === true : checked > 0) && !wrong ? ' is-ok' : e.reaches === false || wrong ? ' is-wrong' : ''}`, attrs: { role: 'status' } })
+    let summary: HTMLElement
     if (asked.subject.kind === 'conto') {
+      const formulas = e.steps.filter((s) => s.formula)
+      const checked = formulas.filter((s) => s.check?.ok).length
+      const wrong = formulas.filter((s) => s.check && !s.check.ok).length
       const answer = texHtml(asked.subject.target.answer.tex, false)
+      summary = h('p', { class: `explain-summary${e.reaches === true && !wrong ? ' is-ok' : e.reaches === false || wrong ? ' is-wrong' : ''}`, attrs: { role: 'status' } })
       summary.innerHTML = [
         e.reaches === true ? `✓ Arriva al risultato di Glifo, ${answer}.` : e.reaches === false ? `✗ L'ultimo passaggio non arriva al risultato di Glifo, ${answer}.` : `Glifo non ha potuto confrontare l'ultimo passaggio con il suo risultato, ${answer}.`,
         formulas.length ? ` Passaggi controllati da Glifo: ${checked} su ${formulas.length}${wrong ? `, ${wrong} sbagliat${wrong === 1 ? 'o' : 'i'}` : ''}.` : '',
       ].join('')
     } else {
       // Qui non c'è un risultato a cui arrivare: Glifo controlla le formule, le frasi no.
-      summary.textContent = !formulas.length
-        ? 'Glifo non ha formule da controllare in questa spiegazione: le frasi le scrive il modello, e possono sbagliare.'
-        : !checked && !wrong
-          ? 'Glifo non ha potuto controllare le formule di questa spiegazione: le frasi le scrive il modello, e possono sbagliare.'
-          : `${wrong ? '✗' : '✓'} Formule controllate da Glifo: ${checked + wrong} su ${formulas.length}${wrong ? `, ${wrong} sbagliat${wrong === 1 ? 'a' : 'e'}` : ', tutte giuste'}. Le frasi le scrive il modello.`
+      summary = formulasSummary(e, 'questa spiegazione')
     }
     const notes = [
       e.toolCalls ? `il modello ha chiesto ${e.toolCalls === 1 ? 'un conto' : `${e.toolCalls} conti`} al motore` : '',

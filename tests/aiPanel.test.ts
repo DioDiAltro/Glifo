@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { EditorState } from '@codemirror/state'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
-import { explainTopic, topicPrompt, topicSystemPrompt, type ChatFn } from '../src/ai/explain'
+import { answerFollowUp, chatContext, chatSystemPrompt, explainTopic, explanationText, topicPrompt, topicSystemPrompt, type ChatFn, type Explanation } from '../src/ai/explain'
 import type { ChatMessage, LoadProgress } from '../src/ai/local'
 import { formulaTopic, graphTopic, schemaTopic, tableTopic, theoremTopic } from '../src/ai/topics'
 import { MarkdownEditor } from '../src/editor/editor'
@@ -278,6 +278,31 @@ describe('gli schemi e le tabelle', () => {
       ].join('\n'),
     )
     expect(topic.facts).toEqual(['lo schema ha 6 forme e 5 collegamenti, in 2 corsie', 'seguendo le frecce si parte da «Inizio»', 'seguendo le frecce si arriva a «Fine»'])
+    // «Fine» viene dopo «Spedisce» anche se è disegnata più in alto: ci arriva una freccia da lì.
+    const moved = JSON.parse(FLOW)
+    moved.nodes.find((n: { id: string }) => n.id === 'e').y = 200
+    expect(schemaTopic(JSON.stringify(moved)).title).toEqual({ text: 'Inizio · Ordina · Disponibile? · Spedisce · Fine' })
+    // In un giro si va avanti dalla forma raggiunta (Leggi → Controlla → Stampa → di nuovo Leggi); dove
+    // il flusso finisce, alla fine.
+    const loop = schemaTopic(
+      JSON.stringify({
+        v: 1,
+        nodes: [
+          { id: 's', shape: 'rect', x: 0, y: 200, w: 100, h: 50, text: 'Stampa' },
+          { id: 'l', shape: 'rect', x: 0, y: 0, w: 100, h: 50, text: 'Leggi' },
+          { id: 'c', shape: 'rhombus', x: 0, y: 100, w: 100, h: 50, text: 'Controlla' },
+          { id: 'f', shape: 'ellipse', x: 200, y: 100, w: 100, h: 50, text: 'Fine' },
+        ],
+        edges: [
+          { id: 'e1', from: 'l', to: 'c' },
+          { id: 'e2', from: 'c', to: 's', text: 'sì' },
+          { id: 'e3', from: 's', to: 'l' },
+          { id: 'e4', from: 'c', to: 'f', text: 'no' },
+        ],
+      }),
+    )
+    expect(loop.title).toEqual({ text: 'Leggi · Controlla · Stampa · Fine' })
+    expect(loop.facts).toEqual(['lo schema ha 4 forme e 4 collegamenti', 'seguendo le frecce si arriva a «Fine»'])
     expect(topicPrompt(topic).startsWith('Lo schema nella nota, descritto da Glifo:\nCorsie:')).toBe(true)
     // Senza gli strumenti, e le formule solo se sono nello schema.
     const system = topicSystemPrompt('professore', 'schema')
@@ -344,6 +369,63 @@ describe('gli schemi e le tabelle', () => {
     const e = await explainTopic(topic, 'semplice', async () => r`1. Il totale delle penne è il prezzo per la quantità. $$10 \cdot 1{,}5 = 15$$
 2. I quaderni costano di più. $$5 \cdot 2{,}4 = 13$$`)
     expect(e.steps.map((s) => s.check)).toEqual([{ ok: true }, { ok: false, value: { tex: '12', text: '12' } }])
+  })
+})
+
+/** Una risposta già data, per la storia della chat. */
+function said(text: string): Explanation {
+  return { steps: [{ text, formula: null, check: null }], reaches: null, toolCalls: 0, corrections: 0 }
+}
+
+describe('la chat sotto la spiegazione', () => {
+  it('la risposta rilegge la cosa spiegata, la spiegazione e le ultime tre domande; Glifo controlla le formule e fa correggere', async () => {
+    const topic = tableTopic(SHEET)
+    const first = await explainTopic(topic, 'semplice', async () => r`1. In D il prezzo per la quantità. $$10 \cdot 1{,}5 = 15$$`)
+    const context = chatContext(topic, first)
+    expect(context).toEqual({ kind: 'tabella', prompt: topicPrompt(topic), explanation: r`1. In D il prezzo per la quantità. $$10 \cdot 1{,}5 = 15$$`, defs: [] })
+    const seen: ChatMessage[][] = []
+    const replies = [r`1. Ogni riga è un prodotto. $$5 \cdot 2{,}4 = 13$$`, r`1. Ogni riga è un prodotto. $$5 \cdot 2{,}4 = 12$$`]
+    const chat: ChatFn = async (messages) => {
+      seen.push(messages.map((m) => ({ ...m })))
+      return replies.shift() ?? ''
+    }
+    const history = ['Prima', 'Seconda', 'Terza', 'Quarta'].map((q) => ({ question: q, answer: said(`Risposta alla ${q.toLowerCase()}.`) }))
+    const answer = await answerFollowUp(context, history, '  Perché si moltiplica?  ', 'semplice', chat)
+    expect(answer.steps).toEqual([{ text: 'Ogni riga è un prodotto.', formula: r`5 \cdot 2{,}4 = 12`, check: { ok: true } }])
+    expect(answer.corrections).toBe(1)
+    expect(seen[1].at(-1)?.content).toBe('Glifo ha controllato le formule:\n- La formula del punto 1 è sbagliata: Glifo calcola $12$.\nCorreggi e riscrivi tutta la risposta nello stesso formato.')
+    // La prima domanda resta fuori: se ne rimandano tre.
+    expect(seen[0].map((m) => `${m.role}: ${m.content.slice(0, 40)}`)).toEqual([
+      `system: ${chatSystemPrompt('semplice', 'tabella').slice(0, 40)}`,
+      `user: ${topicPrompt(topic).slice(0, 40)}`,
+      `assistant: ${context.explanation.slice(0, 40)}`,
+      'user: Seconda',
+      'assistant: 1. Risposta alla seconda.',
+      'user: Terza',
+      'assistant: 1. Risposta alla terza.',
+      'user: Quarta',
+      'assistant: 1. Risposta alla quarta.',
+      'user: Perché si moltiplica?',
+    ])
+    expect(seen[0][0].content).toContain('Hai spiegato allo studente una tabella della sua nota; ora rispondi')
+    expect(seen[0][0].content).not.toContain('<tools>')
+  })
+
+  it('su un conto la chat ha gli strumenti; le domande vecchie e lunghe si lasciano se il contesto non basta', async () => {
+    const target = subjectsIn(state(r`$\int_0^1 x^2 \, dx =$`))[0].target!
+    const e = said('Uso la regola della potenza.')
+    const context = chatContext(target, e)
+    expect(context.kind).toBe('conto')
+    expect(context.prompt).toContain('Risultato di Glifo: $$\\frac{1}{3}$$')
+    expect(explanationText(e)).toBe('1. Uso la regola della potenza.')
+    let seen: ChatMessage[] = []
+    await answerFollowUp(context, [{ question: 'Lunga', answer: said('x'.repeat(9000)) }, { question: 'Corta', answer: said('Sì.') }], 'E poi?', 'professore', async (messages) => {
+      seen = messages
+      return '1. Poi si sostituiscono gli estremi.'
+    })
+    expect(seen[0].content).toContain('<tools>')
+    expect(seen.map((m) => m.content)).not.toContain('Lunga')
+    expect(seen.map((m) => m.content)).toContain('Corta')
   })
 })
 
@@ -431,6 +513,52 @@ describe('il pannello «Spiega con l\'AI»', () => {
     ;[...panel.el.querySelectorAll('button')].find((b) => b.textContent === 'Inserisci nella nota')!.click()
     // La frase senza formula tiene il suo punto.
     expect(editor.getDoc()).toBe(doc.replace(`${table}\n\n`, `${table}\n\n1. In D si moltiplica la quantità per il prezzo: $10 \\cdot 1{,}5 = 15$\n2. In fondo ci sono i totali.\n\n`))
+  })
+
+  it('sotto la spiegazione la chat: la domanda con Invio, la risposta con i segni di Glifo, e con un\'altra spiegazione ricomincia', async () => {
+    const doc = `# Negozio\n\n\`\`\`tabella\n${SHEET}\n\`\`\`\n\n$a^2 + b^2 = c^2$`
+    const seen: ChatMessage[][] = []
+    const replies = [
+      r`1. In D si moltiplica la quantità per il prezzo. $$10 \cdot 1{,}5 = 15$$`,
+      r`1. Perché il totale è il prezzo per la quantità. $$5 \cdot 2{,}4 = 12$$`,
+      '1. Le gomme sono zero, quindi il loro totale è zero.',
+      '1. È il teorema di Pitagora.',
+    ]
+    const { panel } = setup(doc, replies, seen)
+    panel.show()
+    const [table, formula] = [...panel.el.querySelectorAll<HTMLButtonElement>('.ai-subject')]
+    expect(panel.el.querySelector('.ai-chat')).toBeNull()
+    table.click()
+    await settle()
+    const input = panel.el.querySelector<HTMLTextAreaElement>('.ai-chat-input')!
+    expect(panel.el.querySelector('.ai-chat-label')?.textContent).toBe('Hai una domanda su questa spiegazione?')
+    const ask = async (question: string) => {
+      input.value = question
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+      await settle()
+    }
+    await ask('Perché si moltiplica?')
+    const turns = () => [...panel.el.querySelectorAll('.ai-chat-turn')]
+    expect(turns().map((t) => t.querySelector('.ai-chat-question')?.textContent)).toEqual(['Perché si moltiplica?'])
+    expect(turns()[0].querySelector('.explain-step')?.className).toBe('explain-step is-ok')
+    expect(turns()[0].querySelector('.explain-summary')?.textContent).toBe('✓ Formule controllate da Glifo: 1 su 1, tutte giuste. Le frasi le scrive il modello.')
+    expect(input.value).toBe('')
+    // La seconda domanda: il modello rilegge la prima, con la risposta.
+    await ask('E le gomme?')
+    expect(turns()).toHaveLength(2)
+    expect(turns()[1].querySelector('.explain-summary')?.textContent).toBe('Glifo non ha formule da controllare in questa risposta: le frasi le scrive il modello, e possono sbagliare.')
+    expect(seen[2].slice(1).map((m) => m.content.slice(0, 26))).toEqual([
+      'La tabella nella nota, con',
+      '1. In D si moltiplica la q',
+      'Perché si moltiplica?',
+      '1. Perché il totale è il p',
+      'E le gomme?',
+    ])
+    // Un'altra spiegazione: la chat ricomincia, vuota.
+    formula.click()
+    await settle()
+    expect(panel.el.querySelectorAll('.ai-chat')).toHaveLength(1)
+    expect(turns()).toHaveLength(0)
   })
 
   it('senza niente da spiegare lo dice; l\'elenco si rifà solo se si vede, e cambiando nota la spiegazione si chiude', async () => {

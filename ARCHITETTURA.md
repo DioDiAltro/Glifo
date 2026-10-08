@@ -406,7 +406,16 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   `topicFeedback` fa correggere quelle sbagliate, una spiegazione solo a parole va bene; il riepilogo dice
   quante formule ha controllato Glifo e che le frasi le scrive il modello. «Inserisci nella nota» la mette
   dopo il blocco (`insertAfterText`, cercando il testo del blocco vicino al suo inizio, non alla riga ```:
-  una formula uguale scritta appena prima sarebbe più vicina).
+  una formula uguale scritta appena prima sarebbe più vicina). Sotto la spiegazione, solo nel pannello
+  (`chat` in `ExplainPanelDeps`), la chat di `src/ui/explainChat.ts` (8 ottobre 2026): Invio manda la
+  domanda, «Ferma» la interrompe (la domanda torna da scrivere). `answerFollowUp` (src/ai/explain.ts) fa lo
+  stesso giro (`converse`) con un messaggio di sistema per le domande (`chatSystemPrompt`, gli strumenti per
+  i conti, i grafici e le formule), il messaggio della spiegazione (`chatContext`: `questionPrompt` o
+  `topicPrompt`), la spiegazione come l'ha scritta il modello (`explanationText`) e le ultime tre domande
+  (le più vecchie si lasciano se il contesto non basta); Glifo controlla le formule della risposta
+  (`checkFormulas`, lo stesso controllo dei grafici e dei teoremi) e fa correggere quelle sbagliate. Con
+  un'altra spiegazione, «Rifai» o chiudendo, la chat ricomincia (`endChat` ferma il modello); non si salva.
+  I passaggi e il riepilogo si disegnano con `src/ui/explainSteps.ts`, per la spiegazione e per la chat.
 - `src/account/`: account e sincronizzazione. `sync.ts` è il motore (manda, scarica, nei
   conflitti tiene tutte e due le versioni), `controller.ts` decide quando sincronizzare,
   `space.ts` tiene le note di ogni account in uno spazio a parte del browser (`glifo.u.<id>.…`),

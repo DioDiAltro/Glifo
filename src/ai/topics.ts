@@ -184,8 +184,10 @@ function shapeKindName(n: SchemaNode, er: boolean): string {
 }
 
 /**
- * Le forme nell'ordine del flusso: dalle forme dove le frecce partono (e non arrivano), seguendo le
- * frecce; le altre (e tutte, se non ci sono frecce con la punta) dall'alto in basso e da sinistra a destra.
+ * Le forme nell'ordine del flusso: ognuna dopo quelle da cui le arrivano le frecce (con la punta), prima
+ * quelle da cui il flusso continua e poi quelle dove finisce, a parità dall'alto in basso e da sinistra a
+ * destra; in un giro (A → B → A) si va avanti dalla prima forma raggiunta. Le forme senza frecce vengono
+ * dopo, nello stesso ordine della pagina.
  */
 function flowOrder(nodes: SchemaNode[], edges: SchemaEdge[]): SchemaNode[] {
   const key = (n: SchemaNode) => [Math.round((n.y + n.h / 2) / 40), n.x + n.w / 2]
@@ -194,35 +196,31 @@ function flowOrder(nodes: SchemaNode[], edges: SchemaEdge[]): SchemaNode[] {
     const [rb, xb] = key(b)
     return ra - rb || xa - xb
   })
-  const rank = new Map(byPos.map((n, i) => [n.id, i]))
+  const known = new Set(nodes.map((n) => n.id))
   const next = new Map<string, string[]>()
-  const incoming = new Set<string>()
+  const waiting = new Map<string, number>()
   for (const e of edges) {
-    if (e.arrows !== 'end' || !rank.has(e.from) || !rank.has(e.to)) continue
+    if (e.arrows !== 'end' || !known.has(e.from) || !known.has(e.to) || e.from === e.to) continue
     next.set(e.from, [...(next.get(e.from) ?? []), e.to])
-    incoming.add(e.to)
+    waiting.set(e.to, (waiting.get(e.to) ?? 0) + 1)
   }
+  const inFlow = byPos.filter((n) => next.has(n.id) || waiting.has(n.id))
   const order: SchemaNode[] = []
-  const seen = new Set<string>()
-  const byId = new Map(nodes.map((n) => [n.id, n]))
-  const visit = (start: SchemaNode) => {
-    const queue = [start]
-    seen.add(start.id)
-    while (queue.length) {
-      const n = queue.shift()!
-      order.push(n)
-      const after = (next.get(n.id) ?? []).filter((id) => !seen.has(id)).sort((a, b) => rank.get(a)! - rank.get(b)!)
-      for (const id of after) {
-        seen.add(id)
-        queue.push(byId.get(id)!)
-      }
+  const done = new Set<string>()
+  const reached = new Set<string>()
+  while (order.length < inFlow.length) {
+    const left = inFlow.filter((n) => !done.has(n.id))
+    // La prima forma pronta (tutte le frecce che le arrivano sono già passate); in un giro, la prima raggiunta.
+    const ready = left.filter((m) => !waiting.get(m.id))
+    const n = ready.find((m) => next.has(m.id)) ?? ready[0] ?? left.find((m) => reached.has(m.id)) ?? left[0]
+    order.push(n)
+    done.add(n.id)
+    for (const to of next.get(n.id) ?? []) {
+      waiting.set(to, (waiting.get(to) ?? 1) - 1)
+      reached.add(to)
     }
   }
-  for (const n of byPos) if (next.has(n.id) && !incoming.has(n.id) && !seen.has(n.id)) visit(n)
-  // Un giro senza inizio (A → B → A): si parte dalla prima forma in alto.
-  for (const n of byPos) if (next.has(n.id) && !seen.has(n.id)) visit(n)
-  for (const n of byPos) if (!seen.has(n.id)) order.push(n)
-  return order
+  return [...order, ...byPos.filter((n) => !done.has(n.id))]
 }
 
 /** La corsia in cui sta una forma: «Cliente», o il numero se la corsia non ha nome. */

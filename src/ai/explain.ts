@@ -456,8 +456,13 @@ function checkTopicFormula(tex: string, sheet: SheetFactory): FormulaCheck {
 
 /** I punti con il controllo di Glifo sulle formule; un ✗ con lettere che non sono della nota non è sicuro. */
 export function checkTopicSteps(raw: { text: string; formula: string | null }[], topic: ExplainTopic, sheet: SheetFactory): { steps: ExplainStep[]; reaches: null } {
+  return checkFormulas(raw, topic.defs, sheet)
+}
+
+/** Le formule dei punti (di una spiegazione o di una risposta della chat) con il controllo di Glifo. */
+function checkFormulas(raw: { text: string; formula: string | null }[], defs: string[], sheet: SheetFactory): { steps: ExplainStep[]; reaches: null } {
   const own = new Set(['x', 'y'])
-  for (const d of topic.defs) allNames(d).forEach((n) => own.add(n))
+  for (const d of defs) allNames(d).forEach((n) => own.add(n))
   const steps = raw.map((s): ExplainStep => {
     if (!s.formula) return { ...s, check: null }
     let check = checkTopicFormula(s.formula, sheet)
@@ -468,13 +473,13 @@ export function checkTopicSteps(raw: { text: string; formula: string | null }[],
 }
 
 /** Il messaggio per il modello con le formule che Glifo ha trovato sbagliate; null se va tutto bene. */
-export function topicFeedback(result: { steps: ExplainStep[] }): string | null {
+export function topicFeedback(result: { steps: ExplainStep[] }, what = 'tutta la spiegazione'): string | null {
   const lines: string[] = []
   result.steps.forEach((s, i) => {
     if (s.check && !s.check.ok) lines.push(`- La formula del punto ${i + 1} è sbagliata${s.check.value ? `: Glifo calcola $${s.check.value.tex}$` : ''}.`)
   })
   if (!lines.length) return null
-  return ['Glifo ha controllato le formule:', ...lines, 'Correggi e riscrivi tutta la spiegazione nello stesso formato.'].join('\n')
+  return ['Glifo ha controllato le formule:', ...lines, `Correggi e riscrivi ${what} nello stesso formato.`].join('\n')
 }
 
 /** Quanti passaggi sbagliati (per tenere la spiegazione migliore tra quelle scritte). */
@@ -522,8 +527,105 @@ export async function explainTopic(topic: ExplainTopic, tone: ExplainTone, chat:
       ],
       sheet,
       check: (raw) => checkTopicSteps(raw, topic, sheet),
-      feedback: topicFeedback,
+      feedback: (result) => topicFeedback(result),
       needsFormula: false,
+    },
+    chat,
+    events,
+  )
+}
+
+// ——— La chat: le domande dopo la spiegazione (il pannello «Spiega con l'AI») ———
+
+/** Una domanda dello studente sulla spiegazione e la risposta del modello, con le formule controllate da Glifo. */
+export interface FollowUp {
+  question: string
+  answer: Explanation
+}
+
+/** Quello a cui si riferiscono le domande: la cosa spiegata (come la vede il modello) e la spiegazione. */
+export interface ChatContext {
+  kind: 'conto' | TopicKind
+  /** Il messaggio con il conto o la cosa della nota, lo stesso della spiegazione. */
+  prompt: string
+  /** La spiegazione, nel formato in cui l'ha scritta il modello. */
+  explanation: string
+  /** Le definizioni per gli strumenti e per controllare le formule. */
+  defs: string[]
+}
+
+const CHAT_SUBJECT: Record<'conto' | TopicKind, string> = {
+  conto: 'come si arriva al risultato di una formula della sua nota',
+  grafico: 'un grafico della sua nota',
+  formula: 'una formula della sua nota',
+  teorema: 'un enunciato della sua nota',
+  schema: 'uno schema della sua nota',
+  tabella: 'una tabella della sua nota',
+}
+
+/** Le domande di prima che si rimandano al modello, al massimo: il contesto è di 4096 token. */
+const CHAT_HISTORY = 3
+
+export function chatSystemPrompt(tone: ExplainTone, kind: 'conto' | TopicKind): string {
+  const tools = kind === 'conto' || kind === 'grafico' || kind === 'formula'
+  return [
+    `Sei il tutor di Glifo, l'app per prendere appunti di matematica. Hai spiegato allo studente ${CHAT_SUBJECT[kind]}; ora rispondi in italiano alle sue domande su quella spiegazione.`,
+    TONES[tone],
+    '',
+    'Regole:',
+    `- I numeri li calcola il motore di Glifo, che non sbaglia: non fare conti a mente${tools ? '; se ti serve un conto, usa gli strumenti' : ''}. Non inventare numeri.`,
+    '- Glifo controlla le formule che scrivi.',
+    '- Rispondi solo alla domanda, in breve: da 1 a 4 punti in un elenco numerato, un punto per riga, con una o due frasi e, quando aiuta, alla fine una formula tra $$ (un\'uguaglianza in LaTeX, a = b).',
+    '- Se la domanda non riguarda la matematica della nota, dillo in una frase.',
+    ...(tools ? ['', toolsPrompt()] : []),
+  ].join('\n')
+}
+
+/** Una spiegazione (o una risposta) come la rilegge il modello: «1. frase $$formula$$», il suo formato. */
+export function explanationText(e: Explanation): string {
+  return e.steps.map((s, i) => `${i + 1}. ${s.text}${s.formula ? ` $$${s.formula}$$` : ''}`.trim()).join('\n')
+}
+
+/** La chat su una spiegazione: di un conto (con i suggerimenti del motore, come allora) o di un'altra cosa della nota. */
+export function chatContext(about: ExplainTarget | ExplainTopic, e: Explanation): ChatContext {
+  if ('content' in about) return { kind: about.kind, prompt: topicPrompt(about), explanation: explanationText(e), defs: about.defs }
+  return { kind: 'conto', prompt: questionPrompt(about, engineHints(about, sheetFactory(about.defs))), explanation: explanationText(e), defs: about.defs }
+}
+
+/**
+ * La risposta a una domanda della chat: il modello rilegge la cosa spiegata, la spiegazione e le ultime
+ * domande (le più vecchie si lasciano se il contesto non basta), può chiedere conti al motore, e Glifo
+ * controlla le formule della risposta come quelle della spiegazione (e fa correggere quelle sbagliate).
+ */
+export async function answerFollowUp(context: ChatContext, history: FollowUp[], question: string, tone: ExplainTone, chat: ChatFn, events: ExplainEvents = {}): Promise<Explanation> {
+  const sheet = sheetFactory(context.defs)
+  const head: ChatMessage[] = [
+    { role: 'system', content: chatSystemPrompt(tone, context.kind) },
+    { role: 'user', content: context.prompt },
+    { role: 'assistant', content: context.explanation },
+  ]
+  let past = history.slice(-CHAT_HISTORY)
+  const build = (): ChatMessage[] => [
+    ...head,
+    ...past.flatMap((f): ChatMessage[] => [
+      { role: 'user', content: f.question },
+      { role: 'assistant', content: explanationText(f.answer) },
+    ]),
+    { role: 'user', content: question.trim() },
+  ]
+  let messages = build()
+  while (past.length && tooLong(messages)) {
+    past = past.slice(1)
+    messages = build()
+  }
+  return converse(
+    {
+      messages,
+      sheet,
+      check: (raw) => checkFormulas(raw, context.defs, sheet),
+      feedback: (result) => topicFeedback(result, 'tutta la risposta'),
+      needsFormula: false,
+      empty: 'Il modello non ha risposto: riprova, o scegli un modello più grande nelle impostazioni.',
     },
     chat,
     events,
@@ -538,6 +640,8 @@ interface Conversation {
   feedback(result: { steps: ExplainStep[]; reaches: boolean | null }): string | null
   /** Un conto si spiega con le formule: senza nessuna, si chiede di riscrivere. Un grafico può bastare a parole. */
   needsFormula: boolean
+  /** Cosa dire se il modello non scrive niente (di solito: non ha scritto i passaggi). */
+  empty?: string
 }
 
 async function converse(c: Conversation, chat: ChatFn, events: ExplainEvents): Promise<Explanation> {
@@ -597,7 +701,7 @@ async function converse(c: Conversation, chat: ChatFn, events: ExplainEvents): P
     throw new ExplainError(
       long
         ? 'La spiegazione è diventata troppo lunga per il modello nel browser: riprova, o scegli un modello più grande nelle impostazioni.'
-        : 'Il modello non ha scritto i passaggi: riprova, o scegli un modello più grande nelle impostazioni.',
+        : (c.empty ?? 'Il modello non ha scritto i passaggi: riprova, o scegli un modello più grande nelle impostazioni.'),
     )
   }
   return { ...best, toolCalls }

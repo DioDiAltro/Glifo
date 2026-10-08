@@ -368,6 +368,12 @@ zero passava per giusta (`$1/0 = 5$` con il ✓, e lo stesso nei passaggi delle 
 ramo `prova`: una parte senza un valore non si giudica (`tests/check.test.ts`); sul sito va con il resto
 di `prova`, o prima se lo studente lo chiede.
 
+**Fatto il passo 4 (8 ottobre 2026, notte)**: sotto la spiegazione la chat per le domande. Lo stesso modello
+risponde rileggendo la cosa spiegata, la spiegazione e le ultime tre domande; Glifo controlla le formule
+delle risposte e fa correggere quelle sbagliate, come nella spiegazione. La chat è della spiegazione: con
+un'altra ricomincia, e non si salva. Fatti così i quattro passi chiesti dallo studente: ora va provato sul
+sito di prova con il modello vero.
+
 Da fare:
 - provarlo davvero su un computer con WebGPU (Chrome o Edge), su esercizi veri, e scegliere il modello
   di partenza: finora è provato solo con un modello finto (nelle sessioni di Claude Hugging Face era

@@ -1924,6 +1924,81 @@ kbd {
   background: var(--danger-soft);
 }
 
+/* La chat sotto la spiegazione, nel pannello «Spiega con l'AI»: le domande a destra, come in un messaggio. */
+.ai-chat {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-strong);
+}
+
+.ai-chat-label {
+  margin: 0 0 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--heading);
+}
+
+.ai-chat-turns {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-chat-turns[hidden] {
+  display: none;
+}
+
+.ai-chat-question {
+  width: fit-content;
+  max-width: 90%;
+  margin: 0 0 6px auto;
+  padding: 6px 10px;
+  border-radius: 12px 12px 4px 12px;
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ai-chat-answer .explain-steps {
+  margin-top: 0;
+}
+
+.ai-chat-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.ai-chat-input {
+  flex: 1;
+  min-width: 0;
+  max-height: 140px;
+  padding: 7px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.ai-chat-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.ai-chat-input:disabled {
+  opacity: 0.6;
+}
+
 /* Nell'anteprima: il risultato dopo «=», calcolato da Glifo e non ancora scritto nella nota. */
 .markdown-body .calc-result {
   color: var(--accent);

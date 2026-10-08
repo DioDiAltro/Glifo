@@ -907,8 +907,11 @@ teorema cosa dice, con un esempio; per uno schema cosa rappresenta (Glifo gli de
 le frecce, le corsie, i collegamenti con il loro testo, e negli schemi E-R entità, relazioni, attributi e
 cardinalità); per una tabella cosa calcola (Glifo gli dà i valori calcolati, con le lettere delle colonne,
 e le formule). Glifo controlla le formule che il modello scrive (anche gli esempi con i numeri): ✓, ✗ o
-«non controllato»; le frasi le scrive il modello. **Simboli** torna ai simboli; il pulsante della vista
-aperta chiude il pannello.
+«non controllato»; le frasi le scrive il modello. Sotto la spiegazione c'è la **chat**: scrivi una domanda
+(Invio la manda, Maiusc+Invio va a capo) e lo stesso modello risponde rileggendo la cosa spiegata, la
+spiegazione e le ultime domande; Glifo controlla le formule anche nelle risposte. Con un'altra spiegazione
+la chat ricomincia, e non si salva. **Simboli** torna ai simboli; il pulsante della vista aperta chiude il
+pannello.
 
 In **Impostazioni → Spiegazioni (prova)** si sceglie il modello (Qwen3 0.6B, il più leggero, circa 0,4 GB;
 1.7B, consigliato, circa 1 GB; 4B, il più bravo, circa 2,3 GB) e il tono (come il professore o più
