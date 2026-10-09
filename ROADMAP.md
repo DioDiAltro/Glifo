@@ -199,8 +199,10 @@ Perché non gli altri:
      con Cloudflare Turnstile (gratis). Prima di mandare l'email Glifo chiede un token a Cloudflare
      (`src/account/captcha.ts`: il riquadro compare solo se Cloudflare chiede di cliccare) e, con il
      CAPTCHA acceso in Supabase, l'email parte solo con un token valido. Il widget l'ha creato lo
-     studente; la chiave segreta è solo in Supabase (vedi [supabase/README.md](supabase/README.md),
-     «Il controllo anti-robot»). Poi: i limiti di spazio da rivedere (oggi 20 MB di note per
+     studente, che ha acceso il CAPTCHA in Supabase lo stesso giorno: nei registri le richieste
+     senza token sono rifiutate e l'email con il token arriva. La chiave segreta è solo in Supabase
+     (vedi [supabase/README.md](supabase/README.md), «Il controllo anti-robot»). Poi: i limiti di
+     spazio da rivedere (oggi 20 MB di note per
      account);
    - fatto (9 ottobre 2026): il servizio di posta nostro, Resend (gratis: 100 email al giorno e
      3.000 al mese), collegato a Supabase dalle impostazioni di Resend (vedi

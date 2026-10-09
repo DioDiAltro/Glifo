@@ -214,7 +214,11 @@ Cloudflare Turnstile (gratis):
   token solo su `/otp`, non su Google, sul codice né sul link.
 - **L'ordine**: il CAPTCHA si accende in Supabase solo quando la versione di Glifo che manda il token
   è online, altrimenti l'accesso con l'email si ferma (l'errore è `captcha_failed`: Glifo dice che il
-  controllo non è andato e propone Google). Per spegnerlo basta togliere la spunta.
+  controllo non è andato e propone Google). Per spegnerlo basta togliere la spunta. Acceso dallo
+  studente il 9 ottobre 2026, alle 23:45: nei registri due richieste senza token rifiutate («no
+  captcha_token found», dalla versione vecchia di Glifo ancora nel browser) e poi l'email partita e
+  l'accesso riuscito. Chi ha ancora la versione vecchia vede «Non è stato possibile accedere»
+  finché Glifo non si aggiorna (alla riapertura).
 - **Nelle prove nel browser** il Supabase finto (`scripts/fake-supabase.mjs`) vuole il token come
   quello vero, e al posto dello script di Cloudflare c'è un Turnstile finto.
 
