@@ -16,7 +16,9 @@ prossimi passi sono in «In programma» nella ROADMAP.
 - L'utente è uno studente italiano. Scrivi sempre in italiano tutto quello che lo studente vede:
   riepiloghi, domande, avvisi, descrizioni dei comandi e le eventuali righe brevi durante il lavoro.
   Interfaccia, commenti e messaggi di commit sono in italiano.
-- Durante i compiti segui la skill lavoro-silenzioso: niente commenti tra i passaggi, riepilogo completo alla fine.
+- Durante i compiti segui la skill lavoro-silenzioso: nessun messaggio mentre lavori (nemmeno «aspetto
+  le prove» o «commit fatto»: i comandi lunghi si aspettano nello stesso turno), un solo riepilogo alla
+  fine, e gli errori raccontati nel dettaglio.
 - Le funzioni da aggiungere sono in [ROADMAP.md](ROADMAP.md): quando si chiede
   «cosa facciamo adesso?» si parte da lì. Aggiornalo quando una voce è fatta o se ne
   aggiunge una.
