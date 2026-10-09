@@ -89,8 +89,9 @@ sincronizzano tra i dispositivi (passi 1-3 e l'accesso con Google del passo 4). 
 condivide con un link, come in Gemini (il primo pezzo del passo 5). Con Google entra già
 chiunque abbia un account Google, anche se l'app Google è ancora «Testing»: Glifo chiede solo
 nome, email e foto del profilo, e per questi Google non usa l'elenco dei «Test users» (lo
-studente lo ha provato il 9 ottobre 2026). Con l'email invece entrano solo i membri del team
-Supabase. Chi non accede continua a usare Glifo come prima, con gli appunti nel browser.
+studente lo ha provato il 9 ottobre 2026). Dallo stesso giorno entra chiunque anche con l'email:
+le email partono da «Glifo» `accesso@glifo.page` con Resend (vedi il passo 4). Chi non accede
+continua a usare Glifo come prima, con gli appunti nel browser.
 
 **Servizio scelto: Supabase**, sul piano gratuito (progetto `glifo`, vedi
 [supabase/README.md](supabase/README.md)). Dà già pronti database (Postgres), login e
@@ -114,11 +115,9 @@ Da sapere (dati controllati il 30/09/2026):
 - Per un gruppo di compagni che lo usano ogni giorno il piano gratuito basta. Con tanti
   utenti, o per non rischiare la pausa (per esempio d'estate), conviene il piano Pro, 25
   dollari al mese per progetto.
-- Per mandare le email di accesso agli utenti serve un servizio di posta nostro (SMTP):
-  gratis con un account Gmail, oppure con il dominio `glifo.page` (comprato il 9 ottobre 2026)
-  e un servizio come Resend. Per le prove basta l'email del
-  proprietario, a cui Supabase scrive da solo. Intanto si entra anche con Google (vedi il
-  passo 4).
+- Le email di accesso le manda Resend, dal dominio `glifo.page` (dal 9 ottobre 2026; gratis fino
+  a 100 email al giorno e 3.000 al mese, vedi il passo 4): il servizio di posta di Supabase
+  scrive solo ai membri del team.
 
 Perché non gli altri:
 
@@ -152,8 +151,9 @@ Perché non gli altri:
 3. **Accesso e sincronizzazione**, fatto (in prova):
    - si entra con il link dell'email, aperto in questo browser o incollato nella finestra di
      Glifo (o con il codice, se l'email lo contiene), e le note di ogni account stanno in uno
-     spazio a parte del browser. Con il servizio di posta gratuito di Supabase l'email non si
-     può cambiare, quindi ha solo il link (vedi il passo 4);
+     spazio a parte del browser. Con Resend (dal 9 ottobre 2026) i modelli dell'email si possono
+     cambiare: il testo in italiano, con il link e il codice, è in
+     [supabase/README.md](supabase/README.md) (vedi il passo 4);
    - con la rete Glifo manda e scarica le modifiche da solo: all'avvio, tornando su Glifo,
      quando torna la rete, poco dopo ogni modifica e ogni minuto. Senza rete funziona come
      prima;
@@ -176,9 +176,10 @@ Perché non gli altri:
       chiedono solo nome, email e foto del profilo Google non usa l'elenco (vedi
       [supabase/README.md](supabase/README.md), «Accesso con Google»).
 
-   Dopo viene l'email per tutti: servizio di posta nostro e CAPTCHA insieme, con il dominio,
-   quindi dopo il trasloco. La condivisione (passo 5) non dipende dal dominio: si può iniziare
-   anche prima.
+   Fatto il 9 ottobre 2026: l'email per tutti, con Resend (qui sotto). Il prossimo è il CAPTCHA
+   (Cloudflare Turnstile): con l'email aperta a tutti, evita che il modulo di accesso venga usato
+   per mandare email a raffica. La condivisione (passo 5) non dipende dal dominio: si può
+   iniziare anche prima.
 
    Le singole parti:
    - fatto (2 ottobre 2026): accesso con Google, attivo («Continua con Google» nella finestra
@@ -194,16 +195,18 @@ Perché non gli altri:
      un amico): Glifo avrà un dominio tutto suo (vedi «Trasloco»). Resta da decidere chi è il
      titolare nell'informativa e chi incassa: S&Z, se è una società (oppure lo studente e
      l'amico come contitolari, con un accordo scritto su chi risponde alle richieste), o lo
-     studente da solo. Le email di accesso potranno partire da `glifo@` del dominio con un
-     servizio di posta che ha un piano gratuito (Resend o Brevo), dopo aver aggiunto alcuni
-     record DNS: arriveranno a tutti e con il codice di 6 cifre;
-   - CAPTCHA contro le iscrizioni automatiche (Cloudflare Turnstile, gratis) e limiti di
-     spazio da rivedere (oggi 20 MB di note per account);
-   - un servizio di posta nostro (SMTP): serve per scrivere a chi non è nel team e per
-     cambiare l'email, per esempio con il codice di 6 cifre al posto del solo link (comodo
-     per leggere l'email sul telefono e scrivere il codice sul computer). Gratis si può
-     usare un account Gmail con una «password per le app»; più avanti, con un dominio, un
-     servizio come Brevo o Resend.
+     studente da solo;
+   - il prossimo: CAPTCHA contro le iscrizioni automatiche e le email a raffica (Cloudflare
+     Turnstile, gratis: la chiave la crea lo studente in Cloudflare e la mette in Supabase, il
+     controllo nella finestra di accesso lo aggiunge Claude, prima che il CAPTCHA si accenda in
+     Supabase, altrimenti l'accesso con l'email si ferma); poi i limiti di spazio da rivedere
+     (oggi 20 MB di note per account);
+   - fatto (9 ottobre 2026): il servizio di posta nostro, Resend (gratis: 100 email al giorno e
+     3.000 al mese), collegato a Supabase dalle impostazioni di Resend (vedi
+     [supabase/README.md](supabase/README.md), «L'email per entrare»). Le email partono da
+     «Glifo» `accesso@glifo.page` e arrivano a tutti, con il codice oltre al link (comodo per
+     leggere l'email sul telefono e scrivere il codice sul computer) quando i modelli in italiano
+     sono in Supabase. Resta da fare: cambiare l'email dell'account.
 5. **Condivisione:**
    - fatto (4 ottobre 2026): **il link a una nota, come in Gemini**. «Condividi» →
      «Chiunque abbia il link»: chi apre il link, anche senza account, vede una fotografia della
@@ -222,8 +225,8 @@ Perché non gli altri:
        studente ha mostrato la finestra «Condividi» di NotebookLM): il proprietario aggiunge
        le persone e per ognuna decide cosa può fare (per esempio solo leggere o anche
        modificare); in più «Chiunque abbia il link» e «Consenti copie», come per le note;
-     - gli inviti con un link da mandare, perché senza un servizio di posta nostro Supabase
-       scrive solo al team (con Google invece entrano già tutti, vedi il passo 4).
+     - gli inviti, con un link da mandare o per email, ora che le email partono con Resend
+       (passo 4).
    - **scrivere insieme senza conflitti** (messo da parte il 4 ottobre 2026, se ne riparla):
      lo studente vuole che due persone che scrivono nello stesso punto non vadano in conflitto.
      Due modi di lavorare insieme:

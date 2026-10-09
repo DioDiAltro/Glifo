@@ -16,6 +16,7 @@ ottobre 2026 (i piani, i prezzi per chi usa Glifo e il resto sono in [ABBONAMENT
 | Il sito, su Cloudflare Pages (`glifo.page`, dal 9 ottobre 2026) | gratis | il vecchio indirizzo su GitHub Pages, che non si può usare per un servizio a pagamento, resta solo per il trasloco (vedi ROADMAP.md) |
 | Account e note, su Supabase | gratuito | 500 MB di database e 50.000 utenti attivi al mese; va in pausa dopo 7 giorni con poco uso |
 | Accesso con Google | gratis | |
+| Le email per entrare, con Resend (`accesso@glifo.page`, dal 9 ottobre 2026) | gratuito | 100 email al giorno e 3.000 al mese: oltre, l'invio si ferma fino al giorno dopo |
 | Cloudflare (l'account c'è già) | gratuito | |
 | L'assistente AI | con la chiave di chi lo usa | le prove si fanno gratis con una chiave gratuita di Gemini (Google AI Studio, senza carta di credito) o con i 10.000 «neuroni» al giorno di Cloudflare Workers AI |
 | «Spiegami» con Qwen3 nel browser (in prova, 7 ottobre 2026) | gratis: il modello gira sul dispositivo di chi lo usa | si scarica da Hugging Face la prima volta (da 0,4 a 2,3 GB); serve WebGPU, quindi di solito un computer |
@@ -24,7 +25,7 @@ ottobre 2026 (i piani, i prezzi per chi usa Glifo e il resto sono in [ABBONAMENT
 
 - **Il sito su Cloudflare Pages**: gratis, e a differenza di GitHub Pages permette un servizio a
   pagamento; si pubblica anche da un repository privato.
-- **La posta per le email di accesso** (Resend o Brevo): piano gratuito.
+- **La posta per le email di accesso** (Resend, attivo dal 9 ottobre 2026): piano gratuito.
 - **Il CAPTCHA** contro le iscrizioni automatiche (Cloudflare Turnstile): gratis.
 
 ## Da attivare solo quando lo dice lo studente

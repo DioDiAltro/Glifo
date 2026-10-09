@@ -7,4 +7,10 @@ describe('informativa sulla privacy', () => {
     expect(privacy).toContain('<a href="mailto:privacy@glifo.page">privacy@glifo.page</a>')
     expect(privacy).not.toContain('comparirà qui')
   })
+
+  it('dice chi consegna le email per entrare', () => {
+    // Dal 9 ottobre 2026 le manda Resend (accesso@glifo.page), non più la posta di prova di Supabase.
+    expect(privacy).toContain('<strong>Resend</strong>')
+    expect(privacy).not.toContain('email per entrare le manda Supabase')
+  })
 })

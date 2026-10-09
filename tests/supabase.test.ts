@@ -11,8 +11,8 @@ describe('errori dell\'accesso', () => {
     expect(accountError(auth({ code: 'over_email_send_rate_limit', status: 429 }))).toMatchObject({ kind: 'rate' })
     expect(accountError(auth({ code: 'otp_expired', status: 403 })).message).toContain('è sbagliato o scaduto')
     expect(accountError(auth({ code: 'email_address_invalid' }))).toMatchObject({ kind: 'email' })
-    // Con il servizio di posta di prova, Supabase scrive solo ai membri del progetto: gli altri
-    // entrano con Google, aperto a tutti anche con l'app Google in «Testing».
+    // Se Supabase non può mandare l'email (la sua posta di prova scriveva solo al team; dal 9 ottobre
+    // 2026 c'è Resend), si entra con Google, aperto a tutti anche con l'app Google in «Testing».
     expect(accountError(auth({ code: 'email_address_not_authorized' }))).toMatchObject({ kind: 'closed' })
     expect(accountError(auth({ code: 'email_address_not_authorized' })).message).toContain('entra con «Continua con Google»')
     expect(accountError(auth({ code: 'qualcosa_di_nuovo' }))).toMatchObject({ kind: 'other' })
