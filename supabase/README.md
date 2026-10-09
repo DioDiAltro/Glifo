@@ -157,14 +157,42 @@ L'email per entrare:
 - **Site URL** (Authentication → URL Configuration) deve essere l'indirizzo di Glifo,
   `https://diodialtro.github.io/Glifo/`: è dove riporta il link. Con quello predefinito,
   `http://localhost:3000`, il link porta a una pagina che non si apre.
-- **Il servizio di posta di Supabase** (gratuito) scrive solo ai membri del team, poche
-  email all'ora, e con i modelli predefiniti: l'email ha solo il link («Sign in»), non il
-  codice. I modelli si possono cambiare solo con un servizio di posta proprio (SMTP).
+- **Le email le manda Resend** dal 9 ottobre 2026, da «Glifo» `accesso@glifo.page`, e arrivano a
+  tutti. Prima c'era il servizio di posta di Supabase, che scrive solo ai membri del team e
+  poche email all'ora. Il piano gratuito di Resend manda 100 email al giorno e 3.000 al mese:
+  oltre, l'invio si ferma fino al giorno dopo. Come è stato fatto, anche per rifarlo:
+  1. account Resend con il Gmail di Glifo;
+  2. in **Domains** il dominio `glifo.page`, verificato con i record DNS che Resend chiede,
+     aggiunti in Cloudflare accanto a quelli dell'Email Routing di `privacy@glifo.page`;
+  3. in **Settings → Integrations → Supabase**: organizzazione «S&Z's Org», progetto `glifo`,
+     dominio `glifo.page`, mittente «Glifo». Resend crea la chiave e compila da solo
+     Authentication → Emails → SMTP Settings (`smtp.resend.com`). Con l'SMTP proprio Supabase
+     porta il limite a 25 email all'ora (Authentication → Rate Limits; nei registri: «Email
+     limiter from 2/1h to 25»).
 - **Il link** vale una volta sola e solo nel browser in cui si è chiesta l'email (flusso
   PKCE). Se si aprirebbe altrove, lo si copia e lo si incolla nella finestra di Glifo:
-  l'app prende il token e lo controlla con `verifyOtp({ token_hash, type: 'email' })`.
-- **Il codice di 6 cifre** arriva se i modelli «Magic Link» e «Confirm signup» contengono
-  `{{ .Token }}` (quindi con un SMTP proprio): Glifo lo accetta già.
+  l'app prende il token e lo controlla con `verifyOtp({ token_hash, type: 'email' })`. Per
+  questo i modelli usano sempre `{{ .ConfirmationURL }}`: Glifo riconosce solo i link
+  `/auth/v1/verify?…token=…`.
+- **Il codice** arriva se i modelli contengono `{{ .Token }}`: Glifo accetta da 6 a 10 cifre,
+  tutte le lunghezze che Supabase permette, e lo controlla con
+  `verifyOtp({ email, token, type: 'email' })`.
+
+I modelli in italiano (Authentication → Emails → Templates). Le email predefinite sono in
+inglese («Confirm your email address»): si sostituiscono oggetto e testo di **Confirm signup**
+(chi entra per la prima volta) e di **Magic Link** (chi ha già l'account). Oggetto di tutti e
+due: `Il tuo accesso a Glifo`. Testo di **Magic Link**:
+
+```html
+<h2>Entra in Glifo</h2>
+<p>Se stai leggendo questa email nel browser in cui usi Glifo, premi qui:</p>
+<p><a href="{{ .ConfirmationURL }}">Entra in Glifo</a></p>
+<p>Se la leggi altrove, per esempio sul telefono, scrivi questo codice nella finestra di Glifo:</p>
+<p style="font-size:28px;font-weight:bold;letter-spacing:4px">{{ .Token }}</p>
+<p>Il link e il codice valgono una volta sola. Se non hai chiesto tu di entrare in Glifo, ignora questa email.</p>
+```
+
+Per **Confirm signup** lo stesso testo, con il titolo `<h2>Ti diamo il benvenuto in Glifo</h2>`.
 
 ### Il trasloco su glifo.page (ottobre 2026)
 
