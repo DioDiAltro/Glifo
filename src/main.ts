@@ -9,6 +9,7 @@ import { blockMoveTransaction } from './editor/moveBlock'
 import type { BlockKind, MoveDir } from './render/blockMove'
 import { deriveTitle, noteIdsInBrowser, NotesStore, type Note } from './store/notes'
 import { cleanFolderName, FOLDER_NAME_MAX, FoldersStore } from './store/folders'
+import { backupNotes, restoreBackup, restoredMessage } from './store/restore'
 import { addPersonalWord, DICTIONARY_KEY, loadPersonalWords, savePersonalWords } from './store/dictionary'
 import {
   ACCOUNT_SETTINGS,
@@ -81,7 +82,20 @@ import { dismissToast, toast } from './ui/toast'
 import { loadPart, PartNotLoaded, watchSiteUpdates } from './ui/siteUpdate'
 import { leaveNotice, takeNotice } from './ui/notice'
 import { createToolbar } from './ui/toolbar'
-import { openTutorial, showTutorialHint, tutorialSeen } from './ui/tutorial'
+import { markTutorialSeen, openTutorial, showTutorialHint, tutorialSeen } from './ui/tutorial'
+import {
+  buildPackage,
+  importPackage,
+  isRelocationPackage,
+  openedForRelocation,
+  receiveFromOldSite,
+  relocationMessage,
+  relocationPhase,
+  sendToNewSite,
+  type RelocationPackage,
+  type RelocationResult,
+} from './relocation'
+import { leaveRelocationDone, relocationBanner, showRelocationDone, showRelocationPage, takeRelocationDone } from './ui/relocation'
 import { Board } from './board/board'
 import { touchLog } from './board/touchlog'
 import { BoardStore } from './board/store'
@@ -623,8 +637,22 @@ if (narrow.matches) {
 }
 setPanels({})
 setView(settings.view, false)
-// La prima volta il tutorial (se nel frattempo non si è aperta un'altra finestra).
-if (!tutorialSeen()) {
+// Il trasloco su glifo.page (src/relocation.ts): sul vecchio sito, dal giorno dell'avviso, la fascia in
+// cima e, dal giorno del trasloco, la pagina a tutto schermo; sul sito nuovo, aperto dal vecchio, gli
+// appunti che arrivano (poi la pagina si ricarica e dice cosa è arrivato).
+const relocating = openedForRelocation()
+const relocation = relocationPhase(location.origin, new Date())
+if (relocation !== 'none') {
+  const deps = { transfer: transferToNewSite, download: () => void downloadRelocation(), account: !!account }
+  if (relocation === 'moved') showRelocationPage(deps)
+  else app.prepend(relocationBanner(deps))
+}
+if (relocating) receiveFromOldSite(receiveRelocation, relocationReceived)
+const relocationDone = takeRelocationDone()
+if (relocationDone) showRelocationDone(relocationDone)
+// La prima volta il tutorial (se nel frattempo non si è aperta un'altra finestra), ma non mentre
+// arrivano gli appunti dal vecchio Glifo: chi li porta Glifo lo conosce già.
+if (!tutorialSeen() && !relocating) {
   window.setTimeout(() => {
     if (!document.querySelector('dialog[open]')) openGuide(true)
   }, 400)
@@ -1307,44 +1335,76 @@ async function restore(): Promise<void> {
   input.addEventListener('change', async () => {
     const file = input.files?.[0]
     if (!file) return
+    let data: unknown
     try {
-      const data = JSON.parse(await file.text()) as {
-        notes?: { id?: unknown; content?: unknown; folderId?: unknown }[]
-        folders?: unknown
-        dictionary?: unknown
-        boards?: unknown
-      }
-      const notes = (data.notes ?? []).filter((n): n is { id?: unknown; content: string; folderId?: unknown } => typeof n.content === 'string')
-      if (!notes.length) throw new Error('nessuna nota')
-      flushSave()
-      // Le cartelle del backup: si usano quelle che hanno già lo stesso nome, le altre si creano.
-      const folderIds = new Map<string, string>()
-      for (const f of Array.isArray(data.folders) ? (data.folders as { id?: unknown; name?: unknown }[]) : []) {
-        if (typeof f?.id !== 'string' || typeof f.name !== 'string') continue
-        const folder = folders.byName(f.name) ?? folders.create(f.name)
-        if (folder) folderIds.set(f.id, folder.id)
-      }
-      // Le note tornano con un id nuovo: le lavagne del backup vanno su quelle ricreate.
-      const noteIds = new Map<string, string>()
-      for (const n of notes) {
-        const created = store.create(n.content, (typeof n.folderId === 'string' && folderIds.get(n.folderId)) || null)
-        if (typeof n.id === 'string') noteIds.set(n.id, created.id)
-      }
-      for (const b of Array.isArray(data.boards) ? (data.boards as { note?: unknown }[]) : []) {
-        const to = typeof b?.note === 'string' ? noteIds.get(b.note) : undefined
-        if (to) await boards.importBoard(to, b, newStrokeId).catch(() => 0)
-      }
-      if (Array.isArray(data.dictionary)) {
-        setPersonalWords([...loadPersonalWords(), ...data.dictionary.filter((w): w is string => typeof w === 'string')])
-      }
-      changedHere()
-      notesPanel.refresh(active.id)
-      toast(`Ripristinati ${notes.length} appunti`)
+      data = JSON.parse(await file.text())
     } catch {
-      toast('Il file non sembra un backup di Glifo.', 'error')
+      data = null
     }
+    // Il file del trasloco, scaricato dal vecchio sito: come se gli appunti arrivassero da lì.
+    if (isRelocationPackage(data)) {
+      relocationReceived(await receiveRelocation(data).catch(() => null))
+      return
+    }
+    if (!backupNotes(data).length) {
+      toast('Il file non sembra un backup di Glifo.', 'error')
+      return
+    }
+    flushSave()
+    // Le note che ci sono già non si raddoppiano, e le lavagne tornano sulle loro note (src/store/restore.ts).
+    const result = await restoreBackup(data, { notes: store, folders, boards, newStrokeId }).catch(() => null)
+    if (!result) {
+      toast('Il backup non si è potuto ripristinare: forse il browser non ha più spazio.', 'error')
+      return
+    }
+    const dictionary = (data as { dictionary?: unknown }).dictionary
+    if (Array.isArray(dictionary)) {
+      setPersonalWords([...loadPersonalWords(), ...dictionary.filter((w): w is string => typeof w === 'string')])
+    }
+    changedHere()
+    notesPanel.refresh(active.id)
+    toast(restoredMessage(result))
   })
   input.click()
+}
+
+// ——— Trasloco su glifo.page (src/relocation.ts) ———
+
+/** Sul vecchio sito: tutti gli appunti di questo browser, per il sito nuovo. */
+function relocationPackage(): Promise<RelocationPackage> {
+  flushSave()
+  return buildPackage({ boards, welcome: welcomeNote, tutorialSeen: tutorialSeen() })
+}
+
+/** «Porta i miei appunti nel nuovo Glifo»: apre glifo.page e glieli passa. */
+function transferToNewSite(): Promise<RelocationResult> {
+  return sendToNewSite(relocationPackage)
+}
+
+/** «Scarica il backup» sul vecchio sito: lo stesso pacco, in un file da aprire su glifo.page con «Ripristina backup». */
+async function downloadRelocation(): Promise<void> {
+  const data = JSON.stringify(await relocationPackage())
+  const date = new Date().toISOString().slice(0, 10)
+  void downloadText(`glifo-trasloco-${date}.json`, data, 'application/json')
+}
+
+/** Sul sito nuovo: gli appunti arrivati dal vecchio, nello spazio aperto (di solito quello senza account). */
+async function receiveRelocation(pkg: RelocationPackage): Promise<RelocationResult> {
+  flushSave()
+  const { result, dictionary, tutorialSeen: seen } = await importPackage(pkg, { notes: store, folders, boards, newStrokeId, welcome: welcomeNote })
+  if (dictionary.length) setPersonalWords([...loadPersonalWords(), ...dictionary])
+  if (seen) markTutorialSeen()
+  return result
+}
+
+/** Gli appunti sono arrivati: la pagina si ricarica (note, account e impostazioni nuove) e poi dice cosa è arrivato. */
+function relocationReceived(result: RelocationResult | null): void {
+  if (!result) {
+    toast('Gli appunti del vecchio Glifo non sono arrivati: riprova dal vecchio sito, oppure usa il backup.', 'error')
+    return
+  }
+  leaveRelocationDone(relocationMessage(result))
+  reloadPage()
 }
 
 // ——— Account ———

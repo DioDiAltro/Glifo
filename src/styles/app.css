@@ -6316,3 +6316,139 @@ body.shared-page {
     display: none;
   }
 }
+
+/* ——— Trasloco su glifo.page (src/ui/relocation.ts) ———
+   Sul vecchio sito: la fascia in cima, dal giorno dell'avviso, e dal giorno del trasloco la pagina a
+   tutto schermo (una finestra modale che non si chiude). */
+
+.app:has(> .relocation-banner) {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.relocation-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 8px 12px 8px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.relocation-banner-text {
+  flex: 1 1 320px;
+  margin: 0;
+}
+
+.relocation-banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.relocation-banner a.btn,
+.relocation-card a.btn {
+  text-decoration: none;
+}
+
+.relocation-page {
+  width: 100vw;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--bg);
+  color: var(--text);
+  overflow: auto;
+}
+
+/* Solo da aperta: una finestra chiusa deve restare nascosta. */
+.relocation-page[open] {
+  display: grid;
+  place-items: center;
+}
+
+.relocation-page::backdrop {
+  background: var(--bg);
+}
+
+.relocation-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: min(560px, calc(100% - 32px));
+  margin: 24px 16px;
+  padding: 32px 28px 28px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  font-size: 15px;
+}
+
+.relocation-card:focus {
+  outline: none;
+}
+
+.relocation-card a:not(.btn) {
+  color: var(--link);
+}
+
+.relocation-logo {
+  color: var(--accent);
+}
+
+.relocation-logo svg {
+  width: 52px;
+  height: 52px;
+}
+
+.relocation-card h1 {
+  margin: 8px 0 4px;
+  font-size: 26px;
+  line-height: 1.2;
+  color: var(--heading);
+}
+
+.relocation-card > p {
+  margin: 6px 0;
+}
+
+.relocation-step {
+  margin: 14px 0 0;
+}
+
+.relocation-step .btn,
+.relocation-open {
+  height: 40px;
+  padding: 0 16px;
+  font-size: 15px;
+}
+
+.relocation-step .field-help {
+  margin: 6px 0 0;
+}
+
+.relocation-status {
+  font-weight: 600;
+  color: var(--ok);
+}
+
+.relocation-status:empty {
+  display: none;
+}
+
+.relocation-open {
+  margin-top: 14px;
+}
+
+@media (max-width: 480px) {
+  .relocation-card {
+    padding: 24px 18px 20px;
+  }
+}

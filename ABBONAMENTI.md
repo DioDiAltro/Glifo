@@ -644,7 +644,8 @@ ricerca, i piani per università e dipartimenti.
 ## Cosa fare, in ordine
 
 1. Decidere su S&Z: di chi è Glifo e chi incassa. L'8 ottobre 2026 lo studente ha deciso un
-   dominio tutto di Glifo, non `seznet.net`; chi incassa resta da decidere.
+   dominio tutto di Glifo, non `seznet.net` (è `glifo.page`, comprato il 9 ottobre); chi incassa
+   resta da decidere.
 2. Spostare il sito su Cloudflare Pages con il dominio, poi aprire l'account a tutti (gratis): in
    corso dall'8 ottobre 2026 (vedi «Trasloco» in ROADMAP.md).
 3. Far usare Glifo a 30-50 studenti veri (il corso dello studente) e chiedere cosa userebbero e

@@ -2628,22 +2628,48 @@ try {
     await lp.emulateMedia({ media: 'print' })
     check((await lp.evaluate(() => getComputedStyle(document.querySelector('.board-pane')).display)) === 'none', 'la lavagna non va nella stampa')
     await lp.emulateMedia({ media: 'screen' })
-    // Il backup (in Impostazioni) porta anche le lavagne, con i punti in una stringa; «Ripristina
-    // backup» le rimette sulle note ricreate, che hanno un id nuovo.
+    // Il backup (in Impostazioni) porta anche le lavagne, con i punti in una stringa. «Ripristina
+    // backup» non raddoppia le note che ci sono già (fino al 9 ottobre 2026 le aggiungeva tutte con un
+    // id nuovo): eliminata la nota con la lavagna, ripristinando torna lei, con il suo id e la sua
+    // lavagna, e le altre restano una volta sola.
     await lp.locator('.side-profile button[aria-label="Impostazioni"]').click()
     const [backupFile] = await Promise.all([lp.waitForEvent('download'), lp.locator('dialog button', { hasText: 'Scarica backup' }).click()])
     const backupData = JSON.parse(readFileSync(await backupFile.path(), 'utf8'))
     const backupBoards = (backupData.boards ?? []).map((b) => ({ note: b.note, strokes: b.strokes.length, points: typeof b.strokes[0]?.points }))
+    await lp.keyboard.press('Escape')
+    const notesBefore = await lp.locator('.note-item').count()
+    const fresh = lp.locator('.note-item', { hasText: 'Nuovi appunti' })
+    for (let i = 0; i < (await fresh.count()); i++) {
+      await fresh.nth(i).locator('.note-open').click()
+      await lp.waitForTimeout(300)
+      if ((await boardPane.getAttribute('data-note')) === otherNote) break
+    }
+    const withBoard = lp.locator('.note-item.is-active')
+    await withBoard.hover()
+    await withBoard.locator('.note-delete').click()
+    await lp.locator('dialog .btn-danger', { hasText: 'Elimina' }).click()
+    await lp.waitForTimeout(300)
+    const afterDelete = { notes: await lp.locator('.note-item').count(), strokes: (await savedStrokes(lp, otherNote)).length }
+    await lp.locator('.side-profile button[aria-label="Impostazioni"]').click()
     const [chooser] = await Promise.all([lp.waitForEvent('filechooser'), lp.locator('dialog button', { hasText: 'Ripristina backup' }).click()])
     await chooser.setFiles(await backupFile.path())
-    await lp.locator('.toast', { hasText: 'Ripristinati' }).waitFor()
+    const restoredToast = await lp.locator('.toast', { hasText: 'Ripristinato 1 appunto' }).textContent()
     await lp.keyboard.press('Escape')
-    await lp.locator('.note-item', { hasText: 'Nuovi appunti' }).first().click()
-    await lp.waitForSelector('.board-pane[data-loaded="true"]')
-    const restoredNote = await boardPane.getAttribute('data-note')
+    const notesAfter = await lp.locator('.note-item').count()
+    for (let i = 0; i < (await fresh.count()); i++) {
+      await fresh.nth(i).locator('.note-open').click()
+      await lp.waitForTimeout(300)
+      if ((await boardPane.getAttribute('data-note')) === otherNote) break
+    }
+    await lp.waitForSelector(`.board-pane[data-note="${otherNote}"][data-loaded="true"]`)
     check(
-      JSON.stringify(backupBoards) === JSON.stringify([{ note: otherNote, strokes: 1, points: 'string' }]) && restoredNote !== otherNote && (await strokeCount()) === 1,
-      `il backup porta anche le lavagne, e ripristinandolo tornano sulle note ricreate (${JSON.stringify({ backupBoards, restoredNote })})`,
+      JSON.stringify(backupBoards) === JSON.stringify([{ note: otherNote, strokes: 1, points: 'string' }]) &&
+        afterDelete.notes === notesBefore - 1 &&
+        afterDelete.strokes === 0 &&
+        notesAfter === notesBefore &&
+        (await strokeCount()) === 1 &&
+        /^Ripristinato 1 appunto e 1 lavagna; (uno c'era|\d+ c'erano) già/.test(restoredToast),
+      `il backup porta anche le lavagne; ripristinandolo torna la nota eliminata, con il suo id e la sua lavagna, e le altre non raddoppiano (${JSON.stringify({ backupBoards, notesBefore, afterDelete, notesAfter, restoredToast })})`,
     )
     await lb.close()
     // Sull'iPad (Safari si presenta come un Mac, con lo schermo touch) «Schermo intero» non chiede

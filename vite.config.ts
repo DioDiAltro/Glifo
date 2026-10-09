@@ -3,12 +3,20 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 declare const process: { env: Record<string, string | undefined> }
 
-// Quale Glifo si costruisce (i nomi sono in src/site.ts): il sito, la build per claude.ai
-// (GLIFO_NO_PWA=1: la demo e le prove della grafica, vedi CLAUDE.md) o il sito di prova su
-// Cloudflare Pages, dove Cloudflare mette CF_PAGES nella build. Le ultime due senza service worker,
-// che dentro un'altra pagina non sono ammessi e sul sito di prova terrebbero le versioni vecchie, e
-// senza account, così gli appunti veri non si toccano: su Cloudflare anche senza GLIFO_NO_PWA.
-const site = process.env.CF_PAGES ? 'prova' : process.env.GLIFO_NO_PWA ? 'claude' : 'online'
+// Il ramo principale del repository: su Cloudflare Pages (dove Cloudflare mette CF_PAGES e il ramo in
+// CF_PAGES_BRANCH) solo la sua build è il sito vero, quello di glifo.page. Se il ramo cambia nome, va
+// cambiato anche qui: altrimenti glifo.page diventa il sito di prova, con l'account spento.
+export const MAIN_BRANCH = 'claude/blissful-goodall-c0gpmk'
+
+// Quale Glifo si costruisce (i nomi sono in src/site.ts): il sito (su GitHub Pages e, dal ramo
+// principale, su Cloudflare), la build per claude.ai (GLIFO_NO_PWA=1: la demo e le prove della
+// grafica, vedi CLAUDE.md) o il sito di prova, cioè ogni altra build di Cloudflare (il ramo `prova`).
+// Le ultime due senza service worker, che dentro un'altra pagina non sono ammessi e sul sito di prova
+// terrebbero le versioni vecchie, e senza account, così gli appunti veri non si toccano: su
+// Cloudflare anche senza GLIFO_NO_PWA.
+const site = process.env.CF_PAGES
+  ? process.env.CF_PAGES_BRANCH === MAIN_BRANCH ? 'online' : 'prova'
+  : process.env.GLIFO_NO_PWA ? 'claude' : 'online'
 const withPwa = !process.env.VITEST && site === 'online'
 
 export default defineConfig({

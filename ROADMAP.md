@@ -32,28 +32,50 @@ server) né la chiave dell'AI. Per questo l'indirizzo si cambia una volta sola: 
 tutto suo, poi, chi ospita il sito si può cambiare senza che nessuno se ne accorga.
 
 **Il piano** (proposto l'8 ottobre 2026):
-1. lo studente compra il dominio su Cloudflare (a prezzo di costo, con il rinnovo automatico) e
-   ne dice il nome;
-2. Claude prepara:
-   - la regola di `vite.config.ts` che oggi fa di ogni build su Cloudflare il sito di prova
-     (`CF_PAGES`, con i test di `tests/deploy.test.ts`);
-   - «Ripristina backup» che riconosce le note già presenti (oggi le aggiunge sempre, quindi
-     raddoppiano) e riattacca le lavagne alle note sincronizzate;
-   - «Porta i miei appunti nel nuovo Glifo»: apre il sito nuovo e gli passa note, cartelle,
-     dizionario e lavagne, con o senza account;
-   - sul vecchio sito l'avviso con la data, il pulsante, «Scarica backup» e il link; dalla data,
-     da sola, la pagina a tutto schermo con le stesse cose e l'invito a reinstallare l'app; i link
-     condivisi (`nota.html#…`) mandati al nuovo indirizzo;
-   - l'informativa (sito ospitato da Cloudflare, contatto `privacy@` del dominio) e la
-     pubblicazione (il ramo principale su Cloudflare, su GitHub solo la pagina del trasloco);
-   - prima di pubblicare, le foto dell'avviso e della pagina finale;
-3. lo studente, con i passi scritti da Claude: il progetto Cloudflare Pages del ramo principale
-   (come per `prova`) con il dominio; `privacy@` con l'Email Routing di Cloudflare (gratis) verso
-   la sua Gmail; il nuovo indirizzo in Supabase (Site URL e Redirect URLs) e in Google
-   (Authorized JavaScript origins);
-4. le date: con il dominio entro sabato 10 ottobre, avviso dal 12 e trasloco domenica 18 ottobre
-   2026; se il dominio arriva dopo, tutto slitta di altrettanto (sempre almeno una settimana di
-   avviso);
+1. **fatto il 9 ottobre 2026: il dominio è `glifo.page`.** Il nome resta Glifo (deciso l'8 ottobre:
+   `glifo.app` e `glifo.net` erano già presi; `.page` vuol dire «pagina», è di Google e funziona
+   solo con HTTPS). Lo studente l'ha comprato su Cloudflare, con il rinnovo automatico,
+   nell'account dove c'è già `glifo-prova`; come email del titolare c'è l'account Google di Glifo,
+   creato apposta (vedi COSTI.md, «Attivato»);
+2. **fatto il 9 ottobre 2026: Claude ha preparato il trasloco** (ARCHITETTURA.md, `src/relocation.ts`):
+   - su Cloudflare il ramo principale è il sito vero (`MAIN_BRANCH` in `vite.config.ts`, con i test
+     di `tests/deploy.test.ts`), ogni altro ramo il sito di prova;
+   - «Ripristina backup» non raddoppia più le note (stesso id e stesso testo: c'è già) e rimette le
+     lavagne sulle loro note, anche su quelle arrivate con l'account (`src/store/restore.ts`);
+   - «Porta i miei appunti nel nuovo Glifo»: il vecchio sito apre glifo.page e gli passa appunti,
+     cartelle, dizionario, lavagne, gli account del browser e le impostazioni (mai l'accesso né le
+     chiavi dell'AI); sul sito nuovo si apre l'appunto che era aperto e un messaggio dice cosa è
+     arrivato. «Scarica il backup» dà lo stesso pacco in un file, che «Ripristina backup» riconosce;
+   - sul vecchio sito la fascia con la data e i pulsanti; dal giorno del trasloco, da sola, la pagina a
+     tutto schermo con le stesse cose e l'invito a reinstallare l'app; i link `nota.html#…` del
+     vecchio indirizzo mandati a glifo.page;
+   - l'informativa (sito su Cloudflare, e il trasloco dentro il browser); il contatto `privacy@`
+     arriva con l'Email Routing;
+   - le foto della fascia (anche sul telefono), della pagina finale e del messaggio sul sito nuovo,
+     dalla prova nel browser con i due indirizzi veri (`scripts/relocation-test.mjs`).
+
+   **L'avviso è spento** (`NOTICE_DAY = null` in `src/relocation.ts`) finché glifo.page non funziona,
+   account compreso: poi Claude mette la data, e insieme l'indirizzo nel README e `privacy@glifo.page`
+   nell'informativa;
+3. lo studente, in quest'ordine (i passi sono anche in supabase/README.md, «Il trasloco su glifo.page»):
+   1. **il sito**: Cloudflare → «Workers & Pages» → «Create» → «Pages» → «Import an existing Git
+      repository» → GitHub, repository `DioDiAltro/Glifo` → Project name `glifo`, Production branch
+      `claude/blissful-goodall-c0gpmk`, Framework preset None, Build command `npm run build`, Build
+      output directory `dist`, nessuna variabile → «Save and Deploy». Poi «Settings» → «Build» →
+      «Branch control»: Preview branch «None». Poi «Custom domains» → «Set up a custom domain» →
+      `glifo.page` → «Activate domain» (il record DNS lo mette Cloudflare). Niente `www.glifo.page`
+      per ora: sarebbe un altro indirizzo, con gli appunti a parte;
+   2. **l'email**: nel dominio `glifo.page` → «Email» → «Email Routing»: come destinazione il Gmail di
+      Glifo (si conferma dall'email che arriva), poi l'indirizzo `privacy@glifo.page` che manda lì, e
+      «Add records and enable»;
+   3. **Supabase**: Authentication → URL Configuration → «Redirect URLs» → `https://glifo.page/**`;
+   4. **Google** (progetto «Glifo»): nel client web, *Authorized JavaScript origins* anche
+      `https://glifo.page`; in **Branding**, *Authorized domains* anche `glifo.page`;
+   5. aprire `https://glifo.page`, entrare con Google e dirlo a Claude;
+4. le date: il dominio è arrivato il 9 ottobre, quindi avviso da lunedì 12 e trasloco domenica 18
+   ottobre 2026, se per lunedì glifo.page funziona; altrimenti tutto slitta di altrettanto (sempre
+   almeno una settimana di avviso). Il giorno del trasloco lo studente mette in Supabase il Site URL
+   `https://glifo.page/`;
 5. il vecchio sito resta aperto almeno fino a fine febbraio 2027, per chi riapre gli appunti solo
    per gli esami.
 
@@ -93,8 +115,8 @@ Da sapere (dati controllati il 30/09/2026):
   utenti, o per non rischiare la pausa (per esempio d'estate), conviene il piano Pro, 25
   dollari al mese per progetto.
 - Per mandare le email di accesso agli utenti serve un servizio di posta nostro (SMTP):
-  gratis con un account Gmail, oppure con un dominio (es. glifo.app, circa 10-20 € l'anno,
-  che può ospitare anche il sito) e un servizio come Resend. Per le prove basta l'email del
+  gratis con un account Gmail, oppure con il dominio `glifo.page` (comprato il 9 ottobre 2026)
+  e un servizio come Resend. Per le prove basta l'email del
   proprietario, a cui Supabase scrive da solo. Intanto si entra anche con Google (vedi il
   passo 4).
 
@@ -143,10 +165,9 @@ Perché non gli altri:
    - i test usano le vere migrazioni in un Postgres in memoria (PGlite), anche nella prova
      nel browser con un Supabase finto (`scripts/fake-supabase.mjs`).
 4. **Aprire l'account a tutti** (il prossimo, gratis). **In attesa** dal 2 ottobre 2026: si
-   riprende con il dominio (deciso l'8 ottobre 2026: tutto di Glifo, vedi «Trasloco»). Come si
-   riprende:
-   1. lo studente compra il dominio: l'email di contatto per l'informativa sarà `privacy@` del
-      dominio (Email Routing di Cloudflare, gratis); resta da dire chi è il titolare;
+   riprende con il trasloco su `glifo.page` (vedi «Trasloco»). Come si riprende:
+   1. fatto il 9 ottobre 2026: il dominio `glifo.page`. L'email di contatto per l'informativa sarà
+      `privacy@glifo.page` (Email Routing di Cloudflare, gratis); resta da dire chi è il titolare;
    2. Claude aggiorna l'informativa (titolare e contatto) e rivede i limiti di spazio: oggi
       20 MB di note per account, ma il database gratuito ha 500 MB in tutto;
    3. lo studente preme «Publish app» (Google Auth Platform → Audience): da lì entra con

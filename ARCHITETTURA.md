@@ -68,7 +68,11 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   carica in anticipo l'editor degli schemi o delle tabelle della nota aperta, così «Modifica» lo apre
   subito anche dopo una pubblicazione.
   `src/store/`: note, cartelle (`folders.ts`), impostazioni e misure delle sezioni (`layout.ts`,
-  solo su quel dispositivo) nel browser (chiavi `glifo.*`).
+  solo su quel dispositivo) nel browser (chiavi `glifo.*`). `restore.ts` è «Ripristina backup»: una
+  nota con lo stesso id e lo stesso testo non si raddoppia, le altre tornano con il loro id se è
+  libero (`adopt`), così l'account le riconosce e le lavagne le ritrovano; una lavagna va sulla sua
+  nota solo se lì non c'è già niente di scritto (9 ottobre 2026: prima ogni ripristino aggiungeva
+  tutto con id nuovi).
   Glifo può essere aperto in più schede: ogni modifica parte da quello salvato, non dalla copia
   in memoria, e `main.ts` ascolta l'evento `storage` per aggiornare le altre schede.
 - `src/schema/`: schemi stile draw.io con maxGraph (caricato solo quando serve). Nella nota sono
@@ -444,15 +448,31 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   sincronizzare, scaricare o eliminare. Il client di Supabase si carica solo se si accede.
   Nella build per claude.ai (`GLIFO_NO_PWA=1`), dentro claude.ai (`inClaudeViewer`) e sul sito di
   prova su Cloudflare Pages l'account è spento (`accountOff` in main.ts): quale Glifo si costruisce lo
-  decide vite.config.ts (su Cloudflare, dove la build ha `CF_PAGES`, è sempre il sito di prova, senza
-  service worker) e lo passa in `__GLIFO_SITE__`; `src/site.ts` ha i nomi e il messaggio della
-  finestra di Accedi (`accountOffMessage`).
+  decide vite.config.ts (su Cloudflare, dove la build ha `CF_PAGES`, è il sito vero solo il ramo
+  principale, `MAIN_BRANCH`, che va su glifo.page; ogni altro ramo è il sito di prova, senza service
+  worker) e lo passa in `__GLIFO_SITE__`; `src/site.ts` ha i nomi e il messaggio della finestra di
+  Accedi (`accountOffMessage`).
 - `src/share/`: le note condivise con un link, come in Gemini (una fotografia della nota): `link.ts`
   (il link `nota.html#codice`; la nota si legge con la sola chiave pubblica, senza il client di
   Supabase), `dialog.ts` (la finestra «Condividi», come quelle di Google), `page.ts` (la pagina
   `nota.html`: la nota in sola lettura e «Salva una copia»). Le chiamate dell'account (`shareNote`,
   `sharedLinks`…) sono in `src/account/supabase.ts`; nel database la tabella `shared_notes` e le
   funzioni della migrazione «note condivise» (vedi supabase/README.md).
+- `src/relocation.ts` e `src/ui/relocation.ts`: il trasloco su glifo.page (ROADMAP.md, «Trasloco»).
+  Solo sul vecchio indirizzo (`OLD_ORIGIN`), dal giorno dell'avviso (`NOTICE_DAY`, `null` finché
+  glifo.page non funziona) la fascia in cima a `.app` e dal giorno del trasloco (`MOVE_DAY`) la pagina
+  a tutto schermo, una finestra modale che non si chiude; nelle prove le date si cambiano nella build
+  (`VITE_TRASLOCO_AVVISO`, `VITE_TRASLOCO`). «Porta i miei appunti nel nuovo Glifo» apre
+  `glifo.page/#trasloco` (`sendToNewSite`): il sito nuovo dice «pronto», riceve il pacco
+  (`buildPackage`: appunti fuori dall'account senza la nota di benvenuto, cartelle, dizionario, le
+  lavagne di tutte le note, gli account del browser chiave per chiave, le impostazioni che vanno con
+  l'account; mai `glifo.auth.v1`, `glifo.account.v1` né le chiavi dell'AI), lo mette nello spazio
+  aperto (`importPackage`: gli appunti come «Ripristina backup», un account solo se il browser non lo
+  conosce, le lavagne sulle note che ci sono) e risponde; postMessage solo tra `OLD_ORIGIN` e
+  `NEW_ORIGIN`, controllando sempre l'altra finestra. Poi la pagina si ricarica e dice cosa è arrivato
+  (`showRelocationDone`). «Scarica il backup» scarica lo stesso pacco, che «Ripristina backup»
+  riconosce (`isRelocationPackage`). Dal giorno del trasloco `nota.html` del vecchio indirizzo manda al
+  nuovo. La prova nel browser con i due indirizzi veri è `scripts/relocation-test.mjs`.
 - `privacy.html` e `nota.html`: l'informativa sulla privacy e la pagina delle note condivise, altre
   due pagine della build (vedi `vite.config.ts`); l'informativa è collegata da `src/ui/links.ts`.
 - `supabase/`: il database degli account (progetto Supabase `glifo`, Francoforte, piano

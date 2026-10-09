@@ -59,7 +59,8 @@ export function tutorialSeen(): boolean {
   }
 }
 
-function markSeen(): void {
+/** Il tutorial è già stato visto: anche quando arriva dal vecchio Glifo, con gli appunti (src/relocation.ts). */
+export function markTutorialSeen(): void {
   try {
     localStorage.setItem(SEEN_KEY, 'visto')
   } catch {
@@ -182,7 +183,7 @@ export function openTutorial(opts: TutorialOptions): HTMLDialogElement {
     ev.preventDefault()
   })
   dialog.addEventListener('close', () => {
-    markSeen()
+    markTutorialSeen()
     video.pause()
     dialog.remove()
     if (!toShortcuts) opts.onClose?.()

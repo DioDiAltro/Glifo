@@ -148,7 +148,7 @@ function aiFieldset(initial: Settings, deps: SettingsDialogDeps): HTMLElement {
           : service.id === 'openrouter'
             ? h('p', { class: 'field-help' }, 'Con una chiave sola tanti modelli, anche aperti (Qwen, Gemma…): creala su ', link(service.keyUrl!, 'openrouter.ai'), '. «openrouter/free» sceglie ogni volta un modello gratuito. La chiave resta in questo browser e la domanda va direttamente a OpenRouter.')
             : service.id === 'ollama'
-              ? h('p', { class: 'field-help' }, 'I modelli aperti sul tuo computer, gratis e senza internet: installa ', link('https://ollama.com', 'Ollama'), ', scarica un modello (per esempio «ollama pull qwen3») e avvialo permettendo le richieste da Glifo: OLLAMA_ORIGINS=https://diodialtro.github.io ollama serve. La domanda non esce dal computer.')
+              ? h('p', { class: 'field-help' }, 'I modelli aperti sul tuo computer, gratis e senza internet: installa ', link('https://ollama.com', 'Ollama'), `, scarica un modello (per esempio «ollama pull qwen3») e avvialo permettendo le richieste da Glifo: OLLAMA_ORIGINS=${location.origin} ollama serve. La domanda non esce dal computer.`)
               : h('p', { class: 'field-help' }, 'Un servizio che parla la «lingua» di OpenAI (OpenAI, Mistral, Groq, DeepSeek, LM Studio…): scrivi l\'indirizzo della sua API, il modello e, se serve, la chiave. La chiave resta in questo browser e la domanda va direttamente a quel servizio.')
     const proxy = anthropic
       ? h(

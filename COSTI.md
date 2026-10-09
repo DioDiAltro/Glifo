@@ -8,10 +8,11 @@ quando servirebbe e come si fa intanto senza spendere.
 I prezzi cambiano: prima di attivare una voce si ricontrollano. Quelli scritti qui sono del 5
 ottobre 2026 (i piani, i prezzi per chi usa Glifo e il resto sono in [ABBONAMENTI.md](ABBONAMENTI.md)).
 
-## Oggi: tutto gratis
+## Oggi: tutto gratis, tranne il dominio
 
 | Cosa | Piano | Da tenere d'occhio |
 |---|---|---|
+| Il dominio `glifo.page`, su Cloudflare (dal 9 ottobre 2026, vedi «Attivato») | circa 10 $ l'anno | il rinnovo è automatico: la carta salvata su Cloudflare deve restare valida |
 | Il sito, su GitHub Pages | gratis | non si può usare per un servizio a pagamento: si passa a Cloudflare Pages (trasloco deciso l'8 ottobre 2026, vedi ROADMAP.md) |
 | Account e note, su Supabase | gratuito | 500 MB di database e 50.000 utenti attivi al mese; va in pausa dopo 7 giorni con poco uso |
 | Accesso con Google | gratis | |
@@ -30,7 +31,6 @@ ottobre 2026 (i piani, i prezzi per chi usa Glifo e il resto sono in [ABBONAMENT
 
 | Cosa | Quanto | Quando servirebbe | Intanto, gratis |
 |---|---|---|---|
-| **Dominio** tutto di Glifo (deciso dallo studente l'8 ottobre 2026: non `seznet.net`) | 10-20 € l'anno, su Cloudflare a prezzo di costo (il rinnovo costa come il primo anno) | per il trasloco del sito, prima di aprire l'account a tutti | — |
 | **Supabase Pro** | 25 $ al mese | con utenti che pagano: niente pausa e i backup | il piano gratuito |
 | **Cloudflare Workers a pagamento** | 5 $ al mese, più 0,011 $ ogni 1.000 «neuroni» oltre i 10.000 gratis al giorno | quando il modello piccolo deve servire tanta gente | i 10.000 neuroni gratis al giorno |
 | **L'AI di Glifo** (la chiave sul server) | a consumo, per milione di token (ingresso / uscita): Haiku 4.5 1 $ / 5 $, Sonnet 5.5 2 $ / 10 $, Opus 5.5 4 $ / 20 $; si caricano crediti in anticipo e si mette un tetto di spesa al mese | con i piani a pagamento | la propria chiave, anche quella gratuita di Gemini |
@@ -46,4 +46,10 @@ Ogni volta si scrive qui la data e cosa è stato attivato.
 
 ## Attivato
 
-Ancora niente.
+- **9 ottobre 2026: il dominio `glifo.page`.** Lo ha comprato lo studente su Cloudflare Registrar, a
+  prezzo di costo: circa 10 $ l'anno, e il rinnovo costa uguale (il prezzo esatto è nella ricevuta di
+  Cloudflare). Il rinnovo automatico è acceso. È nell'account Cloudflare dove c'è già `glifo-prova`; il
+  titolare è lo studente, con l'email dell'account Google di Glifo, creato apposta così la sua email
+  personale resta privata. Serve per il trasloco del sito (ROADMAP.md, «Trasloco») e per l'email
+  `privacy@glifo.page`. Il nome resta Glifo (deciso l'8 ottobre 2026): `glifo.app` e `glifo.net`
+  erano già presi.

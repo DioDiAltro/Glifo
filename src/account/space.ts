@@ -54,7 +54,7 @@ export function forgetAccount(userId: string): void {
  * La nota di benvenuto mai toccata: non è un appunto da portare nell'account. Anche quella
  * di una versione precedente di Glifo, con un testo un po' diverso.
  */
-function isWelcome(note: Note, welcome: string): boolean {
+export function isWelcome(note: Note, welcome: string): boolean {
   const title = welcome.split('\n', 1)[0]
   return note.content === welcome || (note.content.startsWith(title + '\n') && note.updatedAt === note.createdAt)
 }

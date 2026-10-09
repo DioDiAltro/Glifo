@@ -46,6 +46,8 @@ Cose da sapere:
 - Per spostarli o tenerli al sicuro puoi anche usare **Salva .md** (pure dentro una cartella
   di OneDrive, Google Drive o iCloud) e **Apri .md** sull'altro dispositivo. In *Impostazioni*
   c'è anche **Scarica backup**, con tutti gli appunti (e le loro lavagne) in un solo file.
+  **Ripristina backup** lo rilegge senza doppioni: gli appunti che ci sono già restano come sono, e
+  le lavagne tornano sulle loro note (anche su quelle arrivate con l'account).
   **Apri .md** apre anche i file di Excel (.xlsx) e .csv: diventano note con le tabelle.
 - Puoi tenere Glifo aperto in più schede, o nell'app installata e nel browser insieme: si
   aggiornano a vicenda e nessuna cancella gli appunti scritti nelle altre.
@@ -852,16 +854,27 @@ Per `npm run test:e2e` serve Chromium: `npx playwright-core install chromium`
 
 ## Come viene pubblicata
 
-Il sito online è su **GitHub Pages** e si aggiorna da solo: ogni volta che cambia il branch
-principale del repository, l'automazione `.github/workflows/deploy.yml` esegue i test,
-compila l'app (`npm run build`) e copia la cartella `dist/` nel branch `gh-pages`, che è
-quello pubblicato da GitHub Pages. Si può anche rilanciare a mano dalla scheda *Actions*.
+Il sito online è su **GitHub Pages** e, dal trasloco del 18 ottobre 2026, su **Cloudflare Pages**
+con un dominio tutto suo, **glifo.page** (vedi «Trasloco» in [ROADMAP.md](ROADMAP.md)). Si
+aggiornano da soli ogni volta che cambia il branch principale del repository: l'automazione
+`.github/workflows/deploy.yml` esegue i test, compila l'app (`npm run build`) e copia la cartella
+`dist/` nel branch `gh-pages`, che è quello pubblicato da GitHub Pages (si può anche rilanciare a
+mano dalla scheda *Actions*); Cloudflare costruisce lo stesso ramo da solo, con lo stesso comando e
+la stessa cartella.
 
 `dist/` è un normale sito statico, quindi funziona anche su altri hosting gratuiti come
-**Netlify** (comando di build `npm run build`, cartella `dist`). Su **Cloudflare Pages** c'è il
-sito di prova (`glifo-prova.pages.dev`, dal ramo `prova`, stesso comando e stessa cartella): lì la
-build, che Cloudflare segna con `CF_PAGES`, è senza service worker e con l'account spento, come
-quella per claude.ai (vedi `vite.config.ts` e `src/site.ts`).
+**Netlify** (comando di build `npm run build`, cartella `dist`). Su Cloudflare Pages c'è anche il
+sito di prova (`glifo-prova.pages.dev`, dal ramo `prova`): lì la build è senza service worker e con
+l'account spento, come quella per claude.ai. Lo decide `vite.config.ts`: su Cloudflare, dove la
+build ha `CF_PAGES` e il ramo in `CF_PAGES_BRANCH`, è il sito vero solo il ramo principale (vedi
+anche `src/site.ts`).
+
+Il trasloco (`src/relocation.ts` e `src/ui/relocation.ts`): sul vecchio indirizzo, dal giorno
+dell'avviso, una fascia in cima e, dal giorno del trasloco, una pagina a tutto schermo con «Porta i
+miei appunti nel nuovo Glifo» (il vecchio sito apre glifo.page e gli passa note, cartelle,
+dizionario, lavagne e gli account del browser, mai l'accesso né le chiavi dell'AI) e «Scarica il
+backup», da riaprire su glifo.page con «Ripristina backup». La prova nel browser, con i due
+indirizzi veri, è `node scripts/relocation-test.mjs`.
 
 ## Assistente AI
 
@@ -882,7 +895,8 @@ del servizio che scegli in **Impostazioni → Assistente AI**:
   come Qwen e Gemma; `openrouter/free` sceglie ogni volta un modello gratuito.
 - **Ollama**, i modelli aperti **sul tuo computer**, gratis e senza internet: installa
   <https://ollama.com>, scarica un modello (`ollama pull qwen3`) e avvialo permettendo le
-  richieste da Glifo: `OLLAMA_ORIGINS=https://diodialtro.github.io ollama serve`.
+  richieste da Glifo: `OLLAMA_ORIGINS=https://glifo.page ollama serve` (con l'indirizzo da cui
+  apri Glifo: le impostazioni lo scrivono già giusto).
 - **Un altro servizio compatibile con OpenAI** (OpenAI, Mistral, Groq, DeepSeek, LM Studio…):
   l'indirizzo della sua API, il modello e, se serve, la chiave.
 

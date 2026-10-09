@@ -43,6 +43,9 @@ prossimi passi sono in «In programma» nella ROADMAP.
   file, `*.hf.co`); senza scheda grafica Chromium usa WebGPU sulla CPU (SwiftShader): va bene per
   vedere se passaggi e strumenti funzionano, non per la velocità. `MODELLO=Qwen3-1.7B` per un altro
   modello; scrive le domande, le risposte del modello e i passaggi con i segni di Glifo.
+- `node scripts/relocation-test.mjs`: prova il trasloco su glifo.page con i due indirizzi veri
+  (vecchio sito → nuovo): fa da sé una build con le date del trasloco accese e serve `CHROMIUM_PATH`;
+  con `FOTO=cartella` salva le foto della fascia, della pagina finale e del messaggio sul sito nuovo.
 - `node scripts/icons.mjs`: ridisegna `public/favicon.svg` e le icone PNG dell'app dal simbolo
   ∮ in `src/ui/logo.ts` (serve `CHROMIUM_PATH`). Va rifatto ogni volta che cambia il simbolo.
 - `graphify update .`: rifà il grafo del codice in `graphify-out/` (in locale, senza modelli AI).
@@ -82,6 +85,8 @@ documentazione, non codice: la regola di delegare all'esploratore vale per il co
 - `src/host.ts`: funzioni della demo dentro claude.ai.
 - `src/account/`: account e sincronizzazione con Supabase.
 - `src/share/`: le note condivise con un link (`nota.html#codice`).
+- `src/relocation.ts` e `src/ui/relocation.ts`: il trasloco su glifo.page (avviso e pagina finale sul
+  vecchio sito, «Porta i miei appunti nel nuovo Glifo»).
 - `privacy.html` e `nota.html`: l'informativa sulla privacy e la pagina delle note condivise.
 - `supabase/`: il database degli account: migrazioni, regole di accesso e test.
 
@@ -112,12 +117,13 @@ documentazione, non codice: la regola di delegare all'esploratore vale per il co
 
 Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui quando sono fatte):
 
-- Comprare il dominio di Glifo su Cloudflare e dire il nome a Claude: l'8 ottobre 2026 ha deciso
-  un dominio tutto suo (non `seznet.net`), per non cambiare più indirizzo. Da lì partono il
-  trasloco del sito («Trasloco» in ROADMAP.md, con le date) e l'email di contatto per
-  l'informativa (`privacy@` del dominio). Poi, aggiornata l'informativa, premere «Publish app»
-  nella Google Auth Platform (Audience) per aprire a tutti l'accesso con Google (passo 4 di
-  ROADMAP.md).
+- Il dominio `glifo.page` (comprato il 9 ottobre 2026 su Cloudflare): confermare l'email di
+  verifica che Cloudflare ha mandato al Gmail di Glifo (se no dopo circa 15 giorni il dominio viene
+  sospeso), controllare in «Manage Domains» che il rinnovo automatico sia acceso e cambiare l'email
+  di accesso a Cloudflare con quella di Glifo (Profile → «Change Email Address»). Poi i suoi passi
+  del trasloco («Trasloco» in ROADMAP.md, passo 3, con le date). Infine, aggiornata l'informativa,
+  premere «Publish app» nella Google Auth Platform (Audience) per aprire a tutti l'accesso con
+  Google (passo 4 di ROADMAP.md).
 - Riparlare della condivisione: le cartelle condivise con persone scelte e i loro permessi (come
   nella finestra «Condividi» di NotebookLM) e lo scrivere insieme senza conflitti. Il 4 ottobre
   2026, fatto il link, lo studente ha chiesto di tenerlo per dopo e di sistemare prima la

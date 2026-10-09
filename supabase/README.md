@@ -166,6 +166,20 @@ L'email per entrare:
 - **Il codice di 6 cifre** arriva se i modelli «Magic Link» e «Confirm signup» contengono
   `{{ .Token }}` (quindi con un SMTP proprio): Glifo lo accetta già.
 
+### Il trasloco su glifo.page (ottobre 2026)
+
+Dal 18 ottobre 2026 Glifo è su `https://glifo.page/` (ROADMAP.md, «Trasloco»). L'accesso torna
+sempre alla pagina da cui parte (`appUrl` in `src/account/supabase.ts`), quindi Supabase deve
+accettare anche il nuovo indirizzo:
+
+- **Redirect URLs** (Authentication → URL Configuration): `https://glifo.page/**`, da aggiungere
+  prima che qualcuno entri da glifo.page;
+- **Site URL**: `https://glifo.page/` dal giorno del trasloco (fino ad allora resta quello di
+  GitHub Pages);
+- in Google, nel client web (vedi sotto), *Authorized JavaScript origins* anche
+  `https://glifo.page`, e in **Branding** il dominio `glifo.page` tra gli *Authorized domains*.
+  Il *redirect URI* resta quello di Supabase.
+
 ### Accesso con Google
 
 Attivo dal 2 ottobre 2026. Glifo chiama `signInWithOAuth({ provider: 'google' })` e torna con

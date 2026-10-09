@@ -3,6 +3,7 @@ import '../styles/app.css'
 import { accountSpace, currentAccount } from '../account/space'
 import { hydrateGraphs } from '../graph/preview'
 import { renderMarkdown } from '../render/markdown'
+import { NEW_ORIGIN, relocationPhase } from '../relocation'
 import { hydrateSchemas } from '../schema/preview'
 import { NotesStore } from '../store/notes'
 import { loadSettings } from '../store/settings'
@@ -18,6 +19,10 @@ import { readSharedNote, ShareReadError, snapshotWhen, tokenFromHash, type Share
  * anche senza account, e «Salva una copia» se chi l'ha condivisa lo consente. La nota è di
  * un'altra persona: il Markdown passa dalla pulizia più severa (renderMarkdown con `untrusted`).
  */
+
+// Dal giorno del trasloco il vecchio indirizzo manda i link al nuovo: la nota è la stessa, perché sta
+// nell'account di chi l'ha condivisa (src/relocation.ts).
+if (relocationPhase(location.origin, new Date()) === 'moved') location.replace(`${NEW_ORIGIN}/nota.html${location.hash}`)
 
 const settings = loadSettings()
 const systemDark = window.matchMedia('(prefers-color-scheme: dark)')
