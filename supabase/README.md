@@ -178,7 +178,8 @@ L'email per entrare:
   tutte le lunghezze che Supabase permette, e lo controlla con
   `verifyOtp({ email, token, type: 'email' })`.
 
-I modelli in italiano (Authentication → Emails → Templates). Le email predefinite sono in
+I modelli in italiano (Authentication → Emails → Templates), messi dallo studente il 9 ottobre
+2026: l'email arriva in italiano con il codice. Le email predefinite sono in
 inglese («Confirm your email address»): si sostituiscono oggetto e testo di **Confirm signup**
 (chi entra per la prima volta) e di **Magic Link** (chi ha già l'account). Oggetto di tutti e
 due: `Il tuo accesso a Glifo`. Testo di **Magic Link**:

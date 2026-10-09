@@ -151,9 +151,8 @@ Perché non gli altri:
 3. **Accesso e sincronizzazione**, fatto (in prova):
    - si entra con il link dell'email, aperto in questo browser o incollato nella finestra di
      Glifo (o con il codice, se l'email lo contiene), e le note di ogni account stanno in uno
-     spazio a parte del browser. Con Resend (dal 9 ottobre 2026) i modelli dell'email si possono
-     cambiare: il testo in italiano, con il link e il codice, è in
-     [supabase/README.md](supabase/README.md) (vedi il passo 4);
+     spazio a parte del browser. Dal 9 ottobre 2026 l'email (con Resend) è in italiano e ha il
+     link e il codice: il testo è in [supabase/README.md](supabase/README.md) (vedi il passo 4);
    - con la rete Glifo manda e scarica le modifiche da solo: all'avvio, tornando su Glifo,
      quando torna la rete, poco dopo ogni modifica e ogni minuto. Senza rete funziona come
      prima;
@@ -204,9 +203,9 @@ Perché non gli altri:
    - fatto (9 ottobre 2026): il servizio di posta nostro, Resend (gratis: 100 email al giorno e
      3.000 al mese), collegato a Supabase dalle impostazioni di Resend (vedi
      [supabase/README.md](supabase/README.md), «L'email per entrare»). Le email partono da
-     «Glifo» `accesso@glifo.page` e arrivano a tutti, con il codice oltre al link (comodo per
-     leggere l'email sul telefono e scrivere il codice sul computer) quando i modelli in italiano
-     sono in Supabase. Resta da fare: cambiare l'email dell'account.
+     «Glifo» `accesso@glifo.page` e arrivano a tutti, in italiano e con il codice oltre al link
+     (comodo per leggere l'email sul telefono e scrivere il codice sul computer): i modelli li ha
+     messi in Supabase lo studente, lo stesso giorno. Resta da fare: cambiare l'email dell'account.
 5. **Condivisione:**
    - fatto (4 ottobre 2026): **il link a una nota, come in Gemini**. «Condividi» →
      «Chiunque abbia il link»: chi apre il link, anche senza account, vede una fotografia della
