@@ -49,14 +49,13 @@ tutto suo, poi, chi ospita il sito si può cambiare senza che nessuno se ne acco
    - sul vecchio sito la fascia con la data e i pulsanti; dal giorno del trasloco, da sola, la pagina a
      tutto schermo con le stesse cose e l'invito a reinstallare l'app; i link `nota.html#…` del
      vecchio indirizzo mandati a glifo.page;
-   - l'informativa (sito su Cloudflare, e il trasloco dentro il browser); il contatto `privacy@`
-     arriva con l'Email Routing;
+   - l'informativa (sito su Cloudflare, e il trasloco dentro il browser) e, dal 9 ottobre, il
+     contatto `privacy@glifo.page`;
    - le foto della fascia (anche sul telefono), della pagina finale e del messaggio sul sito nuovo,
      dalla prova nel browser con i due indirizzi veri (`scripts/relocation-test.mjs`).
 
    **L'avviso è spento** (`NOTICE_DAY = null` in `src/relocation.ts`) finché glifo.page non funziona,
-   account compreso: poi Claude mette la data, e insieme l'indirizzo nel README e `privacy@glifo.page`
-   nell'informativa;
+   account compreso: poi Claude mette la data, e insieme l'indirizzo nel README;
 3. lo studente, in quest'ordine (i passi sono anche in supabase/README.md, «Il trasloco su glifo.page»):
    1. **il sito**: Cloudflare → «Workers & Pages» → «Create» → «Pages» → «Import an existing Git
       repository» → GitHub, repository `DioDiAltro/Glifo` → Project name `glifo`, Production branch
@@ -65,9 +64,10 @@ tutto suo, poi, chi ospita il sito si può cambiare senza che nessuno se ne acco
       «Branch control»: Preview branch «None». Poi «Custom domains» → «Set up a custom domain» →
       `glifo.page` → «Activate domain» (il record DNS lo mette Cloudflare). Niente `www.glifo.page`
       per ora: sarebbe un altro indirizzo, con gli appunti a parte;
-   2. **l'email**: nel dominio `glifo.page` → «Email» → «Email Routing»: come destinazione il Gmail di
-      Glifo (si conferma dall'email che arriva), poi l'indirizzo `privacy@glifo.page` che manda lì, e
-      «Add records and enable»;
+   2. **fatto il 9 ottobre 2026: l'email.** `privacy@glifo.page` arriva al Gmail di Glifo (Email
+      Routing di Cloudflare, gratis: nella pagina nuova «Onboard Domain» → `glifo.page`, poi
+      «Destination addresses» con il Gmail di Glifo e «Routing Rules» → «Create routing rule» con
+      `privacy`). Riceve soltanto: rispondendo da Gmail, si risponde dal Gmail;
    3. **Supabase**: Authentication → URL Configuration → «Redirect URLs» → `https://glifo.page/**`;
    4. **Google** (progetto «Glifo»): nel client web, *Authorized JavaScript origins* anche
       `https://glifo.page`; in **Branding**, *Authorized domains* anche `glifo.page`;
@@ -166,9 +166,9 @@ Perché non gli altri:
      nel browser con un Supabase finto (`scripts/fake-supabase.mjs`).
 4. **Aprire l'account a tutti** (il prossimo, gratis). **In attesa** dal 2 ottobre 2026: si
    riprende con il trasloco su `glifo.page` (vedi «Trasloco»). Come si riprende:
-   1. fatto il 9 ottobre 2026: il dominio `glifo.page`. L'email di contatto per l'informativa sarà
-      `privacy@glifo.page` (Email Routing di Cloudflare, gratis); resta da dire chi è il titolare;
-   2. Claude aggiorna l'informativa (titolare e contatto) e rivede i limiti di spazio: oggi
+   1. fatto il 9 ottobre 2026: il dominio `glifo.page`, e l'email di contatto `privacy@glifo.page`
+      (Email Routing di Cloudflare, gratis), già nell'informativa; resta da dire chi è il titolare;
+   2. Claude aggiorna l'informativa (il titolare; il contatto c'è già) e rivede i limiti di spazio: oggi
       20 MB di note per account, ma il database gratuito ha 500 MB in tutto;
    3. lo studente preme «Publish app» (Google Auth Platform → Audience): da lì entra con
       Google chiunque, non solo i «Test users».
@@ -186,8 +186,7 @@ Perché non gli altri:
      dall'account e dalle impostazioni), «Scarica i miei dati» (tutto l'account in un file
      che «Ripristina backup» rilegge) ed «Elimina account» (funzione `delete_account` nel
      database: con l'utente spariscono note, cartelle, impostazioni e sessioni). Come
-     titolare per ora c'è «DioDiAltro». Manca l'indirizzo email di contatto, da aggiungere
-     prima di aprire a tutti;
+     titolare per ora c'è «DioDiAltro». Il contatto è `privacy@glifo.page` (9 ottobre 2026);
    - deciso l'8 ottobre 2026: niente `seznet.net` (il dominio di S&Z, che lo studente ha con
      un amico): Glifo avrà un dominio tutto suo (vedi «Trasloco»). Resta da decidere chi è il
      titolare nell'informativa e chi incassa: S&Z, se è una società (oppure lo studente e
