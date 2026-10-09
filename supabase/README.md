@@ -195,6 +195,29 @@ due: `Il tuo accesso a Glifo`. Testo di **Magic Link**:
 
 Per **Confirm signup** lo stesso testo, con il titolo `<h2>Ti diamo il benvenuto in Glifo</h2>`.
 
+### Il controllo anti-robot (CAPTCHA, ottobre 2026)
+
+Con l'email aperta a tutti, chiunque potrebbe usare la finestra «Accedi» per farci mandare email a
+raffica e finire le 100 al giorno di Resend. Per questo Supabase manda l'email solo con un token di
+Cloudflare Turnstile (gratis):
+
+- **Il widget** «Glifo» è in Cloudflare → Turnstile (lo stesso account di `glifo.page`), creato
+  dallo studente il 9 ottobre 2026: hostname `glifo.page` e `diodialtro.github.io`, modalità
+  Managed, senza pre-clearance. Se Glifo cambia indirizzo, il nuovo dominio va aggiunto lì.
+- **La chiave del sito** (pubblica) è in `src/account/config.ts`. **La chiave segreta** è solo in
+  Supabase: Authentication → Attack Protection (Bot and Abuse Protection) → Enable CAPTCHA
+  protection → Turnstile. Mai nel codice né nei messaggi.
+- **Glifo** (`src/account/captcha.ts`): premendo «Mandami l'email» (o «Mandamene un'altra») scarica
+  lo script di Cloudflare e chiede un token, buono per una sola email, e lo passa a
+  `signInWithOtp` come `captchaToken`. Il riquadro (`appearance: 'interaction-only'`) compare solo
+  se Cloudflare chiede di cliccare. Chi entra con Google non scarica niente: Supabase controlla il
+  token solo su `/otp`, non su Google, sul codice né sul link.
+- **L'ordine**: il CAPTCHA si accende in Supabase solo quando la versione di Glifo che manda il token
+  è online, altrimenti l'accesso con l'email si ferma (l'errore è `captcha_failed`: Glifo dice che il
+  controllo non è andato e propone Google). Per spegnerlo basta togliere la spunta.
+- **Nelle prove nel browser** il Supabase finto (`scripts/fake-supabase.mjs`) vuole il token come
+  quello vero, e al posto dello script di Cloudflare c'è un Turnstile finto.
+
 ### Il trasloco su glifo.page (ottobre 2026)
 
 Dal 18 ottobre 2026 Glifo è su `https://glifo.page/` (ROADMAP.md, «Trasloco»). L'accesso torna

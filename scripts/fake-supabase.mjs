@@ -3,7 +3,8 @@
  * link dell'ultima email (aperto o incollato) e Google (la «pagina di Google» riporta subito
  * a Glifo con l'account scelto con setGoogle); la sincronizzazione invece è quella vera:
  * sync_pull, sync_push e le note condivise con un link girano sulle migrazioni di
- * supabase/migrations, in un Postgres in memoria (PGlite).
+ * supabase/migrations, in un Postgres in memoria (PGlite). Come Supabase con il CAPTCHA acceso,
+ * l'email parte solo con il token del controllo anti-robot, che dà un Turnstile finto.
  */
 import { randomBytes } from 'node:crypto'
 import { readdirSync, readFileSync } from 'node:fs'
@@ -14,6 +15,24 @@ export const SUPABASE_URL = 'https://fgsuonetdmcgojbvrsxi.supabase.co'
 export const CODE = '123456'
 const LINK_CODE = 'codice-del-link'
 export const GOOGLE_CODE = 'codice-di-google'
+export const CAPTCHA_TOKEN = 'token-di-turnstile'
+
+/**
+ * Il Turnstile finto, al posto dello script di Cloudflare: dà subito il token. Con
+ * `window.__turnstileMode` la pagina sceglie un errore di Cloudflare ('errore') o un token che
+ * Supabase rifiuta ('sbagliato'); in `window.__turnstile` restano le opzioni, per i controlli.
+ */
+const FAKE_TURNSTILE = `window.turnstile = {
+  render(host, options) {
+    window.__turnstile = { ...options, host: host.className }
+    const mode = window.__turnstileMode
+    setTimeout(() => (mode === 'errore' ? options['error-callback']('110200') : options.callback(mode === 'sbagliato' ? 'token-sbagliato' : ${JSON.stringify(CAPTCHA_TOKEN)})), 50)
+    return 'widget-finto'
+  },
+  remove(id) {
+    window.__turnstileRemoved = [...(window.__turnstileRemoved || []), id]
+  },
+}`
 
 const b64 = (value) => Buffer.from(JSON.stringify(value)).toString('base64url')
 
@@ -149,7 +168,10 @@ export async function createFakeSupabase() {
       })
     }
     if (path === '/auth/v1/otp') {
-      lastLogin = { email: body.email, redirectTo: url.searchParams.get('redirect_to'), tokenHash: `pkce_${randomBytes(28).toString('hex')}` }
+      if (body.gotrue_meta_security?.captcha_token !== CAPTCHA_TOKEN) {
+        return reply(400, { code: 400, error_code: 'captcha_failed', msg: 'captcha protection: request disallowed (invalid-input-response)' })
+      }
+      lastLogin ={ email: body.email, redirectTo: url.searchParams.get('redirect_to'), tokenHash: `pkce_${randomBytes(28).toString('hex')}` }
       return reply(200, {})
     }
     if (path === '/auth/v1/verify') {
@@ -249,8 +271,13 @@ export async function createFakeSupabase() {
   }
 
   return {
-    /** Collega il Supabase finto a un contesto del browser (un «dispositivo»). */
-    attach: (context) => context.route(`${SUPABASE_URL}/**`, handle),
+    /** Collega il Supabase finto, e il Turnstile finto, a un contesto del browser (un «dispositivo»). */
+    async attach(context) {
+      await context.route(`${SUPABASE_URL}/**`, handle)
+      await context.route('https://challenges.cloudflare.com/**', (route) =>
+        route.fulfill({ status: 200, headers: { 'content-type': 'text/javascript' }, body: FAKE_TURNSTILE }),
+      )
+    },
     /** Il link com'è scritto nell'ultima email (da copiare e incollare in Glifo). */
     emailLink() {
       const link = new URL(`${SUPABASE_URL}/auth/v1/verify`)

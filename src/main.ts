@@ -55,6 +55,7 @@ import {
   knowsAccount,
   setCurrentAccount,
 } from './account/space'
+import { captchaToken } from './account/captcha'
 import { accountDataFile } from './account/export'
 import {
   currentSession,
@@ -1467,6 +1468,11 @@ function dropStarter(): void {
   loadNote(store.list()[0].id, false)
 }
 
+/** L'email per entrare parte con il token del controllo anti-robot (Turnstile, nella finestra). */
+async function sendCodeChecked(email: string, captcha: HTMLElement): Promise<void> {
+  await sendCode(email, await captchaToken(captcha, isDark() ? 'dark' : 'light'))
+}
+
 function openAccount(): void {
   if (accountOff) {
     // La finestra si vede com'è sul sito, ma non si entra.
@@ -1475,7 +1481,7 @@ function openAccount(): void {
     return
   }
   if (!account || !sync) {
-    openLoginDialog({ sendCode, verifyCode, withGoogle: startGoogleSignIn, onSignedIn: (user) => completeSignIn(user) })
+    openLoginDialog({ sendCode: sendCodeChecked, verifyCode, withGoogle: startGoogleSignIn, onSignedIn: (user) => completeSignIn(user) })
     return
   }
   openAccountDialog({
@@ -1500,7 +1506,7 @@ function openAccount(): void {
       openLoginDialog({
         email: account.email,
         lockEmail: true,
-        sendCode,
+        sendCode: sendCodeChecked,
         verifyCode,
         withGoogle: startGoogleSignIn,
         onSignedIn: (user) => completeSignIn(user),

@@ -446,6 +446,8 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   `supabase.ts` fa l'accesso con Google o via email (il link aperto qui o incollato, o il
   codice) e controlla che l'accesso salvato nel browser sia dell'account aperto prima di
   sincronizzare, scaricare o eliminare. Il client di Supabase si carica solo se si accede.
+  `captcha.ts` chiede a Cloudflare Turnstile il token anti-robot prima dell'email (lo script si
+  scarica solo allora; la chiave del sito è in `config.ts`, nelle prove nel browser Turnstile è finto).
   Nella build per claude.ai (`GLIFO_NO_PWA=1`), dentro claude.ai (`inClaudeViewer`) e sul sito di
   prova su Cloudflare Pages l'account è spento (`accountOff` in main.ts): quale Glifo si costruisce lo
   decide vite.config.ts (su Cloudflare, dove la build ha `CF_PAGES`, è il sito vero solo il ramo

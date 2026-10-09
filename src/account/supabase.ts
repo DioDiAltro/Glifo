@@ -31,7 +31,7 @@ export function supabase(): Promise<SupabaseClient> {
 /** Un problema con l'accesso, con il messaggio da mostrare. */
 export class AccountError extends Error {
   constructor(
-    readonly kind: 'offline' | 'rate' | 'code' | 'input' | 'email' | 'closed' | 'other',
+    readonly kind: 'offline' | 'rate' | 'code' | 'input' | 'email' | 'closed' | 'captcha' | 'other',
     message: string,
   ) {
     super(message)
@@ -45,8 +45,12 @@ const MESSAGES: Record<AccountError['kind'], string> = {
   input: 'Incolla qui il link che trovi nell\'email, oppure scrivi il codice se c\'è.',
   email: 'Controlla l\'indirizzo email: sembra sbagliato.',
   closed: 'A questo indirizzo per ora non possiamo mandare l\'email: entra con «Continua con Google».',
+  captcha: 'Il controllo anti-robot non è andato: riprova, oppure entra con «Continua con Google».',
   other: 'Non è stato possibile accedere. Riprova tra poco.',
 }
+
+/** Un errore dell'accesso di quel tipo, con il suo messaggio. */
+export const accountFailure = (kind: AccountError['kind']): AccountError => new AccountError(kind, MESSAGES[kind])
 
 /** Il messaggio da mostrare per un errore dell'accesso (esportata per i test). */
 export function accountError(error: AuthError | null | undefined): AccountError {
@@ -62,8 +66,10 @@ export function accountError(error: AuthError | null | undefined): AccountError 
             ? 'email'
             : code === 'email_address_not_authorized' || code === 'signup_disabled' || code === 'otp_disabled'
               ? 'closed'
-              : 'other'
-  return new AccountError(kind, MESSAGES[kind])
+              : code === 'captcha_failed'
+                ? 'captcha'
+                : 'other'
+  return accountFailure(kind)
 }
 
 async function loadClient(): Promise<SupabaseClient> {
@@ -92,12 +98,15 @@ function appUrl(): string {
 }
 
 /**
- * Manda l'email per entrare (crea l'account se non c'è ancora). Con il servizio di posta di
- * Supabase l'email ha solo un link; il codice c'è se il modello dell'email contiene `{{ .Token }}`.
+ * Manda l'email per entrare (crea l'account se non c'è ancora), con il token del controllo
+ * anti-robot (`captcha.ts`): con il CAPTCHA acceso, Supabase senza token non la manda. Il codice
+ * c'è se il modello dell'email contiene `{{ .Token }}` (vedi supabase/README.md).
  */
-export async function sendCode(email: string): Promise<void> {
+export async function sendCode(email: string, captchaToken: string): Promise<void> {
   const sb = await loadClient()
-  const { error } = await withTimeout(sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo: appUrl() } }))
+  const { error } = await withTimeout(
+    sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo: appUrl(), captchaToken } }),
+  )
   if (error) throw accountError(error)
 }
 

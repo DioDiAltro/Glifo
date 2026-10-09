@@ -111,6 +111,9 @@ documentazione, non codice: la regola di delegare all'esploratore vale per il co
   non tiene mai il testo delle note (`where`).
 - Prima di sincronizzare, scaricare o eliminare, `src/account/supabase.ts` controlla che l'accesso
   salvato nel browser sia dell'account aperto.
+- L'email per entrare parte solo con il token di Cloudflare Turnstile (`src/account/captcha.ts`, il
+  CAPTCHA acceso in Supabase): nelle prove nel browser Turnstile è finto (`scripts/fake-supabase.mjs`),
+  e se Glifo cambia indirizzo il nuovo dominio va aggiunto al widget in Cloudflare.
 - WebLLM (6 MB) sta solo nel worker `src/ai/llmWorker.ts`: la pagina non lo importa mai, parla con il
   worker da `src/ai/local.ts`. Nelle prove nel browser il worker è finto (Qwen3 non si scarica).
 

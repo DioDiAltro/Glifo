@@ -104,7 +104,8 @@ const GOOGLE_G =
 export function openLoginDialog(opts: {
   email?: string
   lockEmail?: boolean
-  sendCode(email: string): Promise<void>
+  /** Manda l'email; il controllo anti-robot, se chiede di cliccare, compare in `captcha`. */
+  sendCode(email: string, captcha: HTMLElement): Promise<void>
   verifyCode(email: string, code: string): Promise<SignedIn>
   /** Va sulla pagina di Google (se non ci riesce, l'errore si mostra qui). */
   withGoogle(): Promise<void>
@@ -113,6 +114,8 @@ export function openLoginDialog(opts: {
   let email = opts.email ?? ''
   let cooldown = 0
   const error = h('p', { class: 'prompt-error', attrs: { role: 'alert', hidden: true } })
+  // Il posto del controllo anti-robot, nel passo che manda l'email.
+  const captcha = h('div', { class: 'login-captcha' })
   const body = h('div', { class: 'login' })
   const dialog = dialogShell('Accedi a Glifo', [body], 'dialog-login')
   dialog.addEventListener('close', () => clearInterval(cooldown))
@@ -159,7 +162,7 @@ export function openLoginDialog(opts: {
               return
             }
             busy(submit, 'Invio…')
-            opts.sendCode(value).then(
+            opts.sendCode(value, captcha).then(
               () => {
                 email = value
                 codeStep()
@@ -189,6 +192,7 @@ export function openLoginDialog(opts: {
         privacyLink(),
         '.',
       ),
+      captcha,
       h('div', { class: 'dialog-actions' }, cancel(), submit),
     )
     input.addEventListener('input', () => (error.hidden = true))
@@ -219,7 +223,7 @@ export function openLoginDialog(opts: {
     }, 1000)
     resend.addEventListener('click', () => {
       resend.disabled = true
-      opts.sendCode(email).then(
+      opts.sendCode(email, captcha).then(
         () => codeStep(),
         (err: unknown) => {
           showError(messageOf(err))
@@ -278,6 +282,7 @@ export function openLoginDialog(opts: {
               h('button', { class: 'link-button', attrs: { type: 'button' }, on: { click: () => emailStep() } }, 'Cambia indirizzo'),
             ],
       ),
+      captcha,
       h('div', { class: 'dialog-actions' }, cancel(), submit),
     )
     input.addEventListener('input', () => (error.hidden = true))

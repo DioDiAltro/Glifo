@@ -3292,6 +3292,16 @@ kbd {
   margin-top: 12px;
 }
 
+/* Il controllo anti-robot (Turnstile): compare solo se Cloudflare chiede di cliccare. */
+.login-captcha {
+  display: flex;
+  justify-content: center;
+}
+
+.login-captcha:empty {
+  display: none;
+}
+
 .google-logo {
   display: inline-flex;
 }

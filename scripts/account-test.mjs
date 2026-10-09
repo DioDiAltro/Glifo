@@ -220,6 +220,45 @@ try {
     `un commento solo per chi fa Glifo arriva ma non si vede; uno nascosto dalla dashboard sparisce dalla pagina (${JSON.stringify({ nameKept, privateRow, problemsAfter })})`,
   )
 
+  // Il controllo anti-robot (Turnstile, 9 ottobre 2026): prima dell'email Glifo chiede un token a
+  // Cloudflare (qui il Turnstile finto) e lo manda a Supabase, che senza token non manda l'email. Se
+  // Cloudflare non lo dà, o Supabase lo rifiuta, la finestra lo dice e propone Google.
+  await pc.page.locator('.account-button').click()
+  const guarded = pc.page.locator('dialog.dialog-login')
+  const refused = async (mode) => {
+    await pc.page.evaluate((m) => (window.__turnstileMode = m), mode)
+    await guarded.locator('input[type=email]').fill(EMAIL)
+    await guarded.locator('.prompt-error[hidden]').waitFor({ state: 'attached' })
+    await guarded.locator('button[type=submit]').click()
+    await guarded.locator('.prompt-error:not([hidden])').waitFor()
+    const submit = guarded.locator('button[type=submit]')
+    return { text: await guarded.locator('.prompt-error').innerText(), button: await submit.innerText(), enabled: await submit.isEnabled() }
+  }
+  const cloudflareSaysNo = await refused('errore')
+  const supabaseSaysNo = await refused('sbagliato')
+  await waitFor(pc.page, () => window.__turnstileRemoved?.length === 2)
+  const widget = await pc.page.evaluate(() => {
+    const { sitekey, appearance, language, theme, host } = window.__turnstile
+    return { sitekey, appearance, language, theme, host, removed: window.__turnstileRemoved }
+  })
+  await pc.page.evaluate(() => delete window.__turnstileMode)
+  await guarded.locator('button', { hasText: 'Annulla' }).click()
+  check(
+    [cloudflareSaysNo, supabaseSaysNo].every(
+      (r) => r.text.includes('controllo anti-robot') && r.text.includes('Continua con Google') && r.enabled && r.button === 'Mandami l\'email',
+    ),
+    `senza il token di Turnstile, o con uno che Supabase rifiuta, l'email non parte e la finestra propone Google (${JSON.stringify({ cloudflareSaysNo, supabaseSaysNo })})`,
+  )
+  check(
+    widget.sitekey === '0x4AAAAAAFSl9e5iFMxjVBro' &&
+      widget.appearance === 'interaction-only' &&
+      widget.language === 'it' &&
+      widget.theme === 'light' &&
+      widget.host === 'login-captcha' &&
+      widget.removed?.length === 2,
+    `Turnstile con la chiave del sito, solo se chiede di cliccare, in italiano, nel posto della finestra e tolto dopo ogni token (${JSON.stringify(widget)})`,
+  )
+
   // Codice sbagliato: si resta nella finestra, con un messaggio.
   await pc.page.locator('.account-button').click()
   const dialog = pc.page.locator('dialog.dialog-login')

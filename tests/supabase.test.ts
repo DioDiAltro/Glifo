@@ -15,6 +15,9 @@ describe('errori dell\'accesso', () => {
     // 2026 c'è Resend), si entra con Google, aperto a tutti anche con l'app Google in «Testing».
     expect(accountError(auth({ code: 'email_address_not_authorized' }))).toMatchObject({ kind: 'closed' })
     expect(accountError(auth({ code: 'email_address_not_authorized' })).message).toContain('entra con «Continua con Google»')
+    // Con il CAPTCHA acceso, un token di Turnstile mancante o rifiutato (vedi captcha.ts).
+    expect(accountError(auth({ code: 'captcha_failed' }))).toMatchObject({ kind: 'captcha' })
+    expect(accountError(auth({ code: 'captcha_failed' })).message).toContain('Continua con Google')
     expect(accountError(auth({ code: 'qualcosa_di_nuovo' }))).toMatchObject({ kind: 'other' })
   })
 })

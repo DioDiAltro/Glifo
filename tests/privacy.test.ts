@@ -12,5 +12,7 @@ describe('informativa sulla privacy', () => {
     // Dal 9 ottobre 2026 le manda Resend (accesso@glifo.page), non più la posta di prova di Supabase.
     expect(privacy).toContain('<strong>Resend</strong>')
     expect(privacy).not.toContain('email per entrare le manda Supabase')
+    // E prima dell'email il controllo anti-robot di Cloudflare (src/account/captcha.ts).
+    expect(privacy).toContain('<strong>Cloudflare Turnstile</strong>')
   })
 })

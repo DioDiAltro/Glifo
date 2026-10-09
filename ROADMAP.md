@@ -175,10 +175,10 @@ Perché non gli altri:
       chiedono solo nome, email e foto del profilo Google non usa l'elenco (vedi
       [supabase/README.md](supabase/README.md), «Accesso con Google»).
 
-   Fatto il 9 ottobre 2026: l'email per tutti, con Resend (qui sotto). Il prossimo è il CAPTCHA
-   (Cloudflare Turnstile): con l'email aperta a tutti, evita che il modulo di accesso venga usato
-   per mandare email a raffica. La condivisione (passo 5) non dipende dal dominio: si può
-   iniziare anche prima.
+   Fatto il 9 ottobre 2026: l'email per tutti, con Resend, e il CAPTCHA (Cloudflare Turnstile), che
+   con l'email aperta a tutti evita che il modulo di accesso venga usato per mandare email a
+   raffica (qui sotto). La condivisione (passo 5) non dipende dal dominio: si può iniziare anche
+   prima.
 
    Le singole parti:
    - fatto (2 ottobre 2026): accesso con Google, attivo («Continua con Google» nella finestra
@@ -195,11 +195,13 @@ Perché non gli altri:
      titolare nell'informativa e chi incassa: S&Z, se è una società (oppure lo studente e
      l'amico come contitolari, con un accordo scritto su chi risponde alle richieste), o lo
      studente da solo;
-   - il prossimo: CAPTCHA contro le iscrizioni automatiche e le email a raffica (Cloudflare
-     Turnstile, gratis: la chiave la crea lo studente in Cloudflare e la mette in Supabase, il
-     controllo nella finestra di accesso lo aggiunge Claude, prima che il CAPTCHA si accenda in
-     Supabase, altrimenti l'accesso con l'email si ferma); poi i limiti di spazio da rivedere
-     (oggi 20 MB di note per account);
+   - fatto (9 ottobre 2026): il CAPTCHA contro le iscrizioni automatiche e le email a raffica,
+     con Cloudflare Turnstile (gratis). Prima di mandare l'email Glifo chiede un token a Cloudflare
+     (`src/account/captcha.ts`: il riquadro compare solo se Cloudflare chiede di cliccare) e, con il
+     CAPTCHA acceso in Supabase, l'email parte solo con un token valido. Il widget l'ha creato lo
+     studente; la chiave segreta è solo in Supabase (vedi [supabase/README.md](supabase/README.md),
+     «Il controllo anti-robot»). Poi: i limiti di spazio da rivedere (oggi 20 MB di note per
+     account);
    - fatto (9 ottobre 2026): il servizio di posta nostro, Resend (gratis: 100 email al giorno e
      3.000 al mese), collegato a Supabase dalle impostazioni di Resend (vedi
      [supabase/README.md](supabase/README.md), «L'email per entrare»). Le email partono da
