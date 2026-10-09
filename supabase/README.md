@@ -202,8 +202,13 @@ Come è stato attivato (gratis, senza carta di credito), anche per rifarlo:
    - email di contatto.
 
    In **Branding** niente logo: il logo va fatto verificare da Google.
-3. In **Audience** l'app resta «Testing»: entrano solo gli indirizzi aggiunti tra i «Test
-   users» (fino a 100). Quando l'account si apre a tutti, «Publish app».
+3. In **Audience** l'app resta «Testing», ma con Google entra lo stesso chiunque: Glifo chiede
+   solo i permessi del punto 4 (nome, email e foto del profilo), e per le app così Google non usa
+   l'elenco dei «Test users», non mostra avvisi e l'accesso non scade dopo 7 giorni («Manage App
+   Audience» nella guida di Google Cloud). Lo studente lo ha provato il 9 ottobre 2026 con un
+   account che non era nell'elenco: «Publish app» non serve. Se un giorno Glifo chiedesse a Google
+   altri permessi (per esempio Drive), l'eccezione non varrebbe più: entrerebbero solo i «Test
+   users» fino a «Publish app» e alla verifica di Google.
 4. In **Data Access** → «Add or remove scopes»: `openid`, `.../auth/userinfo.email` e
    `.../auth/userinfo.profile`, come chiede la guida di Supabase.
 5. In **Clients** → «Create client», tipo «Web application»:

@@ -121,8 +121,8 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
 - Domenica 18 ottobre 2026, il giorno del trasloco su `glifo.page`: in Supabase (Authentication → URL
   Configuration) cambiare il **Site URL** in `https://glifo.page/` («Trasloco» in ROADMAP.md, passo 4).
   Da lunedì 12 il vecchio sito mostra l'avviso: lo studente può scrivere a chi usa Glifo come portare gli
-  appunti. Più avanti, decisi titolare e limiti di spazio, premere «Publish app» nella Google Auth
-  Platform (Audience) per aprire a tutti l'accesso con Google (passo 4 di «Account» in ROADMAP.md).
+  appunti. Più avanti, decidere chi è il titolare nell'informativa (passo 4 di «Account» in
+  ROADMAP.md): con Google l'account è già aperto a tutti, senza «Publish app».
 - Riparlare della condivisione: le cartelle condivise con persone scelte e i loro permessi (come
   nella finestra «Condividi» di NotebookLM) e lo scrivere insieme senza conflitti. Il 4 ottobre
   2026, fatto il link, lo studente ha chiesto di tenerlo per dopo e di sistemare prima la

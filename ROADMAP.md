@@ -86,10 +86,11 @@ avanti l'account servirà anche per l'abbonamento (vedi «Più avanti»).
 
 **Oggi:** l'account c'è, in prova. Si entra con Google o con un'email e gli appunti si
 sincronizzano tra i dispositivi (passi 1-3 e l'accesso con Google del passo 4). Una nota si
-condivide con un link, come in Gemini (il primo pezzo del passo 5). Per ora entrano
-in pochi: con Google gli indirizzi aggiunti tra i «Test users» dell'app Google (fino a 100),
-con l'email i membri del team Supabase. Chi non accede continua a usare Glifo come prima, con
-gli appunti nel browser.
+condivide con un link, come in Gemini (il primo pezzo del passo 5). Con Google entra già
+chiunque abbia un account Google, anche se l'app Google è ancora «Testing»: Glifo chiede solo
+nome, email e foto del profilo, e per questi Google non usa l'elenco dei «Test users» (lo
+studente lo ha provato il 9 ottobre 2026). Con l'email invece entrano solo i membri del team
+Supabase. Chi non accede continua a usare Glifo come prima, con gli appunti nel browser.
 
 **Servizio scelto: Supabase**, sul piano gratuito (progetto `glifo`, vedi
 [supabase/README.md](supabase/README.md)). Dà già pronti database (Postgres), login e
@@ -163,14 +164,17 @@ Perché non gli altri:
    - uscendo, le note dell'account vengono tolte dal browser;
    - i test usano le vere migrazioni in un Postgres in memoria (PGlite), anche nella prova
      nel browser con un Supabase finto (`scripts/fake-supabase.mjs`).
-4. **Aprire l'account a tutti** (il prossimo, gratis). **In attesa** dal 2 ottobre 2026: si
+4. **Aprire l'account a tutti** (il prossimo, gratis). Con Google è già aperto: entra chiunque
+   abbia un account Google (vedi «Oggi»). Il resto è **in attesa** dal 2 ottobre 2026: si
    riprende con il trasloco su `glifo.page` (vedi «Trasloco»). Come si riprende:
    1. fatto il 9 ottobre 2026: il dominio `glifo.page`, e l'email di contatto `privacy@glifo.page`
       (Email Routing di Cloudflare, gratis), già nell'informativa; resta da dire chi è il titolare;
    2. Claude aggiorna l'informativa (il titolare; il contatto c'è già) e rivede i limiti di spazio: oggi
       20 MB di note per account, ma il database gratuito ha 500 MB in tutto;
-   3. lo studente preme «Publish app» (Google Auth Platform → Audience): da lì entra con
-      Google chiunque, non solo i «Test users».
+   3. «Publish app» (Google Auth Platform → Audience) non serve: il 9 ottobre 2026 lo studente è
+      entrato con Google con un account che non era tra i «Test users», perché per le app che
+      chiedono solo nome, email e foto del profilo Google non usa l'elenco (vedi
+      [supabase/README.md](supabase/README.md), «Accesso con Google»).
 
    Dopo viene l'email per tutti: servizio di posta nostro e CAPTCHA insieme, con il dominio,
    quindi dopo il trasloco. La condivisione (passo 5) non dipende dal dominio: si può iniziare
@@ -179,8 +183,8 @@ Perché non gli altri:
    Le singole parti:
    - fatto (2 ottobre 2026): accesso con Google, attivo («Continua con Google» nella finestra
      di accesso; con la stessa email si ritrova lo stesso account). L'app Google è ancora
-     «Testing»: entrano solo gli indirizzi aggiunti come «Test users». Per aprirla a tutti,
-     «Publish app» (vedi [supabase/README.md](supabase/README.md), «Accesso con Google»);
+     «Testing», ma entra chiunque: Glifo chiede solo nome, email e foto del profilo (vedi
+     [supabase/README.md](supabase/README.md), «Accesso con Google»);
    - fatto: informativa sulla privacy (`privacy.html`, collegata dalla finestra di accesso,
      dall'account e dalle impostazioni), «Scarica i miei dati» (tutto l'account in un file
      che «Ripristina backup» rilegge) ed «Elimina account» (funzione `delete_account` nel
@@ -219,7 +223,7 @@ Perché non gli altri:
        le persone e per ognuna decide cosa può fare (per esempio solo leggere o anche
        modificare); in più «Chiunque abbia il link» e «Consenti copie», come per le note;
      - gli inviti con un link da mandare, perché senza un servizio di posta nostro Supabase
-       scrive solo al team; e per far entrare gli altri con Google serve «Publish app» (passo 4).
+       scrive solo al team (con Google invece entrano già tutti, vedi il passo 4).
    - **scrivere insieme senza conflitti** (messo da parte il 4 ottobre 2026, se ne riparla):
      lo studente vuole che due persone che scrivono nello stesso punto non vadano in conflitto.
      Due modi di lavorare insieme:
