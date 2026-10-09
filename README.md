@@ -59,8 +59,8 @@ Con l'account ritrovi gli stessi appunti, con cartelle, impostazioni e dizionari
 su computer, tablet e telefono. Si entra da **Accedi**, in fondo alla barra laterale, senza
 password: con **Continua con Google** oppure con un'email. Il link nell'email va aperto nel
 browser in cui si usa Glifo; se si aprirebbe altrove (per esempio nell'app di Gmail), si copia
-e si incolla nella finestra di Glifo. *Per ora è in prova: possono entrare solo gli indirizzi di
-chi sta provando Glifo.*
+e si incolla nella finestra di Glifo. *Per ora è in prova: con Google entra chiunque, mentre le
+email di accesso arrivano solo a chi sta provando Glifo.*
 
 - **Sincronizzazione automatica:** all'avvio, quando torni su Glifo, quando torna la rete e
   poco dopo ogni modifica. Il pallino sul pulsante dell'account dice com'è andata.

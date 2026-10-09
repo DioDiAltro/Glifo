@@ -44,7 +44,7 @@ const MESSAGES: Record<AccountError['kind'], string> = {
   code: 'Il link o il codice è sbagliato o scaduto: usa quello dell\'ultima email che hai ricevuto, oppure chiedine un\'altra.',
   input: 'Incolla qui il link che trovi nell\'email, oppure scrivi il codice se c\'è.',
   email: 'Controlla l\'indirizzo email: sembra sbagliato.',
-  closed: 'Per ora l\'accesso è aperto solo a chi sta provando Glifo: a questo indirizzo non possiamo scrivere.',
+  closed: 'Per ora le email di accesso arrivano solo a chi sta provando Glifo: entra con «Continua con Google».',
   other: 'Non è stato possibile accedere. Riprova tra poco.',
 }
 
