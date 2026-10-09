@@ -2,7 +2,8 @@
 
 Web app per prendere appunti universitari in Markdown con formule LaTeX (KaTeX) e un
 pannello che suggerisce i simboli. Sito statico (Vite + TypeScript, senza framework),
-installabile come app, pubblicato su GitHub Pages: non c'è un server.
+installabile come app, pubblicato su https://glifo.page (Cloudflare Pages) e, fino al trasloco del 18
+ottobre 2026, anche su GitHub Pages: non c'è un server.
 
 **Lo scopo** (spiegato dallo studente il 3 ottobre 2026): Glifo è prima di tutto un posto dove si
 scrive (appunti, esercizi, tesi, articoli). Calcoli e grafici servono a quello che si scrive: a
@@ -117,13 +118,11 @@ documentazione, non codice: la regola di delegare all'esploratore vale per il co
 
 Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui quando sono fatte):
 
-- Il dominio `glifo.page` (comprato il 9 ottobre 2026 su Cloudflare): confermare l'email di
-  verifica che Cloudflare ha mandato al Gmail di Glifo (se no dopo circa 15 giorni il dominio viene
-  sospeso), controllare in «Manage Domains» che il rinnovo automatico sia acceso e cambiare l'email
-  di accesso a Cloudflare con quella di Glifo (Profile → «Change Email Address»). Poi i suoi passi
-  del trasloco («Trasloco» in ROADMAP.md, passo 3, con le date). Infine, aggiornata l'informativa,
-  premere «Publish app» nella Google Auth Platform (Audience) per aprire a tutti l'accesso con
-  Google (passo 4 di ROADMAP.md).
+- Domenica 18 ottobre 2026, il giorno del trasloco su `glifo.page`: in Supabase (Authentication → URL
+  Configuration) cambiare il **Site URL** in `https://glifo.page/` («Trasloco» in ROADMAP.md, passo 4).
+  Da lunedì 12 il vecchio sito mostra l'avviso: lo studente può scrivere a chi usa Glifo come portare gli
+  appunti. Più avanti, decisi titolare e limiti di spazio, premere «Publish app» nella Google Auth
+  Platform (Audience) per aprire a tutti l'accesso con Google (passo 4 di «Account» in ROADMAP.md).
 - Riparlare della condivisione: le cartelle condivise con persone scelte e i loro permessi (come
   nella finestra «Condividi» di NotebookLM) e lo scrivere insieme senza conflitti. Il 4 ottobre
   2026, fatto il link, lo studente ha chiesto di tenerlo per dopo e di sistemare prima la
@@ -147,8 +146,9 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
 ## Regole
 
 - Per cercare o capire il codice delega sempre a esploratore, invece di leggere i file direttamente. Apri tu i file solo nelle parti che devi modificare. Se esploratore segnala che il grafo non è aggiornato, esegui `graphify update .` e ripeti la ricerca.
-- Ogni push sul branch predefinito esegue test e build e pubblica il sito
-  (`.github/workflows/deploy.yml` → branch `gh-pages`).
+- Ogni push sul branch predefinito esegue test e build e pubblica il sito: su GitHub Pages
+  (`.github/workflows/deploy.yml` → branch `gh-pages`) e su glifo.page (Cloudflare Pages, progetto
+  `glifo`, che costruisce da solo il ramo principale; il ramo `prova` va su glifo-prova.pages.dev).
 - Le modifiche che lo studente vuole provare prima che vadano online (per esempio la grafica)
   si fanno sul ramo `prova`: lo studente ha detto di mandarlo su GitHub (4 ottobre 2026), e non
   va online perché il sito si pubblica solo dal ramo principale. Gliele fai vedere con le foto
@@ -173,7 +173,9 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
 
 - Online si dice solo dopo averlo visto: dopo il push, sul branch `gh-pages` deve arrivare il
   commit «Pubblica <sha>» e su GitHub l'azione «pages build and deployment» deve finire con
-  successo.
+  successo; per glifo.page, sul commit il controllo «Cloudflare Pages: glifo» deve dire «Deploy
+  successful» (`gh api repos/DioDiAltro/Glifo/commits/<sha>/check-runs`). Glifo.page dalla sessione
+  non si apre (la rete lo blocca): l'accesso si controlla nei registri di Supabase (`query_logs`).
 - Controprove: dopo una correzione rimetti apposta il difetto e guarda che un test fallisca. Per
   tornare indietro copia i file da una copia di riserva fatta prima: mai `git checkout` o
   `git stash` con modifiche non ancora nel commit (si perderebbero). Niente commit né build

@@ -14,6 +14,7 @@ import {
   receiveFromOldSite,
   RelocationError,
   relocationMessage,
+  RELOCATION_DATES,
   relocationPhase,
   sendToNewSite,
   type RelocationPackage,
@@ -92,6 +93,10 @@ describe('trasloco su glifo.page: le date', () => {
 
   it('senza il giorno dell\'avviso non succede niente, neanche dopo il trasloco', () => {
     expect(relocationPhase(OLD_ORIGIN, new Date(2026, 9, 20), { notice: null, move: '2026-10-18' })).toBe('none')
+  })
+
+  it('le date decise: avviso da lunedì 12 e trasloco domenica 18 ottobre 2026', () => {
+    expect(RELOCATION_DATES).toEqual({ notice: '2026-10-12', move: '2026-10-18' })
   })
 
   it('il giorno del trasloco si scrive in italiano', () => {

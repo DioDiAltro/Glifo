@@ -459,8 +459,8 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   `sharedLinks`…) sono in `src/account/supabase.ts`; nel database la tabella `shared_notes` e le
   funzioni della migrazione «note condivise» (vedi supabase/README.md).
 - `src/relocation.ts` e `src/ui/relocation.ts`: il trasloco su glifo.page (ROADMAP.md, «Trasloco»).
-  Solo sul vecchio indirizzo (`OLD_ORIGIN`), dal giorno dell'avviso (`NOTICE_DAY`, `null` finché
-  glifo.page non funziona) la fascia in cima a `.app` e dal giorno del trasloco (`MOVE_DAY`) la pagina
+  Solo sul vecchio indirizzo (`OLD_ORIGIN`), dal giorno dell'avviso (`NOTICE_DAY`, il 12 ottobre 2026;
+  `null` la spegne) la fascia in cima a `.app` e dal giorno del trasloco (`MOVE_DAY`) la pagina
   a tutto schermo, una finestra modale che non si chiude; nelle prove le date si cambiano nella build
   (`VITE_TRASLOCO_AVVISO`, `VITE_TRASLOCO`). «Porta i miei appunti nel nuovo Glifo» apre
   `glifo.page/#trasloco` (`sendToNewSite`): il sito nuovo dice «pronto», riceve il pacco

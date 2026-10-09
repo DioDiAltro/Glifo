@@ -13,7 +13,7 @@ ottobre 2026 (i piani, i prezzi per chi usa Glifo e il resto sono in [ABBONAMENT
 | Cosa | Piano | Da tenere d'occhio |
 |---|---|---|
 | Il dominio `glifo.page`, su Cloudflare (dal 9 ottobre 2026, vedi «Attivato») | circa 10 $ l'anno | il rinnovo è automatico: la carta salvata su Cloudflare deve restare valida |
-| Il sito, su GitHub Pages | gratis | non si può usare per un servizio a pagamento: si passa a Cloudflare Pages (trasloco deciso l'8 ottobre 2026, vedi ROADMAP.md) |
+| Il sito, su Cloudflare Pages (`glifo.page`, dal 9 ottobre 2026) | gratis | il vecchio indirizzo su GitHub Pages, che non si può usare per un servizio a pagamento, resta solo per il trasloco (vedi ROADMAP.md) |
 | Account e note, su Supabase | gratuito | 500 MB di database e 50.000 utenti attivi al mese; va in pausa dopo 7 giorni con poco uso |
 | Accesso con Google | gratis | |
 | Cloudflare (l'account c'è già) | gratuito | |

@@ -54,28 +54,27 @@ tutto suo, poi, chi ospita il sito si può cambiare senza che nessuno se ne acco
    - le foto della fascia (anche sul telefono), della pagina finale e del messaggio sul sito nuovo,
      dalla prova nel browser con i due indirizzi veri (`scripts/relocation-test.mjs`).
 
-   **L'avviso è spento** (`NOTICE_DAY = null` in `src/relocation.ts`) finché glifo.page non funziona,
-   account compreso: poi Claude mette la data, e insieme l'indirizzo nel README;
-3. lo studente, in quest'ordine (i passi sono anche in supabase/README.md, «Il trasloco su glifo.page»):
-   1. **il sito**: Cloudflare → «Workers & Pages» → «Create» → «Pages» → «Import an existing Git
-      repository» → GitHub, repository `DioDiAltro/Glifo` → Project name `glifo`, Production branch
+   **L'avviso è acceso dal 12 ottobre 2026** (`NOTICE_DAY` in `src/relocation.ts`, messo il 9 ottobre,
+   quando glifo.page funzionava già, accesso compreso); il README dice già `glifo.page`;
+3. **fatto dallo studente il 9 ottobre 2026** (i passi sono anche in supabase/README.md, «Il trasloco
+   su glifo.page»):
+   1. **il sito**: progetto Cloudflare Pages `glifo` (su pages.dev è `glifo-bru.pages.dev`), dal ramo
+      principale, con il dominio `glifo.page`. Come si rifà: «Workers & Pages» → «Create» → «Pages» →
+      «Import an existing Git repository» → `DioDiAltro/Glifo`, Production branch
       `claude/blissful-goodall-c0gpmk`, Framework preset None, Build command `npm run build`, Build
-      output directory `dist`, nessuna variabile → «Save and Deploy». Poi «Settings» → «Build» →
-      «Branch control»: Preview branch «None». Poi «Custom domains» → «Set up a custom domain» →
-      `glifo.page` → «Activate domain» (il record DNS lo mette Cloudflare). Niente `www.glifo.page`
-      per ora: sarebbe un altro indirizzo, con gli appunti a parte;
-   2. **fatto il 9 ottobre 2026: l'email.** `privacy@glifo.page` arriva al Gmail di Glifo (Email
-      Routing di Cloudflare, gratis: nella pagina nuova «Onboard Domain» → `glifo.page`, poi
-      «Destination addresses» con il Gmail di Glifo e «Routing Rules» → «Create routing rule» con
-      `privacy`). Riceve soltanto: rispondendo da Gmail, si risponde dal Gmail;
-   3. **Supabase**: Authentication → URL Configuration → «Redirect URLs» → `https://glifo.page/**`;
-   4. **Google** (progetto «Glifo»): nel client web, *Authorized JavaScript origins* anche
-      `https://glifo.page`; in **Branding**, *Authorized domains* anche `glifo.page`;
-   5. aprire `https://glifo.page`, entrare con Google e dirlo a Claude;
-4. le date: il dominio è arrivato il 9 ottobre, quindi avviso da lunedì 12 e trasloco domenica 18
-   ottobre 2026, se per lunedì glifo.page funziona; altrimenti tutto slitta di altrettanto (sempre
-   almeno una settimana di avviso). Il giorno del trasloco lo studente mette in Supabase il Site URL
-   `https://glifo.page/`;
+      output directory `dist`; «Branch control»: Preview branch «None»; «Custom domains» →
+      `glifo.page`. Niente `www.glifo.page`: sarebbe un altro indirizzo, con gli appunti a parte;
+   2. **l'email**: `privacy@glifo.page` arriva al Gmail di Glifo (Email Routing di Cloudflare, gratis:
+      nella pagina nuova «Onboard Domain» → `glifo.page`, poi «Destination addresses» con il Gmail di
+      Glifo e «Routing Rules» → «Create routing rule» con `privacy`). Riceve soltanto: rispondendo da
+      Gmail, si risponde dal Gmail;
+   3. **Supabase**: «Redirect URLs» con `https://glifo.page/**`;
+   4. **Google**: `https://glifo.page` tra le *Authorized JavaScript origins*, `glifo.page` tra gli
+      *Authorized domains*; l'account Google di Glifo proprietario del progetto e email di assistenza;
+   5. l'accesso con Google da glifo.page funziona (nei registri di Supabase, 9 ottobre alle 18:17);
+4. le date: avviso da lunedì 12 e trasloco domenica 18 ottobre 2026. Il giorno del trasloco lo
+   studente mette in Supabase il Site URL `https://glifo.page/`, e la pagina a tutto schermo del
+   vecchio sito parte da sola;
 5. il vecchio sito resta aperto almeno fino a fine febbraio 2027, per chi riapre gli appunti solo
    per gli esami.
 

@@ -20,10 +20,11 @@ export const NEW_ORIGIN = 'https://glifo.page'
 export const OLD_ORIGIN = 'https://diodialtro.github.io'
 
 /**
- * Il giorno dell'avviso: da lì il vecchio sito mostra la fascia in cima. `null`: spento, finché glifo.page
- * non funziona (account compreso). Per le prove si cambia nella build con VITE_TRASLOCO_AVVISO.
+ * Il giorno dell'avviso: da lì il vecchio sito mostra la fascia in cima. `null` lo spegne. Acceso il 9
+ * ottobre 2026, quando glifo.page funzionava già, accesso con Google compreso. Per le prove si cambia
+ * nella build con VITE_TRASLOCO_AVVISO.
  */
-const NOTICE_DAY: string | null = null
+const NOTICE_DAY: string | null = '2026-10-12'
 /** Il giorno del trasloco: da lì il vecchio sito mostra solo la pagina a tutto schermo. Per le prove: VITE_TRASLOCO. */
 const MOVE_DAY = '2026-10-18'
 

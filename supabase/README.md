@@ -172,13 +172,17 @@ Dal 18 ottobre 2026 Glifo è su `https://glifo.page/` (ROADMAP.md, «Trasloco»)
 sempre alla pagina da cui parte (`appUrl` in `src/account/supabase.ts`), quindi Supabase deve
 accettare anche il nuovo indirizzo:
 
-- **Redirect URLs** (Authentication → URL Configuration): `https://glifo.page/**`, da aggiungere
-  prima che qualcuno entri da glifo.page;
+- **Redirect URLs** (Authentication → URL Configuration): `https://glifo.page/**`, aggiunto dallo
+  studente il 9 ottobre 2026 (l'accesso con Google da glifo.page funziona: nei registri il login
+  `pkce` delle 16:17 UTC);
 - **Site URL**: `https://glifo.page/` dal giorno del trasloco (fino ad allora resta quello di
   GitHub Pages);
 - in Google, nel client web (vedi sotto), *Authorized JavaScript origins* anche
-  `https://glifo.page`, e in **Branding** il dominio `glifo.page` tra gli *Authorized domains*.
-  Il *redirect URI* resta quello di Supabase.
+  `https://glifo.page`, e in **Branding** il dominio `glifo.page` tra gli *Authorized domains*
+  (fatto il 9 ottobre 2026). Il *redirect URI* resta quello di Supabase. Sempre il 9 ottobre l'account
+  Google di Glifo è diventato proprietario (Owner) del progetto Google Cloud, accanto a quello dello
+  studente, ed è l'email di assistenza e di contatto in **Branding**: nella finestra di Google si vede
+  quella, non l'email personale.
 
 ### Accesso con Google
 

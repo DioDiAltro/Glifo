@@ -22,13 +22,13 @@ giusto: scrivi che x² è una parabola rivolta verso l'alto e il grafico te lo c
 della sfera con un integrale e deve venire 4/3 πr³. E servono a **mostrare** quello che studi: chi
 scrive un articolo ci mette i grafici di quello che sta studiando o scoprendo.
 
-**Usala subito: <https://diodialtro.github.io/Glifo/>**
+**Usala subito: <https://glifo.page>**
 
 ![Suggerimenti mentre si scrive \su](docs/suggerimenti.png)
 
 ## Usarla tutti i giorni
 
-Non serve installare nulla: basta aprire <https://diodialtro.github.io/Glifo/> dal
+Non serve installare nulla: basta aprire <https://glifo.page> dal
 browser. Per averla come un'app vera, con la sua icona e funzionante anche senza internet:
 
 | Dispositivo | Come installarla |
@@ -79,7 +79,7 @@ chi sta provando Glifo.*
 - **I tuoi dati:** nella finestra dell'account, «Scarica i miei dati» scarica tutto l'account
   in un file (che «Ripristina backup» sa rileggere) ed «Elimina account» lo cancella dal
   server per sempre. Come vengono trattati i dati lo spiega
-  l'[informativa sulla privacy](https://diodialtro.github.io/Glifo/privacy.html)
+  l'[informativa sulla privacy](https://glifo.page/privacy.html)
   (`privacy.html`).
 
 #### Condividere una nota con un link
