@@ -25,6 +25,10 @@ prossimi passi sono in «In programma» nella ROADMAP.
 - I piani di abbonamento (idee non ancora decise: cosa far pagare, prezzi, cosa serve prima di
   incassare) sono in [ABBONAMENTI.md](ABBONAMENTI.md): quando se ne parla si riparte da lì e ci si
   scrive quello che si dice e si decide.
+- La discussione sulla grafica del 10 ottobre 2026 (otto punti: account, commenti, impostazioni,
+  modelli e chiave dell'AI, inglese, registro dei tocchi, pulsante ✨) è in [GRAFICA.md](GRAFICA.md):
+  si fa un punto alla volta e lì si scrivono risposte e decisioni. Il file è solo per questo lavoro:
+  quando i punti sono fatti si cancella, con questa riga.
 
 ## Comandi
 

@@ -80,71 +80,16 @@ tutto suo, poi, chi ospita il sito si può cambiare senza che nessuno se ne acco
 
 ### La grafica: account, impostazioni, commenti, AI e lingua (chiesto il 10 ottobre 2026, se ne parla)
 
-**Cosa:** lo studente, «ora la grafica»: otto cose viste a colpo d'occhio, da discutere prima di
+Lo studente, «ora la grafica»: otto cose viste a colpo d'occhio, da discutere una alla volta prima di
 toccare il codice, ricordando che Glifo avrà gli abbonamenti (vedi ABBONAMENTI.md, «Com'è andata la
-discussione», punto 18). Come per la grafica di prima, si fanno sul ramo `prova` e si mostrano con le
-foto. Le proposte qui sotto sono di Claude, niente di deciso tranne dove è scritto.
+discussione», punto 18): 1) «Cambia account»; 2) la pagina dei commenti, tipo FAQ; 3) le impostazioni
+divise in sezioni; 4) più modelli per «Spiegami»; 5) a cosa serve la chiave dell'AI; 6) Glifo anche in
+inglese; 7) via il registro dei tocchi (deciso); 8) il pulsante ✨ con il contorno.
 
-1. **«Cambia account».** Oggi si cambia con «Esci» e poi «Accedi»: «Esci» toglie dal browser le note
-   e le lavagne dell'account (le lavagne non vanno sul server: si perdono), e con Google non si
-   sceglie l'account (manca `prompt: 'select_account'`). C'è già un cambio di fatto, senza avviso:
-   «Accedi di nuovo» (con l'accesso scaduto) e poi Google con un altro account. Proposta: «Cambia
-   account» accanto a «Esci», che lascia nel browser note e lavagne dell'account di prima (le
-   modifiche non ancora mandate partono quando si rientra) e riapre la finestra di accesso, con Google
-   che chiede sempre l'account; forse anche l'elenco degli account usati sul dispositivo, per tornare
-   con un clic. «Esci» resta quello che toglie tutto (per il computer di un altro). Da decidere: se il
-   cambio tiene i dati dell'account di prima; l'elenco degli account.
-2. **La pagina dei commenti, tipo FAQ.** Oggi «Commenti» è una finestra dentro Glifo (schede
-   Problemi, Idee e Altro; «Scrivi un commento» con tipo, testo, nome ed email facoltativi). Proposta:
-   una pagina a parte come `privacy.html` (`glifo.page/commenti`) con in cima le domande frequenti,
-   scritte da chi fa Glifo, e sotto i commenti divisi come oggi, con le risposte e «Scrivi un
-   commento»; in Glifo il fumetto apre subito la finestra per scrivere, con il link alla pagina. Il
-   database non cambia. Da sapere: il limite di 60 commenti all'ora è uno solo per tutti. Da decidere:
-   se va bene, e le prime domande frequenti (le propone Claude).
-3. **Le impostazioni divise in sezioni.** Oggi una colonna sola con sette riquadri (Aspetto, Editor,
-   Controllo ortografico, Assistente AI, Spiegazioni, I tuoi dati, Registro dei tocchi). Proposta:
-   l'elenco delle sezioni a sinistra (sul telefono una pagina per sezione): Generale (lingua, tema,
-   dimensione del testo), Scrittura (i `$` automatici, ortografia e dizionario), AI, Account (quello
-   della finestra Account di oggi, poi l'abbonamento), Dati (backup e spazio usato, anche dai modelli
-   scaricati), Informazioni (versione, guida, commenti, privacy, licenze). Il tema resta solo nelle
-   impostazioni (ARCHITETTURA.md). Da decidere: le sezioni, e se l'account diventa una di queste.
-4. **Più modelli per «Spiegami».** WebLLM 0.2.85, l'ultima versione, ne ha circa 70 (165 voci con le
-   varianti): i Qwen3 fino all'8B (5,7 GB di memoria della scheda grafica), i Qwen3.5 (0.8B, 2B, 4B e
-   9B), Llama 3.2, Gemma 3, Phi 3.5 e 4-mini, Mistral, SmolLM2… Ma «Spiegami» è fatto per i Qwen3: il
-   modo di chiamare gli strumenti, `enable_thinking`, i 4096 token, il messaggio di sistema. Molti
-   altri non usano gli strumenti, hanno un contesto più corto, scrivono male in italiano, sono troppo
-   grandi (Llama 3.1 70B: 31 GB) o hanno una licenza solo per la ricerca (Qwen2.5 3B), che non va con
-   gli abbonamenti. Proposta: «Consigliati» (i Qwen3 fino all'8B, i Qwen3.5 se le prove vanno bene),
-   gli altri che passano i controlli con grandezza e memoria, «Tutti i modelli» nelle avanzate, e
-   l'elenco di quelli scaricati con «Togli». Da decidere: elenco scelto o tutti.
-5. **A cosa serve la chiave.** Oggi solo a «Chiedi all'AI» nella ricerca dei simboli: si descrive un
-   simbolo a parole e arrivano fino a 4 proposte in LaTeX. «Spiegami» e il pannello ✨ usano solo il
-   modello nel browser. Proposta: la chiave anche per spiegare (spiegazioni e chat), scegliendo chi
-   risponde: il modello nel browser o il servizio della chiave (più bravo, anche su telefono e iPad,
-   senza scaricare niente; Glifo controlla i passaggi uguale). È la strada che userà l'AI di Glifo
-   con l'abbonamento. Da decidere: sì o no.
-6. **Glifo anche in inglese** (era in «Non solo appunti»). Oggi non c'è niente per tradurre: circa
-   2.000-3.000 testi, più la guida con i video, l'informativa, la nota di benvenuto e l'email per
-   entrare. Il controllo ortografico ha già l'inglese, le funzioni delle tabelle già i nomi inglesi.
-   Proposta: una base per i testi in due lingue, con un test che trova quelli senza traduzione; la
-   lingua presa dal browser la prima volta e scelta nelle impostazioni; da lì ogni schermata nuova
-   nasce nelle due lingue. Nelle note le parole italiane (```` ```grafico ````, `titolo:`,
-   `\operatorname{studio}`…) restano valide e si aggiungono quelle inglesi; i numeri con il punto per
-   chi usa l'inglese. Poi informativa, guida con i video ed email nelle due lingue. Da decidere:
-   l'ordine.
-7. **Via il registro dei tocchi** (deciso dallo studente: serviva mentre sviluppava la lavagna). Si
-   toglie dalle impostazioni, dalla lavagna (il pallino rosso), dal codice e dall'informativa. Da
-   sapere: se la prova sull'iPad con la Apple Pencil dei promemoria di CLAUDE.md è stata fatta.
-8. **Il pulsante ✨ con il contorno.** Oggi a riposo è l'icona indaco senza fondo e con il pannello
-   aperto un quadrato pieno, che mentre lavora cambia colore. Proposta: con il pannello aperto un
-   contorno spesso (2 px) con dentro la solita icona; mentre lavora contorno e icona sfumano nei colori
-   dell'AI con l'alone, dentro il pulsante come oggi. Da decidere: contorno indaco che si colora solo
-   mentre lavora, o già a colori; se anche «Simboli» aperto passa al contorno.
-
-**Ordine proposto:** prima le cose piccole (8, 7 e 1), poi la base per le due lingue con le
-impostazioni nuove (6 e 3), così i testi nuovi nascono già in inglese; poi la pagina dei commenti (2),
-la chiave e i modelli (5 e 4), infine il resto dell'inglese. Nei giorni del trasloco (avviso dal 12,
-trasloco il 18 ottobre) il sito vero cambia il meno possibile.
+Com'è oggi ogni punto, le proposte di Claude, le domande e le decisioni sono in
+[GRAFICA.md](GRAFICA.md), un file solo per questo lavoro: quando i punti sono fatti si cancella, e qui
+resta solo quello che non è stato fatto. Si fanno sul ramo `prova`, con le foto; fino al trasloco del
+18 ottobre il sito vero cambia il meno possibile.
 
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
