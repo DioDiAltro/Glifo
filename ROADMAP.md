@@ -734,6 +734,34 @@ che si scrive».
   descrizione.
 - Interfaccia anche in inglese.
 
+### Estensioni create da chi usa Glifo (idea dello studente, 10 ottobre 2026)
+
+**Cosa:** come in VS Code e in Obsidian, chi usa Glifo si crea quello che gli serve, come vuole lui,
+e può condividerlo con gli altri. Lo studente: le estensioni fatte dagli utenti si pubblicano solo
+dopo essere state controllate e verificate; non è che uno ne crea una e tutti la possono già usare.
+
+**Il rischio da cui partire:** in Obsidian e in VS Code un'estensione è un programma che fa tutto
+quello che fa l'app. In Glifo potrebbe leggere tutti gli appunti, usare l'accesso all'account e
+mandare tutto altrove. Per questo si va per livelli, dal più sicuro:
+
+1. **Personalizzazioni senza codice** (il primo passo): scorciatoie per le formule e macro (`\R` →
+   ℝ, `//` → `\frac{}{}`), modelli di nota («Lezione», «Esercizio con soluzione», «Teorema e
+   dimostrazione»), pulsanti in più nella barra che inseriscono un testo, temi con i propri colori.
+   Si sincronizzano con l'account e funzionano senza rete.
+2. **Blocchi personalizzati in un riquadro chiuso** (dopo): un piccolo programma disegna un tipo di
+   blocco nuovo, come oggi schema, tabella e grafico (circuiti elettrici, molecole, spartiti, domanda
+   e offerta). Gira in un riquadro isolato (un iframe `sandbox`, senza rete): vede solo il testo del
+   suo blocco, non le note, non l'account, non internet. Più avanti l'assistente AI può scriverlo da
+   una descrizione a parole, così se lo crea anche chi non sa programmare.
+3. **Estensioni libere come in Obsidian:** possono tutto, quindi per ora no.
+
+**Pubblicazione (deciso dallo studente):** dentro Glifo c'è l'elenco delle estensioni approvate. Chi
+ne crea una la manda a controllare, e nell'elenco entra solo dopo il controllo di chi gestisce
+Glifo. Anche ogni aggiornamento va ricontrollato prima di arrivare a chi l'ha installata, altrimenti
+un'estensione approvata potrebbe cambiare dopo. Da decidere: se chi la crea può usarla subito per sé,
+prima del controllo (nel riquadro chiuso il rischio resta suo), e chi fa i controlli quando le
+estensioni saranno tante.
+
 ## Altre idee
 
 - Nell'editor, le righe lunghe di un elenco che vanno a capo allineate al testo dell'elemento
@@ -743,5 +771,4 @@ che si scrive».
 - Aprire direttamente una cartella di appunti, con le immagini.
 - Riconoscere un simbolo **disegnato a mano** (come Detexify).
 - Anteprima delle formule direttamente dentro l'editor, alla Typora/Obsidian.
-- Scorciatoie personali (es. `//` → `\frac{}{}`) e macro personalizzate.
 - App desktop (Tauri) o estensione per VS Code con lo stesso pannello.
