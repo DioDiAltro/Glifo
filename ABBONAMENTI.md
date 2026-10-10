@@ -108,6 +108,18 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
     spiegazioni, come funzionano», con il modello che gira nel browser al posto di quello sul server:
     vedi «In prova sul ramo `prova`» qui sotto, in «I modelli e le chiavi API». Niente di deciso sui
     piani: per ora è gratis, perché non costa niente a Glifo.
+18. **La grafica, pensando agli abbonamenti** (10 ottobre 2026). Lo studente chiede di sistemare
+    account, impostazioni, commenti, AI e lingua (ROADMAP.md, «La grafica») e di ricordare che Glifo
+    avrà gli abbonamenti. Claude propone dove andranno: nell'account il piano (è dell'account, non del
+    dispositivo: cambiando account cambia anche il piano); nelle impostazioni una sezione
+    «Abbonamento» con il piano, il rinnovo, le ricevute e il pulsante per disdire (il «pulsante di
+    recesso» obbligatorio dal 19 giugno 2026, che deve trovarsi subito); nell'AI la scelta di chi
+    risponde: il modello nel browser (gratis per tutti), la propria chiave e, con i piani a pagamento,
+    l'AI di Glifo; accanto all'informativa e alla pagina dei commenti, più avanti, le pagine dei prezzi
+    e dei termini di servizio, in italiano e in inglese se l'interfaccia sarà in due lingue. Da sapere:
+    se le spiegazioni con la propria chiave arrivano adesso, restano gratis per sempre (quello che è
+    gratis non si toglie più); per Claude va bene, perché a Glifo non costano niente e i piani a
+    pagamento danno l'AI senza chiave, i modelli migliori e il tutor. Niente di deciso.
 
 ## La proposta dello studente (4 ottobre 2026)
 
