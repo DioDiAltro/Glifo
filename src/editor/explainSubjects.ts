@@ -54,7 +54,8 @@ function worthExplaining(tex: string): boolean {
  * due con Glifo in tutte e due le lingue (la lingua delle note è di chi le scrive).
  */
 const THEOREM_WORDS_IT = ['Teorema', 'Definizione', 'Lemma', 'Proposizione', 'Corollario', 'Proprietà', 'Principio', 'Legge', 'Regola', 'Criterio', 'Assioma', 'Postulato', 'Formula'] // non si traduce: Glifo le cerca nel testo della nota
-const THEOREM_WORDS_EN = ['Theorem', 'Definition', 'Proposition', 'Corollary', 'Property', 'Properties', 'Principle', 'Law', 'Rule', 'Criterion', 'Axiom', 'Postulate', 'Proof', 'Remark', 'Example']
+// Le stesse parole dell'italiano: Proof, Remark ed Example no, come Dimostrazione, Osservazione ed Esempio.
+const THEOREM_WORDS_EN = ['Theorem', 'Definition', 'Proposition', 'Corollary', 'Property', 'Properties', 'Principle', 'Law', 'Rule', 'Criterion', 'Axiom', 'Postulate']
 const THEOREM_WORDS = [...THEOREM_WORDS_IT, ...THEOREM_WORDS_EN]
 const THEOREM_START = new RegExp(`^(?:\\*\\*|__|\\*|_)?(${THEOREM_WORDS.join('|')})(?![\\p{L}])`, 'iu')
 const FENCE = /^\s*(`{3,}|~{3,})/

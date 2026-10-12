@@ -30,7 +30,8 @@ const T = texts({
     `Can't reach ${service}: check your connection${compatible ? ' and the URL in Settings' : ''}.`,
   ],
   badKey: (service: string) => [
-    `La chiave di ${service} non è valida (o non ha i permessi): controllala nelle impostazioni.`,
+    // «la chiave di Gemini», ma «la chiave del servizio» (il servizio compatibile con OpenAI).
+    `La chiave ${service.startsWith('il ') ? `del ${service.slice(3)}` : `di ${service}`} non è valida (o non ha i permessi): controllala nelle impostazioni.`,
     `The key for ${service} isn't valid (or doesn't have the permissions): check it in Settings.`,
   ],
   notInOllama: (model: string) => [

@@ -146,6 +146,10 @@ describe('assistente AI con gli altri servizi (la «lingua» di OpenAI)', () => 
     const gemini = { service: 'gemini' as const, apiKey: 'k', model: 'gemini-flash-lite-latest', baseUrl: '' }
     vi.stubGlobal('fetch', answer(401))
     await expect(askAi('x', gemini)).rejects.toThrow(/chiave di Gemini non è valida/)
+    // Con il servizio compatibile con OpenAI: «del servizio», non «di il servizio».
+    await expect(askAi('x', { service: 'compatible', apiKey: 'k', model: 'm', baseUrl: 'https://api.example.com/v1' })).rejects.toThrow(
+      'La chiave del servizio non è valida (o non ha i permessi): controllala nelle impostazioni.',
+    )
     vi.stubGlobal('fetch', answer(429))
     await expect(askAi('x', gemini)).rejects.toThrow(/Troppe richieste/)
     vi.stubGlobal('fetch', answer(404))

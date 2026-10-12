@@ -347,9 +347,6 @@ describe('i teoremi scritti in inglese', () => {
   const EXPECTED = [
     ['Theorem', 'Theorem (Pythagoras)'],
     ['Definition', 'Definition (limit)'],
-    ['Proof', 'Proof'],
-    ['Remark', 'Remark'],
-    ['Example', 'Example 2'],
     ['Corollary', 'Corollary 1'],
     ['Proposition', 'Proposition 3'],
     ['Lemma', 'LEMMA 4'],
