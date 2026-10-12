@@ -23,10 +23,178 @@ import { checkFormula, nameLike, runTool, toolCallsIn, toolResponses, toolsPromp
 
 export type ExplainTone = 'professore' | 'semplice'
 
-// Per ora solo le etichette dei toni nelle impostazioni (src/ui/dialogs.ts): i messaggi per il modello si traducono dopo.
+/*
+ * Le etichette dei toni nelle impostazioni (src/ui/dialogs.ts), gli errori e tutto quello che il modello
+ * legge, nella lingua di Glifo: con Glifo in inglese il modello spiega in inglese. Il testo si prepara qui,
+ * nella pagina: il worker del modello (src/ai/llmWorker.ts) non sa la lingua scelta in Glifo.
+ */
 const T = texts({
   professor: ['Come il professore', 'Like a professor'],
   simple: ['Più semplice', 'Simpler'],
+  toneProfessor: [
+    'Scrivi come un professore universitario: preciso, con i nomi delle regole e dei teoremi che usi.',
+    'Write like a university professor: precise, with the names of the rules and theorems you use.',
+  ],
+  toneSimple: [
+    'Scrivi in modo semplice, come a un compagno di corso: frasi brevi, e il perché di ogni passaggio.',
+    'Write simply, as if to a classmate: short sentences, and the reason for every step.',
+  ],
+  rules: ['Regole:', 'Rules:'],
+  // Il messaggio di sistema dei conti (`systemPrompt`).
+  calcTutor: [
+    'Sei il tutor di Glifo, l\'app per prendere appunti di matematica. Spieghi in italiano, passo per passo, come si arriva al risultato di una formula che lo studente ha scritto nella nota.',
+    'You are the tutor of Glifo, the app for taking math notes. You explain in English, step by step, how to get to the result of a formula the student wrote in their note. Always write in English.',
+  ],
+  calcEngine: [
+    '- I conti li fa il motore di Glifo, che non sbaglia: non fare conti a mente. Per un integrale, una derivata, una primitiva, un\'equazione o una semplificazione usa gli strumenti.',
+    '- Glifo\'s engine does the calculations, and it makes no mistakes: don\'t calculate in your head. For an integral, a derivative, an antiderivative, an equation or a simplification, use the tools.',
+  ],
+  calcChecks: [
+    '- Glifo controlla ogni passaggio che scrivi e ti fa correggere quelli sbagliati.',
+    '- Glifo checks every step you write and has you fix the wrong ones.',
+  ],
+  calcFormat: [
+    '- Quando hai i conti, scrivi solo la spiegazione: un elenco numerato, un passaggio per riga, con una frase (cosa fai e perché, con il nome giusto della regola) e poi la formula tra $$. Esempio di riga:',
+    '- Once you have the calculations, write only the explanation: a numbered list, one step per line, with a sentence (what you do and why, with the correct name of the rule) and then the formula between $$. Example line:',
+  ],
+  calcExample: [
+    '1. Per la regola del prodotto derivo un fattore alla volta. $$\\frac{d}{dx}(x^2 \\sin x) = 2x \\sin x + x^2 \\cos x$$',
+    '1. By the product rule, I differentiate one factor at a time. $$\\frac{d}{dx}(x^2 \\sin x) = 2x \\sin x + x^2 \\cos x$$',
+  ],
+  calcEquality: [
+    '- Ogni formula è un\'uguaglianza in LaTeX (a = b), senza parole dentro. Da 2 a 6 passaggi: il primo fa già un conto (non ripetere la domanda), l\'ultimo arriva al risultato di Glifo (niente passaggio con il solo risultato).',
+    '- Every formula is an equality in LaTeX (a = b), with no words inside. From 2 to 6 steps: the first one already does a calculation (don\'t repeat the question), the last one reaches Glifo\'s result (no step with just the result).',
+  ],
+  calcNames: [
+    '- Nomi giusti: l\'integrale definito è l\'area con segno sotto la curva e vale F(b) - F(a), con F una primitiva e a, b gli estremi di integrazione (teorema fondamentale del calcolo integrale); la primitiva di x^n è x^{n+1}/(n+1) (regola della potenza); poi linearità, integrazione per parti, per sostituzione; nelle derivate le regole della somma, del prodotto, del quoziente e della catena.',
+    '- Correct names: the definite integral is the signed area under the curve and equals F(b) - F(a), with F an antiderivative and a, b the limits of integration (fundamental theorem of calculus); the antiderivative of x^n is x^{n+1}/(n+1) (power rule); then linearity, integration by parts, integration by substitution; for derivatives, the sum, product, quotient and chain rules.',
+  ],
+  // Il primo messaggio di un conto (`questionPrompt`).
+  toSolve: (tex: string) => [`Da risolvere: $$${tex}$$`, `To solve: $$${tex}$$`],
+  solutions: (tex: string) => [`Soluzioni di Glifo: $$${tex}$$`, `Glifo's solutions: $$${tex}$$`],
+  formula: (tex: string) => [`Formula: $$${tex}$$`, `Formula: $$${tex}$$`],
+  result: (tex: string) => [`Risultato di Glifo: $$${tex}$$`, `Glifo's result: $$${tex}$$`],
+  wrongResult: (question: string, written: string) => [
+    `Lo studente ha scritto $$${question} = ${written}$$ ma secondo Glifo è sbagliato: spiega come si arriva al risultato giusto.`,
+    `The student wrote $$${question} = ${written}$$ but according to Glifo it is wrong: explain how to get to the correct result.`,
+  ],
+  noteDefinitions: (defs: string) => [`Definizioni della nota: ${defs}`, `Definitions in the note: ${defs}`],
+  engineHint: (tex: string) => [`Dal motore di Glifo: $$${tex}$$`, `From Glifo's engine: $$${tex}$$`],
+  askSolutions: ['Spiegami come si trovano le soluzioni.', 'Explain how to find the solutions.'],
+  askResult: ['Spiegami come si arriva al risultato.', 'Explain how to get to the result.'],
+  // Le correzioni (`feedback`, `topicFeedback`).
+  stepWrong: (n: number, value: string | null) => [
+    `- Il passaggio ${n} è sbagliato${value !== null ? `: Glifo calcola $${value}$` : ''}.`,
+    `- Step ${n} is wrong${value !== null ? `: Glifo calculates $${value}$` : ''}.`,
+  ],
+  lastStepMisses: (tex: string) => [`- L'ultimo passaggio non arriva al risultato di Glifo, $${tex}$.`, `- The last step doesn't reach Glifo's result, $${tex}$.`],
+  stepsChecked: ['Glifo ha controllato i passaggi:', 'Glifo checked the steps:'],
+  fixSteps: [
+    'Correggi e riscrivi tutta la spiegazione nello stesso formato. Se ti serve un conto, usa gli strumenti.',
+    'Fix the mistakes and rewrite the whole explanation in the same format. If you need a calculation, use the tools.',
+  ],
+  formulaWrong: (n: number, value: string | null) => [
+    `- La formula del punto ${n} è sbagliata${value !== null ? `: Glifo calcola $${value}$` : ''}.`,
+    `- The formula in point ${n} is wrong${value !== null ? `: Glifo calculates $${value}$` : ''}.`,
+  ],
+  formulasChecked: ['Glifo ha controllato le formule:', 'Glifo checked the formulas:'],
+  fixWhat: (what: string) => [`Correggi e riscrivi ${what} nello stesso formato.`, `Fix the mistakes and rewrite ${what} in the same format.`],
+  wholeExplanation: ['tutta la spiegazione', 'the whole explanation'],
+  wholeAnswer: ['tutta la risposta', 'the whole answer'],
+  // Le altre cose della nota (`topicSystemPrompt`, `topicPrompt`): cosa si chiede per ognuna.
+  taskGraph: [
+    'cosa mostra un grafico della sua nota: che funzioni ci sono, dove tagliano gli assi, dove crescono e decrescono, massimi e minimi, asintoti, le aree colorate e i punti',
+    'what a graph in their note shows: which functions are there, where they cross the axes, where they increase and decrease, maxima and minima, asymptotes, the shaded areas and the points',
+  ],
+  taskFormula: [
+    'cosa significa una formula della sua nota: cosa sono i simboli, cosa dice e quando si usa',
+    'what a formula in their note means: what the symbols are, what it says and when it is used',
+  ],
+  taskTheorem: [
+    'un teorema o una definizione della sua nota: cosa dice, le ipotesi, a cosa serve, con un esempio',
+    'a theorem or a definition in their note: what it says, the hypotheses, what it is for, with an example',
+  ],
+  taskDiagram: [
+    'uno schema della sua nota: cosa rappresenta, le parti e come sono collegate',
+    'a diagram in their note: what it represents, its parts and how they are connected',
+  ],
+  taskTable: [
+    'una tabella della sua nota: cosa contiene, cosa calcolano le formule e cosa dicono i risultati',
+    'a table in their note: what it contains, what the formulas calculate and what the results say',
+  ],
+  headGraph: ['Il grafico nella nota', 'The graph in the note'],
+  headFormula: ['La formula nella nota', 'The formula in the note'],
+  headTheorem: ['Dalla nota', 'From the note'],
+  headDiagram: ['Lo schema nella nota, descritto da Glifo', 'The diagram in the note, described by Glifo'],
+  headTable: ['La tabella nella nota, con i valori calcolati da Glifo', 'The table in the note, with the values calculated by Glifo'],
+  askGraph: ['Spiegami cosa mostra il grafico.', 'Explain what the graph shows.'],
+  askFormula: ['Spiegami cosa significa questa formula.', 'Explain what this formula means.'],
+  askTheorem: ['Spiegami questo enunciato.', 'Explain this statement.'],
+  askDiagram: ['Spiegami cosa rappresenta lo schema.', 'Explain what the diagram represents.'],
+  askTable: ['Spiegami cosa calcola la tabella.', 'Explain what the table calculates.'],
+  topicTutor: (task: string) => [
+    `Sei il tutor di Glifo, l'app per prendere appunti di matematica. Spieghi in italiano allo studente ${task}.`,
+    `You are the tutor of Glifo, the app for taking math notes. You explain to the student, in English, ${task}. Always write in English.`,
+  ],
+  topicNumbers: (tools: boolean) => [
+    `- I numeri li calcola il motore di Glifo, che non sbaglia: usa i fatti che ti dà Glifo${tools ? ' e, se ti serve un altro conto, gli strumenti' : ''}. Non inventare numeri.`,
+    `- Glifo's engine calculates the numbers, and it makes no mistakes: use the facts Glifo gives you${tools ? ' and, if you need another calculation, the tools' : ''}. Don't make up numbers.`,
+  ],
+  checksFormulas: ['- Glifo controlla le formule che scrivi.', '- Glifo checks the formulas you write.'],
+  diagramFormat: [
+    '- Scrivi solo la spiegazione: un elenco numerato, un punto per riga, con una o due frasi. Una formula tra $$ solo se è già nello schema. Da 2 a 6 punti.',
+    '- Write only the explanation: a numbered list, one point per line, with one or two sentences. A formula between $$ only if it is already in the diagram. From 2 to 6 points.',
+  ],
+  topicFormat: [
+    '- Scrivi solo la spiegazione: un elenco numerato, un punto per riga. In ogni punto una o due frasi e, quando aiuta, alla fine una formula tra $$: un\'uguaglianza in LaTeX (a = b) senza parole dentro. Da 2 a 6 punti.',
+    '- Write only the explanation: a numbered list, one point per line. In each point one or two sentences and, when it helps, a formula between $$ at the end: an equality in LaTeX (a = b) with no words inside. From 2 to 6 points.',
+  ],
+  definitions: (defs: string) => [`Definizioni: ${defs}`, `Definitions: ${defs}`],
+  engineFact: (fact: string) => [`Dal motore di Glifo: ${fact}`, `From Glifo's engine: ${fact}`],
+  // La chat (`chatSystemPrompt`): di cosa era la spiegazione.
+  subjectCalc: ['come si arriva al risultato di una formula della sua nota', 'how to get to the result of a formula in their note'],
+  subjectGraph: ['un grafico della sua nota', 'a graph in their note'],
+  subjectFormula: ['una formula della sua nota', 'a formula in their note'],
+  subjectTheorem: ['un enunciato della sua nota', 'a statement in their note'],
+  subjectDiagram: ['uno schema della sua nota', 'a diagram in their note'],
+  subjectTable: ['una tabella della sua nota', 'a table in their note'],
+  chatTutor: (subject: string) => [
+    `Sei il tutor di Glifo, l'app per prendere appunti di matematica. Hai spiegato allo studente ${subject}; ora rispondi in italiano alle sue domande su quella spiegazione.`,
+    `You are the tutor of Glifo, the app for taking math notes. You explained to the student ${subject}; now answer their questions about that explanation, in English. Always write in English.`,
+  ],
+  chatNumbers: (tools: boolean) => [
+    `- I numeri li calcola il motore di Glifo, che non sbaglia: non fare conti a mente${tools ? '; se ti serve un conto, usa gli strumenti' : ''}. Non inventare numeri.`,
+    `- Glifo's engine calculates the numbers, and it makes no mistakes: don't calculate in your head${tools ? '; if you need a calculation, use the tools' : ''}. Don't make up numbers.`,
+  ],
+  chatFormat: [
+    '- Rispondi solo alla domanda, in breve: da 1 a 4 punti in un elenco numerato, un punto per riga, con una o due frasi e, quando aiuta, alla fine una formula tra $$ (un\'uguaglianza in LaTeX, a = b).',
+    '- Answer only the question, briefly: 1 to 4 points in a numbered list, one point per line, with one or two sentences and, when it helps, a formula between $$ at the end (an equality in LaTeX, a = b).',
+  ],
+  chatOffTopic: [
+    '- Se la domanda non riguarda la matematica della nota, dillo in una frase.',
+    '- If the question is not about the math in the note, say so in one sentence.',
+  ],
+  // Il giro con il modello (`converse`): il promemoria e gli errori per chi usa Glifo.
+  askStepsFormat: [
+    'Ora scrivi la spiegazione nel formato richiesto: un elenco numerato, un passaggio per riga, con la frase e la formula tra $$.',
+    'Now write the explanation in the required format: a numbered list, one step per line, with the sentence and the formula between $$.',
+  ],
+  askPointsFormat: [
+    'Ora scrivi la spiegazione nel formato richiesto: un elenco numerato, un punto per riga.',
+    'Now write the explanation in the required format: a numbered list, one point per line.',
+  ],
+  noAnswer: [
+    'Il modello non ha risposto: riprova, o scegli un modello più grande nelle impostazioni.',
+    'The model didn\'t answer: try again, or choose a bigger model in Settings.',
+  ],
+  tooLong: [
+    'La spiegazione è diventata troppo lunga per il modello nel browser: riprova, o scegli un modello più grande nelle impostazioni.',
+    'The explanation got too long for the model in your browser: try again, or choose a bigger model in Settings.',
+  ],
+  noSteps: [
+    'Il modello non ha scritto i passaggi: riprova, o scegli un modello più grande nelle impostazioni.',
+    'The model didn\'t write the steps: try again, or choose a bigger model in Settings.',
+  ],
 })
 
 export const EXPLAIN_TONES: { id: ExplainTone; readonly label: string }[] = [
@@ -136,25 +304,26 @@ export function explainTarget(tex: string, sheet: Sheet, defs: string[]): Explai
   return { tex, kind: 'check', question: parts[0], answer, written: { tex: last, ok: line.check.ok }, defs }
 }
 
-const TONES: Record<ExplainTone, string> = {
-  professore: 'Scrivi come un professore universitario: preciso, con i nomi delle regole e dei teoremi che usi.',
-  semplice: 'Scrivi in modo semplice, come a un compagno di corso: frasi brevi, e il perché di ogni passaggio.',
+/** Come deve scrivere il modello, secondo il tono scelto nelle impostazioni. */
+function toneRule(tone: ExplainTone): string {
+  const tones: Record<ExplainTone, string> = { professore: T.toneProfessor, semplice: T.toneSimple }
+  return tones[tone]
 }
 
 export function systemPrompt(tone: ExplainTone): string {
   return [
-    'Sei il tutor di Glifo, l\'app per prendere appunti di matematica. Spieghi in italiano, passo per passo, come si arriva al risultato di una formula che lo studente ha scritto nella nota.',
-    TONES[tone],
+    T.calcTutor,
+    toneRule(tone),
     '',
-    'Regole:',
-    '- I conti li fa il motore di Glifo, che non sbaglia: non fare conti a mente. Per un integrale, una derivata, una primitiva, un\'equazione o una semplificazione usa gli strumenti.',
-    '- Glifo controlla ogni passaggio che scrivi e ti fa correggere quelli sbagliati.',
+    T.rules,
+    T.calcEngine,
+    T.calcChecks,
     // Un esempio vero, non uno schema da riempire: il 7 ottobre 2026 Qwen3 copiava «Una frase breve:» in
     // ogni passaggio. È una derivata, così sugli integrali non copia il contenuto.
-    '- Quando hai i conti, scrivi solo la spiegazione: un elenco numerato, un passaggio per riga, con una frase (cosa fai e perché, con il nome giusto della regola) e poi la formula tra $$. Esempio di riga:',
-    '1. Per la regola del prodotto derivo un fattore alla volta. $$\\frac{d}{dx}(x^2 \\sin x) = 2x \\sin x + x^2 \\cos x$$',
-    '- Ogni formula è un\'uguaglianza in LaTeX (a = b), senza parole dentro. Da 2 a 6 passaggi: il primo fa già un conto (non ripetere la domanda), l\'ultimo arriva al risultato di Glifo (niente passaggio con il solo risultato).',
-    '- Nomi giusti: l\'integrale definito è l\'area con segno sotto la curva e vale F(b) - F(a), con F una primitiva e a, b gli estremi di integrazione (teorema fondamentale del calcolo integrale); la primitiva di x^n è x^{n+1}/(n+1) (regola della potenza); poi linearità, integrazione per parti, per sostituzione; nelle derivate le regole della somma, del prodotto, del quoziente e della catena.',
+    T.calcFormat,
+    T.calcExample,
+    T.calcEquality,
+    T.calcNames,
     '',
     toolsPrompt(),
   ].join('\n')
@@ -163,16 +332,16 @@ export function systemPrompt(tone: ExplainTone): string {
 export function questionPrompt(target: ExplainTarget, hints: string[]): string {
   const lines: string[] = []
   if (target.kind === 'solve') {
-    lines.push(`Da risolvere: $$${target.question}$$`, `Soluzioni di Glifo: $$${target.answer.tex}$$`)
+    lines.push(T.toSolve(target.question), T.solutions(target.answer.tex))
   } else {
-    lines.push(`Formula: $$${target.question}$$`, `Risultato di Glifo: $$${target.answer.tex}$$`)
+    lines.push(T.formula(target.question), T.result(target.answer.tex))
     if (target.written && !target.written.ok) {
-      lines.push(`Lo studente ha scritto $$${target.question} = ${target.written.tex}$$ ma secondo Glifo è sbagliato: spiega come si arriva al risultato giusto.`)
+      lines.push(T.wrongResult(target.question, target.written.tex))
     }
   }
-  if (target.defs.length) lines.push(`Definizioni della nota: ${target.defs.map((d) => `$${d}$`).join(', ')}`)
-  for (const h of hints) lines.push(`Dal motore di Glifo: $$${h}$$`)
-  lines.push(target.kind === 'solve' ? 'Spiegami come si trovano le soluzioni.' : 'Spiegami come si arriva al risultato.')
+  if (target.defs.length) lines.push(T.noteDefinitions(target.defs.map((d) => `$${d}$`).join(', ')))
+  for (const h of hints) lines.push(T.engineHint(h))
+  lines.push(target.kind === 'solve' ? T.askSolutions : T.askResult)
   return lines.join('\n')
 }
 
@@ -257,7 +426,8 @@ export function stepsIn(reply: string): { text: string; formula: string | null }
     .replace(/\r/g, '')
     .replace(/\\\[([\s\S]*?)\\\]/g, (_, f: string) => `$$${f}$$`)
     .replace(/\\\(([\s\S]*?)\\\)/g, (_, f: string) => `$${f}$`)
-  const numbered = /^\s*(?:\*\*)?(?:(?:passo|passaggio)\s*)?\d{1,2}\s*[.):](?:\*\*)?(?:\s+|$)(.*)$/i
+  // «Passo 1:», e in inglese «Step 1:» (le due lingue sempre: il modello a volte cambia lingua).
+  const numbered = /^\s*(?:\*\*)?(?:(?:passo|passaggio|step)\s*)?\d{1,2}\s*[.):](?:\*\*)?(?:\s+|$)(.*)$/i
   const bullet = /^\s*[-*•]\s+(.*)$/
   const lines = clean.split('\n')
   const start = lines.some((l) => numbered.test(l)) ? numbered : lines.some((l) => bullet.test(l)) ? bullet : null
@@ -278,8 +448,8 @@ export function stepsIn(reply: string): { text: string; formula: string | null }
     if (step && (step.text || step.formula)) steps.push(step)
     if (steps.length >= MAX_STEPS) break
   }
-  // «Risultato finale: $1/3$» in fondo, senza un'uguaglianza, ripete solo il risultato.
-  while (steps.length > 1 && !steps[steps.length - 1].formula && /^risultato\b/i.test(steps[steps.length - 1].text)) steps.pop()
+  // «Risultato finale: $1/3$» (in inglese «Final result: $1/3$») in fondo, senza un'uguaglianza, ripete solo il risultato.
+  while (steps.length > 1 && !steps[steps.length - 1].formula && /^(?:risultato|(?:final\s+)?result)\b/i.test(steps[steps.length - 1].text)) steps.pop()
   return steps
 }
 
@@ -398,36 +568,29 @@ export function checkSteps(raw: { text: string; formula: string | null }[], targ
 export function feedback(result: { steps: ExplainStep[]; reaches: boolean | null }, target: ExplainTarget): string | null {
   const lines: string[] = []
   result.steps.forEach((s, i) => {
-    if (s.check && !s.check.ok) lines.push(`- Il passaggio ${i + 1} è sbagliato${s.check.value ? `: Glifo calcola $${s.check.value.tex}$` : ''}.`)
+    if (s.check && !s.check.ok) lines.push(T.stepWrong(i + 1, s.check.value?.tex ?? null))
   })
-  if (result.reaches === false) lines.push(`- L'ultimo passaggio non arriva al risultato di Glifo, $${target.answer.tex}$.`)
+  if (result.reaches === false) lines.push(T.lastStepMisses(target.answer.tex))
   if (!lines.length) return null
-  return ['Glifo ha controllato i passaggi:', ...lines, 'Correggi e riscrivi tutta la spiegazione nello stesso formato. Se ti serve un conto, usa gli strumenti.'].join('\n')
+  return [T.stepsChecked, ...lines, T.fixSteps].join('\n')
 }
 
 /** Cosa si chiede al modello per ogni tipo di cosa della nota. */
-const TOPIC_TASK: Record<TopicKind, string> = {
-  grafico: 'cosa mostra un grafico della sua nota: che funzioni ci sono, dove tagliano gli assi, dove crescono e decrescono, massimi e minimi, asintoti, le aree colorate e i punti',
-  formula: 'cosa significa una formula della sua nota: cosa sono i simboli, cosa dice e quando si usa',
-  teorema: 'un teorema o una definizione della sua nota: cosa dice, le ipotesi, a cosa serve, con un esempio',
-  schema: 'uno schema della sua nota: cosa rappresenta, le parti e come sono collegate',
-  tabella: 'una tabella della sua nota: cosa contiene, cosa calcolano le formule e cosa dicono i risultati',
+function topicTask(kind: TopicKind): string {
+  const tasks: Record<TopicKind, string> = { grafico: T.taskGraph, formula: T.taskFormula, teorema: T.taskTheorem, schema: T.taskDiagram, tabella: T.taskTable }
+  return tasks[kind]
 }
 
-const TOPIC_HEAD: Record<TopicKind, string> = {
-  grafico: 'Il grafico nella nota',
-  formula: 'La formula nella nota',
-  teorema: 'Dalla nota',
-  schema: 'Lo schema nella nota, descritto da Glifo',
-  tabella: 'La tabella nella nota, con i valori calcolati da Glifo',
+/** Come comincia il messaggio con la cosa della nota. */
+function topicHead(kind: TopicKind): string {
+  const heads: Record<TopicKind, string> = { grafico: T.headGraph, formula: T.headFormula, teorema: T.headTheorem, schema: T.headDiagram, tabella: T.headTable }
+  return heads[kind]
 }
 
-const TOPIC_ASK: Record<TopicKind, string> = {
-  grafico: 'Spiegami cosa mostra il grafico.',
-  formula: 'Spiegami cosa significa questa formula.',
-  teorema: 'Spiegami questo enunciato.',
-  schema: 'Spiegami cosa rappresenta lo schema.',
-  tabella: 'Spiegami cosa calcola la tabella.',
+/** La domanda in fondo al messaggio. */
+function topicAsk(kind: TopicKind): string {
+  const asks: Record<TopicKind, string> = { grafico: T.askGraph, formula: T.askFormula, teorema: T.askTheorem, schema: T.askDiagram, tabella: T.askTable }
+  return asks[kind]
 }
 
 /** Quanto della nota si manda al modello: il contesto è di 4096 token. */
@@ -437,25 +600,23 @@ export function topicSystemPrompt(tone: ExplainTone, kind: TopicKind): string {
   // Gli strumenti servono dove ci sono conti da fare (un grafico, una formula); altrove occupano posto.
   const tools = kind === 'grafico' || kind === 'formula'
   return [
-    `Sei il tutor di Glifo, l'app per prendere appunti di matematica. Spieghi in italiano allo studente ${TOPIC_TASK[kind]}.`,
-    TONES[tone],
+    T.topicTutor(topicTask(kind)),
+    toneRule(tone),
     '',
-    'Regole:',
-    `- I numeri li calcola il motore di Glifo, che non sbaglia: usa i fatti che ti dà Glifo${tools ? ' e, se ti serve un altro conto, gli strumenti' : ''}. Non inventare numeri.`,
-    '- Glifo controlla le formule che scrivi.',
-    kind === 'schema'
-      ? '- Scrivi solo la spiegazione: un elenco numerato, un punto per riga, con una o due frasi. Una formula tra $$ solo se è già nello schema. Da 2 a 6 punti.'
-      : '- Scrivi solo la spiegazione: un elenco numerato, un punto per riga. In ogni punto una o due frasi e, quando aiuta, alla fine una formula tra $$: un\'uguaglianza in LaTeX (a = b) senza parole dentro. Da 2 a 6 punti.',
+    T.rules,
+    T.topicNumbers(tools),
+    T.checksFormulas,
+    kind === 'schema' ? T.diagramFormat : T.topicFormat,
     ...(tools ? ['', toolsPrompt()] : []),
   ].join('\n')
 }
 
 export function topicPrompt(topic: ExplainTopic): string {
   const content = topic.content.length > TOPIC_CHARS ? `${topic.content.slice(0, TOPIC_CHARS)}\n…` : topic.content
-  const lines = [`${TOPIC_HEAD[topic.kind]}:`, content]
-  if (topic.defs.length) lines.push(`Definizioni: ${topic.defs.map((d) => `$${d}$`).join(', ')}`)
-  for (const fact of topic.facts) lines.push(`Dal motore di Glifo: ${fact}`)
-  lines.push(TOPIC_ASK[topic.kind])
+  const lines = [`${topicHead(topic.kind)}:`, content]
+  if (topic.defs.length) lines.push(T.definitions(topic.defs.map((d) => `$${d}$`).join(', ')))
+  for (const fact of topic.facts) lines.push(T.engineFact(fact))
+  lines.push(topicAsk(topic.kind))
   return lines.join('\n')
 }
 
@@ -492,14 +653,17 @@ function checkFormulas(raw: { text: string; formula: string | null }[], defs: st
   return { steps, reaches: null }
 }
 
-/** Il messaggio per il modello con le formule che Glifo ha trovato sbagliate; null se va tutto bene. */
-export function topicFeedback(result: { steps: ExplainStep[] }, what = 'tutta la spiegazione'): string | null {
+/**
+ * Il messaggio per il modello con le formule che Glifo ha trovato sbagliate; null se va tutto bene. `what`:
+ * cosa riscrivere, nella lingua di Glifo (di solito tutta la spiegazione).
+ */
+export function topicFeedback(result: { steps: ExplainStep[] }, what = T.wholeExplanation): string | null {
   const lines: string[] = []
   result.steps.forEach((s, i) => {
-    if (s.check && !s.check.ok) lines.push(`- La formula del punto ${i + 1} è sbagliata${s.check.value ? `: Glifo calcola $${s.check.value.tex}$` : ''}.`)
+    if (s.check && !s.check.ok) lines.push(T.formulaWrong(i + 1, s.check.value?.tex ?? null))
   })
   if (!lines.length) return null
-  return ['Glifo ha controllato le formule:', ...lines, `Correggi e riscrivi ${what} nello stesso formato.`].join('\n')
+  return [T.formulasChecked, ...lines, T.fixWhat(what)].join('\n')
 }
 
 /** Quanti passaggi sbagliati (per tenere la spiegazione migliore tra quelle scritte). */
@@ -574,13 +738,17 @@ export interface ChatContext {
   defs: string[]
 }
 
-const CHAT_SUBJECT: Record<'conto' | TopicKind, string> = {
-  conto: 'come si arriva al risultato di una formula della sua nota',
-  grafico: 'un grafico della sua nota',
-  formula: 'una formula della sua nota',
-  teorema: 'un enunciato della sua nota',
-  schema: 'uno schema della sua nota',
-  tabella: 'una tabella della sua nota',
+/** Di cosa era la spiegazione su cui si fanno le domande. */
+function chatSubject(kind: 'conto' | TopicKind): string {
+  const subjects: Record<'conto' | TopicKind, string> = {
+    conto: T.subjectCalc,
+    grafico: T.subjectGraph,
+    formula: T.subjectFormula,
+    teorema: T.subjectTheorem,
+    schema: T.subjectDiagram,
+    tabella: T.subjectTable,
+  }
+  return subjects[kind]
 }
 
 /** Le domande di prima che si rimandano al modello, al massimo: il contesto è di 4096 token. */
@@ -589,14 +757,14 @@ const CHAT_HISTORY = 3
 export function chatSystemPrompt(tone: ExplainTone, kind: 'conto' | TopicKind): string {
   const tools = kind === 'conto' || kind === 'grafico' || kind === 'formula'
   return [
-    `Sei il tutor di Glifo, l'app per prendere appunti di matematica. Hai spiegato allo studente ${CHAT_SUBJECT[kind]}; ora rispondi in italiano alle sue domande su quella spiegazione.`,
-    TONES[tone],
+    T.chatTutor(chatSubject(kind)),
+    toneRule(tone),
     '',
-    'Regole:',
-    `- I numeri li calcola il motore di Glifo, che non sbaglia: non fare conti a mente${tools ? '; se ti serve un conto, usa gli strumenti' : ''}. Non inventare numeri.`,
-    '- Glifo controlla le formule che scrivi.',
-    '- Rispondi solo alla domanda, in breve: da 1 a 4 punti in un elenco numerato, un punto per riga, con una o due frasi e, quando aiuta, alla fine una formula tra $$ (un\'uguaglianza in LaTeX, a = b).',
-    '- Se la domanda non riguarda la matematica della nota, dillo in una frase.',
+    T.rules,
+    T.chatNumbers(tools),
+    T.checksFormulas,
+    T.chatFormat,
+    T.chatOffTopic,
     ...(tools ? ['', toolsPrompt()] : []),
   ].join('\n')
 }
@@ -643,9 +811,9 @@ export async function answerFollowUp(context: ChatContext, history: FollowUp[], 
       messages,
       sheet,
       check: (raw) => checkFormulas(raw, context.defs, sheet),
-      feedback: (result) => topicFeedback(result, 'tutta la risposta'),
+      feedback: (result) => topicFeedback(result, T.wholeAnswer),
       needsFormula: false,
-      empty: 'Il modello non ha risposto: riprova, o scegli un modello più grande nelle impostazioni.',
+      empty: T.noAnswer,
     },
     chat,
     events,
@@ -703,9 +871,7 @@ async function converse(c: Conversation, chat: ChatFn, events: ExplainEvents): P
     if (c.needsFormula ? !raw.some((s) => s.formula) : !raw.length) {
       if (reminded) break
       reminded = true
-      const ask = c.needsFormula
-        ? 'Ora scrivi la spiegazione nel formato richiesto: un elenco numerato, un passaggio per riga, con la frase e la formula tra $$.'
-        : 'Ora scrivi la spiegazione nel formato richiesto: un elenco numerato, un punto per riga.'
+      const ask = c.needsFormula ? T.askStepsFormat : T.askPointsFormat
       messages.push({ role: 'assistant', content: said(reply) }, { role: 'user', content: ask })
       continue
     }
@@ -718,11 +884,7 @@ async function converse(c: Conversation, chat: ChatFn, events: ExplainEvents): P
     messages.push({ role: 'assistant', content: said(reply) }, { role: 'user', content: note })
   }
   if (!best) {
-    throw new ExplainError(
-      long
-        ? 'La spiegazione è diventata troppo lunga per il modello nel browser: riprova, o scegli un modello più grande nelle impostazioni.'
-        : (c.empty ?? 'Il modello non ha scritto i passaggi: riprova, o scegli un modello più grande nelle impostazioni.'),
-    )
+    throw new ExplainError(long ? T.tooLong : (c.empty ?? T.noSteps))
   }
   return { ...best, toolCalls }
 }

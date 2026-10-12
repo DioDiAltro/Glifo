@@ -8,13 +8,15 @@
 import { texts } from '../i18n'
 import type { Settings } from '../store/settings'
 
-// Solo quello che si vede nelle impostazioni (src/ui/dialogs.ts): i nomi nell'elenco e la chiave da scrivere.
+// Quello che si vede nelle impostazioni (src/ui/dialogs.ts), i nomi nell'elenco e la chiave da scrivere, e
+// il nome di un servizio qualsiasi nei messaggi d'errore (src/ai/assistant.ts).
 const T = texts({
   gemini: ['Google Gemini (gratis con una chiave di AI Studio)', 'Google Gemini (free with an AI Studio key)'],
   openrouter: ['OpenRouter (tanti modelli, anche gratis)', 'OpenRouter (many models, some free)'],
   ollama: ['Ollama (sul tuo computer)', 'Ollama (on your computer)'],
   compatible: ['Un altro servizio compatibile con OpenAI', 'Another OpenAI-compatible service'],
   compatibleKey: ['la chiave del servizio', 'the service\'s key'],
+  compatibleName: ['il servizio', 'the service'],
 })
 
 export type AiServiceId = 'anthropic' | 'gemini' | 'openrouter' | 'ollama' | 'compatible'
@@ -62,7 +64,7 @@ export const AI_SERVICES: readonly AiService[] = [
     needsKey: true,
   },
   { id: 'ollama', get label() { return T.ollama }, name: 'Ollama', url: 'http://localhost:11434/v1', model: 'qwen3', models: ['qwen3', 'gemma3', 'llama3.2'], keyPlaceholder: '', needsKey: false },
-  { id: 'compatible', get label() { return T.compatible }, name: 'il servizio', url: '', model: '', models: [], get keyPlaceholder() { return T.compatibleKey }, needsKey: false },
+  { id: 'compatible', get label() { return T.compatible }, get name() { return T.compatibleName }, url: '', model: '', models: [], get keyPlaceholder() { return T.compatibleKey }, needsKey: false },
 ]
 
 export function aiService(id: string | undefined): AiService {

@@ -108,5 +108,18 @@ export type FromWorker =
   | { id: number; type: 'done'; value?: string }
   | { id: number; type: 'error'; name: string; message: string }
 
-/** Gli errori che il worker scrive già in italiano (WebGPU che manca, il modello che non c'è). */
+/**
+ * Gli errori che il worker riconosce da sé (WebGPU che manca, il modello che non c'è): hanno questo nome
+ * e, al posto del messaggio, un codice di `GlifoErrorCode` (con il modello dopo uno spazio, se serve).
+ * Nel worker la lingua scelta in Glifo non si sa (lì `localStorage` non c'è, e `lang` di src/i18n.ts
+ * sarebbe quella del browser): il messaggio lo scrive la pagina, nella sua lingua (`localErrorMessage`
+ * in src/ai/local.ts). Anche i messaggi per il modello si preparano nella pagina (src/ai/explain.ts).
+ */
 export const GLIFO_ERROR = 'GlifoError'
+
+export type GlifoErrorCode = 'no-webgpu' | 'no-gpu' | 'unknown-model' | 'not-ready'
+
+/** Il messaggio di un errore del worker: il codice, e dopo uno spazio quello che serve (il modello). */
+export function glifoErrorMessage(code: GlifoErrorCode, detail = ''): string {
+  return detail ? `${code} ${detail}` : code
+}

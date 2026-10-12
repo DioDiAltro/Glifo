@@ -8,6 +8,7 @@
  * corsie, i collegamenti), e le tabelle con i valori calcolati e le formule.
  */
 import { parseGraph, type GraphSpec } from '../graph/spec'
+import { texts, usesDecimalComma } from '../i18n'
 import { formatNumber } from '../math/format'
 import { Sheet } from '../math/sheet'
 import { DB_SHAPES, insideLanes, laneAt, laneNames, parseSchema, parseTable, SHAPE_NAMES, type Schema, type SchemaEdge, type SchemaNode, type ShapeKind, type TableField } from '../schema/model'
@@ -19,14 +20,92 @@ import { cellName, colName } from '../spreadsheet/refs'
 import { isError } from '../spreadsheet/values'
 import type { ExplainTopic } from './explain'
 
+/*
+ * I fatti che il modello legge e i nomi nell'elenco del pannello, nella lingua di Glifo. I numeri e i
+ * risultati dentro (lo studio di una funzione, i valori delle tabelle, i nomi delle forme) li scrivono i
+ * loro moduli; il blocco della nota (```grafico) il modello lo legge com'è.
+ */
+const T = texts({
+  graphTitle: (title: string) => [`titolo del grafico: ${title}`, `graph title: ${title}`],
+  axis: (axis: string, name: string) => [`l'asse ${axis} è ${name}`, `the ${axis} axis is ${name}`],
+  curve: (tex: string) => [`curva: $$${tex}$$`, `curve: $$${tex}$$`],
+  theFunction: (def: string) => [`la funzione $$${def}$$`, `the function $$${def}$$`],
+  study: (name: string, study: string) => [`studio di ${name}: ${study}`, `analysis of ${name}: ${study}`],
+  area: (from: string, to: string, tex: string) => [
+    `area colorata sotto la curva, da ${from} a ${to}: $$${tex}$$`,
+    `shaded area under the curve, from ${from} to ${to}: $$${tex}$$`,
+  ],
+  point: (name: string, x: string, y: string) => [`il punto ${name} = (${x}; ${y})`, `the point ${name} = (${x}, ${y})`],
+  alsoInGraph: (tex: string) => [`nel grafico anche $$${tex}$$`, `also in the graph: $$${tex}$$`],
+  slider: (name: string, value: string, from: string, to: string) => [
+    `lo slider ${name} vale ${value} (da ${from} a ${to})`,
+    `the slider ${name} is set to ${value} (from ${from} to ${to})`,
+  ],
+  theGraph: ['Il grafico', 'The graph'],
+  definesFunction: (tex: string) => [`è la definizione di una funzione: $$${tex}$$`, `it is the definition of a function: $$${tex}$$`],
+  // Gli schemi.
+  shapes: (n: number) => [`${n} ${n === 1 ? 'forma' : 'forme'}`, `${n} ${n === 1 ? 'shape' : 'shapes'}`],
+  both: (first: string, last: string) => [`${first} e ${last}`, `${first} and ${last}`],
+  moreLines: (n: number) => [`… e altre ${n} righe`, `${n === 1 ? '… and 1 more line' : `… and ${n} more lines`}`],
+  entity: ['entità', 'entity'],
+  relationship: ['relazione', 'relationship'],
+  quoted: (text: string) => [`«${text}»`, `“${text}”`],
+  laneNumber: (n: number) => [`n. ${n}`, `no. ${n}`],
+  primaryAndForeignKey: ['chiave primaria ed esterna', 'primary and foreign key'],
+  primaryKey: ['chiave primaria', 'primary key'],
+  foreignKey: ['chiave esterna', 'foreign key'],
+  theLanes: ['le corsie', 'the swimlanes'],
+  numbered: (kind: string, n: number) => [`${kind} n. ${n}`, `${kind} no. ${n}`],
+  lanesLine: (lanes: string) => [`Corsie: ${lanes}`, `Swimlanes: ${lanes}`],
+  shapesHead: ['Forme:', 'Shapes:'],
+  fields: (fields: string) => [`, campi: ${fields}`, `, fields: ${fields}`],
+  inLane: (lane: string) => [`, nella corsia ${lane}`, `, in swimlane ${lane}`],
+  linksHead: ['Collegamenti:', 'Connections:'],
+  aShape: ['una forma', 'a shape'],
+  textAtSide: (text: string, side: string) => [`, con «${text}» dalla parte di ${side}`, `, with “${text}” on the side of ${side}`],
+  linkText: (text: string) => [`: «${text}»`, `: “${text}”`],
+  dashed: [' (tratteggiata)', ' (dashed)'],
+  diagramHas: (shapes: number, links: number, lanes: number) => [
+    `lo schema ha ${shapes} ${shapes === 1 ? 'forma' : 'forme'} e ${links ? `${links} ${links === 1 ? 'collegamento' : 'collegamenti'}` : 'nessun collegamento'}${lanes ? `, in ${lanes} ${lanes === 1 ? 'corsia' : 'corsie'}` : ''}`,
+    `the diagram has ${shapes} ${shapes === 1 ? 'shape' : 'shapes'} and ${links ? `${links} ${links === 1 ? 'connection' : 'connections'}` : 'no connections'}${lanes ? `, in ${lanes} ${lanes === 1 ? 'swimlane' : 'swimlanes'}` : ''}`,
+  ],
+  isER: ['è uno schema E-R: entità, relazioni e i loro attributi', 'it is an E-R diagram: entities, relationships and their attributes'],
+  dbTables: (n: number) => [
+    `${n === 1 ? 'c\'è una tabella' : `ci sono ${n} tabelle`} di una base di dati, con i campi e le chiavi`,
+    `${n === 1 ? 'there is one database table' : `there are ${n} database tables`}, with fields and keys`,
+  ],
+  startsFrom: (shapes: string) => [`seguendo le frecce si parte da ${shapes}`, `following the arrows, it starts from ${shapes}`],
+  endsAt: (shapes: string) => [`seguendo le frecce si arriva a ${shapes}`, `following the arrows, it ends at ${shapes}`],
+  theDiagram: ['Lo schema', 'The diagram'],
+  // Le tabelle.
+  rowsAndColumns: (rows: number, cols: number) => [
+    `${rows} ${rows === 1 ? 'riga' : 'righe'} e ${cols} ${cols === 1 ? 'colonna' : 'colonne'}`,
+    `${rows} ${rows === 1 ? 'row' : 'rows'} and ${cols} ${cols === 1 ? 'column' : 'columns'}`,
+  ],
+  theTable: ['La tabella', 'The table'],
+  moreColumns: (n: number) => [`… e altre ${n} colonne`, `${n === 1 ? '… and 1 more column' : `… and ${n} more columns`}`],
+  cellFormula: (cell: string, formula: string, value: string) => [
+    `in ${cell} la formula ${formula}, che dà ${value}`,
+    `in ${cell} the formula ${formula}, which gives ${value}`,
+  ],
+  sameFormula: (first: string, last: string, down: boolean, firstFormula: string, lastFormula: string) => [
+    `da ${first} a ${last} la stessa formula ${down ? 'riga per riga' : 'colonna per colonna'}: ${first} ${firstFormula} … ${last} ${lastFormula}`,
+    `from ${first} to ${last} the same formula ${down ? 'row by row' : 'column by column'}: ${first} ${firstFormula} … ${last} ${lastFormula}`,
+  ],
+  cellError: (cell: string, error: string) => [`in ${cell} c'è l'errore ${error}`, `in ${cell} there is the error ${error}`],
+  moreFormulas: (n: number) => [`e altre ${n} formule`, `and ${n} more formulas`],
+  moreErrors: (n: number) => [`e altri ${n} errori`, `and ${n} more errors`],
+})
+
 /** I nomi da dare alle funzioni scritte come y = …, perché il modello e i controlli le possano chiamare. */
 const FREE_NAMES = ['f', 'g', 'h', 'p', 'q', 'u', 'v', 'w']
 /** Fatti al massimo, e caratteri dello studio di una funzione: il contesto del modello è piccolo. */
 const MAX_FACTS = 12
 const STUDY_CHARS = 700
 
+/** Un numero del grafico come lo scrive Glifo: 0,5 in italiano, 0.5 in inglese. */
 function numberText(v: number): string {
-  return formatNumber(v, { comma: true, decimal: true, digits: 6 })?.text ?? String(v)
+  return formatNumber(v, { comma: usesDecimalComma(), decimal: true, digits: 6 })?.text ?? String(v)
 }
 
 /** f(x) = x^2 → f; le funzioni già definite (nella nota o nel blocco) tengono il loro nome. */
@@ -63,8 +142,8 @@ export function graphTopic(source: string, defs: string[]): ExplainTopic {
   const used = new Set(defs.map(definedName).filter((n): n is string => !!n))
   const facts: string[] = []
   const firstLabel: string[] = []
-  if (spec?.title) facts.push(`titolo del grafico: ${spec.title}`)
-  for (const [axis, name] of Object.entries(spec?.axes ?? {})) facts.push(`l'asse ${axis} è ${name}`)
+  if (spec?.title) facts.push(T.graphTitle(spec.title))
+  for (const [axis, name] of Object.entries(spec?.axes ?? {})) facts.push(T.axis(axis, name))
   for (const item of spec?.items ?? []) {
     if (item.fromNote || item.dashed) continue
     if (!firstLabel.length && item.label) firstLabel.push(item.label)
@@ -78,27 +157,27 @@ export function graphTopic(source: string, defs: string[]): ExplainTopic {
       if (!name) {
         name = FREE_NAMES.find((n) => !used.has(n)) ?? null
         if (!body || !name) {
-          facts.push(`curva: $$${item.label}$$`)
+          facts.push(T.curve(item.label))
           continue
         }
         used.add(name)
         own.push(`${name}(x) = ${body.trim()}`)
       }
       const def = own.find((d) => definedName(d) === name)
-      if (def) facts.push(`la funzione $$${def}$$`)
+      if (def) facts.push(T.theFunction(def))
       const study = studyOf(own, name)
-      if (study) facts.push(`studio di ${name}: ${study}`)
+      if (study) facts.push(T.study(name, study))
     } else if (item.kind === 'area') {
-      facts.push(`area colorata sotto la curva, da ${numberText(item.from)} a ${numberText(item.to)}: $$${item.label}$$`)
+      facts.push(T.area(numberText(item.from), numberText(item.to), item.label))
     } else if (item.kind === 'point') {
-      facts.push(`il punto ${item.name ?? ''} = (${numberText(item.x)}; ${numberText(item.y)})`.replace('  ', ' '))
+      facts.push(T.point(item.name ?? '', numberText(item.x), numberText(item.y)).replace('  ', ' '))
     } else if (item.label) {
-      facts.push(`nel grafico anche $$${item.label}$$`)
+      facts.push(T.alsoInGraph(item.label))
     }
   }
-  for (const s of spec?.sliders ?? []) facts.push(`lo slider ${s.name} vale ${numberText(s.value)} (da ${s.ends[0]} a ${s.ends[1]})`)
-  const title = spec?.title ? { text: spec.title.replace(/\$/g, '') } : firstLabel.length ? { tex: firstLabel[0] } : { text: 'Il grafico' }
-  return { kind: 'grafico', title, content: `\`\`\`grafico\n${source.trim()}\n\`\`\``, facts: facts.slice(0, MAX_FACTS), defs: own }
+  for (const s of spec?.sliders ?? []) facts.push(T.slider(s.name, numberText(s.value), s.ends[0], s.ends[1]))
+  const title = spec?.title ? { text: spec.title.replace(/\$/g, '') } : firstLabel.length ? { tex: firstLabel[0] } : { text: T.theGraph }
+  return { kind: 'grafico', title, content: `\`\`\`grafico\n${source.trim()}\n\`\`\``, facts: facts.slice(0, MAX_FACTS), defs: own } // non si traduce: il blocco com'è nella nota
 }
 
 /**
@@ -111,10 +190,10 @@ export function formulaTopic(tex: string, defs: string[]): ExplainTopic {
   const own = [...defs]
   const name = definedName(tex)
   if (name) {
-    facts.push(`è la definizione di una funzione: $$${tex}$$`)
+    facts.push(T.definesFunction(tex))
     own.push(tex)
     const study = studyOf(own, name, 400)
-    if (study) facts.push(`studio di ${name}: ${study}`)
+    if (study) facts.push(T.study(name, study))
   }
   return { kind: 'formula', title: { tex }, content: `$$${tex}$$`, facts, defs: own }
 }
@@ -138,14 +217,9 @@ function cut(text: string, max = LABEL_CHARS): string {
   return text.length > max ? `${text.slice(0, max - 1)}…` : text
 }
 
-/** 1 forma, 3 forme. */
-function count(n: number, one: string, many: string): string {
-  return `${n} ${n === 1 ? one : many}`
-}
-
 /** «A», «A e B», «A, B e C». */
 function listText(items: string[]): string {
-  return items.length < 2 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} e ${items[items.length - 1]}`
+  return items.length < 2 ? (items[0] ?? '') : T.both(items.slice(0, -1).join(', '), items[items.length - 1])
 }
 
 /** Le righe che stanno in `max` caratteri (la prima sempre); quante ne restano si dice in fondo. */
@@ -153,7 +227,7 @@ function fitLines(lines: string[], max: number): string[] {
   let used = 0
   for (let i = 0; i < lines.length; i++) {
     used += lines[i].length + 1
-    if (used > max && i > 1) return [...lines.slice(0, i), `… e altre ${lines.length - i} righe`]
+    if (used > max && i > 1) return [...lines.slice(0, i), T.moreLines(lines.length - i)]
   }
   return lines
 }
@@ -178,8 +252,8 @@ function shapeText(n: SchemaNode): string {
 
 /** Che forma è, in minuscolo: in uno schema E-R i rettangoli sono le entità e i rombi le relazioni. */
 function shapeKindName(n: SchemaNode, er: boolean): string {
-  if (er && n.shape === 'rect') return 'entità'
-  if (er && n.shape === 'rhombus') return 'relazione'
+  if (er && n.shape === 'rect') return T.entity
+  if (er && n.shape === 'rhombus') return T.relationship
   return SHAPE_NAMES[n.shape].replace(/\s*\(.*\)$/, '').toLowerCase()
 }
 
@@ -230,13 +304,13 @@ function laneOf(n: SchemaNode, lanes: SchemaNode[]): string | null {
     const at = laneAt(l, n.x + n.w / 2, n.y + n.h / 2)
     if (!at) continue
     const name = laneNames(l.text)[at.lane]?.trim()
-    return name ? `«${name}»` : `n. ${at.lane + 1}`
+    return name ? T.quoted(name) : T.laneNumber(at.lane + 1)
   }
   return null
 }
 
 function fieldText(f: TableField): string {
-  const keys = f.pk && f.fk ? 'chiave primaria ed esterna' : f.pk ? 'chiave primaria' : f.fk ? 'chiave esterna' : ''
+  const keys = f.pk && f.fk ? T.primaryAndForeignKey : f.pk ? T.primaryKey : f.fk ? T.foreignKey : ''
   const more = [f.type.trim(), keys].filter(Boolean).join(', ')
   return `${f.name.trim()}${more ? ` (${more})` : ''}`
 }
@@ -248,7 +322,7 @@ function schemaLabel(schema: Schema): string {
   const main = shapes.filter((n) => !ATTRIBUTES.has(n.shape) && n.shape !== 'text' && n.shape !== 'note').map(shapeText).filter(Boolean)
   const texts = main.length ? main : shapes.map(shapeText).filter(Boolean)
   const parts = texts.length ? texts : lanes.flatMap((l) => laneNames(l.text).map((t) => t.trim())).filter(Boolean)
-  return parts.length ? cut(parts.slice(0, 8).join(' · ').replace(/\$/g, '')) : count(schema.nodes.length, 'forma', 'forme')
+  return parts.length ? cut(parts.slice(0, 8).join(' · ').replace(/\$/g, '')) : T.shapes(schema.nodes.length)
 }
 
 /** Il nome di uno schema nell'elenco del pannello; null se il blocco non è uno schema o è vuoto. */
@@ -269,58 +343,61 @@ export function schemaTopic(source: string): ExplainTopic {
   const lanes = schema.nodes.filter((n) => n.shape === 'lanes')
   const shapes = flowOrder(schema.nodes.filter((n) => n.shape !== 'lanes'), schema.edges)
   const er = shapes.some((n) => ER_SHAPES.has(n.shape))
-  const names = new Map<string, string>(lanes.map((l) => [l.id, 'le corsie']))
+  const names = new Map<string, string>(lanes.map((l) => [l.id, T.theLanes]))
+  // Le forme con un testo: il nome è il testo tra virgolette, e dopo si dice che forma è.
+  const named = new Set<string>()
   const unnamed = new Map<string, number>()
   for (const n of shapes) {
     const text = shapeText(n)
-    if (text) names.set(n.id, `«${text}»`)
-    else {
+    if (text) {
+      names.set(n.id, T.quoted(text))
+      named.add(n.id)
+    } else {
       const kind = shapeKindName(n, er)
       const k = (unnamed.get(kind) ?? 0) + 1
       unnamed.set(kind, k)
-      names.set(n.id, `${kind} n. ${k}`)
+      names.set(n.id, T.numbered(kind, k))
     }
   }
   const laneList = lanes.flatMap((l) => laneNames(l.text).map((t) => t.trim())).filter(Boolean)
   const lines: string[] = []
-  if (laneList.length) lines.push(`Corsie: ${laneList.map((t) => `«${t}»`).join(', ')}`)
-  lines.push('Forme:')
+  if (laneList.length) lines.push(T.lanesLine(laneList.map((t) => T.quoted(t)).join(', ')))
+  lines.push(T.shapesHead)
   for (const n of shapes) {
     const name = names.get(n.id)!
-    let line = name.startsWith('«') ? `${name} (${shapeKindName(n, er)})` : name
+    let line = named.has(n.id) ? `${name} (${shapeKindName(n, er)})` : name
     const fields = n.shape === 'table' ? parseTable(n.text).fields.filter((f) => f.name.trim()) : []
-    if (fields.length) line += `, campi: ${fields.map(fieldText).join(', ')}`
+    if (fields.length) line += T.fields(fields.map(fieldText).join(', '))
     const lane = lanes.length ? laneOf(n, lanes) : null
-    if (lane) line += `, nella corsia ${lane}`
+    if (lane) line += T.inLane(lane)
     lines.push(`- ${line}`)
   }
   if (schema.edges.length) {
-    lines.push('Collegamenti:')
+    lines.push(T.linksHead)
     for (const e of schema.edges) {
-      const a = names.get(e.from) ?? 'una forma'
-      const b = names.get(e.to) ?? 'una forma'
+      const a = names.get(e.from) ?? T.aShape
+      const b = names.get(e.to) ?? T.aShape
       let line = `${a} ${e.arrows === 'both' ? '↔' : e.arrows === 'none' ? '—' : '→'} ${b}`
       const text = e.text.replace(/\s*\n\s*/g, ' ').trim()
-      if (text) line += e.at === 'start' ? `, con «${text}» dalla parte di ${a}` : e.at === 'end' ? `, con «${text}» dalla parte di ${b}` : `: «${text}»`
-      if (e.dashed) line += ' (tratteggiata)'
+      if (text) line += e.at === 'start' ? T.textAtSide(text, a) : e.at === 'end' ? T.textAtSide(text, b) : T.linkText(text)
+      if (e.dashed) line += T.dashed
       lines.push(`- ${line}`)
     }
   }
-  const links = schema.edges.length ? count(schema.edges.length, 'collegamento', 'collegamenti') : 'nessun collegamento'
-  const facts = [`lo schema ha ${count(shapes.length, 'forma', 'forme')} e ${links}${laneList.length ? `, in ${count(laneList.length, 'corsia', 'corsie')}` : ''}`]
-  if (er) facts.push('è uno schema E-R: entità, relazioni e i loro attributi')
+  const facts = [T.diagramHas(shapes.length, schema.edges.length, laneList.length)]
+  if (er) facts.push(T.isER)
   const tables = shapes.filter((n) => n.shape === 'table').length
-  if (tables) facts.push(`${tables === 1 ? 'c\'è una tabella' : `ci sono ${tables} tabelle`} di una base di dati, con i campi e le chiavi`)
+  if (tables) facts.push(T.dbTables(tables))
   const arrows = schema.edges.filter((e) => e.arrows === 'end')
   if (arrows.length) {
     const from = new Set(arrows.map((e) => e.from))
     const to = new Set(arrows.map((e) => e.to))
     const starts = shapes.filter((n) => from.has(n.id) && !to.has(n.id)).map((n) => names.get(n.id)!)
     const ends = shapes.filter((n) => to.has(n.id) && !from.has(n.id)).map((n) => names.get(n.id)!)
-    if (starts.length && starts.length <= 3) facts.push(`seguendo le frecce si parte da ${listText(starts)}`)
-    if (ends.length && ends.length <= 3) facts.push(`seguendo le frecce si arriva a ${listText(ends)}`)
+    if (starts.length && starts.length <= 3) facts.push(T.startsFrom(listText(starts)))
+    if (ends.length && ends.length <= 3) facts.push(T.endsAt(listText(ends)))
   }
-  const title = schema.nodes.length ? schemaLabel(schema) : 'Lo schema'
+  const title = schema.nodes.length ? schemaLabel(schema) : T.theDiagram
   return { kind: 'schema', title: { text: title }, content: fitLines(lines, BLOCK_CHARS).join('\n'), facts, defs: [] }
 }
 
@@ -362,7 +439,7 @@ export function tableTitle(source: string): string | null {
     .slice(0, cols)
     .map((c) => (c && !isFormula(c.input) ? c.input.trim() : ''))
     .filter(Boolean)
-  return head.length ? cut(head.join(' · ').replace(/\$/g, '')) : `${count(rows, 'riga', 'righe')} e ${count(cols, 'colonna', 'colonne')}`
+  return head.length ? cut(head.join(' · ').replace(/\$/g, '')) : T.rowsAndColumns(rows, cols)
 }
 
 /**
@@ -373,7 +450,7 @@ export function tableTitle(source: string): string | null {
  */
 export function tableTopic(source: string): ExplainTopic {
   const model = readSheet(source)
-  const title = { text: tableTitle(source) ?? 'La tabella' }
+  const title = { text: tableTitle(source) ?? T.theTable }
   if (!model) return { kind: 'tabella', title, content: source, facts: [], defs: [] }
   const { rows, cols } = sheetSize(model)
   const evaluator = new SheetEvaluator(model)
@@ -381,7 +458,7 @@ export function tableTopic(source: string): ExplainTopic {
   const columns = Array.from({ length: shown }, (_, c) => c)
   const lines = [`|   | ${columns.map(colName).join(' | ')} |`, `|${'---|'.repeat(shown + 1)}`]
   for (let r = 0; r < rows; r++) lines.push(`| ${r + 1} | ${columns.map((c) => valueText(evaluator.result(r, c)).replace(/\|/g, '\\|')).join(' | ')} |`)
-  const content = [...fitLines(lines, BLOCK_CHARS), ...(cols > shown ? [`… e altre ${cols - shown} colonne`] : [])].join('\n')
+  const content = [...fitLines(lines, BLOCK_CHARS), ...(cols > shown ? [T.moreColumns(cols - shown)] : [])].join('\n')
 
   const formulas: { row: number; col: number; input: string }[] = []
   for (let r = 0; r < rows; r++) {
@@ -416,19 +493,19 @@ export function tableTopic(source: string): ExplainTopic {
     same.forEach((g) => told.add(g))
     const first = cellName(f.row, f.col)
     if (same.length === 1) {
-      said.push(`in ${first} la formula ${formulaText(f.input)}, che dà ${valueText(evaluator.result(f.row, f.col))}`)
+      said.push(T.cellFormula(first, formulaText(f.input), valueText(evaluator.result(f.row, f.col))))
       continue
     }
     const last = same[same.length - 1]
     const end = cellName(last.row, last.col)
-    said.push(`da ${first} a ${end} la stessa formula ${down.length > 1 ? 'riga per riga' : 'colonna per colonna'}: ${first} ${formulaText(f.input)} … ${end} ${formulaText(last.input)}`)
+    said.push(T.sameFormula(first, end, down.length > 1, formulaText(f.input), formulaText(last.input)))
   }
   const errors = formulas
     .filter((f) => isError(evaluator.result(f.row, f.col).value))
-    .map((f) => `in ${cellName(f.row, f.col)} c'è l'errore ${valueText(evaluator.result(f.row, f.col), true)}`)
+    .map((f) => T.cellError(cellName(f.row, f.col), valueText(evaluator.result(f.row, f.col), true)))
   const facts = [
-    ...(said.length > MAX_FORMULAS ? [...said.slice(0, MAX_FORMULAS - 1), `e altre ${said.length - MAX_FORMULAS + 1} formule`] : said),
-    ...(errors.length > MAX_ERRORS ? [...errors.slice(0, MAX_ERRORS - 1), `e altri ${errors.length - MAX_ERRORS + 1} errori`] : errors),
+    ...(said.length > MAX_FORMULAS ? [...said.slice(0, MAX_FORMULAS - 1), T.moreFormulas(said.length - MAX_FORMULAS + 1)] : said),
+    ...(errors.length > MAX_ERRORS ? [...errors.slice(0, MAX_ERRORS - 1), T.moreErrors(errors.length - MAX_ERRORS + 1)] : errors),
   ]
   return { kind: 'tabella', title, content, facts, defs: [] }
 }

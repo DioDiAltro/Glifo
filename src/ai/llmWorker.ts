@@ -3,15 +3,22 @@
  * fuori dalla pagina, così mentre scrive l'editor non si blocca. Parla con src/ai/local.ts (i messaggi
  * sono `ToWorker` e `FromWorker`). La prima volta WebLLM scarica il modello da Hugging Face e la sua
  * libreria da GitHub e li tiene nella Cache Storage del browser: dopo funziona anche offline.
+ *
+ * Il worker non scrive testi: qui la lingua scelta in Glifo non si sa (`localStorage` nei worker non c'è).
+ * I messaggi per il modello arrivano già pronti dalla pagina, e i suoi errori sono codici che la pagina
+ * scrive nella sua lingua (`GLIFO_ERROR` in src/ai/localModels.ts).
  */
 import { deleteChatConfigInCache, deleteModelAllInfoInCache, deleteModelWasmInCache, MLCEngine, prebuiltAppConfig } from '@mlc-ai/web-llm'
-import { GLIFO_ERROR, modelUrl, webllmId, type FromWorker, type ToWorker } from './localModels'
+import { GLIFO_ERROR, glifoErrorMessage, modelUrl, webllmId, type FromWorker, type GlifoErrorCode, type ToWorker } from './localModels'
 
 const scope = self as unknown as { postMessage(msg: FromWorker): void; addEventListener(type: 'message', fn: (ev: MessageEvent<ToWorker>) => void): void }
 const post = (msg: FromWorker) => scope.postMessage(msg)
 
 class GlifoError extends Error {
   override name = GLIFO_ERROR
+  constructor(code: GlifoErrorCode, detail?: string) {
+    super(glifoErrorMessage(code, detail))
+  }
 }
 
 let engine: MLCEngine | null = null
@@ -25,17 +32,15 @@ interface Gpu {
 /** C'è una scheda grafica da usare con WebGPU? E sa fare i conti a 16 bit (i modelli q4f16 sono più leggeri)? */
 async function shaderF16(): Promise<boolean> {
   const gpu = (navigator as Navigator & { gpu?: Gpu }).gpu
-  if (!gpu) {
-    throw new GlifoError('Questo browser non ha WebGPU, che serve per far girare il modello sul dispositivo: prova con Chrome o Edge aggiornati, su un computer.')
-  }
+  if (!gpu) throw new GlifoError('no-webgpu')
   const adapter = await gpu.requestAdapter()
-  if (!adapter) throw new GlifoError('WebGPU c\'è, ma non trova una scheda grafica da usare su questo dispositivo.')
+  if (!adapter) throw new GlifoError('no-gpu')
   return adapter.features.has('shader-f16')
 }
 
 async function load(id: number, model: string): Promise<string> {
   const name = webllmId(model, await shaderF16())
-  if (!prebuiltAppConfig.model_list.some((m) => m.model_id === name)) throw new GlifoError(`Il modello ${name} non c'è in questa versione di WebLLM.`)
+  if (!prebuiltAppConfig.model_list.some((m) => m.model_id === name)) throw new GlifoError('unknown-model', name)
   engine ??= new MLCEngine()
   engine.setInitProgressCallback((r) => post({ id, type: 'progress', progress: r.progress, text: r.text }))
   if (loaded !== name) {
@@ -47,7 +52,7 @@ async function load(id: number, model: string): Promise<string> {
 }
 
 async function chat(id: number, msg: Extract<ToWorker, { type: 'chat' }>): Promise<string> {
-  if (!engine || !loaded) throw new GlifoError('Il modello non è ancora pronto.')
+  if (!engine || !loaded) throw new GlifoError('not-ready')
   const stream = await engine.chat.completions.create({
     messages: msg.messages,
     stream: true,
