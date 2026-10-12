@@ -13,9 +13,57 @@
  * dall'inizio; le frecce che saltano colonne passano tra i riquadri (nodi finti, come nel metodo di
  * Sugiyama) e l'ordine nelle colonne è quello che incrocia meno frecce (i baricentri).
  */
+import { byLang, dateLocale, texts } from '../i18n'
 import type { PlanTable } from '../spreadsheet/plan'
 import { numberText, type Link, type Schedule, type Task } from './schedule'
 import { escapeXml, type Palette } from './svg'
+
+const T = texts({
+  milestoneTip: ['Traguardo (durata zero)', 'Milestone (zero duration)'],
+  durationTip: (amount: string) => [`Durata: ${amount}`, `Duration: ${amount}`],
+  onDay: (date: string) => [`Il ${date}`, `On ${date}`],
+  fromTo: (from: string, to: string) => [`Dal ${from} al ${to}`, `From ${from} to ${to}`],
+  earliest: (start: string, end: string) => [`Inizio e fine al più presto: ${start} e ${end}`, `Earliest start and finish: ${start} and ${end}`],
+  latest: (start: string, end: string) => [`Inizio e fine al più tardi: ${start} e ${end}`, `Latest start and finish: ${start} and ${end}`],
+  criticalTip: ['Critica: senza margine', 'Critical: no slack'],
+  slackTip: (amount: string, free: string) => [`Margine: ${amount} (libero: ${free})`, `Slack: ${amount} (free: ${free})`],
+  doneTip: (percent: string) => [`Fatto: ${percent}%`, `Done: ${percent}%`],
+  gantt: ['Diagramma di Gantt', 'Gantt chart'],
+  network: ['Reticolo del progetto', 'Project network diagram'],
+  start: ['Inizio', 'Start'],
+  end: ['Fine', 'End'],
+  criticalTask: ['Attività critica (senza margine)', 'Critical task (no slack)'],
+  slackTask: ['Attività con margine', 'Task with slack'],
+  slack: ['Margine (quanto può slittare)', 'Slack (how much it can slip)'],
+  milestone: ['Traguardo', 'Milestone'],
+  done: ['Fatto (la parte piena)', 'Done (the solid part)'],
+  criticalNetwork: ['Attività e legami critici', 'Critical tasks and links'],
+  boxes: [
+    'In ogni riquadro: sopra l\'inizio al più presto, la durata e la fine al più presto; sotto l\'inizio al più tardi, il margine e la fine al più tardi',
+    'In each box: the earliest start, the duration and the earliest finish on top; the latest start, the slack and the latest finish at the bottom',
+  ],
+  criticalPaths: (n: number, paths: string) => [
+    n > 1 ? `Percorsi critici: ${paths}` : `Percorso critico: ${paths}`,
+    n > 1 ? `Critical paths: ${paths}` : `Critical path: ${paths}`,
+  ],
+  projectDuration: (amount: string) => [`Durata del progetto: ${amount}`, `Project duration: ${amount}`],
+  projectDates: (amount: string, from: string, to: string) => [`Durata del progetto: ${amount} (dal ${from} al ${to})`, `Project duration: ${amount} (from ${from} to ${to})`],
+  checked: (n: number) => [`✓ I tempi scritti nella tabella sono giusti (${n})`, `✓ The times written in the table are correct (${n})`],
+  workingDays: (one: boolean) => [one ? 'giorno lavorativo' : 'giorni lavorativi', one ? 'working day' : 'working days'],
+})
+
+/** Le unità delle durate, con i nomi di src/spreadsheet/plan.ts (giorni, settimane…): il plurale o il singolare. */
+const UNITS = texts({
+  giorni: (one: boolean) => [one ? 'giorno' : 'giorni', one ? 'day' : 'days'],
+  settimane: (one: boolean) => [one ? 'settimana' : 'settimane', one ? 'week' : 'weeks'],
+  ore: (one: boolean) => [one ? 'ora' : 'ore', one ? 'hour' : 'hours'],
+  mesi: (one: boolean) => [one ? 'mese' : 'mesi', one ? 'month' : 'months'],
+  minuti: (one: boolean) => [one ? 'minuto' : 'minuti', one ? 'minute' : 'minutes'],
+  anni: (one: boolean) => [one ? 'anno' : 'anni', one ? 'year' : 'years'],
+})
+
+/** I tipi dei legami scritti sulle frecce: II, FF e IF in italiano, SS, FF e SF in inglese (come in Project). */
+const LINK_TYPES = texts({ II: ['II', 'SS'], FF: ['FF', 'FF'], IF: ['IF', 'SF'] })
 
 export interface PlanDrawing {
   svg: string
@@ -91,17 +139,49 @@ export function wrapText(text: string, size: number, max: number, lines = 2): st
   return rest ? [...out, rest] : out
 }
 
-const SINGULAR: Record<string, string> = { giorni: 'giorno', 'giorni lavorativi': 'giorno lavorativo', settimane: 'settimana', ore: 'ora', mesi: 'mese', minuti: 'minuto', anni: 'anno' }
+/**
+ * Il nome dell'unità delle durate (`unit` come in src/spreadsheet/plan.ts: giorni, settimane…) nella
+ * lingua di Glifo, al plurale o (`one`) al singolare; `working`: i giorni lavorativi.
+ */
+export function unitName(unit: string, one = false, working = false): string {
+  if (working && unit === 'giorni') return T.workingDays(one)
+  return Object.hasOwn(UNITS, unit) ? UNITS[unit as keyof typeof UNITS](one) : unit
+}
 
-/** Una durata con la sua unità: «1 giorno», «2,5 settimane». */
-export function amount(x: number, unit: string): string {
-  return `${numberText(x)} ${Math.abs(x - 1) < EPS ? (SINGULAR[unit] ?? unit) : unit}`
+/** Una durata con la sua unità: «1 giorno», «2,5 settimane», «3 giorni lavorativi» (in inglese «2.5 weeks»). */
+export function amount(x: number, unit: string, working = false): string {
+  return `${numberText(x)} ${unitName(unit, Math.abs(x - 1) < EPS, working)}`
 }
 
 // ——— Le date ———
 
 export const MONTHS = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre']
 const SHORT_MONTHS = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic']
+
+/** Una data con il formato della lingua (in inglese quello del browser): le date sono a mezzanotte UTC. */
+function localDate(d: Date, format: Intl.DateTimeFormatOptions): string {
+  return d.toLocaleDateString(dateLocale(), { ...format, timeZone: 'UTC' })
+}
+
+/** Il mese e l'anno: «ottobre 2026», in inglese «October 2026». */
+function monthYear(d: Date): string {
+  return byLang({ it: () => `${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`, en: () => localDate(d, { month: 'long', year: 'numeric' }) })
+}
+
+/** Il mese abbreviato: «ott», in inglese «Oct». */
+function shortMonth(d: Date): string {
+  return byLang({ it: () => SHORT_MONTHS[d.getUTCMonth()], en: () => localDate(d, { month: 'short' }) })
+}
+
+/** Il mese abbreviato e l'anno: «ott 2026», in inglese «Oct 2026». */
+function shortMonthYear(d: Date): string {
+  return byLang({ it: () => `${SHORT_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`, en: () => localDate(d, { month: 'short', year: 'numeric' }) })
+}
+
+/** Il giorno e il mese: «12/10» (in inglese americano «10/12»). */
+function dayMonth(d: Date): string {
+  return byLang({ it: () => `${d.getUTCDate()}/${d.getUTCMonth() + 1}`, en: () => localDate(d, { day: 'numeric', month: 'numeric' }) })
+}
 
 /** Le unità con cui il Gantt mostra le date (con le ore e i minuti restano i numeri). */
 export function hasDates(unit: string): boolean {
@@ -127,9 +207,12 @@ export function dayOf(start: Date, k: number, unit: string, working: boolean): D
   return d
 }
 
-/** 12/10/2026. */
+/** 12/10/2026 (in inglese americano 10/12/2026). */
 export function dateText(d: Date): string {
-  return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`
+  return byLang({
+    it: () => `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`,
+    en: () => localDate(d, { day: '2-digit', month: '2-digit', year: 'numeric' }),
+  })
 }
 
 /** Il primo e l'ultimo giorno di un'attività (o la data di un traguardo, la fine di quello che c'è prima). */
@@ -156,15 +239,15 @@ const BAR = 14
 /** La descrizione di un'attività, per il fumetto che si legge passandoci sopra. */
 function taskTitle(t: Task, plan: PlanTable, start: Date | undefined): string {
   const lines = [`${t.id}${t.name ? ` · ${t.name}` : ''}${t.who ? ` (${t.who})` : ''}`]
-  lines.push(t.duration <= EPS ? 'Traguardo (durata zero)' : `Durata: ${amount(t.duration, plan.unit)}`)
+  lines.push(t.duration <= EPS ? T.milestoneTip : T.durationTip(amount(t.duration, plan.unit)))
   if (start && hasDates(plan.unit)) {
     const [a, b] = taskDates(t, start, plan.unit, plan.working)
-    lines.push(t.duration <= EPS ? `Il ${dateText(a)}` : `Dal ${dateText(a)} al ${dateText(b)}`)
+    lines.push(t.duration <= EPS ? T.onDay(dateText(a)) : T.fromTo(dateText(a), dateText(b)))
   }
-  lines.push(`Inizio e fine al più presto: ${numberText(t.es)} e ${numberText(t.ef)}`)
-  lines.push(`Inizio e fine al più tardi: ${numberText(t.ls)} e ${numberText(t.lf)}`)
-  lines.push(t.critical ? 'Critica: senza margine' : `Margine: ${amount(t.slack, plan.unit)} (libero: ${numberText(t.free)})`)
-  if (t.done !== null) lines.push(`Fatto: ${numberText(t.done * 100)}%`)
+  lines.push(T.earliest(numberText(t.es), numberText(t.ef)))
+  lines.push(T.latest(numberText(t.ls), numberText(t.lf)))
+  lines.push(t.critical ? T.criticalTip : T.slackTip(amount(t.slack, plan.unit), numberText(t.free)))
+  if (t.done !== null) lines.push(T.doneTip(numberText(t.done * 100)))
   return lines.join('\n')
 }
 
@@ -213,10 +296,11 @@ export function ganttSvg(s: Schedule, plan: PlanTable, palette: Palette, options
   // Il tempo: le colonne, i numeri (o le date) in alto.
   const grid: string[] = []
   const labels: string[] = []
-  const caption = plan.unit.charAt(0).toUpperCase() + plan.unit.slice(1) + (plan.working && start ? ' lavorativi' : '')
+  const unitCaption = unitName(plan.unit, false, plan.working && !!start)
+  const caption = unitCaption.charAt(0).toUpperCase() + unitCaption.slice(1)
   if (start) {
     const days = Array.from({ length: units }, (_, k) => dayOf(start, k, plan.unit, plan.working))
-    const cellLabel = (d: Date) => (plan.unit === 'giorni' ? String(d.getUTCDate()) : plan.unit === 'settimane' ? `${d.getUTCDate()}/${d.getUTCMonth() + 1}` : SHORT_MONTHS[d.getUTCMonth()])
+    const cellLabel = (d: Date) => (plan.unit === 'giorni' ? String(d.getUTCDate()) : plan.unit === 'settimane' ? dayMonth(d) : shortMonth(d))
     // Un numero ogni `step` colonne, perché non si tocchino; ognuno sopra il suo giorno (o settimana, mese).
     const step = Math.max(1, Math.ceil((textWidth(plan.unit === 'settimane' ? '30/10' : '30', 10.5) + 4) / unit))
     days.forEach((d, k) => {
@@ -224,13 +308,13 @@ export function ganttSvg(s: Schedule, plan: PlanTable, palette: Palette, options
       if (k % step === 0) labels.push(`<text x="${r1(x(k) + unit / 2)}" y="${header - 6}" text-anchor="middle" font-size="10.5" fill="${palette.text}">${escapeXml(cellLabel(d))}</text>`)
     })
     // Sopra, il mese (o l'anno) dove comincia.
-    const group = (d: Date) => (plan.unit === 'mesi' ? String(d.getUTCFullYear()) : `${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`)
+    const group = (d: Date) => (plan.unit === 'mesi' ? String(d.getUTCFullYear()) : monthYear(d))
     let from = 0
     for (let k = 1; k <= units; k++) {
       if (k < units && group(days[k]) === group(days[from])) continue
       const room = x(k) - x(from) - 6
-      const short = `${SHORT_MONTHS[days[from].getUTCMonth()]} ${days[from].getUTCFullYear()}`
-      const text = [group(days[from]), short, SHORT_MONTHS[days[from].getUTCMonth()]].find((t) => textWidth(t, 11, true) <= room) ?? ''
+      const short = shortMonthYear(days[from])
+      const text = [group(days[from]), short, shortMonth(days[from])].find((t) => textWidth(t, 11, true) <= room) ?? ''
       if (text) labels.push(`<text x="${r1(x(from) + 3)}" y="${header - 24}" font-size="11" font-weight="600" fill="${palette.axis}">${escapeXml(text)}</text>`)
       if (from > 0) grid.push(`<path d="M${r1(x(from))} ${header - 36}V${top + tasks.length * ROW}" stroke="${palette.grid}" stroke-width="1"/>`)
       from = k
@@ -316,7 +400,7 @@ export function ganttSvg(s: Schedule, plan: PlanTable, palette: Palette, options
     out.push(`<g class="plan-task" data-task="${i}"><title>${escapeXml(taskTitle(t, plan, start))}</title><rect class="plan-row" x="0" y="${top + i * ROW}" width="${width}" height="${ROW}" fill="transparent"/>${parts.join('')}</g>`)
   }
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" ${FONT} role="img" aria-label="Diagramma di Gantt">${out.join('')}</svg>`
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" ${FONT} role="img" aria-label="${T.gantt}">${out.join('')}</svg>`
   return { svg, width, height }
 }
 
@@ -418,7 +502,7 @@ export function networkSvg(s: Schedule, plan: PlanTable, palette: Palette): Plan
 
   // Le frecce, con i nodi finti dove saltano delle colonne.
   const edges: NetEdge[] = []
-  const linkLabel = (l: Link) => (l.type === 'FI' ? '' : l.type) + (l.lag ? `${l.lag > 0 ? '+' : '−'}${numberText(Math.abs(l.lag))}` : '')
+  const linkLabel = (l: Link) => (l.type === 'FI' ? '' : LINK_TYPES[l.type]) + (l.lag ? `${l.lag > 0 ? '+' : '−'}${numberText(Math.abs(l.lag))}` : '')
   const addEdge = (from: number, to: number, critical: boolean, label = '') => {
     const path = [from]
     for (let r = nodes[from].rank + 1; r < nodes[to].rank; r++) path.push(nodes.push({ kind: 'dummy', task: -1, rank: r, size: 10, y: 0 }) - 1)
@@ -544,7 +628,7 @@ export function networkSvg(s: Schedule, plan: PlanTable, palette: Palette): Plan
       const color = critical ? palette.loss : palette.axis
       out.push(
         `<circle cx="${r1(x)}" cy="${r1(y)}" r="${END_R}" fill="${palette.halo}" stroke="${color}" stroke-width="${critical ? 2 : 1.3}"/>`,
-        `<text x="${r1(x)}" y="${r1(y + 4)}" text-anchor="middle" font-size="10.5" font-weight="600" fill="${palette.axis}">${n.kind === 'start' ? 'Inizio' : 'Fine'}</text>`,
+        `<text x="${r1(x)}" y="${r1(y + 4)}" text-anchor="middle" font-size="10.5" font-weight="600" fill="${palette.axis}">${n.kind === 'start' ? T.start : T.end}</text>`,
       )
       continue
     }
@@ -576,7 +660,7 @@ export function networkSvg(s: Schedule, plan: PlanTable, palette: Palette): Plan
       '</g>',
     )
   }
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" ${FONT} role="img" aria-label="Reticolo del progetto">${out.join('')}</svg>`
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" ${FONT} role="img" aria-label="${T.network}">${out.join('')}</svg>`
   return { svg, width, height }
 }
 
@@ -594,25 +678,24 @@ export function planLegend(s: Schedule, plan: PlanTable, kind: 'gantt' | 'retico
   const items: PlanLegend['items'] = []
   const hasCritical = s.tasks.some((t) => t.critical)
   if (kind === 'gantt') {
-    if (hasCritical) items.push({ swatch: 'critical', label: 'Attività critica (senza margine)' })
-    if (s.tasks.some((t) => !t.critical)) items.push({ swatch: 'normal', label: 'Attività con margine' })
-    if (s.tasks.some((t) => t.slack > EPS)) items.push({ swatch: 'slack', label: 'Margine (quanto può slittare)' })
-    if (s.tasks.some((t) => t.duration <= EPS)) items.push({ swatch: 'milestone', label: 'Traguardo' })
-    if (plan.has.done) items.push({ swatch: 'done', label: 'Fatto (la parte piena)' })
+    if (hasCritical) items.push({ swatch: 'critical', label: T.criticalTask })
+    if (s.tasks.some((t) => !t.critical)) items.push({ swatch: 'normal', label: T.slackTask })
+    if (s.tasks.some((t) => t.slack > EPS)) items.push({ swatch: 'slack', label: T.slack })
+    if (s.tasks.some((t) => t.duration <= EPS)) items.push({ swatch: 'milestone', label: T.milestone })
+    if (plan.has.done) items.push({ swatch: 'done', label: T.done })
   } else if (hasCritical) {
-    items.push({ swatch: 'critical', label: 'Attività e legami critici' })
+    items.push({ swatch: 'critical', label: T.criticalNetwork })
   }
   const notes: string[] = []
-  if (kind === 'reticolo') notes.push('In ogni riquadro: sopra l\'inizio al più presto, la durata e la fine al più presto; sotto l\'inizio al più tardi, il margine e la fine al più tardi')
+  if (kind === 'reticolo') notes.push(T.boxes)
   const paths = s.paths.map((p) => p.map((i) => s.tasks[i].id).join(' → '))
-  if (paths.length) notes.push(`${paths.length > 1 ? 'Percorsi critici' : 'Percorso critico'}: ${paths.join('; ')}`)
-  let duration = `Durata del progetto: ${amount(s.end, plan.working ? 'giorni lavorativi' : plan.unit)}`
+  if (paths.length) notes.push(T.criticalPaths(paths.length, paths.join('; ')))
+  const duration = amount(s.end, plan.unit, plan.working)
   if (start && kind === 'gantt' && hasDates(plan.unit) && s.tasks.length) {
     const last = s.tasks.reduce((a, t) => (t.ef > a.ef ? t : a))
-    duration += ` (dal ${dateText(dayOf(start, 0, plan.unit, plan.working))} al ${dateText(taskDates(last, start, plan.unit, plan.working)[1])})`
-  }
-  notes.push(duration)
-  if (s.checked) notes.push(`✓ I tempi scritti nella tabella sono giusti (${s.checked})`)
+    notes.push(T.projectDates(duration, dateText(dayOf(start, 0, plan.unit, plan.working)), dateText(taskDates(last, start, plan.unit, plan.working)[1])))
+  } else notes.push(T.projectDuration(duration))
+  if (s.checked) notes.push(T.checked(s.checked))
   return { items, notes }
 }
 

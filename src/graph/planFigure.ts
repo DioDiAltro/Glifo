@@ -4,12 +4,27 @@
  * (planPreview.ts) e le figure da usare fuori da Glifo: «Scarica» (PNG, SVG, copiata) e
  * l'immagine nei file .md, chiare su bianco, con il titolo e la legenda in testo SVG.
  */
+import { texts } from '../i18n'
 import type { PlanData } from '../spreadsheet/plan'
-import { ganttSvg, hasDates, networkSvg, planLegend, planSwatchSvg, PLAN_FONT, textWidth, type PlanDrawing, type PlanLegend } from './gantt'
+import { ganttSvg, hasDates, networkSvg, planLegend, planSwatchSvg, PLAN_FONT, textWidth, unitName, type PlanDrawing, type PlanLegend } from './gantt'
 import { labelPlain, labelSvg } from './labels'
 import { planBlock, type PlanBlock } from './planBlock'
 import { schedule, type Schedule } from './schedule'
 import { escapeXml, PALETTES, type Palette } from './svg'
+
+const T = texts({
+  noTable: [
+    'Prima del grafico, nella nota, non c\'è una tabella: le attività vengono dalla tabella scritta sopra',
+    'There\'s no table before the graph in the note: the tasks come from the table written above it',
+  ],
+  datesNeedUnit: (unit: string) => [
+    `Le date si mostrano con le durate in giorni, settimane o mesi (qui sono in ${unit})`,
+    `Dates are shown when durations are in days, weeks or months (here they're in ${unit})`,
+  ],
+  gantt: ['Diagramma di Gantt', 'Gantt chart'],
+  network: ['Reticolo del progetto', 'Project network diagram'],
+  tableRow: (n: number) => [`Tabella, riga ${n}: `, `Table, row ${n}: `],
+})
 
 /** Un errore da mostrare: di una riga del blocco o di una riga della tabella. */
 export interface PlanError {
@@ -37,7 +52,7 @@ export function planPicture(source: string, data: PlanData | null, palette: Pale
   const errors: PlanError[] = block.errors.map((e) => ({ line: e.line, text: e.text, message: e.message }))
   const fail = (message: string) => errors.push({ line: block.at.line, text: block.at.text, message })
   if (!data || data.error !== undefined) {
-    fail(data?.error ?? 'Prima del grafico, nella nota, non c\'è una tabella: le attività vengono dalla tabella scritta sopra')
+    fail(data?.error ?? T.noTable)
     return { block, schedule: null, drawing: null, legend: null, errors }
   }
   const plan = data.plan
@@ -46,7 +61,7 @@ export function planPicture(source: string, data: PlanData | null, palette: Pale
   for (const c of s.checks) errors.push({ row: c.row, message: c.message })
   if (!s.ok) return { block, schedule: s, drawing: null, legend: null, errors }
   const start = block.start
-  if (start && !hasDates(plan.unit)) fail(`Le date si mostrano con le durate in giorni, settimane o mesi (qui sono in ${plan.unit})`)
+  if (start && !hasDates(plan.unit)) fail(T.datesNeedUnit(unitName(plan.unit)))
   const drawing = block.kind === 'gantt' ? ganttSvg(s, plan, palette, { width, start }) : networkSvg(s, plan, palette)
   return { block, schedule: s, drawing, legend: planLegend(s, plan, block.kind, start), errors }
 }
@@ -74,7 +89,7 @@ export const FIGURE_WIDTH = 760
 
 /** Il nome della figura: il titolo, o quello del disegno. */
 export function planName(block: PlanBlock): string {
-  return block.title ? labelPlain(block.title) : block.kind === 'gantt' ? 'Diagramma di Gantt' : 'Reticolo del progetto'
+  return block.title ? labelPlain(block.title) : block.kind === 'gantt' ? T.gantt : T.network
 }
 
 /**
@@ -113,7 +128,7 @@ export function planFigure(source: string, data: PlanData | null): string | null
     }
   }
   for (const e of errors) {
-    const where = e.row !== undefined ? `Tabella, riga ${e.row}: ` : ''
+    const where = e.row !== undefined ? T.tableRow(e.row) : ''
     parts.push(`<text x="12" y="${y + 16}" font-family="${PLAN_FONT}" font-size="13" fill="${FIGURE.loss}">${escapeXml(where + e.message)}</text>`)
     y += 22
   }

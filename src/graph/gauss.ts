@@ -19,6 +19,7 @@ import {
   type ComplexScope,
   type ComplexVars,
 } from '../math/complex'
+import { texts, usesDecimalComma } from '../i18n'
 import { compileDomain } from '../math/domain'
 import { MathError, type Compiled } from '../math/evaluate'
 import { nameLatex, toLatex } from '../math/latex'
@@ -29,7 +30,20 @@ import type { GraphItem, Range } from './spec'
 /** La variabile complessa dei grafici. */
 const Z = 'z'
 
-const STYLE = { comma: true, decimal: true, digits: 9 }
+const T = texts({
+  realSides: ['Nelle disuguaglianze vanno numeri reali, come |z|, \\Re z, \\Im z o \\arg z', 'Inequalities need real numbers, like |z|, \\Re z, \\Im z or \\arg z'],
+  conditionsInSet: [
+    'Nel piano di Gauss le condizioni vanno in un insieme: \\{z \\in \\mathbb{C} : |z| \\le 1, \\Re z > 0\\}',
+    'In the complex plane, conditions go in a set: \\{z \\in \\mathbb{C} : |z| \\le 1, \\Re z > 0\\}',
+  ],
+  noSolutions: ['Non trovo soluzioni (con parte reale e immaginaria tra −32 e 32)', 'No solutions found (with real and imaginary parts between −32 and 32)'],
+  whatToDraw: ['Nel piano di Gauss si disegnano numeri, equazioni e disuguaglianze in z', 'The complex plane shows numbers, equations and inequalities in z'],
+  needRelation: ['Con la z serve un\'equazione o una disuguaglianza, es. |z - i| = 2', 'With z you need an equation or an inequality, e.g. |z - i| = 2'],
+  notNumber: ['Non è un numero', 'It\'s not a number'],
+})
+
+/** Come si scrivono i numeri nelle etichette: con la virgola in italiano, con il punto in inglese. */
+const style = () => ({ comma: usesDecimalComma(), decimal: true, digits: 9 })
 
 /** Le funzioni che hanno senso solo per i numeri complessi. */
 const COMPLEX_FUNCTIONS = new Set(['re', 'im', 'arg', 'conj'])
@@ -136,7 +150,7 @@ function inZ(node: MathNode, scope: ComplexScope): (z: Complex) => Complex {
 function realSide(scope: ComplexScope): (node: MathNode) => Compiled {
   return (node) => {
     const f = inZ(node, scope)
-    if (!realEverywhere(f)) throw new MathError('Nelle disuguaglianze vanno numeri reali, come |z|, \\Re z, \\Im z o \\arg z')
+    if (!realEverywhere(f)) throw new MathError(T.realSides)
     return (v) => f({ re: v.x, im: v.y }).re
   }
 }
@@ -153,9 +167,9 @@ function valueLabel(node: MathNode, name: string | null, z: Complex): string {
   const written = toLatex(node)
   const parts = [name ? `${nameLatex(name)} = ${written}` : written]
   const plain = (tex: string) => tex.replace(/\\,|\s/g, '')
-  const algebraic = formatComplex(z, STYLE)
+  const algebraic = formatComplex(z, style())
   if (algebraic && plain(algebraic.tex) !== plain(written)) parts.push(algebraic.tex)
-  const polar = hasExponential(node) ? null : exponentialForm(z, STYLE)
+  const polar = hasExponential(node) ? null : exponentialForm(z, style())
   if (polar && plain(polar.tex) !== plain(written) && (!algebraic || plain(polar.tex) !== plain(algebraic.tex))) parts.push(polar.tex)
   return parts.join(' = ')
 }
@@ -191,7 +205,7 @@ export interface GaussLine {
  */
 export function gaussItem(l: GaussLine, scope: ComplexScope, sets: ReadonlyMap<string, MathNode> | undefined, slot: number): GraphItem {
   const { main, cond, line } = l
-  if (cond) throw new MathError('Nel piano di Gauss le condizioni vanno in un insieme: \\{z \\in \\mathbb{C} : |z| \\le 1, \\Re z > 0\\}')
+  if (cond) throw new MathError(T.conditionsInSet)
   const label = toLatex(main)
   // Nelle equazioni e nelle disuguaglianze la z è sempre la variabile; in un'espressione da sola è
   // il numero z, se la nota lo definisce (z \bar{z}).
@@ -227,11 +241,11 @@ export function gaussItem(l: GaussLine, scope: ComplexScope, sets: ReadonlyMap<s
     const G = (z: Complex) => sub(left(z), right(z))
     if (realEverywhere(G)) return { kind: 'implicit', line, label, slot, F: (x, y) => G({ re: x, im: y }).re }
     const solutions = solveComplex(G)
-    if (!solutions.length) throw new MathError('Non trovo soluzioni (con parte reale e immaginaria tra −32 e 32)')
+    if (!solutions.length) throw new MathError(T.noSolutions)
     return { kind: 'complex', line, label, slot, values: solutions, name: null, arrows: false }
   }
-  if (main.k === 'rel' || main.k === 'in' || main.k === 'and' || main.k === 'or') throw new MathError('Nel piano di Gauss si disegnano numeri, equazioni e disuguaglianze in z')
-  if (freeValue(main)) throw new MathError('Con la z serve un\'equazione o una disuguaglianza, es. |z - i| = 2')
+  if (main.k === 'rel' || main.k === 'in' || main.k === 'and' || main.k === 'or') throw new MathError(T.whatToDraw)
+  if (freeValue(main)) throw new MathError(T.needRelation)
 
   // Con il parametro t (o θ): una curva, come 2e^{it}.
   const param = namesIn(main).has('t') && !scope.consts.has('t') ? 't' : namesIn(main).has('θ') && !scope.consts.has('θ') ? 'θ' : null
@@ -250,7 +264,7 @@ export function gaussItem(l: GaussLine, scope: ComplexScope, sets: ReadonlyMap<s
   const roots = allRoots(main, scope)
   if (roots && roots.length > 1) return { kind: 'complex', line, label, slot, values: roots, name: null, arrows: false }
   const value = compileComplex(main, scope)({})
-  if (!Number.isFinite(value.re) || !Number.isFinite(value.im)) throw new MathError('Non è un numero')
+  if (!Number.isFinite(value.re) || !Number.isFinite(value.im)) throw new MathError(T.notNumber)
   // Il nome di un numero definito nella nota (z_1): la freccia ha il suo nome.
   const name = main.k === 'name' && scope.consts.has(main.name) ? main.name : null
   return { kind: 'complex', line, label: valueLabel(main, null, value), slot, values: [value], name, arrows: true }

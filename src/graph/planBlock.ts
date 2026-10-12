@@ -5,9 +5,26 @@
  * Gantt. Il renderer scrive le attività in `data-plan` (vedi src/render/markdown.ts), lette da
  * `readPlan` nell'anteprima e nei file .md.
  */
+import { texts } from '../i18n'
 import type { PlanData } from '../spreadsheet/plan'
 import { blockLines, labelLine, type GraphError } from './spec'
 import { planLine } from './tableGraph'
+
+const T = texts({
+  noAxes: ['Il diagramma non ha gli assi x e y: il tempo e le attività hanno già il loro nome', 'This chart has no x and y axes: the time and the tasks already have their names'],
+  ganttLines: [
+    'Nel diagramma di Gantt si scrivono solo le righe titolo:, gantt: e inizio: (le attività sono nella tabella)',
+    'In the Gantt chart you can only write the titolo:, gantt: and inizio: lines (the tasks are in the table)',
+  ],
+  networkLines: [
+    'Nel reticolo si scrivono solo le righe titolo:, reticolo: e inizio: (le attività sono nella tabella)',
+    'In the network diagram you can only write the titolo:, reticolo: and inizio: lines (the tasks are in the table)',
+  ],
+  date: ['Scrivi la data d\'inizio come 12/10/2026', 'Write the start date like 2026-10-12'],
+  networkDate: ['Il reticolo ha i tempi in numeri: la data d\'inizio serve al diagramma di Gantt', 'The network diagram shows times as numbers: the start date is for the Gantt chart'],
+  oneRange: ['Il disegno prende le attività da un intervallo solo: scrivi una riga sola', 'The chart takes its tasks from a single range: write only one line'],
+  oneChart: ['Un blocco fa un disegno solo: il Gantt e il reticolo vanno in due blocchi grafico', 'A block makes a single chart: the Gantt chart and the network diagram go in two grafico blocks'],
+})
 
 export type PlanKind = 'gantt' | 'reticolo'
 
@@ -32,6 +49,7 @@ export function planRange(source: string): { kind: PlanKind; range: string; at: 
   return null
 }
 
+// I mesi della data d'inizio scritta nella nota (inizio: 12 ottobre 2026): per ora solo in italiano.
 const MONTHS = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre']
 
 /** Una data scritta all'italiana (12/10/2026, 12-10-26, 12 ottobre 2026) o come 2026-10-12; null se non lo è. */
@@ -63,22 +81,22 @@ export function planBlock(source: string): PlanBlock | null {
     const label = labelLine(l.text)
     if (label) {
       if (label.key === 'title' && label.value) block.title = label.value
-      else if (label.key !== 'title') fail('Il diagramma non ha gli assi x e y: il tempo e le attività hanno già il loro nome')
+      else if (label.key !== 'title') fail(T.noAxes)
       continue
     }
     const p = planLine(l.text)
     if (!p) {
-      fail(`Nel ${found.kind === 'gantt' ? 'diagramma di Gantt' : 'reticolo'} si scrivono solo le righe titolo:, ${found.kind}: e inizio: (le attività sono nella tabella)`)
+      fail(found.kind === 'gantt' ? T.ganttLines : T.networkLines)
       continue
     }
     if (p.key === 'inizio') {
       const date = parseDate(p.value)
-      if (!date) fail('Scrivi la data d\'inizio come 12/10/2026')
-      else if (found.kind === 'reticolo') fail('Il reticolo ha i tempi in numeri: la data d\'inizio serve al diagramma di Gantt')
+      if (!date) fail(T.date)
+      else if (found.kind === 'reticolo') fail(T.networkDate)
       else block.start = date
       continue
     }
-    if (seen) fail(p.key === found.kind ? 'Il disegno prende le attività da un intervallo solo: scrivi una riga sola' : 'Un blocco fa un disegno solo: il Gantt e il reticolo vanno in due blocchi grafico')
+    if (seen) fail(p.key === found.kind ? T.oneRange : T.oneChart)
     seen = true
   }
   return block

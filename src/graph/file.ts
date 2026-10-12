@@ -9,6 +9,7 @@
  *     y = x^2
  *     -->
  */
+import { texts, usesDecimalComma } from '../i18n'
 import { formatNumber } from '../math/format'
 import { nameLatex } from '../math/latex'
 import { renderTexMathml } from '../render/katex'
@@ -24,8 +25,15 @@ import { readPlan } from './planBlock'
 import { planFigure } from './planFigure'
 import { areaColor, graphTitle, itemColors, PALETTES, escapeXml, type Palette } from './svg'
 
+const T = texts({
+  /** Il testo dopo il segno del commento: solo per chi legge il file (Glifo cerca il segno). */
+  hint: ['per modificare il grafico apri questo file con Glifo', 'to edit the graph, open this file with Glifo'],
+  /** Il testo alternativo dell'immagine (gli altri programmi lo mostrano se l'immagine non c'è). */
+  image: ['Grafico', 'Graph'],
+})
+
+/** Il segno del commento con il testo del blocco: lo stesso in tutte le lingue, perché Glifo lo cerca. */
 const MARKER = 'glifo-grafico'
-const HINT = 'per modificare il grafico apri questo file con Glifo'
 /** Una riga che apre o chiude un blocco di codice (come in src/schema/blocks.ts). */
 const FENCE = /^\s*(`{3,}|~{3,})(.*)$/
 const OPEN = new RegExp(`^([ \\t]*)<!-- ${MARKER}\\b`)
@@ -56,7 +64,7 @@ export function graphImage(source: string, defs: readonly string[] = [], chart: 
   const rows = spec.items
     .map((item, i) => ({ item, color: colors[i] }))
     .filter(({ item }) => ((item.kind !== 'point' && item.kind !== 'point3') || item.name) && item.label !== '')
-  const numbers = spec.sliders.map((s) => `${nameLatex(s.name)} = ${formatNumber(s.value, { comma: true, decimal: true, digits: 6 })?.tex ?? s.value}`)
+  const numbers = spec.sliders.map((s) => `${nameLatex(s.name)} = ${formatNumber(s.value, { comma: usesDecimalComma(), decimal: true, digits: 6 })?.tex ?? s.value}`)
   const lines = rows.length + (numbers.length ? 1 : 0)
   const legendHeight = lines ? lines * 28 + 12 : 0
   let legend = ''
@@ -142,7 +150,7 @@ export function graphFigure(spec: GraphSpec, plot: string, width: number, height
     rows.push(`${swatchSvg(item, colors[i], palette, x, y + 6)}<text x="${(x + 28).toFixed(1)}" y="${y + 18}" ${font}>${text.svg}</text>${extra}`)
   })
   if (spec.sliders.length) {
-    const numbers = spec.sliders.map((s) => `${nameLatex(s.name)} = ${formatNumber(s.value, { comma: true, decimal: true, digits: 6 })?.tex ?? s.value}`).join(', \quad ')
+    const numbers = spec.sliders.map((s) => `${nameLatex(s.name)} = ${formatNumber(s.value, { comma: usesDecimalComma(), decimal: true, digits: 6 })?.tex ?? s.value}`).join(', \quad ')
     const text = texSvg(numbers, size)
     rows.push(`<text x="${width / 2}" y="${rows.length * rowHeight + 18}" text-anchor="middle" ${font}>${text.svg}</text>`)
   }
@@ -171,11 +179,11 @@ export const FIGURE_PALETTE: Palette = { ...PALETTES.light, surface: '#ffffff', 
 export function graphsForFile(text: string, images: ReadonlyMap<number, string>): string {
   let out = ''
   let pos = 0
-  for (const block of findFencedBlocks(text, 'grafico')) {
+  for (const block of findFencedBlocks(text, 'grafico')) { // non si traduce: il nome del blocco
     const image = images.get(block.line)
     if (!block.closed || !image) continue
     const indent = /^[ \t]*/.exec(text.slice(block.from))![0]
-    const lines = [`${indent}![Grafico](data:image/svg+xml;base64,${base64(image)})`, `${indent}<!-- ${MARKER} · ${HINT}`, hide(block.source), `${indent}-->`]
+    const lines = [`${indent}![${T.image}](data:image/svg+xml;base64,${base64(image)})`, `${indent}<!-- ${MARKER} · ${T.hint}`, hide(block.source), `${indent}-->`]
     out += text.slice(pos, block.from) + lines.join('\n')
     pos = block.to
   }
@@ -212,7 +220,7 @@ export function graphsFromFile(text: string): string {
     while (image >= 0 && !out[image].trim()) image--
     if (image >= 0 && IMAGE.test(out[image])) out.length = image
     const indent = open[1]
-    out.push(`${indent}\`\`\`grafico`, unhide(lines.slice(i + 1, end).join('\n')), `${indent}\`\`\``)
+    out.push(`${indent}\`\`\`grafico`, unhide(lines.slice(i + 1, end).join('\n')), `${indent}\`\`\``) // non si traduce: il nome del blocco
     i = end
   }
   return out.join('\n')

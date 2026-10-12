@@ -10,7 +10,37 @@
  * il tipo e lo scarto come in Project: «AII» (inizio-inizio), «BFF+2», «C+3» (3 dopo la fine di C),
  * «D-1»; i tipi sono FI (fine-inizio, quello di sempre), II, FF e IF, anche all'inglese (FS, SS, SF).
  */
+import { texts, usesDecimalComma } from '../i18n'
 import type { PlanActivity, PlanTable, PlanTime } from '../spreadsheet/plan'
+
+const T = texts({
+  unknownLink: (item: string) => [
+    `tra le precedenti c'è «${item}», ma non c'è un'attività con questo codice`,
+    `the predecessors include “${item}”, but there's no task with this code`,
+  ],
+  list: (first: string, last: string) => [`${first} e ${last}`, `${first} and ${last}`],
+  noCode: ['manca il codice dell\'attività, nella prima colonna', 'the task code is missing, in the first column'],
+  sameCode: (id: string, row: number) => [`il codice ${id} c'è già alla riga ${row}: ogni attività ha il suo`, `the code ${id} is already on row ${row}: each task has its own`],
+  noDuration: (id: string) => [`manca la durata di ${id || 'questa attività'} (un numero)`, `the duration of ${id || 'this task'} is missing (a number)`],
+  negative: (id: string) => [`la durata di ${id} è negativa`, `the duration of ${id} is negative`],
+  afterItself: (id: string) => [`${id} non può venire dopo sé stessa`, `${id} can't come after itself`],
+  after: (next: string, before: string) => [`${next} dopo ${before}`, `${next} after ${before}`],
+  cycle: (names: string, steps: string) => [
+    `${names} si aspettano a vicenda (${steps}): così il progetto non può cominciare`,
+    `${names} wait for each other (${steps}): so the project can't start`,
+  ],
+  wrongTime: (time: string, id: string, right: string, written: string) => [`${time} di ${id} è ${right}, non ${written}`, `${time} of ${id} is ${right}, not ${written}`],
+})
+
+/** I tempi scritti nella tabella, per i messaggi del controllo. */
+const TIME_NAMES = texts({
+  es: ['l\'inizio al più presto', 'the earliest start'],
+  ef: ['la fine al più presto', 'the earliest finish'],
+  ls: ['l\'inizio al più tardi', 'the latest start'],
+  lf: ['la fine al più tardi', 'the latest finish'],
+  slack: ['il margine totale', 'the total slack'],
+  free: ['il margine libero', 'the free slack'],
+})
 
 export type LinkType = 'FI' | 'II' | 'FF' | 'IF'
 
@@ -67,6 +97,7 @@ export interface Schedule {
 const EPS = 1e-9
 
 const TYPES: Record<string, LinkType> = { FI: 'FI', II: 'II', FF: 'FF', IF: 'IF', FS: 'FI', SS: 'II', SF: 'IF' }
+// Le parole scritte nella colonna delle precedenti (nessuno, niente, nulla; «A e B»): per ora solo in italiano.
 const NONE = /^(-|—|–|\/|nessun[ao]?|niente|nulla)$/i
 const LINK = /^(.+?)\s*(?:\(\s*)?(FI|II|FF|IF|FS|SS|SF)?(?:\s*\))?\s*(?:([+-])\s*(\d+(?:[.,]\d+)?)\s*[a-zàèéìòù.]*)?$/i
 
@@ -111,7 +142,7 @@ export function parseLinks(text: string, ids: ReadonlyMap<string, number>): { li
       for (const p of parts) links.push({ from: ids.get(key(p))!, type: 'FI', lag: 0 })
       continue
     }
-    problems.push(`tra le precedenti c'è «${item}», ma non c'è un'attività con questo codice`)
+    problems.push(T.unknownLink(item))
   }
   return { links, problems }
 }
@@ -157,18 +188,9 @@ function order(count: number, preds: readonly number[][]): { order: number[] } |
   return { cycle: [...cycle.slice(first), ...cycle.slice(0, first)] }
 }
 
-/** «A, B e C». */
+/** «A, B e C» (in inglese «A, B and C»). */
 export function listText(items: readonly string[]): string {
-  return items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} e ${items[items.length - 1]}`
-}
-
-const TIME_NAMES: Record<PlanTime, string> = {
-  es: 'l\'inizio al più presto',
-  ef: 'la fine al più presto',
-  ls: 'l\'inizio al più tardi',
-  lf: 'la fine al più tardi',
-  slack: 'il margine totale',
-  free: 'il margine libero',
+  return items.length < 2 ? items.join('') : T.list(items.slice(0, -1).join(', '), items[items.length - 1])
 }
 
 /** I tempi del progetto dalle attività della tabella. */
@@ -178,22 +200,22 @@ export function schedule(plan: PlanTable): Schedule {
   const ids = new Map<string, number>()
   acts.forEach((a, i) => {
     if (!a.id) {
-      problems.push({ row: a.row, message: 'manca il codice dell\'attività, nella prima colonna' })
+      problems.push({ row: a.row, message: T.noCode })
       return
     }
     const k = key(a.id)
     const first = ids.get(k)
-    if (first !== undefined) problems.push({ row: a.row, message: `il codice ${a.id} c'è già alla riga ${acts[first].row}: ogni attività ha il suo` })
+    if (first !== undefined) problems.push({ row: a.row, message: T.sameCode(a.id, acts[first].row) })
     else ids.set(k, i)
   })
   const tasks: Task[] = acts.map((a, i) => {
-    if (a.duration === null) problems.push({ row: a.row, message: `manca la durata di ${a.id || 'questa attività'} (un numero)` })
-    else if (a.duration < 0) problems.push({ row: a.row, message: `la durata di ${a.id} è negativa` })
+    if (a.duration === null) problems.push({ row: a.row, message: T.noDuration(a.id) })
+    else if (a.duration < 0) problems.push({ row: a.row, message: T.negative(a.id) })
     const parsed = parseLinks(a.after, ids)
     for (const p of parsed.problems) problems.push({ row: a.row, message: p })
     const links = parsed.links.filter((l) => {
       if (l.from !== i) return true
-      problems.push({ row: a.row, message: `${a.id} non può venire dopo sé stessa` })
+      problems.push({ row: a.row, message: T.afterItself(a.id) })
       return false
     })
     return {
@@ -219,8 +241,8 @@ export function schedule(plan: PlanTable): Schedule {
   const sorted = order(tasks.length, preds)
   if ('cycle' in sorted) {
     const names = sorted.cycle.map((i) => tasks[i].id)
-    const steps = sorted.cycle.map((i, k) => `${tasks[sorted.cycle[(k + 1) % names.length]].id} dopo ${tasks[i].id}`)
-    problems.push({ row: tasks[sorted.cycle[0]].row, message: `${listText(names)} si aspettano a vicenda (${steps.join(', ')}): così il progetto non può cominciare` })
+    const steps = sorted.cycle.map((i, k) => T.after(tasks[sorted.cycle[(k + 1) % names.length]].id, tasks[i].id))
+    problems.push({ row: tasks[sorted.cycle[0]].row, message: T.cycle(listText(names), steps.join(', ')) })
     return empty(false)
   }
   // In avanti: ogni attività comincia appena i suoi legami lo permettono (e non prima dell'inizio).
@@ -282,15 +304,15 @@ function checkGiven(s: Schedule, acts: readonly PlanActivity[]): void {
       checked++
       const right = t[time]
       if (Math.abs(right - value) > 1e-6 * Math.max(1, Math.abs(right))) {
-        s.checks.push({ row: a.row, message: `${TIME_NAMES[time]} di ${t.id} è ${numberText(right)}, non ${numberText(value)}` })
+        s.checks.push({ row: a.row, message: T.wrongTime(TIME_NAMES[time], t.id, numberText(right), numberText(value)) })
       }
     }
   })
   s.checked = s.checks.length ? 0 : checked
 }
 
-/** Un tempo con la virgola: 2, 2,5, 0,33. */
+/** Un tempo con la virgola (in inglese il punto): 2, 2,5, 0,33. */
 export function numberText(x: number): string {
-  const r = Math.round(x * 100) / 100
-  return String(r).replace('.', ',').replace('-', '−')
+  const r = String(Math.round(x * 100) / 100)
+  return (usesDecimalComma() ? r.replace('.', ',') : r).replace('-', '−')
 }

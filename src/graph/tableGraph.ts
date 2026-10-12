@@ -5,11 +5,42 @@
  * e la perdita dove stanno sotto, e il punto di pareggio dove si incontrano (il diagramma di
  * redditività dell'economia aziendale).
  */
+import { texts } from '../i18n'
 import { NO_TABLE, parseRange, REVENUE, TOTAL_COST, type ChartData } from '../spreadsheet/chart'
 import { formatNumber, roundTo, type Format } from '../spreadsheet/format'
 import { colName } from '../spreadsheet/refs'
 import type { GraphError, GraphItem } from './spec'
 
+const T = texts({
+  oneRange: ['Un grafico prende i dati da un intervallo solo: scrivi una riga dati: sola', 'A graph takes its data from a single range: write only one dati: line'],
+  dataFirst: [
+    'Il punto di pareggio è tra due linee dei dati: scrivi prima la riga dati: con le celle della tabella (dati: A8:D13)',
+    'The break-even point is between two data lines: first write the dati: line with the table cells (dati: A8:D13)',
+  ],
+  twoLines: [
+    'Scrivi le due linee, prima i ricavi e poi i costi: pareggio: Ricavi, Costi totali',
+    'Write the two lines, revenue first and then costs: pareggio: Revenue, Total costs',
+  ],
+  noColumn: (name: string) => [
+    `Tra i dati non c'è la colonna «${name}»: scrivi i nomi come nella prima riga dei dati (pareggio: Ricavi, Costi totali)`,
+    `There's no “${name}” column in the data: write the names as in the first row of the data (pareggio: Revenue, Total costs)`,
+  ],
+  noCommonX: [
+    'Le due linee non hanno valori per le stesse x: servono almeno due righe in comune',
+    'The two lines don\'t have values for the same x: they need at least two rows in common',
+  ],
+  profitArea: ['Area di utile', 'Profit area'],
+  lossArea: ['Area di perdita', 'Loss area'],
+  profit: ['Utile', 'Profit'],
+  loss: ['Perdita', 'Loss'],
+  breakEven: ['Punto di pareggio', 'Break-even point'],
+  noMeeting: [
+    'Le due linee non si incontrano tra i dati della tabella: prova con altre quantità (più grandi o più piccole)',
+    'The two lines don\'t meet within the table data: try other quantities (larger or smaller)',
+  ],
+})
+
+// Le parole delle righe del blocco (dati:, pareggio:, gantt:, reticolo:, inizio:): per ora solo in italiano.
 const DATA_LINE = /^(dati|pareggio)\s*:\s*(.*)$/i
 
 /** Una riga `dati: …` o `pareggio: …` (null se la riga è altro). */
@@ -76,11 +107,11 @@ export function tableItems(lines: readonly DataLine[], data: ChartData | null | 
   const fail = (l: DataLine, message: string) => errors.push({ line: l.line, text: l.text, message })
   const dati = lines.find((l) => l.key === 'dati')
   for (const l of lines) {
-    if (l.key === 'dati' && l !== dati) fail(l, 'Un grafico prende i dati da un intervallo solo: scrivi una riga dati: sola')
+    if (l.key === 'dati' && l !== dati) fail(l, T.oneRange)
   }
   const pareggi = lines.filter((l) => l.key === 'pareggio')
   if (!dati) {
-    for (const l of pareggi) fail(l, 'Il punto di pareggio è tra due linee dei dati: scrivi prima la riga dati: con le celle della tabella (dati: A8:D13)')
+    for (const l of pareggi) fail(l, T.dataFirst)
     return { items, errors }
   }
   if (!data?.table) {
@@ -108,13 +139,13 @@ export function tableItems(lines: readonly DataLine[], data: ChartData | null | 
   for (const l of pareggi) {
     const names = l.value.split(/[,;]/).map((s) => s.trim()).filter(Boolean)
     if (names.length !== 2) {
-      fail(l, 'Scrivi le due linee, prima i ricavi e poi i costi: pareggio: Ricavi, Costi totali')
+      fail(l, T.twoLines)
       continue
     }
     const found = names.map((name) => series.find((s) => s.name.toLowerCase() === name.toLowerCase() || s.letter === name.toUpperCase()))
     const missing = names.find((_, i) => !found[i])
     if (missing) {
-      fail(l, `Tra i dati non c'è la colonna «${missing}»: scrivi i nomi come nella prima riga dei dati (pareggio: Ricavi, Costi totali)`)
+      fail(l, T.noColumn(missing))
       continue
     }
     // Prima i ricavi e poi i costi; scritti al contrario, con i loro nomi, si capisce lo stesso.
@@ -122,15 +153,16 @@ export function tableItems(lines: readonly DataLine[], data: ChartData | null | 
     if (TOTAL_COST.test(revenue.name) && REVENUE.test(cost.name)) [revenue, cost] = [cost, revenue]
     const meeting = breakEven(revenue.points, cost.points)
     if (!meeting) {
-      fail(l, 'Le due linee non hanno valori per le stesse x: servono almeno due righe in comune')
+      fail(l, T.noCommonX)
       continue
     }
-    if (meeting.gain.length) items.push({ kind: 'gap', line: l.line, label: textLabel('Area di utile'), slot: -1, tone: 'gain', polygons: meeting.gain, text: 'Utile' })
-    if (meeting.loss.length) items.push({ kind: 'gap', line: l.line, label: textLabel('Area di perdita'), slot: -1, tone: 'loss', polygons: meeting.loss, text: 'Perdita' })
+    if (meeting.gain.length) items.push({ kind: 'gap', line: l.line, label: textLabel(T.profitArea), slot: -1, tone: 'gain', polygons: meeting.gain, text: T.profit })
+    if (meeting.loss.length) items.push({ kind: 'gap', line: l.line, label: textLabel(T.lossArea), slot: -1, tone: 'loss', polygons: meeting.loss, text: T.loss })
     for (const [x, y] of meeting.points) {
-      items.push({ kind: 'mark', line: l.line, label: textLabel('Punto di pareggio'), slot: -1, x, y, text: 'Punto di pareggio', coords: `(${quantity(x, xFormat)}; ${formatNumber(roundTo(y, 2), revenue.format)})` })
+      // Le coordinate con il punto e virgola anche in inglese: i numeri della tabella possono avere la virgola (20,000).
+      items.push({ kind: 'mark', line: l.line, label: textLabel(T.breakEven), slot: -1, x, y, text: T.breakEven, coords: `(${quantity(x, xFormat)}; ${formatNumber(roundTo(y, 2), revenue.format)})` })
     }
-    if (!meeting.points.length) fail(l, 'Le due linee non si incontrano tra i dati della tabella: prova con altre quantità (più grandi o più piccole)')
+    if (!meeting.points.length) fail(l, T.noMeeting)
   }
   return { items, errors }
 }
