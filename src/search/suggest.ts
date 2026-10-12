@@ -1,3 +1,4 @@
+import { lang, type Lang } from '../i18n'
 import { SYMBOLS, commandNames, type SymbolEntry } from '../symbols'
 import { normalizeText } from './normalize'
 
@@ -12,23 +13,40 @@ export interface Suggestion {
 interface SuggestIndex {
   entry: SymbolEntry
   names: string[]
-  /** Parole chiave normalizzate e anche "incollate" (per ogni → perogni). */
-  keys: string[]
+  /** Nome e parole chiave di ogni lingua, normalizzati e anche "incollati" (per ogni → perogni). */
+  keys: Record<Lang, string[]>
+}
+
+/**
+ * Una parola che c'è solo nell'altra lingua conta meno: con Glifo in italiano `\res` propone ancora
+ * \rho (resistività) prima di una parola inglese che comincia così, e in inglese il contrario. La parola
+ * intera dell'altra lingua (420 − 150) resta sotto l'inizio di una parola della lingua di Glifo (320).
+ */
+const OTHER_LANGUAGE = 150
+
+function keysOf(texts: readonly string[]): string[] {
+  const keys = new Set<string>()
+  for (const k of texts) {
+    const n = normalizeText(k)
+    if (!n) continue
+    keys.add(n.replace(/ /g, ''))
+    for (const w of n.split(' ')) if (w.length >= 3) keys.add(w)
+  }
+  return [...keys]
 }
 
 let index: SuggestIndex[] | null = null
 
 function getIndex(): SuggestIndex[] {
-  return (index ??= SYMBOLS.map((entry) => {
-    const keys = new Set<string>()
-    for (const k of [entry.name, ...entry.keywords]) {
-      const n = normalizeText(k)
-      if (!n) continue
-      keys.add(n.replace(/ /g, ''))
-      for (const w of n.split(' ')) if (w.length >= 3) keys.add(w)
-    }
-    return { entry, names: commandNames(entry), keys: [...keys] }
-  }))
+  return (index ??= SYMBOLS.map((entry) => ({
+    entry,
+    names: commandNames(entry),
+    // Le due lingue: `\infinito` e `\infinity` trovano tutti e due \infty.
+    keys: {
+      it: keysOf([entry.names[0], ...entry.keywordsByLang[0]]),
+      en: keysOf([entry.names[1], ...entry.keywordsByLang[1]]),
+    },
+  })))
 }
 
 function isSubsequence(needle: string, hay: string): boolean {
@@ -40,7 +58,8 @@ function isSubsequence(needle: string, hay: string): boolean {
 /**
  * Suggerimenti per il comando che si sta scrivendo dopo `\`.
  * Esempio: `su` → \sum, \sup, \subset…; funziona anche con parole
- * italiane (`\infinito` → \infty, `\radice` → \sqrt).
+ * italiane e inglesi (`\infinito` e `\infinity` → \infty, `\radice` e
+ * `\root` → \sqrt).
  */
 export function suggestCommands(prefix: string, limit = 40): Suggestion[] {
   const items = getIndex()
@@ -71,9 +90,12 @@ export function suggestCommands(prefix: string, limit = 40): Suggestion[] {
       else if (prefix.length >= 4 && isSubsequence(lower, name.toLowerCase())) consider(80 + w - alias, 'fuzzy')
     })
     if (norm.length >= 3) {
-      for (const k of it.keys) {
-        if (k === norm) consider(420 + w * 3, 'keyword')
-        else if (k.startsWith(norm)) consider(320 + w * 3, 'keyword')
+      for (const l of ['it', 'en'] as const) {
+        const other = l === lang ? 0 : OTHER_LANGUAGE
+        for (const k of it.keys[l]) {
+          if (k === norm) consider(420 + w * 3 - other, 'keyword')
+          else if (k.startsWith(norm)) consider(320 + w * 3 - other, 'keyword')
+        }
       }
     }
     if (acc.best) out.push(acc.best)

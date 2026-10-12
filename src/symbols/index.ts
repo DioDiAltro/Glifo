@@ -1,3 +1,4 @@
+import { texts } from '../i18n'
 import type { Category, CategoryId, SymbolEntry } from './types'
 import { greek } from './data/greek'
 import { operators, relations } from './data/operators'
@@ -9,25 +10,55 @@ import { misc, chemistry } from './data/misc'
 
 export type { Category, CategoryId, SymbolEntry, SymbolForm } from './types'
 
+/** I nomi delle categorie. */
+const LABELS = texts({
+  greek: ['Lettere greche', 'Greek letters'],
+  fractions: ['Frazioni, potenze, radici', 'Fractions, powers, roots'],
+  operators: ['Operatori', 'Operators'],
+  relations: ['Relazioni', 'Relations'],
+  arrows: ['Frecce', 'Arrows'],
+  sets: ['Insiemi', 'Sets'],
+  logic: ['Logica', 'Logic'],
+  bigops: ['Sommatorie e produttorie', 'Sums and products'],
+  calculus: ['Analisi', 'Calculus'],
+  functions: ['Funzioni', 'Functions'],
+  delimiters: ['Parentesi', 'Brackets'],
+  accents: ['Accenti e decorazioni', 'Accents and decorations'],
+  fonts: ['Stili delle lettere', 'Letter styles'],
+  structures: ['Matrici e sistemi', 'Matrices and systems'],
+  text: ['Testo e spazi', 'Text and spaces'],
+  misc: ['Varie', 'Miscellaneous'],
+  chemistry: ['Chimica', 'Chemistry'],
+})
+
+/** Una categoria: il nome è un getter, nella lingua di Glifo quando si mostra. */
+const cat = (id: CategoryId, icon: string): Category => ({
+  id,
+  icon,
+  get label() {
+    return LABELS[id]
+  },
+})
+
 /** Categorie nell'ordine in cui appaiono nel pannello laterale. */
 export const CATEGORIES: Category[] = [
-  { id: 'greek', label: 'Lettere greche', icon: String.raw`\alpha` },
-  { id: 'fractions', label: 'Frazioni, potenze, radici', icon: String.raw`\tfrac{a}{b}` },
-  { id: 'operators', label: 'Operatori', icon: String.raw`\pm` },
-  { id: 'relations', label: 'Relazioni', icon: String.raw`\leq` },
-  { id: 'arrows', label: 'Frecce', icon: String.raw`\Rightarrow` },
-  { id: 'sets', label: 'Insiemi', icon: String.raw`\in` },
-  { id: 'logic', label: 'Logica', icon: String.raw`\forall` },
-  { id: 'bigops', label: 'Sommatorie e produttorie', icon: String.raw`\textstyle\sum` },
-  { id: 'calculus', label: 'Analisi', icon: String.raw`\textstyle\int` },
-  { id: 'functions', label: 'Funzioni', icon: String.raw`\sin` },
-  { id: 'delimiters', label: 'Parentesi', icon: String.raw`\langle\,\rangle` },
-  { id: 'accents', label: 'Accenti e decorazioni', icon: String.raw`\vec{v}` },
-  { id: 'fonts', label: 'Stili delle lettere', icon: String.raw`\mathbb{R}` },
-  { id: 'structures', label: 'Matrici e sistemi', icon: String.raw`\left(\begin{smallmatrix}a&b\\c&d\end{smallmatrix}\right)` },
-  { id: 'text', label: 'Testo e spazi', icon: String.raw`\text{Aa}` },
-  { id: 'misc', label: 'Varie', icon: String.raw`\ldots` },
-  { id: 'chemistry', label: 'Chimica', icon: String.raw`\ce{H2O}` },
+  cat('greek', String.raw`\alpha`),
+  cat('fractions', String.raw`\tfrac{a}{b}`),
+  cat('operators', String.raw`\pm`),
+  cat('relations', String.raw`\leq`),
+  cat('arrows', String.raw`\Rightarrow`),
+  cat('sets', String.raw`\in`),
+  cat('logic', String.raw`\forall`),
+  cat('bigops', String.raw`\textstyle\sum`),
+  cat('calculus', String.raw`\textstyle\int`),
+  cat('functions', String.raw`\sin`),
+  cat('delimiters', String.raw`\langle\,\rangle`),
+  cat('accents', String.raw`\vec{v}`),
+  cat('fonts', String.raw`\mathbb{R}`),
+  cat('structures', String.raw`\left(\begin{smallmatrix}a&b\\c&d\end{smallmatrix}\right)`),
+  cat('text', String.raw`\text{Aa}`),
+  cat('misc', String.raw`\ldots`),
+  cat('chemistry', String.raw`\ce{H2O}`),
 ]
 
 export const SYMBOLS: SymbolEntry[] = [

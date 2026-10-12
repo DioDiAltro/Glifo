@@ -12,7 +12,7 @@ import { parseSync } from 'vite'
 
 /**
  * Le parti già tradotte: una cartella (con la barra alla fine) o un file. Restano da tradurre (GRAFICA.md,
- * punto 6): i conti (src/math), i simboli, le tabelle, i grafici, gli schemi, l'AI e la ricerca.
+ * punto 6): i conti (src/math), le tabelle, i grafici, gli schemi e l'AI.
  */
 const TRANSLATED = [
   'src/i18n.ts',
@@ -25,6 +25,12 @@ const TRANSLATED = [
   'src/editor/',
   'src/render/',
   'src/store/',
+  // I dati dei simboli (src/symbols/data/) hanno i testi in coppie [italiano, inglese] dentro le chiamate: li controlla tests/symbolsEn.test.ts.
+  'src/symbols/define.ts',
+  'src/symbols/index.ts',
+  'src/symbols/template.ts',
+  'src/symbols/types.ts',
+  'src/search/',
 ]
 
 /** Dentro le parti tradotte, i file che restano in italiano (e perché). */
