@@ -5,6 +5,28 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
 
 ## Dove sono le cose
 
+- `src/i18n.ts` (12 ottobre 2026, GRAFICA.md punto 6): le due lingue, italiano e inglese. `lang` si
+  decide all'avvio (`detectLang`: quella scelta, in `glifo.lang.v1`; la prima volta dal browser, la prima
+  tra italiano e inglese nelle sue lingue, se no inglese; con appunti già nel browser, anche `matherdown.*`,
+  italiano) e `rememberLang` in main.ts la fissa. Cambiarla (`chooseLang`, Impostazioni → «Lingua», il
+  primo riquadro) salva la nota e ricarica la pagina; le altre schede lo dicono con «Ricarica». È del
+  dispositivo, fuori dagli spazi degli account; il trasloco su glifo.page la porta (`lang` nel pacco:
+  senza, italiano), se no un browser inglese aprirebbe glifo.page in inglese prima degli appunti. I testi:
+  `texts({...})` in cima a ogni file (`T`), ogni voce `[italiano, inglese]` o una funzione che compone le
+  due frasi intere; `rich` per gli elementi dentro una frase (`{nome}`), `byLang` per i pezzi lunghi (la
+  guida di `openHelpDialog`, le parole della ricerca di CodeMirror), `dateLocale` per le date. Leggere i
+  testi all'import va bene (la lingua non cambia con la pagina aperta); le etichette esportate sono getter,
+  così nelle prove `setLangForTests` cambia lingua. Nelle prove Glifo è in italiano (`tests/support/lang.ts`;
+  nelle prove nel browser `locale: 'it-IT'`, e una apre Glifo con il browser in inglese e torna
+  all'italiano dalle impostazioni). `tests/translations.test.ts` legge i sorgenti con il parser di Vite:
+  ogni tabella ha le due versioni con gli stessi `{nomi}`, e nelle parti tradotte (`TRANSLATED`) non resta
+  italiano scritto nel codice (una stima: frasi con le parole e le lettere dell'italiano, etichette come
+  «Chiudi»; classi CSS e nomi di file no); quello che deve restare italiano (le parole delle note come
+  ```` ```grafico ````, il registro dei tocchi) ha sulla riga il commento «non si traduce». Tradotti:
+  main.ts, src/ui (tranne il registro dei tocchi e il trasloco), lavagna, editor, store, render, account e
+  condivisione; restano src/math, i simboli, le tabelle, i grafici, gli schemi, l'AI e la ricerca. La
+  nota di benvenuto è in `welcome.md` e `welcome.en.md` (`isWelcome` riconosce tutte e due, mai toccate);
+  con Glifo in inglese il controllo ortografico parte con l'inglese solo (`DEFAULT_SETTINGS`).
 - `src/symbols/`: catalogo dei simboli; per aggiungerne uno vedi «Aggiungere un
   simbolo» nel README.
 - `src/search/`: ricerca a parole in italiano e suggerimenti mentre si scrive `\…`.
@@ -54,7 +76,12 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   anteprima, e nell'anteprima la loro fascia è il bordo in alto (`syncTo` ne tiene conto). Nella
   riga ci sono anche i due gruppi della barra di formattazione (`toolbar.ts`); `fitBar` decide se le
   viste stanno al centro o, se il posto non basta, a destra. Il tutorial è in `tutorial.ts` (si apre
-  la prima volta e da «Come si usa»; le prove nel browser lo segnano come visto, tranne la sua);
+  la prima volta e da «Come si usa»; le prove nel browser lo segnano come visto, tranne la sua): undici
+  pagine (12 ottobre 2026: anche grafici, tabelle, schemi, «Spiega con l'AI» e la condivisione), con i
+  testi nelle due lingue in quattro righe al massimo (lo controlla `tests/tutorial.test.ts`, così i
+  pulsanti non si spostano) e i video che `scripts/tutorial.mjs` registra con il browser in italiano (la
+  scena di «Spiega con l'AI» con un modello finto, `tutorialModel`; i video in inglese quando tutto è
+  tradotto);
   chiuso quello della prima volta, o lasciato per le scorciatoie, `showTutorialHint` mostra un
   fumetto che punta al «?» (o al logo, se la barra è chiusa) e se ne va da solo dopo 8 secondi.
   I messaggi brevi in basso sono `toast.ts`; con un pulsante (per esempio «Ricarica») restano finché
@@ -435,8 +462,10 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   (le più vecchie si lasciano se il contesto non basta); Glifo controlla le formule della risposta
   (`checkFormulas`, lo stesso controllo dei grafici e dei teoremi) e fa correggere quelle sbagliate. Con
   un'altra spiegazione, «Rifai» o chiudendo, la chat ricomincia (`endChat` ferma il modello); non si salva.
-  Mentre la spiegazione o la chat del pannello lavorano il pulsante ✨ sfuma i colori con un alone, come un
-  neon (`.is-working`; l'alone resta dentro il pulsante: la barra, che scorre, taglierebbe quello che esce), e se
+  Con il pannello aperto ✨ e «Simboli» hanno un contorno spesso, non il fondo pieno (12 ottobre 2026,
+  GRAFICA.md punto 8, variante A), e `aria-expanded` dice quale pannello si vede (`markPanelButtons` in
+  main.ts). Mentre la spiegazione o la chat del pannello lavorano il pulsante ✨ sfuma i colori con un alone, come un
+  neon (`.is-working`, con il pannello aperto anche il contorno: `ai-working-ring`; l'alone resta dentro il pulsante: la barra, che scorre, taglierebbe quello che esce), e se
   finiscono con il pannello AI che non si vede ha un pallino finché non lo si riapre (`.has-news`), ma non
   se la spiegazione è stata chiusa o fermata (`src/ui/aiActivity.ts`, 8 ottobre 2026: `activity` passa da
   `SidePanel` ad `AiPanel`, `ExplainPanel` ed `ExplainChat`; in main.ts `aiWork` e `aiShown`, chiamata da

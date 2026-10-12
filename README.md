@@ -819,10 +819,17 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
   **Commenti**, «Come si usa» e le impostazioni (lì c'è anche il tema). Sopra il testo una riga sola: a sinistra i pulsanti per
   formattare, al centro le viste (Editor, Diviso, Anteprima, Lavagna), a destra quelli per inserire e i
   **Simboli**, vicino al loro pannello.
-- **Tutorial** la prima volta che si entra: poche pagine, ognuna con un video e due righe, da
-  sfogliare con Indietro e Avanti; l'ultima ha «Inizia». Si riapre da «Come si usa» (il «?» in
-  fondo alla barra laterale: quando si chiude il tutorial, un fumetto lo indica per qualche
-  secondo), e da lì si arriva a tutte le scorciatoie.
+- **Tutorial** la prima volta che si entra: undici pagine, ognuna con un video e poche righe (scrivere,
+  formule, simboli, calcoli, grafici, tabelle, schemi, «Spiega con l'AI», lavagna, viste e appunti,
+  condivisione e account), da sfogliare con Indietro e Avanti; l'ultima ha «Inizia». Si riapre da «Come
+  si usa» (il «?» in fondo alla barra laterale: quando si chiude il tutorial, un fumetto lo indica per
+  qualche secondo), e da lì si arriva a tutte le scorciatoie.
+- **Italiano e inglese**: in *Impostazioni → Lingua*; la prima volta Glifo
+  prende la lingua del browser (chi aveva già gli appunti resta in italiano). Per ora in inglese sono
+  tradotte le schermate (barre, finestre, pannelli, lavagna, account, condivisione, commenti, guida e
+  tutorial) e la nota di benvenuto; i conti, i nomi dei simboli, le tabelle, i grafici, gli schemi e
+  l'AI restano in italiano, e si traducono dopo (GRAFICA.md, punto 6). La lingua in cui si scrive è
+  un'altra cosa: la sceglie il controllo ortografico.
 - Sezioni in tonalità diverse (la cornice è più scura del foglio su cui si scrive) e **da
   allargare o stringere**: trascina il bordo dell'elenco degli appunti, del pannello dei
   simboli o quello tra testo e anteprima (o usa le frecce, quando il bordo ha il fuoco); con un
@@ -995,7 +1002,8 @@ Web app in **TypeScript** con [Vite](https://vite.dev), senza framework e senza 
 ```
 src/
   main.ts                 avvio dell'app e collegamento dei pezzi
-  welcome.md              la nota di benvenuto
+  i18n.ts                 le due lingue: la lingua della pagina e le tabelle dei testi (texts)
+  welcome.md              la nota di benvenuto (welcome.en.md in inglese)
   symbols/                il "dizionario" dei simboli
     data/*.ts             i simboli, divisi per categoria
     template.ts           segnaposto (#) e anteprime (⋯)
@@ -1162,6 +1170,28 @@ c(r`\iint`, 'integrale doppio', 'integrale doppio, doppio integrale, double inte
 
 `npm test` controlla automaticamente che ogni simbolo e ogni variante siano formule valide
 per KaTeX e che la ricerca continui a trovare le risposte giuste.
+
+### Scrivere un testo dell'interfaccia
+
+Ogni testo che si vede ha un nome e le due versioni, italiano e inglese, nella tabella `T` in cima al
+file che lo usa (`src/i18n.ts`):
+
+```ts
+const T = texts({
+  close: ['Chiudi', 'Close'],
+  notes: (n: number) => [n === 1 ? 'Una nota' : `${n} note`, n === 1 ? 'One note' : `${n} notes`],
+  help: ['Premi {key} per cercare.', 'Press {key} to search.'],
+})
+
+h('button', { title: T.close }, T.notes(3))
+h('p', {}, ...rich(T.help, { key: h('kbd', {}, 'Ctrl+K') }))
+```
+
+Le frasi con dei valori si compongono intere in ogni lingua (con una funzione), mai a pezzi; i pezzi
+lunghi, come le pagine della guida, si scrivono interi con `byLang({ it: () => …, en: () => … })`.
+`npm test` controlla che ogni testo abbia l'inglese, con gli stessi nomi tra graffe, e che nelle parti
+già tradotte (`TRANSLATED` in `tests/translations.test.ts`) non resti italiano scritto direttamente nel
+codice. Le parole che si scrivono nelle note (```` ```grafico ````, `titolo:`…) non si traducono.
 
 ## Licenze
 

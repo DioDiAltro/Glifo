@@ -18,9 +18,9 @@ quando i punti sono tutti fatti si cancella, insieme alla voce «La grafica» di
 | 3 | Le impostazioni divise in sezioni | da decidere |
 | 4 | Più modelli per «Spiegami» | da decidere |
 | 5 | A cosa serve la chiave dell'AI | da decidere |
-| 6 | Glifo anche in inglese | da decidere |
+| 6 | Glifo anche in inglese | la base e le schermate fatte sul ramo `prova`, con il tutorial nuovo: da vedere |
 | 7 | Via il registro dei tocchi | deciso: si toglie (manca una risposta) |
-| 8 | Il pulsante ✨ con il contorno | da decidere |
+| 8 | Il pulsante ✨ con il contorno | fatto sul ramo `prova` con la variante A: da vedere (A o B) |
 
 ## 1. «Cambia account»
 
@@ -362,7 +362,48 @@ l'IVA dei paesi europei).
 `src/ai/explain.ts` e `src/ai/assistant.ts`; le date con `'it-IT'` in vari file; le prove nel
 browser (`scripts/smoke-test.mjs`) controllano i testi italiani.
 
-**Risposte e decisioni.** —
+**Risposte e decisioni.** Lo studente, 12 ottobre 2026: «ora facciamo il punto 6; pensavo che dovremmo
+aggiornare il tutorial perché abbiamo aggiunto molte funzionalità nuove e non abbiamo spiegato come
+funziona». Si fa la proposta a tappe, con la lingua dal browser la prima volta. Fatto sul ramo `prova`
+il 12 ottobre 2026:
+
+- **la base** (tappa 1): `src/i18n.ts`, con ogni testo nella tabella del suo file, il nome e le due
+  versioni; la prova `tests/translations.test.ts` segnala i testi senza inglese e l'italiano rimasto nel
+  codice delle parti tradotte. In Impostazioni il primo riquadro è «Lingua» (Italiano, English: finché
+  le impostazioni non sono divise in sezioni, punto 3; poi va in «Generale»); cambiandola Glifo salva la
+  nota e si ricarica, e le altre schede aperte lo dicono. La prima volta la lingua si prende dal
+  browser: italiano se tra le lingue del browser l'italiano viene prima dell'inglese, se no inglese; chi
+  ha già gli appunti nel browser resta in italiano. La lingua resta sul dispositivo (non va con
+  l'account); il trasloco su glifo.page la porta dal vecchio sito, altrimenti chi ha il browser in
+  inglese vedrebbe glifo.page in inglese;
+- **le schermate** (tappa 2, la prima parte): in inglese ci sono la barra laterale, le due barre, le
+  viste, le finestre (impostazioni, account e accesso, condividi, commenti, conferme), la guida con tutte
+  le scorciatoie, il tutorial, la lavagna, i pannelli dei simboli e di «Spiega con l'AI», l'anteprima,
+  i messaggi e la pagina delle note condivise; anche la nota di benvenuto ha la versione inglese. Con
+  Glifo in inglese il controllo ortografico parte con l'inglese solo, e «Glifo» non è più sottolineato;
+- **il tutorial**: da 6 a 11 pagine, con i video rifatti nei due temi. Pagine nuove: «I grafici» (il
+  pulsante con gli assi, lo slider, il 3D, le frecce ↑ ↓), «Le tabelle» (la tabella con le formule e
+  SOMMA), «Gli schemi» (forme e frecce come in draw.io), «Spiega con l'AI» (il pulsante ✨ e i passaggi
+  controllati) e «Condividere e ritrovare gli appunti» (il link, la stampa, l'account, i commenti);
+  «Calcoli e controlli» ora mostra anche un limite. I video sono con Glifo in italiano: quelli inglesi
+  si rifanno alla fine (tappa 6), quando anche conti e simboli sono tradotti;
+- le prove nel browser girano con il browser in italiano; una prova nuova apre Glifo con il browser in
+  inglese (tutorial, barre e nota di benvenuto in inglese) e torna all'italiano dalle impostazioni.
+  Corretto anche «1 simboli trovati» (ora «1 simbolo trovato»).
+
+Restano in italiano, per le prossime volte (tappa 2, seconda parte, e tappe 3-6): i risultati e gli
+errori dei conti (`src/math`), i nomi dei simboli e delle categorie (la ricerca trova già le parole
+inglesi: «infinity», «for all», «square root»), le tabelle (editor e funzioni), i grafici, gli schemi
+(editor e modelli), i messaggi e le spiegazioni dell'AI, le parole delle note in inglese, i numeri con il
+punto, l'informativa, l'email per entrare e i video in inglese. I teoremi scritti in inglese
+(«Theorem», «Definition») il pannello AI ancora non li riconosce.
+
+Da decidere:
+
+- quando va sul sito: subito così (chi ha il browser in inglese vede le schermate in inglese e i conti
+  ancora in italiano) o quando è tradotto anche il resto?
+- la lingua va con l'account, come il tema? Oggi resta sul dispositivo: con l'account, entrando da un
+  dispositivo nuovo Glifo si ricaricherebbe nella lingua dell'account.
 
 ## 7. Via il registro dei tocchi
 
@@ -415,7 +456,24 @@ chiuso resta com'è. Due varianti, da vedere prima in foto nei due temi:
 **Nel codice.** Gli stili in `src/styles/app.css` (`.ai-toggle`, `.is-working`, `.has-news`, i colori
 `--ai-1`…`--ai-4` dei due temi); gli stati in `src/ui/aiActivity.ts`.
 
-**Risposte e decisioni.** —
+**Risposte e decisioni.** Lo studente, 12 ottobre 2026: «se puoi fai anche il punto 8». Fatto sul ramo
+`prova` con la variante A, quella che Claude consiglia (il colore resta il segno che l'AI sta lavorando):
+
+- con il pannello aperto ✨ ha un contorno indaco di 2 px con l'icona indaco dentro, al posto del
+  quadrato pieno con l'icona bianca; mentre l'AI lavora contorno e icona sfumano azzurro → indaco → viola
+  → rosa, con l'alone verso l'interno (la barra scorre e taglierebbe quello che esce). A riposo e con il
+  pannello chiuso è come prima; con «riduci animazioni» il contorno resta viola, fermo;
+- anche «Simboli», aperto, ha il contorno (il bordo e un'ombra dentro: il pulsante non cambia misura)
+  invece del fondo pieno, così i due pulsanti dei pannelli si accendono allo stesso modo;
+- i due pulsanti dicono con `aria-expanded` quale pannello si vede: prima lo capiva solo chi guardava.
+
+Le foto (`pulsante-ai-chiaro.png` e `pulsante-ai-scuro.png`, mandate nella chat) mettono accanto oggi, A
+e B nei due temi, con quattro momenti dell'animazione. A riposo l'icona è grigia come gli altri pulsanti
+della barra, non indaco come era scritto qui sopra (la regola indaco era coperta da quella dei pulsanti):
+resta così.
+
+Da decidere: A o B (con B cambia solo lo stile: il contorno sfumato con i colori che girano); «Simboli»
+con il contorno va bene o torna pieno?
 
 ## Gli abbonamenti, in tutto questo
 

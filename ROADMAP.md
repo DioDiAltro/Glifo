@@ -91,7 +91,9 @@ Com'è oggi ogni punto, le proposte di Claude, le domande e le decisioni sono in
 resta solo quello che non è stato fatto. Si fanno sul ramo `prova`, con le foto; fino al trasloco del
 18 ottobre il sito vero cambia il meno possibile. Il punto 1, «Cambia account», è sul sito dal 12
 ottobre 2026: lo studente ha detto «va bene» per provarlo, perché sul sito di prova l'account è spento,
-e poi, lo stesso giorno, «il punto 1 va bene».
+e poi, lo stesso giorno, «il punto 1 va bene». Sul ramo `prova` dal 12 ottobre 2026, da vedere: il punto
+6 nella prima parte (la scelta della lingua, le schermate in inglese e il tutorial rifatto, con 11
+pagine) e il punto 8 (il pulsante ✨ con il contorno, variante A).
 
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 

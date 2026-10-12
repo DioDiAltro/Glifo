@@ -15,7 +15,9 @@ prossimi passi sono in «In programma» nella ROADMAP.
 
 - L'utente è uno studente italiano. Scrivi sempre in italiano tutto quello che lo studente vede:
   riepiloghi, domande, avvisi, descrizioni dei comandi e le eventuali righe brevi durante il lavoro.
-  Interfaccia, commenti e messaggi di commit sono in italiano.
+  Commenti e messaggi di commit sono in italiano. L'interfaccia di Glifo è in italiano e in inglese
+  (`src/i18n.ts`): ogni testo nuovo va nella tabella `texts` del suo file con le due versioni (vedi
+  «Scrivere un testo dell'interfaccia» nel README), e la nota di benvenuto ha le due versioni.
 - Durante i compiti segui la skill lavoro-silenzioso: nessun messaggio mentre lavori (nemmeno «aspetto
   le prove» o «commit fatto»: i comandi lunghi si aspettano nello stesso turno), un solo riepilogo alla
   fine, e gli errori raccontati nel dettaglio.
@@ -42,8 +44,8 @@ prossimi passi sono in «In programma» nella ROADMAP.
   senza service worker e con l'account spento (Accedi e Condividi si vedono, ma la finestra di
   accesso dice che lì non si entra).
 - `node scripts/tutorial.mjs`: registra dall'app vera (esegui prima `npm run build`) i video del
-  tutorial, nel tema chiaro e in quello scuro, in `public/tutorial/` (serve `CHROMIUM_PATH`; usa
-  l'ffmpeg di Playwright). Va rifatto quando cambia l'interfaccia che i video mostrano; con un
+  tutorial, nel tema chiaro e in quello scuro, con Glifo in italiano, in `public/tutorial/` (serve
+  `CHROMIUM_PATH`; usa l'ffmpeg di Playwright). Va rifatto quando cambia l'interfaccia che i video mostrano; con un
   nome (`formule`) rifà solo quella pagina.
 - `node scripts/spiegami-qwen.mjs`: «Spiegami» con Qwen3 vero sulla build in `dist/` (le prove di
   sempre usano un modello finto). Serve la rete verso Hugging Face (`huggingface.co` e i server dei
@@ -89,6 +91,7 @@ documentazione, non codice: la regola di delegare all'esploratore vale per il co
 - `src/graph/`: i grafici nella nota (2D e 3D, zone, piano di Gauss, statistica, i dati delle tabelle, il Gantt e il reticolo) con gli slider.
 - `src/board/`: la lavagna per scrivere a mano accanto al testo, con il registro dei tocchi.
 - `src/ai/`: assistente AI, con la chiave di chi lo usa, e «Spiegami» (in prova): Qwen3 nel browser con WebLLM, con il motore come strumenti.
+- `src/i18n.ts`: le due lingue dell'interfaccia (la lingua della pagina e le tabelle dei testi).
 - `src/host.ts`: funzioni della demo dentro claude.ai.
 - `src/account/`: account e sincronizzazione con Supabase.
 - `src/share/`: le note condivise con un link (`nota.html#codice`).
@@ -122,6 +125,10 @@ documentazione, non codice: la regola di delegare all'esploratore vale per il co
   e se Glifo cambia indirizzo il nuovo dominio va aggiunto al widget in Cloudflare.
 - WebLLM (6 MB) sta solo nel worker `src/ai/llmWorker.ts`: la pagina non lo importa mai, parla con il
   worker da `src/ai/local.ts`. Nelle prove nel browser il worker è finto (Qwen3 non si scarica).
+- La prima volta Glifo prende la lingua dal browser: gli script con Playwright (prove, video del
+  tutorial, foto) aprono il browser con `locale: 'it-IT'`, e le prove unitarie sono in italiano
+  (`tests/support/lang.ts`). Le parole che si scrivono nelle note (```` ```grafico ````, `titolo:`…)
+  non si traducono.
 
 ## Promemoria per lo studente
 
