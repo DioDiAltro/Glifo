@@ -1,7 +1,8 @@
 /**
  * Un Supabase finto per le prove nel browser. L'accesso accetta sempre il codice 123456, il
  * link dell'ultima email (aperto o incollato) e Google (la «pagina di Google» riporta subito
- * a Glifo con l'account scelto con setGoogle); la sincronizzazione invece è quella vera:
+ * a Glifo con l'account scelto con setGoogle, e segna se Glifo le ha chiesto di far scegliere
+ * l'account); la sincronizzazione invece è quella vera:
  * sync_pull, sync_push e le note condivise con un link girano sulle migrazioni di
  * supabase/migrations, in un Postgres in memoria (PGlite). Come Supabase con il CAPTCHA acceso,
  * l'email parte solo con il token del controllo anti-robot, che dà un Turnstile finto.
@@ -50,6 +51,10 @@ export async function createFakeSupabase() {
   let lastLogin = null
   /** L'accesso con Google: se è attivo in Supabase e con quale account Google si entra. */
   let google = { enabled: true, email: null }
+  /** Il `prompt` di ogni passaggio dalla pagina di Google ('select_account': chiede quale account). */
+  const googlePrompts = []
+  /** Lo `scope` di ogni uscita ('local': solo in quel browser). */
+  const logouts = []
   /** Per le prove: sync_push risponde con un errore, così le modifiche restano da mandare. */
   let pushFails = false
   const emailOf = (id) => [...users].find(([, uid]) => uid === id)?.[0]
@@ -159,6 +164,7 @@ export async function createFakeSupabase() {
       if (!google.enabled || url.searchParams.get('provider') !== 'google') {
         return reply(400, { code: 400, error_code: 'validation_failed', msg: 'Unsupported provider: provider is not enabled' })
       }
+      googlePrompts.push(url.searchParams.get('prompt'))
       const back = new URL(url.searchParams.get('redirect_to'))
       back.searchParams.set('code', GOOGLE_CODE)
       return route.fulfill({
@@ -207,7 +213,10 @@ export async function createFakeSupabase() {
       if (!email) return reply(400, { code: 'refresh_token_not_found', error_code: 'refresh_token_not_found', message: 'Invalid Refresh Token' })
       return reply(200, session({ id, email }))
     }
-    if (path === '/auth/v1/logout') return route.fulfill({ status: 204, headers: cors })
+    if (path === '/auth/v1/logout') {
+      logouts.push(url.searchParams.get('scope'))
+      return route.fulfill({ status: 204, headers: cors })
+    }
     if (path === '/auth/v1/user') {
       const id = userIdFrom(request.headers().authorization ?? '')
       return id ? reply(200, userJson({ id, email: emailOf(id) })) : reply(401, { code: 'no_authorization', message: 'No authorization' })
@@ -300,6 +309,10 @@ export async function createFakeSupabase() {
     failPush(value) {
       pushFails = value
     },
+    /** Che cosa Glifo ha chiesto alla pagina di Google, una voce per passaggio. */
+    googlePrompts: () => [...googlePrompts],
+    /** Le uscite dall'account arrivate al server, con il loro `scope`. */
+    logouts: () => [...logouts],
     /** L'id dell'account con questa email, se c'è. */
     userId: (email) => users.get(email) ?? null,
     /** Quello che resta nel database dell'account `id`: l'utente e le sue note. */

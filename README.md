@@ -74,6 +74,9 @@ Cloudflare: di solito non si vede, a volte chiede di cliccare una casella. *Per 
 - **Uscita:** uscendo, le note dell'account vengono tolte dal browser, che magari non è il
   tuo. Nell'account restano. Le **lavagne** invece stanno solo nel browser: uscendo si tolgono
   anche loro, e prima Glifo lo dice.
+- **Cambia account:** accanto a «Esci dall'account». Note, cartelle e lavagne dell'account
+  restano nel browser, con le sue impostazioni, e quello che non è ancora partito parte quando
+  rientri; poi si riapre la finestra per entrare, e Google chiede quale account usare.
 - **Dove stanno i dati:** su [Supabase](https://supabase.com), in Europa (Francoforte).
   Ognuno può leggere solo i suoi appunti (vedi [supabase/README.md](supabase/README.md)).
 - **I tuoi dati:** nella finestra dell'account, «Scarica i miei dati» scarica tutto l'account

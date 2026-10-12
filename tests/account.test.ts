@@ -1,12 +1,27 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { accountSpace, adoptGuestNotes, currentAccount, forgetAccount, guestNoteCount, knowsAccount, setCurrentAccount } from '../src/account/space'
+import {
+  accountSpace,
+  adoptGuestNotes,
+  currentAccount,
+  forgetAccount,
+  guestNoteCount,
+  knowsAccount,
+  restorePrefs,
+  setAsidePrefs,
+  setCurrentAccount,
+} from '../src/account/space'
+import { loadPersonalWords, savePersonalWords } from '../src/store/dictionary'
 import { FoldersStore } from '../src/store/folders'
 import { isUuid } from '../src/store/ids'
 import { NotesStore } from '../src/store/notes'
-import { validAccountSettings } from '../src/store/settings'
+import { loadSettings, saveSettings, validAccountSettings } from '../src/store/settings'
+import { leaveSwitch, takeSwitch } from '../src/ui/notice'
 
-beforeEach(() => localStorage.clear())
+beforeEach(() => {
+  localStorage.clear()
+  sessionStorage.clear()
+})
 afterEach(() => vi.useRealTimers())
 
 const WELCOME = '# Benvenuto in Glifo\n\nnota di benvenuto'
@@ -98,6 +113,56 @@ describe('account in questo browser', () => {
     expect(accountSpace('u1').notes.list()).toEqual([])
     expect(accountSpace('u2').notes.list().map((n) => n.title)).toEqual(['Di Bruno'])
     expect(new NotesStore().list().map((n) => n.title)).toEqual(['Senza account'])
+  })
+})
+
+describe('«Cambia account»', () => {
+  it('le impostazioni e le parole dell\'account restano da parte, e tornano quando si rientra', () => {
+    accountSpace('u1').notes.create('# Di Anna')
+    saveSettings({ theme: 'dark', fontSize: 18, apiKey: 'sk-ant-di-questo-browser' })
+    savePersonalWords(['autovalore'])
+    setAsidePrefs('u1')
+    // Nell'altro account il browser prende le sue.
+    saveSettings({ theme: 'light', fontSize: 14 })
+    savePersonalWords(['Bruno'])
+    restorePrefs('u1')
+    expect(loadSettings()).toMatchObject({ theme: 'dark', fontSize: 18, apiKey: 'sk-ant-di-questo-browser' })
+    expect(loadPersonalWords()).toEqual(['autovalore'])
+    // Messe da parte una volta sola: da qui valgono quelle del browser.
+    expect(localStorage.getItem('glifo.u.u1.prefs.v1')).toBeNull()
+  })
+
+  it('le chiavi API restano quelle del browser, non dell\'account', () => {
+    saveSettings({ apiKey: 'sk-ant-prima' })
+    setAsidePrefs('u1')
+    expect(localStorage.getItem('glifo.u.u1.prefs.v1')).not.toContain('sk-ant')
+    saveSettings({ apiKey: 'sk-ant-dopo' })
+    restorePrefs('u1')
+    expect(loadSettings().apiKey).toBe('sk-ant-dopo')
+  })
+
+  it('uno spazio senza impostazioni messe da parte le riprende tutte dall\'account', () => {
+    const { state } = accountSpace('u1')
+    state.update(() => ({ cursor: '123', settingsRev: 4, settingsDirty: ['theme'] }))
+    saveSettings({ theme: 'light' })
+    restorePrefs('u1')
+    expect(state.read()).toMatchObject({ cursor: null, settingsRev: null, settingsDirty: ['theme'] })
+    expect(loadSettings().theme).toBe('light')
+  })
+
+  it('uscendo dall\'account si tolgono anche le impostazioni messe da parte', () => {
+    accountSpace('u1').notes.create('# Di Anna')
+    setAsidePrefs('u1')
+    forgetAccount('u1')
+    expect(knowsAccount('u1')).toBe(false)
+  })
+
+  it('la pagina dopo il cambio sa quale account si è lasciato, una volta sola', () => {
+    leaveSwitch({ email: 'anna@example.com', pending: true })
+    expect(takeSwitch()).toEqual({ email: 'anna@example.com', pending: true })
+    expect(takeSwitch()).toBeNull()
+    sessionStorage.setItem('glifo.cambio-account', '{"pending": true')
+    expect(takeSwitch()).toBeNull()
   })
 })
 

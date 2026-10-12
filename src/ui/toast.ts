@@ -20,6 +20,8 @@ export interface ToastOptions {
   action?: { label: string; run: () => void }
   /** Il messaggio resta finché chi l'ha mostrato non lo toglie con `dismissToast` (es. «Apro l'editor…»). */
   sticky?: boolean
+  /** Per quanto resta, in millisecondi, se più lungo del solito (es. l'avviso dopo aver ricaricato la pagina). */
+  duration?: number
 }
 
 /**
@@ -55,7 +57,7 @@ export function toast(message: string, kind: 'info' | 'error' = 'info', options:
     : h('div', { class: `toast${kind === 'error' ? ' is-error' : ''}` }, message)
   container.append(el)
   requestAnimationFrame(() => el.classList.add('is-visible'))
-  if (!action && !options.sticky) setTimeout(() => dismissToast(el), kind === 'error' ? 5000 : 2200)
+  if (!action && !options.sticky) setTimeout(() => dismissToast(el), options.duration ?? (kind === 'error' ? 5000 : 2200))
   return el
 }
 

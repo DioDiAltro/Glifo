@@ -100,10 +100,13 @@ const GOOGLE_G =
  * Accesso con Google, oppure via email in due passi: l'indirizzo, poi il link (o il codice)
  * dell'email.
  * `lockEmail`: per rientrare nello stesso account, l'indirizzo non si cambia.
+ * `title` e `intro`: dopo «Cambia account» la finestra dice che cosa resta in questo browser.
  */
 export function openLoginDialog(opts: {
   email?: string
   lockEmail?: boolean
+  title?: string
+  intro?: string
   /** Manda l'email; il controllo anti-robot, se chiede di cliccare, compare in `captcha`. */
   sendCode(email: string, captcha: HTMLElement): Promise<void>
   verifyCode(email: string, code: string): Promise<SignedIn>
@@ -117,7 +120,7 @@ export function openLoginDialog(opts: {
   // Il posto del controllo anti-robot, nel passo che manda l'email.
   const captcha = h('div', { class: 'login-captcha' })
   const body = h('div', { class: 'login' })
-  const dialog = dialogShell('Accedi a Glifo', [body], 'dialog-login')
+  const dialog = dialogShell(opts.title ?? 'Accedi a Glifo', [body], 'dialog-login')
   dialog.addEventListener('close', () => clearInterval(cooldown))
 
   const showError = (message: string) => {
@@ -179,7 +182,7 @@ export function openLoginDialog(opts: {
       h(
         'p',
         { class: 'login-intro' },
-        'Con l\'account ritrovi gli stessi appunti su computer, tablet e telefono. Niente password: entri con Google o con un\'email.',
+        opts.intro ?? 'Con l\'account ritrovi gli stessi appunti su computer, tablet e telefono. Niente password: entri con Google o con un\'email.',
       ),
       google,
       h('p', { class: 'login-or' }, 'oppure con l\'email'),
@@ -304,6 +307,8 @@ export function openAccountDialog(opts: {
   guestCount: number
   onAdoptGuest(): number
   onRelogin(): void
+  /** «Cambia account»: come uscire, ma gli appunti dell'account restano in questo browser. */
+  onSwitch(): void
   onSignOut(): void
   /** «Scarica i miei dati»: prepara il file e lo scarica (gli errori li mostra lei). */
   onDownload(): Promise<void>
@@ -384,15 +389,29 @@ export function openAccountDialog(opts: {
       h(
         'fieldset',
         {},
-        h('legend', {}, 'Uscire'),
+        h('legend', {}, 'Cambiare account o uscire'),
         h(
           'p',
           { class: 'field-help' },
-          'Uscendo, le note dell\'account vengono tolte da questo browser: restano nell\'account e le ritrovi quando rientri.',
+          'Cambiando account, note, cartelle e lavagne di questo account restano in questo browser: le ritrovi quando rientri. Uscendo si tolgono da qui, e le note restano nell\'account: è la scelta giusta su un computer che non è tuo.',
         ),
         h(
           'div',
           { class: 'button-row' },
+          h(
+            'button',
+            {
+              class: 'btn',
+              attrs: { type: 'button' },
+              on: {
+                click: () => {
+                  dialog.close()
+                  opts.onSwitch()
+                },
+              },
+            },
+            'Cambia account',
+          ),
           h(
             'button',
             {

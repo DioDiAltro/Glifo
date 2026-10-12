@@ -13,7 +13,7 @@ quando i punti sono tutti fatti si cancella, insieme alla voce «La grafica» di
 
 | Punto | Cosa | Stato |
 |---|---|---|
-| 1 | «Cambia account» | da decidere |
+| 1 | «Cambia account» | fatto sul ramo `prova` (12 ottobre): aspetta il «va bene» |
 | 2 | La pagina dei commenti, tipo FAQ | da decidere |
 | 3 | Le impostazioni divise in sezioni | da decidere |
 | 4 | Più modelli per «Spiegami» | da decidere |
@@ -71,7 +71,37 @@ anche il piano, e la finestra dell'account lo mostrerà.
 `src/account/supabase.ts`; gli spazi degli account in `src/account/space.ts`; la prova nel browser in
 `scripts/account-test.mjs` (il Google finto non fa scegliere l'account).
 
-**Risposte e decisioni.** —
+**Risposte e decisioni.** Lo studente, 12 ottobre 2026: «facciamo il passo 1 di grafica; aggiungiamo
+il pulsante cambia account». Si fa la proposta, con il cambio che tiene nel browser note, cartelle e
+lavagne dell'account di prima. L'elenco «Account su questo dispositivo» e la foto e il nome di Google
+nel pulsante non li ha chiesti: restano da decidere.
+
+Fatto sul ramo `prova` il 12 ottobre 2026:
+
+- nella finestra «Account» il riquadro «Cambiare account o uscire» ha «Cambia account» accanto a «Esci
+  dall'account», e il testo dice la differenza (cambiando restano qui; uscendo si tolgono, ed è la
+  scelta giusta su un computer non tuo);
+- «Cambia account» manda le modifiche e non chiede niente, perché non si perde niente: quello che non
+  parte resta nello spazio dell'account e parte quando si rientra. Senza rete non parte («Per cambiare
+  account serve la connessione»): non si potrebbe entrare nell'altro;
+- le impostazioni che vanno con l'account e il dizionario personale (nel browser ce n'è una copia
+  sola) restano da parte nello spazio dell'account e tornano quando si rientra. Prima, rientrando dopo
+  il cambio nascosto, restavano quelle dell'altro account, e quelle non ancora mandate potevano finire
+  nell'account sbagliato;
+- l'accesso si chiude solo in questo browser; la pagina si ricarica senza account e si riapre da sola
+  la finestra «Cambia account», che dice di chi sono gli appunti che restano (e, se c'è, che qualche
+  modifica partirà al rientro). Chiudendola si resta senza account, con «Accedi»;
+- Google chiede sempre quale account usare (`prompt: 'select_account'`), anche da «Accedi»;
+- il cambio nascosto passa dagli stessi controlli: le impostazioni dell'account di prima restano da
+  parte, e un avviso dice in quale account si è entrati e che gli appunti di quello di prima restano
+  in questo browser;
+- «Esci» resta com'è: toglie tutto da questo browser;
+- l'informativa (aggiornata al 12 ottobre) dice che con «Cambia account» note, cartelle e lavagne
+  restano nel browser.
+
+Sul sito di prova l'account è spento, quindi lì «Cambia account» non si prova: com'è venuto si
+vede nelle foto, e la prova nel browser (`scripts/account-test.mjs`, con il Supabase finto) fa tutto il
+giro con due account Google. Con il Google vero si prova quando va sul sito.
 
 ## 2. La pagina dei commenti, tipo FAQ
 

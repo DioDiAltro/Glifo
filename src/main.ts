@@ -53,6 +53,8 @@ import {
   forgetAccount,
   guestNoteCount,
   knowsAccount,
+  restorePrefs,
+  setAsidePrefs,
   setCurrentAccount,
 } from './account/space'
 import { captchaToken } from './account/captcha'
@@ -81,7 +83,7 @@ import { PaneResizer } from './ui/resize'
 import { SidePanel, type PanelView } from './ui/sidePanel'
 import { dismissToast, toast } from './ui/toast'
 import { loadPart, PartNotLoaded, watchSiteUpdates } from './ui/siteUpdate'
-import { leaveNotice, takeNotice } from './ui/notice'
+import { leaveNotice, leaveSwitch, takeNotice, takeSwitch, type AccountSwitch } from './ui/notice'
 import { createToolbar } from './ui/toolbar'
 import { markTutorialSeen, openTutorial, showTutorialHint, tutorialSeen } from './ui/tutorial'
 import {
@@ -1511,6 +1513,7 @@ function openAccount(): void {
         withGoogle: startGoogleSignIn,
         onSignedIn: (user) => completeSignIn(user),
       }),
+    onSwitch: () => void switchAccount(),
     onSignOut: () => void signOutAccount(),
     onDownload: () => downloadAccountData(),
     onDelete: () => void deleteAccount(),
@@ -1604,7 +1607,10 @@ async function deleteAccount(): Promise<void> {
   reloadPage()
 }
 
-/** Accesso fatto: la prima volta in questo browser si chiede se portare nell'account gli appunti che ci sono. */
+/**
+ * Accesso fatto: la prima volta in questo browser si chiede se portare nell'account gli appunti
+ * che ci sono; in un account che ha già lo spazio qui tornano le sue impostazioni.
+ */
 async function completeSignIn(user: SignedIn): Promise<void> {
   if (account?.userId === user.userId) {
     // Accesso rinnovato: si riprende a sincronizzare.
@@ -1612,7 +1618,16 @@ async function completeSignIn(user: SignedIn): Promise<void> {
     return
   }
   flushSave()
-  if (!knowsAccount(user.userId)) {
+  if (account) {
+    // Si entra in un altro account senza «Cambia account» (con l'accesso scaduto, «Accedi di
+    // nuovo» e poi un altro account Google): come con «Cambia account», quello di prima resta in
+    // questo browser con le sue impostazioni, e quello che non era partito parte quando si rientra.
+    setAsidePrefs(account.userId)
+    leaveNotice(`Sei entrato come ${user.email}. Gli appunti di ${account.email} restano in questo browser: li ritrovi quando rientri in quell'account.`)
+  }
+  if (knowsAccount(user.userId)) {
+    restorePrefs(user.userId)
+  } else {
     const count = guestNoteCount(welcomeNote)
     const add =
       count > 0 &&
@@ -1641,6 +1656,46 @@ async function completeSignIn(user: SignedIn): Promise<void> {
   }
   setCurrentAccount({ userId: user.userId, email: user.email })
   reloadPage()
+}
+
+/**
+ * «Cambia account»: come uscire, ma note, cartelle e lavagne dell'account restano in questo
+ * browser, con le sue impostazioni messe da parte, e quello che non è ancora partito parte
+ * quando si rientra. Poi la pagina si ricarica senza account e riapre la finestra per entrare.
+ */
+async function switchAccount(): Promise<void> {
+  if (!account || !sync) return
+  if (!navigator.onLine) {
+    // Senza rete non si entra nell'altro account: si resta in questo.
+    toast('Per cambiare account serve la connessione.', 'error')
+    return
+  }
+  flushSave()
+  await sync.syncNow()
+  // Quello scritto mentre si mandava resta nello spazio dell'account, con il resto.
+  flushSave()
+  const pending = sync.hasPending()
+  unloading = true
+  sync.stop()
+  setAsidePrefs(account.userId)
+  await signOut()
+  leaveSwitch({ email: account.email, pending })
+  setCurrentAccount(null)
+  reloadPage()
+}
+
+/** Dopo «Cambia account»: la finestra per entrare, che dice cosa resta in questo browser. */
+function openSwitchLogin(left: AccountSwitch): void {
+  openLoginDialog({
+    title: 'Cambia account',
+    intro:
+      `Scegli l'account in cui entrare. Gli appunti di ${left.email} restano in questo browser, con le lavagne: li ritrovi quando rientri in quell'account.` +
+      (left.pending ? ' Le modifiche che non sono ancora arrivate nell\'account partono allora.' : ''),
+    sendCode: sendCodeChecked,
+    verifyCode,
+    withGoogle: startGoogleSignIn,
+    onSignedIn: (user) => completeSignIn(user),
+  })
 }
 
 async function signOutAccount(): Promise<void> {
@@ -1702,9 +1757,13 @@ if (sync && account) {
   sync.start()
 }
 
-// Un avviso lasciato prima di ricaricare la pagina (per esempio «account eliminato»).
+// Un avviso lasciato prima di ricaricare la pagina (per esempio «account eliminato»): resta di
+// più, perché arriva mentre la pagina si apre.
 const notice = takeNotice()
-if (notice) toast(notice)
+if (notice) toast(notice, 'info', { duration: 8000 })
+// Dopo «Cambia account» la finestra per entrare si riapre da sola.
+const switched = takeSwitch()
+if (switched && !account && !accountOff) openSwitchLogin(switched)
 
 // L'editor degli schemi o delle tabelle della nota aperta, pronto prima del clic.
 warmEditors(active.content)

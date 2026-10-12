@@ -1,9 +1,12 @@
 // @vitest-environment jsdom
 import type { PGlite } from '@electric-sql/pglite'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { accountSpace, restorePrefs, setAsidePrefs } from '../src/account/space'
 import { SyncEngine, SyncError, SyncState, type LocalChange, type Prefs, type SyncBackend } from '../src/account/sync'
+import { loadPersonalWords, savePersonalWords } from '../src/store/dictionary'
 import { FoldersStore } from '../src/store/folders'
 import { NotesStore } from '../src/store/notes'
+import { accountSettings, loadSettings, saveSettings, validAccountSettings } from '../src/store/settings'
 import { callAs, createDatabase, createUser } from './support/database'
 
 let db: PGlite
@@ -346,5 +349,84 @@ describe('impostazioni e dizionario', () => {
     // Le parole di questo browser invece si aggiungono a quelle dell'account.
     await pc.sync()
     expect(pc.words).toEqual(['Glifo'])
+  })
+})
+
+/**
+ * Un account in questo browser, come in main.ts: lo spazio è dell'account, ma le impostazioni e
+ * il dizionario personale sono quelli del browser, una copia sola per tutti gli account.
+ */
+function inBrowser(userId: string, backend: Partial<SyncBackend> = {}) {
+  const { notes, folders, state } = accountSpace(userId)
+  const engine = new SyncEngine({
+    notes,
+    folders,
+    state,
+    prefs: {
+      read: () => accountSettings(loadSettings()),
+      apply: (values) => saveSettings(validAccountSettings(values)),
+      words: () => loadPersonalWords(),
+      applyWords: (words) => void savePersonalWords(words),
+    },
+    backend: {
+      pull: (since) => callAs(db, userId, 'sync_pull', { since }),
+      push: (changes) => callAs(db, userId, 'sync_push', { changes }),
+      ...backend,
+    },
+    hooks: { flush: () => {}, changed: () => {} },
+  })
+  return { state, engine }
+}
+
+describe('cambiare account in questo browser', () => {
+  it('rientrando valgono le impostazioni e le parole di quell\'account, anche quelle non ancora mandate', async () => {
+    const anna = await createUser(db, 'p@example.invalid')
+    const bruno = await createUser(db, 'q@example.invalid')
+    // Bruno ha già le sue impostazioni nell'account, da un altro dispositivo.
+    const telefono = device(bruno)
+    Object.assign(telefono.settings, { theme: 'light', fontSize: 14 })
+    telefono.words.push('Bruno')
+    telefono.state.update(() => ({ settingsDirty: ['theme', 'fontSize'], wordsDirty: true }))
+    await telefono.sync()
+
+    // Anna sceglie il tema scuro; poi, mentre il server non risponde, il testo più grande e una parola.
+    let online = true
+    const offline = () => Promise.reject(new SyncError('offline', 'Nessuna connessione'))
+    const a = inBrowser(anna, { push: (changes) => (online ? callAs(db, anna, 'sync_push', { changes }) : offline()) })
+    saveSettings({ theme: 'dark' })
+    a.state.settingsChanged(['theme'])
+    await a.engine.sync()
+    online = false
+    saveSettings({ fontSize: 20 })
+    a.state.settingsChanged(['fontSize'])
+    savePersonalWords(['autovalore'])
+    a.state.wordsChanged()
+    await expect(a.engine.sync()).rejects.toMatchObject({ kind: 'offline' })
+
+    // «Cambia account»: entra Bruno, e il browser prende le sue impostazioni.
+    setAsidePrefs(anna)
+    await inBrowser(bruno).engine.sync()
+    expect(loadSettings()).toMatchObject({ theme: 'light', fontSize: 14 })
+    expect(loadPersonalWords()).toEqual(['Bruno'])
+
+    // Di nuovo Anna: tornano le sue, e partono quelle che non erano arrivate.
+    setAsidePrefs(bruno)
+    restorePrefs(anna)
+    expect(loadSettings()).toMatchObject({ theme: 'dark', fontSize: 20 })
+    expect(loadPersonalWords()).toEqual(['autovalore'])
+    online = true
+    await a.engine.sync()
+    expect(a.engine.hasPending()).toBe(false)
+    expect(loadSettings()).toMatchObject({ theme: 'dark', fontSize: 20 })
+
+    // Ognuno ha le sue nell'account: niente è passato da un account all'altro.
+    const pcAnna = device(anna)
+    await pcAnna.sync()
+    expect(pcAnna.settings).toMatchObject({ theme: 'dark', fontSize: 20 })
+    expect(pcAnna.words).toEqual(['autovalore'])
+    const pcBruno = device(bruno)
+    await pcBruno.sync()
+    expect(pcBruno.settings).toMatchObject({ theme: 'light', fontSize: 14 })
+    expect(pcBruno.words).toEqual(['Bruno'])
   })
 })

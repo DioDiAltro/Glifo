@@ -179,7 +179,12 @@ export async function signInWithGoogle(): Promise<void> {
   if (!providerEnabled(settings, 'google')) {
     throw new AccountError('closed', 'L\'accesso con Google non è ancora attivo: per ora entra con l\'email.')
   }
-  const { data, error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: appUrl(), skipBrowserRedirect: true } })
+  const { data, error } = await sb.auth.signInWithOAuth({
+    provider: 'google',
+    // Google chiede sempre con quale account entrare: senza, rientrerebbe da solo nell'ultimo
+    // usato in questo browser (dopo «Cambia account», o sul computer di un altro).
+    options: { redirectTo: appUrl(), skipBrowserRedirect: true, queryParams: { prompt: 'select_account' } },
+  })
   if (error || !data.url) throw accountError(error)
   location.assign(data.url)
 }

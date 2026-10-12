@@ -58,7 +58,8 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   chiuso quello della prima volta, o lasciato per le scorciatoie, `showTutorialHint` mostra un
   fumetto che punta al «?» (o al logo, se la barra è chiusa) e se ne va da solo dopo 8 secondi.
   I messaggi brevi in basso sono `toast.ts`; con un pulsante (per esempio «Ricarica») restano finché
-  non lo si preme o non li si chiude. `siteUpdate.ts` (8 ottobre 2026) serve quando il sito si aggiorna con
+  non lo si preme o non li si chiude. L'avviso lasciato prima di ricaricare la pagina (`notice.ts`)
+  resta 8 secondi. `siteUpdate.ts` (8 ottobre 2026) serve quando il sito si aggiorna con
   la pagina aperta: i file delle parti caricate solo quando servono (gli editor di schemi e tabelle, i
   file Excel) hanno nel nome un'impronta e la versione nuova toglie quelli vecchi. Ogni `import()` per
   un'azione dello studente passa da `loadPart`, che dice perché non arriva (Glifo aggiornato, senza
@@ -352,7 +353,8 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   schermo intero, pagina nascosta, errori), mai il testo delle note (`where`); il pallino rosso sulla
   lavagna lo apre, e lo studente lo copia o lo scarica per mandarlo nella chat. In `main.ts`
   la lavagna si toglie con la nota, segue la nota che cambia id con l'account (`replaced`,
-  `adoptGuestNotes`) e uscendo dall'account si toglie, con l'avviso. Per le prove nel browser lo stato
+  `adoptGuestNotes`) e uscendo dall'account si toglie, con l'avviso (con «Cambia account» resta, con le
+  note dell'account). Per le prove nel browser lo stato
   è in `data-strokes`, `data-note`, `data-loaded`, `data-tool`, `data-eraser`, `data-shapes`,
   `data-shape` (l'ultima figura) e `data-selected` (quanti tratti sono selezionati) sulla `.board-pane`.
 - `src/ai/`: assistente AI, con la chiave di chi lo usa: Anthropic con l'SDK, o un servizio che parla la
@@ -446,6 +448,16 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   `supabase.ts` fa l'accesso con Google o via email (il link aperto qui o incollato, o il
   codice) e controlla che l'accesso salvato nel browser sia dell'account aperto prima di
   sincronizzare, scaricare o eliminare. Il client di Supabase si carica solo se si accede.
+  «Cambia account» (`switchAccount` in main.ts, 12 ottobre 2026, ramo `prova`) è «Esci» senza
+  togliere niente: manda le modifiche, lascia nel browser lo spazio dell'account (note, cartelle,
+  lavagne e quello che non è partito), mette da parte nel suo spazio le impostazioni che vanno con
+  l'account e il dizionario (`setAsidePrefs`: nel browser ce n'è una copia sola), chiude l'accesso
+  solo qui (`scope: 'local'`) e ricarica la pagina senza account, che riapre la finestra per entrare
+  (`leaveSwitch`/`takeSwitch` in `src/ui/notice.ts`). Senza rete non parte. Entrando in un account
+  che ha già lo spazio, `completeSignIn` rimette le sue impostazioni (`restorePrefs`; senza, la
+  sincronizzazione le riscarica tutte); il cambio senza il pulsante (accesso scaduto, «Accedi di
+  nuovo» e un altro account Google) mette da parte quelle dell'account di prima e lo dice con un
+  avviso. Google chiede sempre quale account usare (`prompt: 'select_account'`).
   `captcha.ts` chiede a Cloudflare Turnstile il token anti-robot prima dell'email (lo script si
   scarica solo allora; la chiave del sito è in `config.ts`, nelle prove nel browser Turnstile è finto).
   Nella build per claude.ai (`GLIFO_NO_PWA=1`), dentro claude.ai (`inClaudeViewer`) e sul sito di

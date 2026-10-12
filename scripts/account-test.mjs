@@ -1,7 +1,7 @@
 /**
  * Prova l'account in un browser vero: accesso con il codice, appunti portati nell'account,
  * due dispositivi che si sincronizzano, un conflitto senza rete, le impostazioni, l'uscita,
- * una nota condivisa con un link, i dati scaricati e l'account eliminato.
+ * «Cambia account», una nota condivisa con un link, i dati scaricati e l'account eliminato.
  *   npm run build && npm run test:e2e
  * Supabase è finto (scripts/fake-supabase.mjs), ma la sincronizzazione usa le vere migrazioni.
  */
@@ -65,6 +65,37 @@ async function poll(fn, timeout = 10000) {
     await new Promise((r) => setTimeout(r, 200))
   }
   return false
+}
+
+/** Quanti tratti ha nel browser la lavagna della nota (IndexedDB «glifo-lavagne»). */
+const boardStrokes = (page, note) =>
+  page.evaluate(
+    (id) =>
+      new Promise((resolve) => {
+        const open = indexedDB.open('glifo-lavagne')
+        open.onsuccess = () => {
+          const req = open.result.transaction('strokes', 'readonly').objectStore('strokes').count(IDBKeyRange.bound([id], [id, []]))
+          req.onsuccess = () => {
+            open.result.close()
+            resolve(req.result)
+          }
+        }
+      }),
+    note,
+  )
+
+/** Scrive sulla lavagna della nota aperta e torna al testo; restituisce l'id della nota. */
+async function drawOnBoard(page) {
+  await page.locator('.view-button[aria-label="Lavagna"]').click()
+  await page.waitForSelector('.board-pane[data-loaded="true"]')
+  const note = await page.locator('.board-pane').getAttribute('data-note')
+  const stage = await page.locator('.board-stage').boundingBox()
+  await page.mouse.move(stage.x + 60, stage.y + 120)
+  await page.mouse.down()
+  for (let i = 1; i <= 10; i++) await page.mouse.move(stage.x + 60 + i * 15, stage.y + 120 + i * 4)
+  await page.mouse.up()
+  await page.locator('.view-button[aria-label="Editor"]').click()
+  return note
 }
 
 /** Come quando si torna su Glifo da un'altra app: si scaricano le novità. */
@@ -338,15 +369,7 @@ try {
   // ——— Uscire dall'account ———
   // Una lavagna scritta sta solo in questo browser, non nell'account: uscendo Glifo lo dice, e la
   // toglie insieme alle note.
-  await pc.page.locator('.view-button[aria-label="Lavagna"]').click()
-  await pc.page.waitForSelector('.board-pane[data-loaded="true"]')
-  const drawnNote = await pc.page.locator('.board-pane').getAttribute('data-note')
-  const stage = await pc.page.locator('.board-stage').boundingBox()
-  await pc.page.mouse.move(stage.x + 60, stage.y + 120)
-  await pc.page.mouse.down()
-  for (let i = 1; i <= 10; i++) await pc.page.mouse.move(stage.x + 60 + i * 15, stage.y + 120 + i * 4)
-  await pc.page.mouse.up()
-  await pc.page.locator('.view-button[aria-label="Editor"]').click()
+  const drawnNote = await drawOnBoard(pc.page)
   await pc.page.locator('.account-button').click()
   await pc.page.locator('dialog.dialog-account button', { hasText: 'Esci dall\'account' }).click()
   const boardWarning = pc.page.locator('dialog.dialog-confirm')
@@ -356,20 +379,7 @@ try {
   await boardWarning.locator('.btn-danger', { hasText: 'Esci lo stesso' }).click()
   await out
   await pc.page.waitForSelector('.cm-editor')
-  const boardLeft = await pc.page.evaluate(
-    (note) =>
-      new Promise((resolve) => {
-        const open = indexedDB.open('glifo-lavagne')
-        open.onsuccess = () => {
-          const req = open.result.transaction('strokes', 'readonly').objectStore('strokes').count(IDBKeyRange.bound([note], [note, []]))
-          req.onsuccess = () => {
-            open.result.close()
-            resolve(req.result)
-          }
-        }
-      }),
-    drawnNote,
-  )
+  const boardLeft = await boardStrokes(pc.page, drawnNote)
   check(
     warningText.includes('La lavagna di una nota sta solo in questo browser') && boardLeft === 0,
     `uscendo, Glifo avvisa che la lavagna non è nell'account, e la toglie dal browser con le note (${JSON.stringify({ warningText, boardLeft })})`,
@@ -490,6 +500,9 @@ try {
   // chiede cosa fare dell'appunto del browser (intanto il primo account prova a sincronizzare).
   fake.failPush(true)
   await typeAtEnd(google.page, ' — modifica solo del primo account')
+  // E una lavagna scritta, che sta solo in questo browser.
+  const firstBoard = await drawOnBoard(google.page)
+  check(await poll(async () => (await boardStrokes(google.page, firstBoard)) > 0), 'la lavagna del primo account è salvata nel browser')
   await google.page.waitForTimeout(3500)
   fake.failPush(false)
   const OTHER = 'altra@example.com'
@@ -498,20 +511,117 @@ try {
   await google.page.goto(`${url}?code=${GOOGLE_CODE}`)
   await google.page.locator('dialog.dialog-confirm').waitFor()
   await google.page.waitForTimeout(4000)
+  const intoOther = google.page.waitForEvent('load')
   await keepHere()
+  await intoOther
   const emailHere = () =>
     google.page.evaluate(() => JSON.parse(localStorage.getItem('glifo.account.v1') ?? 'null')?.email).catch(() => null)
   check(await poll(async () => (await emailHere()) === OTHER), 'tornando con un altro account Google si passa a quello')
   await google.page.waitForSelector('.cm-editor')
+  check(
+    await waitFor(google.page, (email) => [...document.querySelectorAll('.toast')].some((t) => t.textContent.includes(`Gli appunti di ${email} restano in questo browser`)), EMAIL),
+    'e un avviso dice che gli appunti del primo account restano in questo browser',
+  )
   await google.page.waitForTimeout(1500)
   const otherNotes = await fake.notes(OTHER)
   check(
     !otherNotes.some((n) => n.content.includes('modifica solo del primo account')),
     `le note del primo account non finiscono nell'altro (${otherNotes.length} note nell'altro)`,
   )
+  const firstId = fake.userId(EMAIL)
+  const otherId = fake.userId(OTHER)
+  const keptHere = await google.page.evaluate(
+    (id) => Object.keys(localStorage).some((k) => k.startsWith(`glifo.u.${id}.note.v1.`) && localStorage.getItem(k).includes('modifica solo del primo account')),
+    firstId,
+  )
   check(
-    !(await fake.notes(EMAIL)).some((n) => n.content.includes('modifica solo del primo account')),
+    keptHere && !(await fake.notes(EMAIL)).some((n) => n.content.includes('modifica solo del primo account')),
     'e la modifica resta in questo browser, nello spazio del primo account',
+  )
+
+  // ——— Cambia account (12 ottobre 2026) ———
+  // Nell'altro account: il tema chiaro e una modifica che non parte (il server non risponde).
+  await google.page.locator('.side-profile button[aria-label="Impostazioni"]').click()
+  await google.page.locator('dialog .segmented label', { hasText: 'Chiaro' }).click()
+  await google.page.keyboard.press('Escape')
+  fake.failPush(true)
+  await typeAtEnd(google.page, ' — modifica solo dell\'altro account')
+  await google.page.waitForTimeout(3500)
+  const accountWindow = google.page.locator('dialog.dialog-account')
+  // Senza rete non si cambia account: non si potrebbe entrare nell'altro.
+  await google.context.setOffline(true)
+  await google.page.locator('.account-button').click()
+  check(
+    (await accountWindow.locator('.button-row button').allInnerTexts()).join('|').includes('Cambia account|Esci dall\'account'),
+    'nella finestra dell\'account, accanto a «Esci dall\'account» c\'è «Cambia account»',
+  )
+  await accountWindow.locator('button', { hasText: 'Cambia account' }).click()
+  check(
+    await waitFor(google.page, () => [...document.querySelectorAll('.toast')].some((t) => t.textContent.includes('Per cambiare account serve la connessione'))),
+    'senza rete «Cambia account» dice che serve la connessione',
+  )
+  check(!(await accountState(google.page)).includes('is-guest'), 'e si resta nell\'account')
+  await google.context.setOffline(false)
+
+  // Con la rete: niente domande (non si perde niente), si esce e si riapre la finestra per entrare.
+  await google.page.locator('.account-button').click()
+  const leaving = google.page.waitForEvent('load')
+  await accountWindow.locator('button', { hasText: 'Cambia account' }).click()
+  await leaving
+  await google.page.waitForSelector('.cm-editor')
+  const switchLogin = google.page.locator('dialog.dialog-login[open]')
+  await switchLogin.waitFor()
+  const switchText = (await switchLogin.innerText()).replace(/\s+/g, ' ')
+  check(
+    switchText.includes('Cambia account') && switchText.includes(`Gli appunti di ${OTHER} restano in questo browser`) && switchText.includes('partono allora'),
+    `cambiando account si riapre la finestra per entrare, che dice cosa resta qui (${switchText.slice(0, 190)}…)`,
+  )
+  check((await accountState(google.page)).includes('is-guest'), 'intanto si è fuori dall\'account')
+  const keysAfterSwitch = await google.page.evaluate(() => Object.keys(localStorage))
+  check(
+    keysAfterSwitch.some((k) => k.startsWith(`glifo.u.${otherId}.note.v1.`)) &&
+      keysAfterSwitch.includes(`glifo.u.${otherId}.prefs.v1`) &&
+      keysAfterSwitch.some((k) => k.startsWith(`glifo.u.${firstId}.note.v1.`)) &&
+      !keysAfterSwitch.some((k) => k.startsWith('glifo.auth')),
+    'gli appunti dei due account restano nel browser, l\'accesso no',
+  )
+  check(fake.logouts().at(-1) === 'local', `e l'accesso si chiude solo in questo browser (${fake.logouts().at(-1)})`)
+
+  // Si sceglie con Google il primo account: tornano i suoi appunti, la sua lavagna, il suo tema,
+  // e parte la modifica che era rimasta qui.
+  fake.failPush(false)
+  fake.setGoogle({ email: EMAIL })
+  const askedBefore = fake.googlePrompts().length
+  await switchLogin.locator('button', { hasText: 'Continua con Google' }).click()
+  check(await poll(async () => (await emailHere()) === EMAIL, 15000), 'scegliendo con Google il primo account si torna lì')
+  await waitFor(google.page, () => document.querySelector('.account-button:not(.is-guest)') && document.querySelector('.cm-editor'), undefined, 15000)
+  const asked = fake.googlePrompts().slice(askedBefore)
+  check(JSON.stringify(asked) === '["select_account"]', `Google chiede quale account usare (${asked})`)
+  check(
+    (await google.page.evaluate(() => document.documentElement.dataset.theme)) === theme,
+    `tornano le impostazioni del primo account (il tema ${theme}, non quello chiaro dell'altro)`,
+  )
+  check(
+    await poll(async () => (await fake.notes(EMAIL)).some((n) => n.content.includes('modifica solo del primo account')), 15000),
+    'e la modifica che non era partita arriva nel suo account',
+  )
+  check((await boardStrokes(google.page, firstBoard)) > 0, 'e la sua lavagna c\'è ancora')
+
+  // E di nuovo nell'altro: tutto era già partito, poi torna il suo tema e parte la sua modifica.
+  await google.page.locator('.account-button').click()
+  const leavingAgain = google.page.waitForEvent('load')
+  await accountWindow.locator('button', { hasText: 'Cambia account' }).click()
+  await leavingAgain
+  await switchLogin.waitFor()
+  check(!(await switchLogin.innerText()).includes('partono allora'), 'con tutto già mandato, la finestra non parla di modifiche in attesa')
+  fake.setGoogle({ email: OTHER })
+  await switchLogin.locator('button', { hasText: 'Continua con Google' }).click()
+  check(await poll(async () => (await emailHere()) === OTHER, 15000), 'con «Cambia account» si torna anche nell\'altro')
+  await waitFor(google.page, () => document.querySelector('.account-button:not(.is-guest)') && document.querySelector('.cm-editor'), undefined, 15000)
+  check((await google.page.evaluate(() => document.documentElement.dataset.theme)) === 'light', 'con il suo tema chiaro')
+  check(
+    await poll(async () => (await fake.notes(OTHER)).some((n) => n.content.includes('modifica solo dell\'altro account')), 15000),
+    'e parte anche la sua modifica rimasta in questo browser',
   )
   pc.errors.push(...google.errors)
 

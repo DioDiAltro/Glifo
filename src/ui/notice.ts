@@ -22,3 +22,33 @@ export function takeNotice(): string | null {
     return null
   }
 }
+
+const SWITCH_KEY = 'glifo.cambio-account'
+
+/** Dopo «Cambia account» la pagina si ricarica e riapre la finestra per entrare (main.ts). */
+export interface AccountSwitch {
+  /** L'account lasciato: i suoi appunti restano in questo browser. */
+  email: string
+  /** Qualche modifica non è arrivata nell'account: parte quando si rientra. */
+  pending: boolean
+}
+
+export function leaveSwitch(info: AccountSwitch): void {
+  try {
+    sessionStorage.setItem(SWITCH_KEY, JSON.stringify(info))
+  } catch {
+    /* sessionStorage non disponibile: la finestra non si riapre, resta «Accedi» */
+  }
+}
+
+/** Il cambio di account appena fatto in questa scheda, se c'è (e lo toglie). */
+export function takeSwitch(): AccountSwitch | null {
+  try {
+    const raw = sessionStorage.getItem(SWITCH_KEY)
+    sessionStorage.removeItem(SWITCH_KEY)
+    const info = raw ? (JSON.parse(raw) as Partial<AccountSwitch> | null) : null
+    return info && typeof info.email === 'string' ? { email: info.email, pending: info.pending === true } : null
+  } catch {
+    return null
+  }
+}

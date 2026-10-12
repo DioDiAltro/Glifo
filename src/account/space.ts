@@ -1,5 +1,7 @@
+import { loadPersonalWords, savePersonalWords } from '../store/dictionary'
 import { FoldersStore } from '../store/folders'
 import { NotesStore, type Note } from '../store/notes'
+import { accountSettings, loadSettings, saveSettings, validAccountSettings } from '../store/settings'
 import { readJson, removeItem, storageKeys, writeJson } from '../store/storage'
 import { SyncState } from './sync'
 
@@ -48,6 +50,34 @@ export function knowsAccount(userId: string): boolean {
 /** Toglie da questo browser le note dell'account (nell'account restano). */
 export function forgetAccount(userId: string): void {
   for (const key of storageKeys(`glifo.${prefixOf(userId)}`)) removeItem(key)
+}
+
+const prefsKey = (userId: string) => `glifo.${prefixOf(userId)}prefs.v1`
+
+/**
+ * Si passa a un altro account («Cambia account» in main.ts): nel browser c'è una copia sola delle
+ * impostazioni che vanno con l'account e del dizionario personale, quindi quelle di questo
+ * account restano da parte nel suo spazio, anche se non sono ancora arrivate nell'account.
+ */
+export function setAsidePrefs(userId: string): void {
+  writeJson(prefsKey(userId), { settings: accountSettings(loadSettings()), words: loadPersonalWords() })
+}
+
+/**
+ * Si rientra in un account che ha già lo spazio in questo browser: tornano le impostazioni e le
+ * parole messe da parte, e con la sincronizzazione parte quello che non era ancora arrivato.
+ * Senza (lo spazio è di prima di «Cambia account»), la prossima sincronizzazione riprende
+ * tutto dall'account, impostazioni comprese.
+ */
+export function restorePrefs(userId: string): void {
+  const saved = readJson<{ settings?: unknown; words?: unknown } | null>(prefsKey(userId), null)
+  removeItem(prefsKey(userId))
+  if (typeof saved === 'object' && saved !== null) {
+    if (typeof saved.settings === 'object' && saved.settings !== null) saveSettings(validAccountSettings(saved.settings as Record<string, unknown>))
+    if (Array.isArray(saved.words)) savePersonalWords(saved.words.filter((w): w is string => typeof w === 'string'))
+  } else if (knowsAccount(userId)) {
+    accountSpace(userId).state.update(() => ({ cursor: null, settingsRev: null }))
+  }
 }
 
 /**
