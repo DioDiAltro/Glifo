@@ -13,8 +13,9 @@ import { formatNumber } from '../math/format'
 import { Sheet } from '../math/sheet'
 import { DB_SHAPES, insideLanes, laneAt, laneNames, parseSchema, parseTable, SHAPE_NAMES, type Schema, type SchemaEdge, type SchemaNode, type ShapeKind, type TableField } from '../schema/model'
 import { SheetEvaluator, type CellResult } from '../spreadsheet/evaluate'
-import { formatValue } from '../spreadsheet/format'
+import { errorText, formatValue } from '../spreadsheet/format'
 import { isFormula, normalizeFormula, shiftFormula } from '../spreadsheet/formula'
+import { shownInput } from '../spreadsheet/input'
 import { parseSheet, sheetSize, type SheetModel } from '../spreadsheet/model'
 import { cellName, colName } from '../spreadsheet/refs'
 import { isError } from '../spreadsheet/values'
@@ -414,16 +415,22 @@ function readSheet(source: string): SheetModel | null {
   }
 }
 
-/** Il valore come lo mostra la tabella; un errore con il suo codice (e, se serve, cosa vuol dire). */
+/** Il valore come lo mostra la tabella; un errore con il suo codice (e, se serve, cosa vuol dire), nella lingua di Glifo. */
 function valueText(result: CellResult, why = false): string {
-  if (isError(result.value)) return why ? `${result.value.error} (${result.value.message.toLowerCase()})` : result.value.error
+  if (isError(result.value)) {
+    const code = errorText(result.value.error)
+    return why ? `${code} (${result.value.message.toLowerCase()})` : code
+  }
   return formatValue(result.value, result.format)
 }
 
-/** La formula come la riscrive Excel (=somma(b2:b5) → =SOMMA(B2:B5)). */
+/**
+ * La formula come la riscrive Excel (=somma(b2:b5) → =SOMMA(B2:B5)) e come si vede nella cella: con Glifo
+ * in inglese con i nomi e i separatori inglesi (=SUM(B2:B5)).
+ */
 function formulaText(input: string): string {
   try {
-    return normalizeFormula(input.trim())
+    return shownInput(normalizeFormula(input.trim()))
   } catch {
     return input.trim()
   }

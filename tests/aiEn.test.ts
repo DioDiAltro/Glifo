@@ -220,6 +220,15 @@ describe('i fatti di Glifo, in inglese e con i numeri con il punto', () => {
     expect(graphTopic('P = (1.5, 2.25)', []).facts).toEqual(['il punto P = (1,5; 2,25)'])
   })
 
+  it('una tabella scritta all\'italiana: le formule e gli errori come in Excel inglese', () => {
+    const source = ['| Cosa | Quanto |', '| --- | --- |', '| Penne | 2,5 |', '| Somma | =SOMMA(B2:B2) |', '| Errore | =NONESISTE(B2) |'].join('\n')
+    const facts = tableTopic(source).facts.join(' · ')
+    expect(facts).toContain('=SUM(B2:B2)')
+    expect(facts).not.toContain('SOMMA')
+    expect(facts).toContain('#NAME?')
+    expect(facts).not.toContain('#NOME?')
+  })
+
   it('una tabella: la griglia, le formule copiate dette una volta, gli errori, e il nome nell\'elenco', () => {
     const source = [
       '| Item | Qty | Price | Total |',
