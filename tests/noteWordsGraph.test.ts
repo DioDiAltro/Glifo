@@ -378,7 +378,8 @@ describe('i messaggi citano le parole nella lingua di Glifo', () => {
     expect(message(r`\operatorname{barre}(1, 2, 3)`)).toBe(r`Write \operatorname{barchart}(x), or with the frequencies: \operatorname{barchart}(v, f)`)
     expect(message(r`\operatorname{dispersione}(x)`, ['x = (1, 2, 3)'])).toBe(r`Write \operatorname{scatter}(x, y), with x and y two data vectors`)
     expect(message(r`\operatorname{regressione}(x)`, ['x = (1, 2, 3)'])).toBe(r`Write \operatorname{regression}(x, y), with x and y two data vectors`)
-    expect(message(r`\operatorname{livelli}(f, g)`)).toBe(r`Write \operatorname{levels}(f), with f a function of x and y`)
+    // Il nome inglese è quello che il lettore conosce (src/noteWords.ts): contour.
+    expect(message(r`\operatorname{livelli}(f, g)`)).toBe(r`Write \operatorname{contour}(f), with f a function of x and y`)
     expect(message(r`\operatorname{conica}(x^2 + y^2)`)).toBe(r`Write \operatorname{conic}(x^2 + 4y^2 = 4)`)
   })
 })
