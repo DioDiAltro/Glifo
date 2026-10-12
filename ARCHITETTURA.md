@@ -448,7 +448,7 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   `supabase.ts` fa l'accesso con Google o via email (il link aperto qui o incollato, o il
   codice) e controlla che l'accesso salvato nel browser sia dell'account aperto prima di
   sincronizzare, scaricare o eliminare. Il client di Supabase si carica solo se si accede.
-  «Cambia account» (`switchAccount` in main.ts, 12 ottobre 2026, ramo `prova`) è «Esci» senza
+  «Cambia account» (`switchAccount` in main.ts, 12 ottobre 2026) è «Esci» senza
   togliere niente: manda le modifiche, lascia nel browser lo spazio dell'account (note, cartelle,
   lavagne e quello che non è partito), mette da parte nel suo spazio le impostazioni che vanno con
   l'account e il dizionario (`setAsidePrefs`: nel browser ce n'è una copia sola), chiude l'accesso

@@ -246,7 +246,7 @@ Attivo dal 2 ottobre 2026. Glifo chiama `signInWithOAuth({ provider: 'google' })
 `?code=…`, come il link dell'email. Prima legge `/auth/v1/settings`: se Google non è attivo, lo
 dice nella finestra invece di mandare su una pagina di errore. Con la stessa email di un account
 già esistente, Supabase collega Google a quell'account: note e impostazioni restano le stesse.
-Dal 12 ottobre 2026 (ramo `prova`, con «Cambia account») Glifo passa `prompt: 'select_account'`:
+Dal 12 ottobre 2026 (con «Cambia account») Glifo passa `prompt: 'select_account'`:
 Google chiede sempre con quale account entrare, invece di rientrare da solo nell'ultimo usato.
 
 Come è stato attivato (gratis, senza carta di credito), anche per rifarlo:

@@ -89,8 +89,8 @@ inglese; 7) via il registro dei tocchi (deciso); 8) il pulsante ✨ con il conto
 Com'è oggi ogni punto, le proposte di Claude, le domande e le decisioni sono in
 [GRAFICA.md](GRAFICA.md), un file solo per questo lavoro: quando i punti sono fatti si cancella, e qui
 resta solo quello che non è stato fatto. Si fanno sul ramo `prova`, con le foto; fino al trasloco del
-18 ottobre il sito vero cambia il meno possibile. Il punto 1, «Cambia account», è fatto sul ramo
-`prova` (12 ottobre 2026): aspetta il «va bene» dello studente.
+18 ottobre il sito vero cambia il meno possibile. Il punto 1, «Cambia account», è sul sito dal 12
+ottobre 2026: lo studente ha detto «va bene» per provarlo, perché sul sito di prova l'account è spento.
 
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
@@ -174,8 +174,8 @@ Perché non gli altri:
      eliminata qui ma cambiata altrove torna;
    - al primo accesso chiede se aggiungere all'account gli appunti già nel browser;
    - porta con sé impostazioni e dizionario personale; la chiave API resta sul dispositivo;
-   - uscendo, le note dell'account vengono tolte dal browser; con «Cambia account» (ramo `prova`,
-     12 ottobre 2026) restano, con le lavagne e le impostazioni, per rientrare;
+   - uscendo, le note dell'account vengono tolte dal browser; con «Cambia account» (dal 12 ottobre
+     2026) restano, con le lavagne e le impostazioni, per rientrare;
    - i test usano le vere migrazioni in un Postgres in memoria (PGlite), anche nella prova
      nel browser con un Supabase finto (`scripts/fake-supabase.mjs`).
 4. **Aprire l'account a tutti** (il prossimo, gratis). Con Google è già aperto: entra chiunque

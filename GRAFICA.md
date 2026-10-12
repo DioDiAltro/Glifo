@@ -13,7 +13,7 @@ quando i punti sono tutti fatti si cancella, insieme alla voce «La grafica» di
 
 | Punto | Cosa | Stato |
 |---|---|---|
-| 1 | «Cambia account» | fatto sul ramo `prova` (12 ottobre): aspetta il «va bene» |
+| 1 | «Cambia account» | fatto: sul sito dal 12 ottobre, da provare con il Google vero |
 | 2 | La pagina dei commenti, tipo FAQ | da decidere |
 | 3 | Le impostazioni divise in sezioni | da decidere |
 | 4 | Più modelli per «Spiegami» | da decidere |
@@ -101,7 +101,9 @@ Fatto sul ramo `prova` il 12 ottobre 2026:
 
 Sul sito di prova l'account è spento, quindi lì «Cambia account» non si prova: com'è venuto si
 vede nelle foto, e la prova nel browser (`scripts/account-test.mjs`, con il Supabase finto) fa tutto il
-giro con due account Google. Con il Google vero si prova quando va sul sito.
+giro con due account Google. Lo studente, viste le foto: «va bene, portalo sul ramo principale anche
+perché sul ramo di prova non posso provarlo». Sul sito dal 12 ottobre 2026 (glifo.page e il vecchio
+indirizzo): resta da provarlo con il Google vero.
 
 ## 2. La pagina dei commenti, tipo FAQ
 
