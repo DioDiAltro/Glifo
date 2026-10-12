@@ -14,25 +14,36 @@ export function words(s: string): string[] {
 }
 
 /**
- * Parole che non aiutano a trovare un simbolo ("come faccio il simbolo
- * dell'…"). Sono già senza accenti.
+ * Parole che non aiutano a trovare un simbolo, in italiano ("come faccio il simbolo dell'…") e in
+ * inglese ("how do I write the symbol for…"): la ricerca capisce le due lingue, qualunque sia quella
+ * di Glifo. Sono già senza accenti.
  */
 export const STOPWORDS = new Set(
-  `come faccio fa fare fai si scrive scrivere scrivo scriverlo scriverla scrivi inserire inserisco inserisci metto mettere metti
+  /* non si traduce: sono le parole di chi cerca */ `come faccio fa fare fai si scrive scrivere scrivo scriverlo scriverla scrivi inserire inserisco inserisci metto mettere metti
   ottengo ottenere ottieni voglio vorrei volevo posso puoi puo potrei devo serve servirebbe mi ti ci vi ne
   il lo la i gli le l un uno una un di del dello della dei degli delle dell d a al allo alla ai agli alle all
   da dal dallo dalla dai dagli dalle in nel nello nella nei negli nelle con su sul sullo sulla sui sugli sulle per tra fra
   e ed o od che cosa cos qual quale quali quello quella questo questa c e
   simbolo simboli segno segni comando comandi codice latex katex tex markdown md formula formule matematica matematico
   carattere caratteri scritta tipo tipi
-  how do does i to the a an of for in on is what write type make get insert symbol sign command math please can you`
+  how do does did i to the a an of for in on at by with from is are be it its this that these what which where there
+  write type make get insert put add use using want need like show symbol symbols sign signs command commands
+  character characters formulas formulae math maths mathematical please can could would should you my me we`
     .split(/\s+/)
     .filter(Boolean),
 )
 
-/** Radice rudimentale per l'italiano: "frecce"/"freccia" → "frecc". */
+/** Il singolare inglese con la s: "integrals" → "integral", "sets" → "set" (non "gauss", "minus"). */
+export function singular(word: string): string {
+  return word.length >= 4 && /[^su]s$/.test(word) ? word.slice(0, -1) : word
+}
+
+/**
+ * Radice rudimentale: "frecce"/"freccia" → "frecc" e, con il singolare inglese, "matrices" →
+ * "matric" come "matrice".
+ */
 export function stem(word: string): string {
-  const s = word.replace(/[aeiou]+$/, '')
+  const s = singular(word).replace(/[aeiou]+$/, '')
   return s.length >= 3 ? s : word
 }
 
