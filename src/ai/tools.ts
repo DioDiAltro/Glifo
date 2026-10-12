@@ -8,9 +8,55 @@
  * dentro <tools></tools> nel messaggio di sistema, le chiamate come JSON dentro <tool_call></tool_call>
  * e le risposte dentro <tool_response></tool_response>, in un messaggio dell'utente. WebLLM le fa da
  * solo solo per i modelli Hermes: qui si leggono dal testo.
+ *
+ * Il modello legge gli strumenti nella lingua di Glifo: con Glifo in inglese sono inglesi i nomi, gli
+ * argomenti, le descrizioni e le risposte. `runTool` riconosce i nomi delle due lingue (dentro Glifo si
+ * usano quelli italiani, come in `engineHints`, src/ai/explain.ts).
  */
+import { pick, texts, type Text } from '../i18n'
 import type { FormattedResult } from '../math/format'
 import { Sheet, splitEquals } from '../math/sheet'
+
+// Quello che il modello legge: le descrizioni degli strumenti e le risposte del motore.
+const T = texts({
+  notDone: [
+    'Glifo non sa fare questo conto: scrivilo in un altro modo o vai avanti senza.',
+    'Glifo can\'t do this calculation: write it another way or go on without it.',
+  ],
+  calculate: [
+    'Calcola con il motore di Glifo un\'espressione in LaTeX: numeri, frazioni, radici, integrali, derivate, limiti, somme, con le definizioni della nota. Restituisce il risultato esatto.',
+    'Calculates a LaTeX expression with Glifo\'s engine: numbers, fractions, roots, integrals, derivatives, limits, sums, with the definitions in the note. Returns the exact result.',
+  ],
+  expression: ['L\'espressione in LaTeX, senza «=» in fondo. Esempio: \\int_0^1 x^2 \\, dx', 'The expression in LaTeX, without “=” at the end. Example: \\int_0^1 x^2 \\, dx'],
+  noExpression: ['Manca l\'espressione.', 'The expression is missing.'],
+  derivative: ['Calcola con il motore di Glifo la derivata di una funzione.', 'Calculates the derivative of a function with Glifo\'s engine.'],
+  derivativeFunction: ['La funzione in LaTeX. Esempio: x^2 \\sin x', 'The function in LaTeX. Example: x^2 \\sin x'],
+  variable: ['La variabile, di solito x.', 'The variable, usually x.'],
+  noFunction: ['Manca la funzione.', 'The function is missing.'],
+  antiderivative: [
+    'Trova con il motore di Glifo una primitiva (l\'integrale indefinito) di una funzione.',
+    'Finds an antiderivative (the indefinite integral) of a function with Glifo\'s engine.',
+  ],
+  integrand: ['La funzione da integrare, in LaTeX. Esempio: R^2 - x^2', 'The function to integrate, in LaTeX. Example: R^2 - x^2'],
+  solve: ['Risolve con il motore di Glifo un\'equazione, una disequazione o un sistema.', 'Solves an equation, an inequality or a system with Glifo\'s engine.'],
+  equation: ['L\'equazione in LaTeX. Esempio: x^2 - 5x + 6 = 0', 'The equation in LaTeX. Example: x^2 - 5x + 6 = 0'],
+  noEquation: ['Manca l\'equazione.', 'The equation is missing.'],
+  check: [
+    'Controlla con il motore di Glifo se un\'uguaglianza in LaTeX è giusta, anche con le lettere (per esempio un passaggio di un conto).',
+    'Checks with Glifo\'s engine whether an equality in LaTeX is correct, even with letters (for example a step of a calculation).',
+  ],
+  equality: ['L\'uguaglianza in LaTeX. Esempio: (x + 1)^2 = x^2 + 2x + 1', 'The equality in LaTeX. Example: (x + 1)^2 = x^2 + 2x + 1'],
+  needsEquality: ['Serve un\'uguaglianza, con «=».', 'This needs an equality, with “=”.'],
+  cantCheck: ['Glifo non riesce a controllarla: vai avanti senza.', 'Glifo can\'t check it: go on without it.'],
+  rightRounded: ['Giusta, con le cifre arrotondate.', 'Correct, with the digits rounded.'],
+  right: ['Giusta.', 'Correct.'],
+  wrongValue: (value: string) => [`Sbagliata: il valore giusto è ${value}.`, `Wrong: the correct value is ${value}.`],
+  wrongSides: [
+    'Sbagliata: le due parti non valgono lo stesso (se è un\'equazione da risolvere, usa risolvi).',
+    'Wrong: the two sides are not equal (if it is an equation to solve, use solve).',
+  ],
+  noTool: (name: string, names: string) => [`Lo strumento «${name}» non c'è: usa ${names}.`, `There is no tool “${name}”: use ${names}.`],
+})
 
 /** Un foglio nuovo con le definizioni della nota: ogni chiamata parte da lì e non ne cambia altre. */
 export type SheetFactory = () => Sheet
@@ -20,10 +66,11 @@ export interface ToolCall {
   args: Record<string, string>
 }
 
+/** Uno strumento: i nomi sono [italiano, inglese], e `run` legge gli argomenti con il nome italiano. */
 interface Tool {
-  name: string
-  description: string
-  params: Record<string, string>
+  name: Text
+  readonly description: string
+  params: { name: Text; readonly description: string }[]
   run(args: Record<string, string>, sheet: SheetFactory): string
 }
 
@@ -52,8 +99,6 @@ function resultOf(tex: string, sheet: SheetFactory): FormattedResult | null {
     return null
   }
 }
-
-const NOT_DONE = 'Glifo non sa fare questo conto: scrivilo in un altro modo o vai avanti senza.'
 
 /** La risposta di «controlla»: anche per i passaggi delle spiegazioni (vedi `checkFormula`). */
 export type FormulaCheck = { ok: true; rounded?: boolean } | { ok: false; value?: { tex: string; text: string } } | null
@@ -105,66 +150,72 @@ export function nameLike(src: string): boolean {
 
 const TOOLS: readonly Tool[] = [
   {
-    name: 'calcola',
-    description: 'Calcola con il motore di Glifo un\'espressione in LaTeX: numeri, frazioni, radici, integrali, derivate, limiti, somme, con le definizioni della nota. Restituisce il risultato esatto.',
-    params: { espressione: 'L\'espressione in LaTeX, senza «=» in fondo. Esempio: \\int_0^1 x^2 \\, dx' },
+    name: ['calcola', 'calculate'],
+    get description() { return T.calculate },
+    params: [{ name: ['espressione', 'expression'], get description() { return T.expression } }],
     run: (a, sheet) => {
       const tex = bareTex(a.espressione ?? '')
-      if (!tex) return 'Manca l\'espressione.'
+      if (!tex) return T.noExpression
       if (splitEquals(tex).length > 1) return checkTool.run({ uguaglianza: tex }, sheet)
       const result = resultOf(`${tex} =`, sheet)
-      return result ? `${tex} = ${result.tex}` : NOT_DONE
+      return result ? `${tex} = ${result.tex}` : T.notDone
     },
   },
   {
-    name: 'deriva',
-    description: 'Calcola con il motore di Glifo la derivata di una funzione.',
-    params: { funzione: 'La funzione in LaTeX. Esempio: x^2 \\sin x', variabile: 'La variabile, di solito x.' },
+    name: ['deriva', 'derivative'],
+    get description() { return T.derivative },
+    params: [
+      { name: ['funzione', 'function'], get description() { return T.derivativeFunction } },
+      { name: ['variabile', 'variable'], get description() { return T.variable } },
+    ],
     run: (a, sheet) => {
       const f = bareTex(a.funzione ?? '')
       const v = variableOf(a.variabile)
-      if (!f) return 'Manca la funzione.'
+      if (!f) return T.noFunction
       const result = resultOf(`\\frac{d}{d${v}}\\left(${f}\\right) =`, sheet)
-      return result ? `\\frac{d}{d${v}}\\left(${f}\\right) = ${result.tex}` : NOT_DONE
+      return result ? `\\frac{d}{d${v}}\\left(${f}\\right) = ${result.tex}` : T.notDone
     },
   },
   {
-    name: 'primitiva',
-    description: 'Trova con il motore di Glifo una primitiva (l\'integrale indefinito) di una funzione.',
-    params: { funzione: 'La funzione da integrare, in LaTeX. Esempio: R^2 - x^2', variabile: 'La variabile, di solito x.' },
+    name: ['primitiva', 'antiderivative'],
+    get description() { return T.antiderivative },
+    params: [
+      { name: ['funzione', 'function'], get description() { return T.integrand } },
+      { name: ['variabile', 'variable'], get description() { return T.variable } },
+    ],
     run: (a, sheet) => {
       const f = bareTex(a.funzione ?? '')
       const v = variableOf(a.variabile)
-      if (!f) return 'Manca la funzione.'
+      if (!f) return T.noFunction
       const result = resultOf(`\\int ${withParens(f)} \\, d${v} =`, sheet)
-      return result ? `\\int ${withParens(f)} \\, d${v} = ${result.tex}` : NOT_DONE
+      return result ? `\\int ${withParens(f)} \\, d${v} = ${result.tex}` : T.notDone
     },
   },
   {
-    name: 'risolvi',
-    description: 'Risolve con il motore di Glifo un\'equazione, una disequazione o un sistema.',
-    params: { equazione: 'L\'equazione in LaTeX. Esempio: x^2 - 5x + 6 = 0' },
+    name: ['risolvi', 'solve'],
+    get description() { return T.solve },
+    params: [{ name: ['equazione', 'equation'], get description() { return T.equation } }],
     run: (a, sheet) => {
       const tex = bareTex(a.equazione ?? '')
-      if (!tex) return 'Manca l\'equazione.'
+      if (!tex) return T.noEquation
       const result = resultOf(`${tex} \\Rightarrow`, sheet)
-      return result ? `${tex} \\Rightarrow ${result.tex}` : NOT_DONE
+      return result ? `${tex} \\Rightarrow ${result.tex}` : T.notDone
     },
   },
 ]
 
 /** «controlla»: separato perché anche «calcola» ci passa, quando riceve un'uguaglianza. */
 const checkTool: Tool = {
-  name: 'controlla',
-  description: 'Controlla con il motore di Glifo se un\'uguaglianza in LaTeX è giusta, anche con le lettere (per esempio un passaggio di un conto).',
-  params: { uguaglianza: 'L\'uguaglianza in LaTeX. Esempio: (x + 1)^2 = x^2 + 2x + 1' },
+  name: ['controlla', 'check'],
+  get description() { return T.check },
+  params: [{ name: ['uguaglianza', 'equality'], get description() { return T.equality } }],
   run: (a, sheet) => {
     const tex = bareTex(a.uguaglianza ?? '')
-    if (splitEquals(tex).length < 2) return 'Serve un\'uguaglianza, con «=».'
+    if (splitEquals(tex).length < 2) return T.needsEquality
     const check = checkFormula(tex, sheet)
-    if (!check) return 'Glifo non riesce a controllarla: vai avanti senza.'
-    if (check.ok) return check.rounded ? 'Giusta, con le cifre arrotondate.' : 'Giusta.'
-    return check.value ? `Sbagliata: il valore giusto è ${check.value.tex}.` : 'Sbagliata: le due parti non valgono lo stesso (se è un\'equazione da risolvere, usa risolvi).'
+    if (!check) return T.cantCheck
+    if (check.ok) return check.rounded ? T.rightRounded : T.right
+    return check.value ? T.wrongValue(check.value.tex) : T.wrongSides
   },
 }
 
@@ -186,12 +237,12 @@ export function toolsPrompt(): string {
     JSON.stringify({
       type: 'function',
       function: {
-        name: t.name,
+        name: pick(t.name),
         description: t.description,
         parameters: {
           type: 'object',
-          properties: Object.fromEntries(Object.entries(t.params).map(([k, d]) => [k, { type: 'string', description: d }])),
-          required: Object.keys(t.params),
+          properties: Object.fromEntries(t.params.map((p) => [pick(p.name), { type: 'string', description: p.description }])),
+          required: t.params.map((p) => pick(p.name)),
         },
       },
     }),
@@ -213,14 +264,19 @@ export function toolsPrompt(): string {
   ].join('\n')
 }
 
-/** Fa la chiamata con il motore e restituisce la risposta per il modello. */
+/**
+ * Fa la chiamata con il motore e restituisce la risposta per il modello. Lo strumento e gli argomenti si
+ * riconoscono con il nome italiano o con quello inglese; se lo strumento non c'è, la risposta dice i nomi
+ * nella lingua di Glifo (quelli che il modello ha letto).
+ */
 export function runTool(call: ToolCall, sheet: SheetFactory): string {
-  const tool = ALL_TOOLS.find((t) => t.name === call.name)
-  if (!tool) return `Lo strumento «${call.name}» non c'è: usa ${ALL_TOOLS.map((t) => t.name).join(', ')}.`
+  const tool = ALL_TOOLS.find((t) => t.name.includes(call.name))
+  if (!tool) return T.noTool(call.name, ALL_TOOLS.map((t) => pick(t.name)).join(', '))
+  const args = Object.fromEntries(Object.entries(call.args).map(([k, v]) => [tool.params.find((p) => p.name.includes(k))?.name[0] ?? k, v]))
   try {
-    return tool.run(call.args, sheet)
+    return tool.run(args, sheet)
   } catch {
-    return NOT_DONE
+    return T.notDone
   }
 }
 
