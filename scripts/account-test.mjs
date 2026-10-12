@@ -13,10 +13,11 @@ import { CODE, GOOGLE_CODE, createFakeSupabase } from './fake-supabase.mjs'
 const server = await preview({ preview: { port: 4175, strictPort: true }, logLevel: 'error' })
 const url = server.resolvedUrls.local[0]
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined })
-// Il tutorial della prima apertura lo prova smoke-test.mjs: qui è già visto.
+// Il tutorial della prima apertura lo prova smoke-test.mjs: qui è già visto. Il browser è in italiano
+// (Glifo prende la lingua dal browser, src/i18n.ts).
 const newContext = browser.newContext.bind(browser)
 browser.newContext = async (options) => {
-  const context = await newContext(options)
+  const context = await newContext({ locale: 'it-IT', ...options })
   // Anche nelle pagine di altri siti (la finta pagina di Google), dove il browser può negarlo.
   await context.addInitScript(() => {
     try {

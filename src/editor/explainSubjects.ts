@@ -50,7 +50,7 @@ function worthExplaining(tex: string): boolean {
 }
 
 /** Le parole con cui comincia un enunciato da spiegare. */
-const THEOREM_WORDS = ['Teorema', 'Definizione', 'Lemma', 'Proposizione', 'Corollario', 'Proprietà', 'Principio', 'Legge', 'Regola', 'Criterio', 'Assioma', 'Postulato', 'Formula']
+const THEOREM_WORDS = ['Teorema', 'Definizione', 'Lemma', 'Proposizione', 'Corollario', 'Proprietà', 'Principio', 'Legge', 'Regola', 'Criterio', 'Assioma', 'Postulato', 'Formula'] // non si traduce: Glifo le cerca nel testo della nota
 const THEOREM_START = new RegExp(`^(?:\\*\\*|__|\\*|_)?(${THEOREM_WORDS.join('|')})(?![\\p{L}])`, 'iu')
 const FENCE = /^\s*(`{3,}|~{3,})/
 const HEADING = /^\s{0,3}(#{1,6})\s+(.*)$/

@@ -1,4 +1,15 @@
 import { SUPABASE_KEY, SUPABASE_URL } from '../account/config'
+import { dateLocale, lang, texts } from '../i18n'
+
+const T = texts({
+  offline: ['Per aprire una nota condivisa serve la connessione.', 'You need a connection to open a shared note.'],
+  failed: ['Non è stato possibile aprire la nota: riprova tra poco.', 'Couldn\'t open the note: try again in a moment.'],
+  // Quando è stata fatta la fotografia, da mettere dopo «fotografia» (in inglese dopo «snapshot»).
+  todayAt: (time: string) => [`di oggi alle ${time}`, `from today at ${time}`],
+  yesterdayAt: (time: string) => [`di ieri alle ${time}`, `from yesterday at ${time}`],
+  // «dell'1», «dell'8» e «dell'11 settembre», gli altri giorni «del».
+  onDay: (day: string) => [/^(1|8|11)\b/.test(day) ? `dell'${day}` : `del ${day}`, `from ${day}`],
+})
 
 /**
  * Le note condivise con un link (vedi supabase/migrations, «note condivise»): una fotografia della
@@ -114,20 +125,21 @@ export async function readSharedNote(token: string, fetchImpl: typeof fetch = (.
       signal: typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(20_000) : undefined,
     })
   } catch {
-    throw new ShareReadError('offline', 'Per aprire una nota condivisa serve la connessione.')
+    throw new ShareReadError('offline', T.offline)
   }
-  if (!response.ok) throw new ShareReadError('server', 'Non è stato possibile aprire la nota: riprova tra poco.')
+  if (!response.ok) throw new ShareReadError('server', T.failed)
   return parseSharedNote(await response.json().catch(() => null))
 }
 
 /** «di oggi alle 10:32», «di ieri alle 9:05», «del 3 ottobre»: quando è stata fatta la fotografia. */
 export function snapshotWhen(ts: number, now = new Date()): string {
   const d = new Date(ts)
-  const time = d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
-  if (d.toDateString() === now.toDateString()) return `di oggi alle ${time}`
+  // «09:05» in italiano, «9:05 AM» in inglese (americano).
+  const time = d.toLocaleTimeString(dateLocale(), { hour: lang === 'it' ? '2-digit' : 'numeric', minute: '2-digit' })
+  if (d.toDateString() === now.toDateString()) return T.todayAt(time)
   const yesterday = new Date(now)
   yesterday.setDate(now.getDate() - 1)
-  if (d.toDateString() === yesterday.toDateString()) return `di ieri alle ${time}`
-  const day = d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric' })
-  return `${/^(1|8|11)\b/.test(day) ? 'dell\'' : 'del '}${day}`
+  if (d.toDateString() === yesterday.toDateString()) return T.yesterdayAt(time)
+  const day = d.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long', year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric' })
+  return T.onDay(day)
 }

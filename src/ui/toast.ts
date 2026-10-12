@@ -1,4 +1,9 @@
+import { texts } from '../i18n'
 import { h } from './dom'
+
+const T = texts({
+  close: ['Chiudi', 'Close'],
+})
 
 let container: HTMLElement | null = null
 
@@ -52,7 +57,7 @@ export function toast(message: string, kind: 'info' | 'error' = 'info', options:
           },
           action.label,
         ),
-        h('button', { class: 'toast-close', title: 'Chiudi', attrs: { type: 'button', 'aria-label': 'Chiudi' }, on: { click: () => dismissToast(el) } }, '×'),
+        h('button', { class: 'toast-close', title: T.close, attrs: { type: 'button', 'aria-label': T.close }, on: { click: () => dismissToast(el) } }, '×'),
       )
     : h('div', { class: `toast${kind === 'error' ? ' is-error' : ''}` }, message)
   container.append(el)

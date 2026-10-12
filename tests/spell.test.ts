@@ -11,6 +11,7 @@ import itDic from '../node_modules/dictionary-it/index.dic?raw'
 import enAff from '../node_modules/dictionary-en/index.aff?raw'
 import enDic from '../node_modules/dictionary-en/index.dic?raw'
 import welcomeNote from '../src/welcome.md?raw'
+import welcomeEnglish from '../src/welcome.en.md?raw'
 import { fullyParsed } from './support/editorState'
 
 const r = String.raw
@@ -106,8 +107,13 @@ describe('correttore (Hunspell con i dizionari veri)', () => {
   const load = async (lang: SpellLanguage) => ({ aff: encoder.encode(files[lang][0]), dic: encoder.encode(files[lang][1]) })
   let both: SpellEngine
   let italian: SpellEngine
+  let english: SpellEngine
   beforeAll(async () => {
-    ;[both, italian] = await Promise.all([SpellEngine.create(['it', 'en'], load), SpellEngine.create(['it'], load)])
+    ;[both, italian, english] = await Promise.all([
+      SpellEngine.create(['it', 'en'], load),
+      SpellEngine.create(['it'], load),
+      SpellEngine.create(['en'], load),
+    ])
   })
 
   it('accetta le parole giuste, anche con elisioni e maiuscole', () => {
@@ -161,6 +167,13 @@ describe('correttore (Hunspell con i dizionari veri)', () => {
     const found = wordsToCheck(state, 0, state.doc.length).map((w) => w.word)
     expect(found.length).toBeGreaterThan(100)
     expect(both.misspelled(found)).toEqual(['perchè'])
+  })
+
+  it('nella nota di benvenuto in inglese, con il correttore inglese, è sottolineato solo l\'esempio', () => {
+    const state = fullyParsed(EditorState.create({ doc: welcomeEnglish, extensions: [markdown({ base: markdownLanguage, extensions: [mathMarkdown] })] }))
+    const found = wordsToCheck(state, 0, state.doc.length).map((w) => w.word)
+    expect(found.length).toBeGreaterThan(100)
+    expect(english.misspelled(found)).toEqual(['recieve'])
   })
 
   it('usa le parole aggiunte dallo studente, con qualunque maiuscola', () => {

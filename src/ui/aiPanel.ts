@@ -12,11 +12,30 @@ import type { ExplainTopic } from '../ai/explain'
 import { formulaTopic, graphTopic, schemaTopic, tableTopic, theoremTopic } from '../ai/topics'
 import type { MarkdownEditor } from '../editor/editor'
 import { subjectsIn, type NoteSubject, type SubjectKind } from '../editor/explainSubjects'
+import { rich, texts } from '../i18n'
 import { escapeHtml, renderTex } from '../render/katex'
 import type { Settings } from '../store/settings'
 import { ICONS, h, icon } from './dom'
 import type { AiWork } from './aiActivity'
 import { ExplainPanel, type ExplainModel, type ExplainSubject } from './explainPanel'
+
+const T = texts({
+  kindCalculation: ['Conto', 'Calculation'],
+  kindGraph: ['Grafico', 'Graph'],
+  kindFormula: ['Formula', 'Formula'],
+  kindTheorem: ['Teorema', 'Theorem'],
+  kindDiagram: ['Schema', 'Diagram'],
+  kindTable: ['Tabella', 'Table'],
+  subjects: ['Quello che si può spiegare nella nota', 'What can be explained in the note'],
+  empty: [
+    'In questa nota non c\'è ancora niente da spiegare: scrivi una formula (anche un conto, con «=» alla fine: {example}), un teorema o una definizione, o inserisci un grafico, uno schema o una tabella.',
+    'There\'s nothing to explain in this note yet: write a formula (even a calculation, with “=” at the end: {example}), a theorem or a definition, or insert a graph, a diagram or a table.',
+  ],
+  explainWithAi: ['Spiega con l\'AI', 'Explain with AI'],
+  close: ['Chiudi', 'Close'],
+  closePanel: ['Chiudi il pannello', 'Close the panel'],
+  choose: ['Nella nota: scegli cosa spiegare', 'In the note: choose what to explain'],
+})
 
 export interface AiPanelDeps {
   editor: MarkdownEditor
@@ -31,7 +50,11 @@ export interface AiPanelDeps {
   activity?: AiWork
 }
 
-const KIND_NAMES: Record<SubjectKind, string> = { conto: 'Conto', grafico: 'Grafico', formula: 'Formula', teorema: 'Teorema', schema: 'Schema', tabella: 'Tabella' }
+/** Il tipo di una voce dell'elenco, come si legge accanto a lei. */
+function kindName(kind: SubjectKind): string {
+  const names: Record<SubjectKind, string> = { conto: T.kindCalculation, grafico: T.kindGraph, formula: T.kindFormula, teorema: T.kindTheorem, schema: T.kindDiagram, tabella: T.kindTable }
+  return names[kind]
+}
 
 /** Dopo quanto, smesso di scrivere, l'elenco si rifà (in millisecondi). */
 const REFRESH_MS = 300
@@ -90,28 +113,26 @@ export class AiPanel {
       activity: deps.activity,
       ...(deps.model && { model: deps.model }),
     })
-    this.list = h('ul', { class: 'ai-subjects', attrs: { 'aria-label': 'Quello che si può spiegare nella nota' } })
+    this.list = h('ul', { class: 'ai-subjects', attrs: { 'aria-label': T.subjects } })
     this.empty = h(
       'p',
       { class: 'ai-panel-empty', attrs: { hidden: true } },
-      'In questa nota non c\'è ancora niente da spiegare: scrivi una formula (anche un conto, con «=» alla fine: ',
-      h('span', { html: texInline('\\int_0^1 x^2 \\, dx =') }),
-      '), un teorema o una definizione, o inserisci un grafico, uno schema o una tabella.',
+      ...rich(T.empty, { example: h('span', { html: texInline('\\int_0^1 x^2 \\, dx =') }) }),
     )
     this.el = h(
       'section',
-      { class: 'ai-panel', attrs: { 'aria-label': 'Spiega con l\'AI' } },
+      { class: 'ai-panel', attrs: { 'aria-label': T.explainWithAi } },
       h(
         'div',
         { class: 'ai-panel-head' },
-        h('span', { class: 'ai-panel-title' }, icon(ICONS.sparkles, 18), 'Spiega con l\'AI'),
+        h('span', { class: 'ai-panel-title' }, icon(ICONS.sparkles, 18), T.explainWithAi),
         h(
           'button',
-          { class: 'icon-button ai-panel-close', title: 'Chiudi', attrs: { type: 'button', 'aria-label': 'Chiudi il pannello' }, on: { click: () => deps.onClose() } },
+          { class: 'icon-button ai-panel-close', title: T.close, attrs: { type: 'button', 'aria-label': T.closePanel }, on: { click: () => deps.onClose() } },
           icon(ICONS.x, 16),
         ),
       ),
-      h('p', { class: 'ai-panel-label' }, 'Nella nota: scegli cosa spiegare'),
+      h('p', { class: 'ai-panel-label' }, T.choose),
       this.list,
       this.empty,
       this.explain.el,
@@ -174,7 +195,7 @@ export class AiPanel {
               attrs: { type: 'button', 'aria-pressed': String(chosen), 'data-kind': s.kind },
               on: { click: () => void this.choose(s) },
             },
-            h('span', { class: 'ai-subject-kind' }, s.kind === 'teorema' && s.tag ? s.tag : KIND_NAMES[s.kind]),
+            h('span', { class: 'ai-subject-kind' }, s.kind === 'teorema' && s.tag ? s.tag : kindName(s.kind)),
             h('span', { class: 'ai-subject-body', html: body }),
           ),
         )

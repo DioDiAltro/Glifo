@@ -1,3 +1,10 @@
+import { dateLocale, lang, texts } from '../i18n'
+
+const T = texts({
+  today: (time: string) => [`oggi ${time}`, `today ${time}`],
+  yesterday: (time: string) => [`ieri ${time}`, `yesterday ${time}`],
+})
+
 type Child = Node | string | number | null | undefined | false | Child[]
 
 export interface Props {
@@ -116,11 +123,12 @@ export function clear(el: Element): void {
 export function formatDate(ts: number): string {
   const d = new Date(ts)
   const now = new Date()
-  const time = d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+  // «09:05» in italiano, «9:05 AM» in inglese (americano).
+  const time = d.toLocaleTimeString(dateLocale(), { hour: lang === 'it' ? '2-digit' : 'numeric', minute: '2-digit' })
   const sameDay = d.toDateString() === now.toDateString()
-  if (sameDay) return `oggi ${time}`
+  if (sameDay) return T.today(time)
   const yesterday = new Date(now)
   yesterday.setDate(now.getDate() - 1)
-  if (d.toDateString() === yesterday.toDateString()) return `ieri ${time}`
-  return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric' })
+  if (d.toDateString() === yesterday.toDateString()) return T.yesterday(time)
+  return d.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric' })
 }

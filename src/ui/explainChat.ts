@@ -8,11 +8,27 @@
 import { answerFollowUp, REPLY_TOKENS, type ChatContext, type Explanation, type FollowUp } from '../ai/explain'
 import { LocalAbort, type ChatMessage } from '../ai/local'
 import { localModel } from '../ai/localModels'
+import { texts } from '../i18n'
 import type { Settings } from '../store/settings'
 import { h } from './dom'
 import type { ExplainModel } from './explainPanel'
 import type { AiWork } from './aiActivity'
 import { formulasSummary, stepsList } from './explainSteps'
+
+const T = texts({
+  turns: ['Le domande sulla spiegazione', 'Your questions about the explanation'],
+  placeholder: ['Per esempio: perché si fa così?', 'For example: why is it done this way?'],
+  input: ['La tua domanda sulla spiegazione', 'Your question about the explanation'],
+  ask: ['Chiedi', 'Ask'],
+  stop: ['Ferma', 'Stop'],
+  chat: ['Domande sulla spiegazione', 'Questions about the explanation'],
+  label: ['Hai una domanda su questa spiegazione?', 'Have a question about this explanation?'],
+  thisAnswer: ['questa risposta', 'this answer'],
+  tryAgain: ['Riprova', 'Try again'],
+  answering: ['Rispondo…', 'Answering…'],
+  stopTitle: ['Ferma la risposta', 'Stop answering'],
+  askTitle: ['Manda la domanda (Invio)', 'Send the question (Enter)'],
+})
 
 export interface ExplainChatDeps {
   context: ChatContext
@@ -41,10 +57,10 @@ export class ExplainChat {
   private draftText = ''
 
   constructor(private readonly deps: ExplainChatDeps) {
-    this.list = h('ol', { class: 'ai-chat-turns', attrs: { 'aria-label': 'Le domande sulla spiegazione', 'aria-live': 'polite' } })
+    this.list = h('ol', { class: 'ai-chat-turns', attrs: { 'aria-label': T.turns, 'aria-live': 'polite' } })
     this.input = h('textarea', {
       class: 'ai-chat-input',
-      attrs: { rows: 2, placeholder: 'Per esempio: perché si fa così?', 'aria-label': 'La tua domanda sulla spiegazione' },
+      attrs: { rows: 2, placeholder: T.placeholder, 'aria-label': T.input },
       on: {
         keydown: (ev: Event) => {
           const key = ev as KeyboardEvent
@@ -55,11 +71,11 @@ export class ExplainChat {
         },
       },
     })
-    this.button = h('button', { class: 'btn btn-primary btn-small ai-chat-send', attrs: { type: 'button' }, on: { click: () => (this.controller ? this.stop() : void this.ask()) } }, 'Chiedi')
+    this.button = h('button', { class: 'btn btn-primary btn-small ai-chat-send', attrs: { type: 'button' }, on: { click: () => (this.controller ? this.stop() : void this.ask()) } }, T.ask)
     this.el = h(
       'section',
-      { class: 'ai-chat', attrs: { 'aria-label': 'Domande sulla spiegazione' } },
-      h('p', { class: 'ai-chat-label' }, 'Hai una domanda su questa spiegazione?'),
+      { class: 'ai-chat', attrs: { 'aria-label': T.chat } },
+      h('p', { class: 'ai-chat-label' }, T.label),
       this.list,
       h('div', { class: 'ai-chat-form' }, this.input, this.button),
     )
@@ -133,7 +149,7 @@ export class ExplainChat {
     this.list.replaceChildren(
       ...this.turns.map((t) => {
         const item = h('li', { class: 'ai-chat-turn' }, h('p', { class: 'ai-chat-question' }, t.question))
-        if (t.answer) item.append(h('div', { class: 'ai-chat-answer' }, stepsList(t.answer), formulasSummary(t.answer, 'questa risposta')))
+        if (t.answer) item.append(h('div', { class: 'ai-chat-answer' }, stepsList(t.answer), formulasSummary(t.answer, T.thisAnswer)))
         else if (t.error) {
           item.append(
             h('p', { class: 'ai-error' }, t.error),
@@ -149,13 +165,13 @@ export class ExplainChat {
                   },
                 },
               },
-              'Riprova',
+              T.tryAgain,
             ),
           )
         } else {
           this.draft = h('pre', { class: 'explain-draft', attrs: { 'aria-hidden': 'true' } })
           this.draftText = ''
-          item.append(h('div', { class: 'ai-loading', attrs: { role: 'status' } }, h('span', { class: 'spinner', attrs: { 'aria-hidden': 'true' } }), 'Rispondo…'), this.draft)
+          item.append(h('div', { class: 'ai-loading', attrs: { role: 'status' } }, h('span', { class: 'spinner', attrs: { 'aria-hidden': 'true' } }), T.answering), this.draft)
         }
         return item
       }),
@@ -163,8 +179,8 @@ export class ExplainChat {
     this.list.hidden = !this.turns.length
     const busy = !!this.controller
     this.input.disabled = busy
-    this.button.textContent = busy ? 'Ferma' : 'Chiedi'
+    this.button.textContent = busy ? T.stop : T.ask
     this.button.classList.toggle('btn-primary', !busy)
-    this.button.title = busy ? 'Ferma la risposta' : 'Manda la domanda (Invio)'
+    this.button.title = busy ? T.stopTitle : T.askTitle
   }
 }

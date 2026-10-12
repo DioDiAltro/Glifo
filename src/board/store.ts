@@ -427,6 +427,6 @@ export class BoardStore {
 }
 
 async function openDefault(): Promise<BoardBackend> {
-  if (typeof indexedDB === 'undefined') throw new Error('IndexedDB non disponibile')
+  if (typeof indexedDB === 'undefined') throw new Error('IndexedDB non disponibile') // non si traduce: errore interno, chi chiama mostra un suo messaggio
   return new IdbBoards(await openBoardDatabase())
 }

@@ -3,6 +3,7 @@ import type { SyntaxNode } from '@lezer/common'
 import type { MarkdownConfig } from '@lezer/markdown'
 import { EditorSelection, type ChangeSpec, type EditorState, type Line, type Range } from '@codemirror/state'
 import { Decoration, ViewPlugin, type DecorationSet, type EditorView, type ViewUpdate } from '@codemirror/view'
+import { texts } from '../i18n'
 import {
   bullet,
   childMarker,
@@ -31,6 +32,18 @@ import { besideSchema, schemaBlockRanges } from './schemaBlocks'
  *
  * Gli elementi figli si spostano insieme al genitore e i numeri si aggiornano.
  */
+
+const T = texts({
+  numbers: ['Numeri', 'Numbers'],
+  numbersDot: ['Numeri con il punto', 'Numbers with a period'],
+  letters: ['Lettere', 'Letters'],
+  capitalLetters: ['Lettere maiuscole', 'Capital letters'],
+  romanNumerals: ['Numeri romani', 'Roman numerals'],
+  examples: ['Esempi', 'Examples'],
+  dashes: ['Trattini', 'Dashes'],
+  bullets: ['Pallini', 'Bullets'],
+  todo: ['Cose da fare', 'To-do'],
+})
 
 /** Niente blocchi di codice rientrati: il rientro serve agli elenchi (il codice va tra ```). */
 export const noIndentedCode: MarkdownConfig = { remove: ['IndentedCode'] }
@@ -384,17 +397,20 @@ export function applyListStyle(target: CommandTarget, style: ListStyle): void {
   target.dispatch({ changes, scrollIntoView: true, userEvent: 'input' })
 }
 
-/** Gli stili del menu degli elenchi. */
-export const LIST_STYLES: { label: string; example: string; style: ListStyle }[] = [
-  { label: 'Numeri', example: '1)', style: { marker: numbered('number', 1, 'paren') } },
-  { label: 'Numeri con il punto', example: '1.', style: { marker: numbered('number', 1, 'dot') } },
-  { label: 'Lettere', example: 'a)', style: { marker: numbered('letter', 1, 'paren') } },
-  { label: 'Lettere maiuscole', example: 'A)', style: { marker: numbered('letter', 1, 'paren', true) } },
-  { label: 'Numeri romani', example: 'i)', style: { marker: numbered('roman', 1, 'paren') } },
-  { label: 'Esempi', example: 'es)', style: { marker: label('es)') } },
-  { label: 'Trattini', example: '–', style: { marker: bullet('-') } },
-  { label: 'Pallini', example: '•', style: { marker: bullet('*') } },
-  { label: 'Cose da fare', example: '☐', style: { marker: bullet('-'), task: true } },
+/** Il nome fisso di uno stile degli elenchi: l'etichetta cambia con la lingua. */
+export type ListStyleId = 'numbers' | 'numbers-dot' | 'letters' | 'capital-letters' | 'roman' | 'examples' | 'dashes' | 'bullets' | 'todo'
+
+/** Gli stili del menu degli elenchi (le etichette si leggono quando servono, nella lingua della pagina). */
+export const LIST_STYLES: { id: ListStyleId; label: string; example: string; style: ListStyle }[] = [
+  { id: 'numbers', get label() { return T.numbers }, example: '1)', style: { marker: numbered('number', 1, 'paren') } },
+  { id: 'numbers-dot', get label() { return T.numbersDot }, example: '1.', style: { marker: numbered('number', 1, 'dot') } },
+  { id: 'letters', get label() { return T.letters }, example: 'a)', style: { marker: numbered('letter', 1, 'paren') } },
+  { id: 'capital-letters', get label() { return T.capitalLetters }, example: 'A)', style: { marker: numbered('letter', 1, 'paren', true) } },
+  { id: 'roman', get label() { return T.romanNumerals }, example: 'i)', style: { marker: numbered('roman', 1, 'paren') } },
+  { id: 'examples', get label() { return T.examples }, example: 'es)', style: { marker: label('es)') } },
+  { id: 'dashes', get label() { return T.dashes }, example: '–', style: { marker: bullet('-') } },
+  { id: 'bullets', get label() { return T.bullets }, example: '•', style: { marker: bullet('*') } },
+  { id: 'todo', get label() { return T.todo }, example: '☐', style: { marker: bullet('-'), task: true } },
 ]
 
 const markerMark = Decoration.mark({ class: 'cm-list-mark' })

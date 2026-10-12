@@ -1,5 +1,25 @@
+import { texts } from '../i18n'
 import { EDITOR_SHARE, NOTES_WIDTH, PANE_LIMITS, SYMBOLS_WIDTH, type PaneSizes, type SizeLimits } from '../store/layout'
 import { h } from './dom'
+
+const T = texts({
+  notesWidth: ['Larghezza dell\'elenco degli appunti', 'Width of the notes list'],
+  symbolsWidth: ['Larghezza del pannello dei simboli', 'Width of the symbols panel'],
+  /** Il bordo tra il testo e quello che gli sta accanto: l'anteprima o, nella sua vista, la lavagna. */
+  split: (board: boolean) => [
+    board ? 'Divisione tra testo e lavagna' : 'Divisione tra testo e anteprima',
+    board ? 'Divider between text and whiteboard' : 'Divider between text and preview',
+  ],
+  splitValue: (percent: number, board: boolean) => [
+    `testo ${percent}%, ${board ? 'lavagna' : 'anteprima'} ${100 - percent}%`,
+    `text ${percent}%, ${board ? 'whiteboard' : 'preview'} ${100 - percent}%`,
+  ],
+  pixels: (n: number) => [`${n} pixel`, `${n} pixels`],
+  handleHint: [
+    'Trascina per allargare o stringere. Doppio clic: torna alla misura di partenza.',
+    'Drag to widen or narrow. Double-click: back to the original size.',
+  ],
+})
 
 /** Testo e anteprima restano larghi almeno così, anche allargando i pannelli ai lati. */
 export const PANE_MIN = 220
@@ -69,7 +89,7 @@ export class PaneResizer {
     this.notesHandle = this.edge({
       key: 'notesWidth',
       className: 'resize-notes',
-      label: 'Larghezza dell\'elenco degli appunti',
+      label: T.notesWidth,
       controls: parts.notes,
       grows: 1,
       begin: () => {
@@ -81,7 +101,7 @@ export class PaneResizer {
     this.splitHandle = this.edge({
       key: 'editorShare',
       className: 'resize-split',
-      label: 'Divisione tra testo e anteprima',
+      label: T.split(false),
       controls: parts.editor,
       grows: 1,
       begin: () => {
@@ -93,7 +113,7 @@ export class PaneResizer {
     this.symbolsHandle = this.edge({
       key: 'symbolsWidth',
       className: 'resize-symbols',
-      label: 'Larghezza del pannello dei simboli',
+      label: T.symbolsWidth,
       controls: parts.symbols,
       grows: -1,
       begin: () => {
@@ -108,7 +128,7 @@ export class PaneResizer {
   private edge(edge: Edge): HTMLElement {
     return h('div', {
       class: `resize-handle ${edge.className}`,
-      title: 'Trascina per allargare o stringere. Doppio clic: torna alla misura di partenza.',
+      title: T.handleHint,
       attrs: {
         role: 'separator',
         tabindex: 0,
@@ -211,12 +231,12 @@ export class PaneResizer {
     this.parts.editor.style.setProperty('--split-grow', String(editor))
     this.parts.preview.style.setProperty('--split-grow', String(1000 - editor))
     this.parts.board?.style.setProperty('--split-grow', String(1000 - editor))
-    aria(this.notesHandle, notesWidth, NOTES_WIDTH, `${notesWidth} pixel`)
-    aria(this.symbolsHandle, symbolsWidth, SYMBOLS_WIDTH, `${symbolsWidth} pixel`)
+    aria(this.notesHandle, notesWidth, NOTES_WIDTH, T.pixels(notesWidth))
+    aria(this.symbolsHandle, symbolsWidth, SYMBOLS_WIDTH, T.pixels(symbolsWidth))
     const percent = Math.round(editorShare * 100)
-    const beside = this.besideText() === this.parts.board ? 'lavagna' : 'anteprima'
-    this.splitHandle.setAttribute('aria-label', `Divisione tra testo e ${beside}`)
-    aria(this.splitHandle, percent, { min: EDITOR_SHARE.min * 100, max: EDITOR_SHARE.max * 100 }, `testo ${percent}%, ${beside} ${100 - percent}%`)
+    const board = this.besideText() === this.parts.board
+    this.splitHandle.setAttribute('aria-label', T.split(board))
+    aria(this.splitHandle, percent, { min: EDITOR_SHARE.min * 100, max: EDITOR_SHARE.max * 100 }, T.splitValue(percent, board))
   }
 }
 

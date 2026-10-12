@@ -5,6 +5,16 @@
  * dal dispositivo. Qui solo l'elenco, i nomi e i messaggi tra la pagina e il worker: WebLLM sta nel
  * worker (src/ai/llmWorker.ts), che si carica solo quando serve.
  */
+import { texts } from '../i18n'
+
+// Le etichette dell'elenco nelle impostazioni (src/ui/dialogs.ts) e quanto si scarica.
+const T = texts({
+  lightest: ['Qwen3 0.6B, il più leggero', 'Qwen3 0.6B, the lightest'],
+  recommended: ['Qwen3 1.7B, consigliato', 'Qwen3 1.7B, recommended'],
+  best: ['Qwen3 4B, il più bravo ma pesante', 'Qwen3 4B, the most capable but heavy'],
+  /** I gigabyte, con la virgola in italiano e il punto in inglese. */
+  about: (gb: number) => [`circa ${String(gb).replace('.', ',')} GB`, `about ${gb} GB`],
+})
 
 export interface LocalModel {
   /** Il nome nelle impostazioni (salvato in `localModel`). */
@@ -17,9 +27,9 @@ export interface LocalModel {
 }
 
 export const LOCAL_MODELS: readonly LocalModel[] = [
-  { id: 'Qwen3-0.6B', name: 'Qwen3 0.6B', label: 'Qwen3 0.6B, il più leggero', size: 'circa 0,4 GB' },
-  { id: 'Qwen3-1.7B', name: 'Qwen3 1.7B', label: 'Qwen3 1.7B, consigliato', size: 'circa 1 GB' },
-  { id: 'Qwen3-4B', name: 'Qwen3 4B', label: 'Qwen3 4B, il più bravo ma pesante', size: 'circa 2,3 GB' },
+  { id: 'Qwen3-0.6B', name: 'Qwen3 0.6B', get label() { return T.lightest }, get size() { return T.about(0.4) } },
+  { id: 'Qwen3-1.7B', name: 'Qwen3 1.7B', get label() { return T.recommended }, get size() { return T.about(1) } },
+  { id: 'Qwen3-4B', name: 'Qwen3 4B', get label() { return T.best }, get size() { return T.about(2.3) } },
 ]
 
 export const DEFAULT_LOCAL_MODEL = 'Qwen3-1.7B'

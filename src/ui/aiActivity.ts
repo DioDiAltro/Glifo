@@ -7,6 +7,15 @@
  * pallino, che se ne va quando il pannello AI torna a vedersi. Titolo e aria-label dicono lo stesso.
  */
 
+import { texts } from '../i18n'
+
+const T = texts({
+  workingTitle: ['Spiega con l\'AI: sta lavorando…', 'Explain with AI: working…'],
+  newsTitle: ['Spiega con l\'AI: ha finito, apri il pannello per vedere', 'Explain with AI: done, open the panel to see it'],
+  workingLabel: (label: string) => [`${label}, sta lavorando`, `${label}, working`],
+  newsLabel: (label: string) => [`${label}, ha finito`, `${label}, done`],
+})
+
 /** Quello che serve a chi lavora con il modello (la spiegazione, la chat): dire quando comincia e finisce. */
 export interface AiWork {
   /**
@@ -23,8 +32,8 @@ export interface AiActivity extends AiWork {
   readonly news: boolean
 }
 
-export const AI_WORKING_TITLE = 'Spiega con l\'AI: sta lavorando…'
-export const AI_NEWS_TITLE = 'Spiega con l\'AI: ha finito, apri il pannello per vedere'
+export const AI_WORKING_TITLE = T.workingTitle
+export const AI_NEWS_TITLE = T.newsTitle
 
 export function aiActivity(button: HTMLElement, visible: () => boolean): AiActivity {
   const idle = { title: button.title, label: button.getAttribute('aria-label') ?? '' }
@@ -35,9 +44,9 @@ export function aiActivity(button: HTMLElement, visible: () => boolean): AiActiv
     button.classList.toggle('is-working', running > 0)
     button.classList.toggle('has-news', news)
     const [title, label] = running > 0
-      ? [AI_WORKING_TITLE, `${idle.label}, sta lavorando`]
+      ? [AI_WORKING_TITLE, T.workingLabel(idle.label)]
       : news
-        ? [AI_NEWS_TITLE, `${idle.label}, ha finito`]
+        ? [AI_NEWS_TITLE, T.newsLabel(idle.label)]
         : [idle.title, idle.label]
     button.title = title
     button.setAttribute('aria-label', label)

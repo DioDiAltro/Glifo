@@ -66,6 +66,7 @@ const INFORMATICA = `
   sort merge insertion selection bubble binary search tree graph node vector tensor
   machine learning deep layer epoch loss overfitting underfitting feature clustering embedding notebook
   python java javascript typescript kotlin swift git github html css sql json xml url
+  glifo md backtick backticks
   if else for while do switch case break continue return try catch finally throw throws
   new this super class interface extends implements import package public private protected
   static final abstract void null true false int long short byte char double boolean main method instanceof

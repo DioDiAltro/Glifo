@@ -5,7 +5,17 @@
  * Studio); OpenRouter dà con una chiave sola tanti modelli, anche gratis; Ollama fa girare i modelli
  * aperti sul proprio computer. La chiave resta nel browser e il testo va direttamente al servizio.
  */
+import { texts } from '../i18n'
 import type { Settings } from '../store/settings'
+
+// Solo quello che si vede nelle impostazioni (src/ui/dialogs.ts): i nomi nell'elenco e la chiave da scrivere.
+const T = texts({
+  gemini: ['Google Gemini (gratis con una chiave di AI Studio)', 'Google Gemini (free with an AI Studio key)'],
+  openrouter: ['OpenRouter (tanti modelli, anche gratis)', 'OpenRouter (many models, some free)'],
+  ollama: ['Ollama (sul tuo computer)', 'Ollama (on your computer)'],
+  compatible: ['Un altro servizio compatibile con OpenAI', 'Another OpenAI-compatible service'],
+  compatibleKey: ['la chiave del servizio', 'the service\'s key'],
+})
 
 export type AiServiceId = 'anthropic' | 'gemini' | 'openrouter' | 'ollama' | 'compatible'
 
@@ -31,7 +41,7 @@ export const AI_SERVICES: readonly AiService[] = [
   { id: 'anthropic', label: 'Anthropic (Claude)', name: 'Anthropic', url: '', model: 'claude-opus-5-5', models: [], keyUrl: 'https://console.anthropic.com/settings/keys', keyPlaceholder: 'sk-ant-…', needsKey: true },
   {
     id: 'gemini',
-    label: 'Google Gemini (gratis con una chiave di AI Studio)',
+    get label() { return T.gemini },
     name: 'Gemini',
     url: 'https://generativelanguage.googleapis.com/v1beta/openai',
     model: 'gemini-flash-lite-latest',
@@ -42,7 +52,7 @@ export const AI_SERVICES: readonly AiService[] = [
   },
   {
     id: 'openrouter',
-    label: 'OpenRouter (tanti modelli, anche gratis)',
+    get label() { return T.openrouter },
     name: 'OpenRouter',
     url: 'https://openrouter.ai/api/v1',
     model: 'openrouter/free',
@@ -51,8 +61,8 @@ export const AI_SERVICES: readonly AiService[] = [
     keyPlaceholder: 'sk-or-…',
     needsKey: true,
   },
-  { id: 'ollama', label: 'Ollama (sul tuo computer)', name: 'Ollama', url: 'http://localhost:11434/v1', model: 'qwen3', models: ['qwen3', 'gemma3', 'llama3.2'], keyPlaceholder: '', needsKey: false },
-  { id: 'compatible', label: 'Un altro servizio compatibile con OpenAI', name: 'il servizio', url: '', model: '', models: [], keyPlaceholder: 'la chiave del servizio', needsKey: false },
+  { id: 'ollama', get label() { return T.ollama }, name: 'Ollama', url: 'http://localhost:11434/v1', model: 'qwen3', models: ['qwen3', 'gemma3', 'llama3.2'], keyPlaceholder: '', needsKey: false },
+  { id: 'compatible', get label() { return T.compatible }, name: 'il servizio', url: '', model: '', models: [], get keyPlaceholder() { return T.compatibleKey }, needsKey: false },
 ]
 
 export function aiService(id: string | undefined): AiService {

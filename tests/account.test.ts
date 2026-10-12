@@ -63,6 +63,18 @@ describe('portare gli appunti di questo browser nell\'account', () => {
     expect(accountSpace('u1').notes.get(toccata.id)?.content).toContain('i miei appunti')
   })
 
+  it('la nota di benvenuto mai toccata resta fuori in tutte e due le lingue (Glifo può aver cambiato lingua)', () => {
+    const WELCOME_EN = '# Welcome to Glifo\n\nwelcome note'
+    const guest = new NotesStore()
+    guest.create(WELCOME)
+    guest.create(WELCOME_EN)
+    guest.create('# Idee')
+    expect(guestNoteCount(WELCOME)).toBe(2)
+    expect(guestNoteCount([WELCOME, WELCOME_EN])).toBe(1)
+    expect(adoptGuestNotes('u1', [WELCOME, WELCOME_EN])).toBe(1)
+    expect(accountSpace('u1').notes.list().map((n) => n.title)).toEqual(['Idee'])
+  })
+
   it('le note create prima delle cartelle ricevono un id nuovo (UUID)', () => {
     const vecchioId = Date.UTC(2026, 3, 1).toString(36) + 'abcd1234'
     localStorage.setItem('glifo.note.v1.' + vecchioId, '# Nota di aprile')

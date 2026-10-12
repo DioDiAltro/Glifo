@@ -1,10 +1,27 @@
 import { ChangeSet, EditorSelection, EditorState, StateField, Transaction, type Extension, type TransactionSpec } from '@codemirror/state'
 import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view'
+import { texts } from '../i18n'
 import { findFencedBlocks, type SchemaBlock } from '../schema/blocks'
 import { parseSchema } from '../schema/model'
 import { readInput } from '../spreadsheet/format'
 import { parseSheet, sheetSize } from '../spreadsheet/model'
 import { ICONS } from '../ui/dom'
+
+const T = texts({
+  shapesAndArrows: (shapes: number, arrows: number) => [
+    `${shapes === 1 ? '1 forma' : `${shapes} forme`}, ${arrows === 1 ? '1 freccia' : `${arrows} frecce`}`,
+    `${shapes === 1 ? '1 shape' : `${shapes} shapes`}, ${arrows === 1 ? '1 arrow' : `${arrows} arrows`}`,
+  ],
+  notADiagram: ['da sistemare: il testo del blocco non è uno schema', 'needs fixing: the block\'s text isn\'t a diagram'],
+  empty: ['vuota', 'empty'],
+  size: (rows: number, cols: number) => [
+    `${rows} ${rows === 1 ? 'riga' : 'righe'}, ${cols} ${cols === 1 ? 'colonna' : 'colonne'}`,
+    `${rows} ${rows === 1 ? 'row' : 'rows'}, ${cols} ${cols === 1 ? 'column' : 'columns'}`,
+  ],
+  diagram: ['Schema', 'Diagram'],
+  table: ['Tabella', 'Table'],
+  edit: ['Modifica', 'Edit'],
+})
 
 /** I blocchi che nel testo diventano una riga con «Modifica»: gli schemi e le tabelle. */
 export type WidgetKind = 'schema' | 'tabella'
@@ -20,11 +37,9 @@ const svg = (paths: string) =>
 function schemaSummary(source: string): string {
   try {
     const { nodes, edges } = parseSchema(source)
-    const shapes = nodes.length === 1 ? '1 forma' : `${nodes.length} forme`
-    const arrows = edges.length === 1 ? '1 freccia' : `${edges.length} frecce`
-    return `${shapes}, ${arrows}`
+    return T.shapesAndArrows(nodes.length, edges.length)
   } catch {
-    return 'da sistemare: il testo del blocco non è uno schema'
+    return T.notADiagram
   }
 }
 
@@ -32,8 +47,8 @@ function schemaSummary(source: string): string {
 function sheetSummary(source: string): string {
   const model = parseSheet(source)
   const { rows, cols } = sheetSize(model)
-  if (!rows) return 'vuota'
-  const size = `${rows} ${rows === 1 ? 'riga' : 'righe'}, ${cols} ${cols === 1 ? 'colonna' : 'colonne'}`
+  if (!rows) return T.empty
+  const size = T.size(rows, cols)
   // Solo i testi: i numeri e le formule non dicono di cosa parla la tabella.
   const names = (model.cells[0] ?? [])
     .map((c) => c?.input.trim() ?? '')
@@ -43,8 +58,8 @@ function sheetSummary(source: string): string {
 }
 
 const KINDS: Record<WidgetKind, { title: string; icon: string; summary(source: string): string }> = {
-  schema: { title: 'Schema', icon: svg(ICONS.schema), summary: schemaSummary },
-  tabella: { title: 'Tabella', icon: svg(ICONS.sheet), summary: sheetSummary },
+  schema: { get title() { return T.diagram }, icon: svg(ICONS.schema), summary: schemaSummary },
+  tabella: { get title() { return T.table }, icon: svg(ICONS.sheet), summary: sheetSummary },
 }
 
 /** Gli schemi e le tabelle chiusi del testo, in ordine. */
@@ -79,7 +94,7 @@ class BlockWidget extends WidgetType {
     const button = document.createElement('button')
     button.type = 'button'
     button.className = 'btn btn-small'
-    button.textContent = 'Modifica'
+    button.textContent = T.edit
     // La riga del blocco si calcola al momento: intanto il testo prima può essere cambiato.
     const edit = () => this.onEdit(this.kind, view.state.doc.lineAt(view.posAtDOM(wrap)).number - 1, this.source)
     button.addEventListener('click', edit)

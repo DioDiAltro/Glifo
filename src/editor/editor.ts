@@ -16,6 +16,7 @@ import {
   type ViewUpdate,
 } from '@codemirror/view'
 import { tags as t } from '@lezer/highlight'
+import { byLang, texts } from '../i18n'
 import { acceptCalcResult, calcPlugin } from './calcResults'
 import { insertTemplate, wrapSelection } from './insert'
 import { continueList, deleteListMarker, indentListItems, listMarkers, noIndentedCode, outdentListItems } from './lists'
@@ -27,6 +28,14 @@ import { blockMoves } from './moveBlock'
 import { schemaBlocks } from './schemaBlocks'
 import { spellcheck, type SpellcheckOptions } from './spellcheck'
 import { SuggestionController } from './suggestions'
+
+const T = texts({
+  placeholder: ['Scrivi qui i tuoi appunti in Markdown… prova a digitare \\sum', 'Write your notes here in Markdown… try typing \\sum'],
+  editorLabel: ['Editor degli appunti', 'Notes editor'],
+  /** Il testo che Ctrl+B e Ctrl+I mettono (selezionato) quando non c'è niente di selezionato. */
+  bold: ['grassetto', 'bold'],
+  italic: ['corsivo', 'italic'],
+})
 
 export interface EditorCallbacks {
   onDocChange(doc: string): void
@@ -68,25 +77,31 @@ const highlight = HighlightStyle.define([
   { tag: [t.special(t.string), t.regexp, t.escape], color: 'var(--code-string)' },
 ])
 
-const italianPhrases = EditorState.phrases.of({
-  Find: 'Trova',
-  Replace: 'Sostituisci',
-  next: 'successivo',
-  previous: 'precedente',
-  all: 'tutti',
-  'match case': 'maiuscole/minuscole',
-  'by word': 'parola intera',
-  regexp: 'espressione regolare',
-  replace: 'sostituisci',
-  'replace all': 'sostituisci tutti',
-  close: 'chiudi',
-  'current match': 'risultato corrente',
-  'on line': 'alla riga',
-  'Go to line': 'Vai alla riga',
-  go: 'vai',
-  'replaced match on line $': 'sostituito alla riga $',
-  'replaced $ matches': 'sostituiti $ risultati',
-})
+/** Le parole della ricerca di CodeMirror (Ctrl+F): in italiano tradotte, in inglese restano le sue. */
+const searchPhrases = (): Extension =>
+  byLang<Extension>({
+    it: () =>
+      EditorState.phrases.of({
+        Find: 'Trova',
+        Replace: 'Sostituisci',
+        next: 'successivo',
+        previous: 'precedente',
+        all: 'tutti',
+        'match case': 'maiuscole/minuscole',
+        'by word': 'parola intera',
+        regexp: 'espressione regolare',
+        replace: 'sostituisci',
+        'replace all': 'sostituisci tutti',
+        close: 'chiudi',
+        'current match': 'risultato corrente',
+        'on line': 'alla riga',
+        'Go to line': 'Vai alla riga',
+        go: 'vai',
+        'replaced match on line $': 'sostituito alla riga $',
+        'replaced $ matches': 'sostituiti $ risultati',
+      }),
+    en: () => [],
+  })
 
 /** Invio dopo una riga "$$" aperta: crea subito la chiusura del blocco. */
 function closeMathBlockOnEnter(view: EditorView): boolean {
@@ -163,8 +178,8 @@ export class MarkdownEditor {
         { key: 'Enter', run: (v) => continueList(v) || insertNewlineContinueMarkup(v) },
         { key: 'Backspace', run: (v) => deleteListMarker(v) || deleteMarkupBackward(v) },
         { key: 'Escape', run: clearAllPlaceholders },
-        { key: 'Mod-b', run: (v) => (wrapSelection(v, '**', '**', 'grassetto'), true) },
-        { key: 'Mod-i', run: (v) => (wrapSelection(v, '*', '*', 'corsivo'), true) },
+        { key: 'Mod-b', run: (v) => (wrapSelection(v, '**', '**', T.bold), true) },
+        { key: 'Mod-i', run: (v) => (wrapSelection(v, '*', '*', T.italic), true) },
         { key: 'Mod-m', run: (v) => (this.insertInlineMath(v), true) },
         { key: 'Mod-Shift-m', run: (v) => (this.insertBlockMath(v), true) },
         { key: 'Mod-s', run: () => (this.cb.onSave(), true), preventDefault: true },
@@ -185,8 +200,8 @@ export class MarkdownEditor {
       highlightSelectionMatches(),
       search({ top: true }),
       EditorView.lineWrapping,
-      italianPhrases,
-      placeholder('Scrivi qui i tuoi appunti in Markdown… prova a digitare \\sum'),
+      searchPhrases(),
+      placeholder(T.placeholder),
       markdown({ base: markdownLanguage, codeLanguages: languages, extensions: [mathMarkdown, noIndentedCode], addKeymap: false }),
       listMarkers,
       // Chiude in automatico anche davanti al $ di fine formula (es. `$x^{|}$`).
@@ -203,7 +218,7 @@ export class MarkdownEditor {
       keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...searchKeymap, ...historyKeymap, indentWithTab]),
       EditorView.updateListener.of((u) => this.onUpdate(u)),
       // Il controllo del browser resta spento: quello di Glifo salta formule e codice.
-      EditorView.contentAttributes.of({ spellcheck: 'false', lang: 'it', 'aria-label': 'Editor degli appunti' }),
+      EditorView.contentAttributes.of({ spellcheck: 'false', lang: 'it', 'aria-label': T.editorLabel }),
       this.spelling.of([]),
     ]
 

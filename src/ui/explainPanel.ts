@@ -14,11 +14,83 @@ import type { MarkdownEditor } from '../editor/editor'
 import { explanationMarkdown, insertAfterText, insertExplanation, regionToExplain, targetAt } from '../editor/explainInsert'
 import type { MathRegion } from '../editor/mathContext'
 import { inClaudeViewer } from '../host'
+import { texts } from '../i18n'
 import type { Settings } from '../store/settings'
 import type { AiWork } from './aiActivity'
 import { ICONS, h, icon } from './dom'
 import { ExplainChat } from './explainChat'
 import { formulasSummary, stepsList, texHtml } from './explainSteps'
+
+const T = texts({
+  explainTitle: [
+    'I passaggi di questo conto, scritti da un modello AI nel browser e controllati da Glifo',
+    'The steps of this calculation, written by an AI model in your browser and checked by Glifo',
+  ],
+  explain: ['Spiegami', 'Explain'],
+  explanation: ['Spiegazione', 'Explanation'],
+  inClaude: [
+    'Dentro claude.ai il modello non si può scaricare (la pagina blocca i download da Hugging Face): «Spiegami» funziona su Glifo aperto dal suo sito, con Chrome o Edge su un computer.',
+    'The model can\'t be downloaded inside claude.ai (the page blocks downloads from Hugging Face): “Explain” works on the Glifo website, with Chrome or Edge on a computer.',
+  ],
+  inserted: ['Spiegazione inserita nella nota', 'Explanation inserted into the note'],
+  formulaGone: [
+    'La formula non c\'è più nella nota: la spiegazione non si può inserire',
+    'The formula is no longer in the note: the explanation can\'t be inserted',
+  ],
+  subjectGone: [
+    'Quello che hai fatto spiegare non c\'è più nella nota: la spiegazione non si può inserire',
+    'What you asked to explain is no longer in the note: the explanation can\'t be inserted',
+  ],
+  modelTitle: ['Il modello che scrive la spiegazione, in questo browser', 'The model writing the explanation, in this browser'],
+  close: ['Chiudi la spiegazione', 'Close the explanation'],
+  downloading: (name: string, percent: number) => [`Scarico ${name}: ${percent}%`, `Downloading ${name}: ${percent}%`],
+  preparing: (name: string, percent: number) => [`Preparo ${name}: ${percent}%`, `Preparing ${name}: ${percent}%`],
+  progress: ['Avanzamento', 'Progress'],
+  firstDownload: (size: string) => [
+    `La prima volta il modello si scarica (${size}) e poi resta in questo browser, anche offline.`,
+    `The first time, the model is downloaded (${size}); then it stays in this browser, even offline.`,
+  ],
+  fixingSteps: ['Correggo i passaggi che Glifo ha segnato…', 'Fixing the steps Glifo flagged…'],
+  writingSteps: ['Scrivo i passaggi…', 'Writing the steps…'],
+  fixingFormulas: ['Correggo le formule che Glifo ha segnato…', 'Fixing the formulas Glifo flagged…'],
+  writingExplanation: ['Scrivo la spiegazione…', 'Writing the explanation…'],
+  toolsDone: (n: number) => [`Conti fatti dal motore di Glifo: ${n}`, `Calculations done by Glifo's engine: ${n}`],
+  settings: ['Impostazioni', 'Settings'],
+  tryAgain: ['Riprova', 'Try again'],
+  cancel: ['Annulla', 'Cancel'],
+  reaches: (answer: string) => [`✓ Arriva al risultato di Glifo, ${answer}.`, `✓ Reaches Glifo's result, ${answer}.`],
+  missesResult: (answer: string) => [
+    `✗ L'ultimo passaggio non arriva al risultato di Glifo, ${answer}.`,
+    `✗ The last step doesn't reach Glifo's result, ${answer}.`,
+  ],
+  notCompared: (answer: string) => [
+    `Glifo non ha potuto confrontare l'ultimo passaggio con il suo risultato, ${answer}.`,
+    `Glifo couldn't compare the last step with its result, ${answer}.`,
+  ],
+  stepsChecked: (checked: number, total: number, wrong: number) => [
+    ` Passaggi controllati da Glifo: ${checked} su ${total}${wrong ? `, ${wrong} sbagliat${wrong === 1 ? 'o' : 'i'}` : ''}.`,
+    ` Steps checked by Glifo: ${checked} of ${total}${wrong ? `, ${wrong} wrong` : ''}.`,
+  ],
+  thisExplanation: ['questa spiegazione', 'this explanation'],
+  toolCalls: (n: number) => [
+    `il modello ha chiesto ${n === 1 ? 'un conto' : `${n} conti`} al motore`,
+    `the model asked the engine for ${n === 1 ? 'one calculation' : `${n} calculations`}`,
+  ],
+  corrections: (steps: boolean, n: number) => [
+    `Glifo gli ha fatto correggere ${steps ? 'i passaggi' : 'le formule'} ${n === 1 ? 'una volta' : `${n} volte`}`,
+    `Glifo had the model fix ${steps ? 'the steps' : 'the formulas'} ${n === 1 ? 'once' : `${n} times`}`,
+  ],
+  insertStepsTitle: [
+    'Mette i passaggi nella nota, dopo la formula: lì Glifo li controlla come le altre formule',
+    'Inserts the steps into the note after the formula, where Glifo checks them like any other formula',
+  ],
+  insertExplanationTitle: [
+    'Mette la spiegazione nella nota, subito dopo: lì Glifo controlla le formule come le altre',
+    'Inserts the explanation into the note right after it, where Glifo checks its formulas like any others',
+  ],
+  insert: ['Inserisci nella nota', 'Insert into note'],
+  again: ['Rifai', 'Regenerate'],
+})
 
 /** Il modello: quello nel browser (src/ai/local.ts), o uno finto nei test. */
 export interface ExplainModel {
@@ -79,14 +151,14 @@ export class ExplainPanel {
       'button',
       {
         class: 'btn btn-small btn-explain',
-        title: 'I passaggi di questo conto, scritti da un modello AI nel browser e controllati da Glifo',
+        title: T.explainTitle,
         attrs: { type: 'button', hidden: true },
         on: { mousedown: preventFocusSteal, click: () => void this.start() },
       },
       icon(ICONS.sparkles, 14),
-      'Spiegami',
+      T.explain,
     )
-    this.el = h('section', { class: 'explain-box', attrs: { hidden: true, 'aria-label': 'Spiegazione' } })
+    this.el = h('section', { class: 'explain-box', attrs: { hidden: true, 'aria-label': T.explanation } })
   }
 
   /** Il cursore si è mosso o la nota è cambiata: «Spiegami» c'è solo su un conto che Glifo sa fare. */
@@ -139,7 +211,7 @@ export class ExplainPanel {
     const model = this.model()
     if (inClaudeViewer() && !this.deps.model) {
       // La pagina di claude.ai blocca i download da altri siti: il modello non arriverebbe mai.
-      this.set({ status: 'error', asked, message: 'Dentro claude.ai il modello non si può scaricare (la pagina blocca i download da Hugging Face): «Spiegami» funziona su Glifo aperto dal suo sito, con Chrome o Edge su un computer.' })
+      this.set({ status: 'error', asked, message: T.inClaude })
       return
     }
     this.set({ status: 'loading', asked, progress: 0, fetching: false })
@@ -220,8 +292,8 @@ export class ExplainPanel {
     const markdown = explanationMarkdown(explanation)
     const s = asked.subject
     const ok = s.kind === 'conto' ? insertExplanation(view, markdown, s.target.tex, asked.near) : insertAfterText(view, markdown, s.source, asked.near)
-    if (ok) this.deps.toast('Spiegazione inserita nella nota')
-    else this.deps.toast(`${s.kind === 'conto' ? 'La formula' : 'Quello che hai fatto spiegare'} non c'è più nella nota: la spiegazione non si può inserire`, 'error')
+    if (ok) this.deps.toast(T.inserted)
+    else this.deps.toast(s.kind === 'conto' ? T.formulaGone : T.subjectGone, 'error')
   }
 
   private render(): void {
@@ -236,11 +308,11 @@ export class ExplainPanel {
     const head = h(
       'div',
       { class: 'explain-head' },
-      h('span', { class: 'explain-title' }, icon(ICONS.sparkles, 14), 'Spiegazione'),
-      s.status === 'writing' || s.status === 'done' ? h('span', { class: 'ai-model', title: 'Il modello che scrive la spiegazione, in questo browser' }, s.model) : null,
+      h('span', { class: 'explain-title' }, icon(ICONS.sparkles, 14), T.explanation),
+      s.status === 'writing' || s.status === 'done' ? h('span', { class: 'ai-model', title: T.modelTitle }, s.model) : null,
       h(
         'button',
-        { class: 'icon-button explain-close', title: 'Chiudi la spiegazione', attrs: { type: 'button', 'aria-label': 'Chiudi la spiegazione' }, on: { click: () => this.close() } },
+        { class: 'icon-button explain-close', title: T.close, attrs: { type: 'button', 'aria-label': T.close }, on: { click: () => this.close() } },
         icon(ICONS.x, 15),
       ),
     )
@@ -250,9 +322,9 @@ export class ExplainPanel {
       const chosen = localModel(this.deps.settings().localModel)
       const percent = Math.round(s.progress * 100)
       parts.push(
-        h('div', { class: 'ai-loading', attrs: { role: 'status' } }, h('span', { class: 'spinner', attrs: { 'aria-hidden': 'true' } }), s.fetching ? `Scarico ${chosen.name}: ${percent}%` : `Preparo ${chosen.name}: ${percent}%`),
-        h('progress', { class: 'explain-progress', attrs: { max: 100, value: percent, 'aria-label': 'Avanzamento' } }),
-        h('p', { class: 'ai-hint' }, `La prima volta il modello si scarica (${chosen.size}) e poi resta in questo browser, anche offline.`),
+        h('div', { class: 'ai-loading', attrs: { role: 'status' } }, h('span', { class: 'spinner', attrs: { 'aria-hidden': 'true' } }), s.fetching ? T.downloading(chosen.name, percent) : T.preparing(chosen.name, percent)),
+        h('progress', { class: 'explain-progress', attrs: { max: 100, value: percent, 'aria-label': T.progress } }),
+        h('p', { class: 'ai-hint' }, T.firstDownload(chosen.size)),
         this.cancelButton(),
       )
     } else if (s.status === 'writing') {
@@ -265,21 +337,22 @@ export class ExplainPanel {
           h('span', { class: 'spinner', attrs: { 'aria-hidden': 'true' } }),
           s.asked.subject.kind === 'conto'
             ? s.correcting
-              ? 'Correggo i passaggi che Glifo ha segnato…'
-              : 'Scrivo i passaggi…'
+              ? T.fixingSteps
+              : T.writingSteps
             : s.correcting
-              ? 'Correggo le formule che Glifo ha segnato…'
-              : 'Scrivo la spiegazione…',
+              ? T.fixingFormulas
+              : T.writingExplanation,
         ),
-        s.tools ? h('p', { class: 'ai-hint' }, `Conti fatti dal motore di Glifo: ${s.tools}`) : null,
+        s.tools ? h('p', { class: 'ai-hint' }, T.toolsDone(s.tools)) : null,
         this.draft,
         this.cancelButton(),
       )
     } else if (s.status === 'error') {
       parts.push(h('p', { class: 'ai-error' }, s.message))
       const actions = h('div', { class: 'answer-actions' })
-      if (/impostazioni/i.test(s.message)) actions.append(h('button', { class: 'btn btn-small', attrs: { type: 'button' }, on: { click: () => this.deps.openSettings() } }, icon(ICONS.settings, 14), 'Impostazioni'))
-      actions.append(h('button', { class: 'btn btn-small', attrs: { type: 'button' }, on: { click: () => void this.start(s.asked) } }, 'Riprova'))
+      // I messaggi arrivano da src/ai, in italiano o in inglese: se dicono di cambiare le impostazioni, il pulsante per aprirle.
+      if (/impostazioni|settings/i.test(s.message)) actions.append(h('button', { class: 'btn btn-small', attrs: { type: 'button' }, on: { click: () => this.deps.openSettings() } }, icon(ICONS.settings, 14), T.settings))
+      actions.append(h('button', { class: 'btn btn-small', attrs: { type: 'button' }, on: { click: () => void this.start(s.asked) } }, T.tryAgain))
       parts.push(actions)
     } else {
       parts.push(...this.stepsView(s.asked, s.explanation))
@@ -300,7 +373,7 @@ export class ExplainPanel {
 
   /** Annulla: la spiegazione si chiude subito (lo scaricamento del modello, se c'è, finisce nel worker e resta per la prossima volta). */
   private cancelButton(): HTMLElement {
-    return h('button', { class: 'btn btn-small', attrs: { type: 'button' }, on: { click: () => this.close() } }, 'Annulla')
+    return h('button', { class: 'btn btn-small', attrs: { type: 'button' }, on: { click: () => this.close() } }, T.cancel)
   }
 
   private stepsView(asked: Asked, e: Explanation): HTMLElement[] {
@@ -314,17 +387,14 @@ export class ExplainPanel {
       const answer = texHtml(asked.subject.target.answer.tex, false)
       summary = h('p', { class: `explain-summary${e.reaches === true && !wrong ? ' is-ok' : e.reaches === false || wrong ? ' is-wrong' : ''}`, attrs: { role: 'status' } })
       summary.innerHTML = [
-        e.reaches === true ? `✓ Arriva al risultato di Glifo, ${answer}.` : e.reaches === false ? `✗ L'ultimo passaggio non arriva al risultato di Glifo, ${answer}.` : `Glifo non ha potuto confrontare l'ultimo passaggio con il suo risultato, ${answer}.`,
-        formulas.length ? ` Passaggi controllati da Glifo: ${checked} su ${formulas.length}${wrong ? `, ${wrong} sbagliat${wrong === 1 ? 'o' : 'i'}` : ''}.` : '',
+        e.reaches === true ? T.reaches(answer) : e.reaches === false ? T.missesResult(answer) : T.notCompared(answer),
+        formulas.length ? T.stepsChecked(checked, formulas.length, wrong) : '',
       ].join('')
     } else {
       // Qui non c'è un risultato a cui arrivare: Glifo controlla le formule, le frasi no.
-      summary = formulasSummary(e, 'questa spiegazione')
+      summary = formulasSummary(e, T.thisExplanation)
     }
-    const notes = [
-      e.toolCalls ? `il modello ha chiesto ${e.toolCalls === 1 ? 'un conto' : `${e.toolCalls} conti`} al motore` : '',
-      e.corrections ? `Glifo gli ha fatto correggere ${conto ? 'i passaggi' : 'le formule'} ${e.corrections === 1 ? 'una volta' : `${e.corrections} volte`}` : '',
-    ].filter(Boolean)
+    const notes = [e.toolCalls ? T.toolCalls(e.toolCalls) : '', e.corrections ? T.corrections(conto, e.corrections) : ''].filter(Boolean)
     const parts: (HTMLElement | null)[] = [
       list,
       summary,
@@ -336,13 +406,13 @@ export class ExplainPanel {
           'button',
           {
             class: 'btn btn-primary btn-small',
-            title: conto ? 'Mette i passaggi nella nota, dopo la formula: lì Glifo li controlla come le altre formule' : 'Mette la spiegazione nella nota, subito dopo: lì Glifo controlla le formule come le altre',
+            title: conto ? T.insertStepsTitle : T.insertExplanationTitle,
             attrs: { type: 'button' },
             on: { mousedown: preventFocusSteal, click: () => this.insert(asked, e) },
           },
-          'Inserisci nella nota',
+          T.insert,
         ),
-        h('button', { class: 'btn btn-small', attrs: { type: 'button' }, on: { click: () => void this.start(asked) } }, 'Rifai'),
+        h('button', { class: 'btn btn-small', attrs: { type: 'button' }, on: { click: () => void this.start(asked) } }, T.again),
       ),
     ]
     return parts.filter((p): p is HTMLElement => p !== null)

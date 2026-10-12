@@ -1,3 +1,16 @@
+import { texts } from './i18n'
+
+const T = texts({
+  testSite: [
+    'Questo è il sito di prova di Glifo: l\'accesso è spento, così gli appunti veri non si toccano, e le note scritte qui restano solo in questo browser. Sul sito di Glifo funziona.',
+    'This is Glifo\'s test site: sign-in is turned off so real notes aren\'t touched, and notes written here stay only in this browser. It works on the Glifo website.',
+  ],
+  claudeCopy: [
+    'In questa copia di Glifo dentro claude.ai l\'accesso è spento, così gli appunti veri non si toccano: sul sito di Glifo funziona.',
+    'In this copy of Glifo inside claude.ai, sign-in is turned off so real notes aren\'t touched: it works on the Glifo website.',
+  ],
+})
+
 /**
  * Quale Glifo è: vite.config.ts lo decide nella build e lo passa all'app in `__GLIFO_SITE__`.
  * - `online`: il sito, su GitHub Pages e, dal ramo principale, su Cloudflare Pages (glifo.page);
@@ -10,8 +23,6 @@ export type Site = 'online' | 'claude' | 'prova'
 
 /** Cosa dice la finestra di Accedi dove l'account è spento. */
 export function accountOffMessage(site: Site): string {
-  if (site === 'prova') {
-    return 'Questo è il sito di prova di Glifo: l\'accesso è spento, così gli appunti veri non si toccano, e le note scritte qui restano solo in questo browser. Sul sito di Glifo funziona.'
-  }
-  return 'In questa copia di Glifo dentro claude.ai l\'accesso è spento, così gli appunti veri non si toccano: sul sito di Glifo funziona.'
+  if (site === 'prova') return T.testSite
+  return T.claudeCopy
 }

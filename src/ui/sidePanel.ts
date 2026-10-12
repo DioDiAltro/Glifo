@@ -6,6 +6,7 @@ import { staticGraphSvg } from '../graph/picture'
 import { formulaGraph } from '../graph/spec'
 import { graphTitle, PALETTES } from '../graph/svg'
 import type { SuggestionItem } from '../editor/suggestions'
+import { rich, texts } from '../i18n'
 import { cleanKatexError, renderTex } from '../render/katex'
 import { isConfidentAnswer, searchSymbols, type SearchResult } from '../search/search'
 import { CATEGORIES, symbolsInCategory, type CategoryId, type SymbolEntry, type SymbolForm } from '../symbols'
@@ -15,6 +16,57 @@ import { ICONS, clear, h, icon } from './dom'
 import type { AiWork } from './aiActivity'
 import { AiPanel } from './aiPanel'
 import { ExplainPanel } from './explainPanel'
+
+const T = texts({
+  searchPlaceholder: ['Cerca un simbolo… es. «infinito», «per ogni»', 'Search for a symbol… e.g. “infinity”, “for all”'],
+  search: ['Cerca un simbolo', 'Search for a symbol'],
+  clearSearch: ['Cancella la ricerca', 'Clear search'],
+  insertGraphTitle: [
+    'Mette nella nota un blocco ```grafico con questa funzione, che l\'anteprima disegna',
+    'Inserts a ```grafico block with this function into the note; the preview draws it',
+  ],
+  insertGraph: ['Inserisci il grafico', 'Insert graph'],
+  symbolsPanel: ['Pannello dei simboli', 'Symbols panel'],
+  shortcut: ['Scorciatoia', 'Shortcut'],
+  formulaPreview: ['Anteprima formula', 'Formula preview'],
+  explainWithAi: ['Spiega con l\'AI', 'Explain with AI'],
+  block: ['a blocco', 'block'],
+  inline: ['in linea', 'inline'],
+  withCode: (code: string) => [`con ${code}`, `with ${code}`],
+  previewOf: (code: string) => [`anteprima di ${code}`, `preview of ${code}`],
+  noFormula: [
+    'Metti il cursore dentro una formula ($ … $) per vederla qui mentre scrivi.',
+    'Put the cursor inside a formula ($ … $) to see it here as you type.',
+  ],
+  emptyFormula: ['Formula vuota: inizia a scrivere…', 'Empty formula: start typing…'],
+  copied: (text: string) => [`Copiato: ${text}`, `Copied: ${text}`],
+  copyFailed: ['Impossibile copiare negli appunti', 'Couldn\'t copy to the clipboard'],
+  suggestionsFor: ['Suggerimenti per {cmd}', 'Suggestions for {cmd}'],
+  suggestionKeys: ['{tab} inserisce · {arrows} scegli · {esc}', '{tab} inserts · {arrows} choose · {esc}'],
+  clickToInsert: ['clicca per inserire', 'click to insert'],
+  answer: ['Risposta', 'Answer'],
+  insertIntoNote: ['Inserisci nella nota', 'Insert into note'],
+  insert: ['Inserisci', 'Insert'],
+  copy: ['Copia', 'Copy'],
+  found: (n: number) => [n === 1 ? '1 simbolo trovato' : `${n} simboli trovati`, n === 1 ? '1 symbol found' : `${n} symbols found`],
+  enterKey: ['Invio', 'Enter'],
+  enterInserts: ['{enter} inserisce', '{enter} inserts'],
+  noneFound: ['Nessun simbolo trovato con queste parole.', 'No symbols found for these words.'],
+  askAiKeys: ['Ctrl+Invio', 'Ctrl+Enter'],
+  askAi: (question: string) => [` Chiedi all'AI: «${question}»`, ` Ask AI: “${question}”`],
+  askAiHint: [
+    'Per domande più complesse, es. «freccia con scritto sopra n → ∞» o «matrice 4×4 con puntini».',
+    'For more complex questions, e.g. “arrow with n → ∞ written above it” or “4×4 matrix with dots”.',
+  ],
+  searching: ['Sto cercando la risposta…', 'Looking for the answer…'],
+  cancel: ['Annulla', 'Cancel'],
+  openSettings: [' Apri le impostazioni', ' Open settings'],
+  tryAgain: ['Riprova', 'Try again'],
+  aiAnswer: [' Risposta dell\'AI', ' AI answer'],
+  modelTitle: ['Il modello che ha risposto', 'The model that answered'],
+  noAnswers: ['Nessuna formula proposta.', 'No formulas suggested.'],
+  categories: ['Categorie di simboli', 'Symbol categories'],
+})
 
 export interface SidePanelDeps {
   editor: MarkdownEditor
@@ -90,8 +142,8 @@ export class SidePanel {
       class: 'panel-search-input',
       attrs: {
         type: 'search',
-        placeholder: 'Cerca un simbolo… es. «infinito», «per ogni»',
-        'aria-label': 'Cerca un simbolo',
+        placeholder: T.searchPlaceholder,
+        'aria-label': T.search,
         autocomplete: 'off',
         spellcheck: 'false',
       },
@@ -104,8 +156,8 @@ export class SidePanel {
       'button',
       {
         class: 'icon-button panel-search-clear',
-        title: 'Cancella la ricerca',
-        attrs: { type: 'button', 'aria-label': 'Cancella la ricerca', hidden: true },
+        title: T.clearSearch,
+        attrs: { type: 'button', 'aria-label': T.clearSearch, hidden: true },
         on: { click: () => this.resetSearch(true) },
       },
       icon(ICONS.x, 16),
@@ -124,7 +176,7 @@ export class SidePanel {
         'button',
         {
           class: 'btn btn-small formula-graph-insert',
-          title: 'Mette nella nota un blocco ```grafico con questa funzione, che l\'anteprima disegna',
+          title: T.insertGraphTitle,
           attrs: { type: 'button' },
           on: {
             mousedown: preventFocusSteal,
@@ -134,26 +186,26 @@ export class SidePanel {
             },
           },
         },
-        'Inserisci il grafico',
+        T.insertGraph,
       ),
     )
     this.body = h('div', { class: 'panel-body' })
 
     this.el = h(
       'aside',
-      { class: 'symbols-panel', attrs: { id: 'symbols-panel', 'aria-label': 'Pannello dei simboli' } },
+      { class: 'symbols-panel', attrs: { id: 'symbols-panel', 'aria-label': T.symbolsPanel } },
       h(
         'div',
         { class: 'panel-search' },
         h('span', { class: 'panel-search-icon' }, icon(ICONS.search, 16)),
         this.searchInput,
         this.clearButton,
-        h('kbd', { class: 'panel-search-kbd', title: 'Scorciatoia' }, 'Ctrl K'),
+        h('kbd', { class: 'panel-search-kbd', title: T.shortcut }, 'Ctrl K'),
       ),
       h(
         'section',
         { class: 'formula-box' },
-        h('div', { class: 'formula-head' }, h('span', {}, 'Anteprima formula'), this.formulaMeta),
+        h('div', { class: 'formula-head' }, h('span', {}, T.formulaPreview), this.formulaMeta),
         this.formulaRender,
         this.formulaError,
         h('div', { class: 'formula-actions' }, this.explain.button),
@@ -216,7 +268,7 @@ export class SidePanel {
   setView(view: PanelView): void {
     this.shown = view
     this.el.classList.toggle('view-ai', view === 'ai')
-    this.el.setAttribute('aria-label', view === 'ai' ? 'Spiega con l\'AI' : 'Pannello dei simboli')
+    this.el.setAttribute('aria-label', view === 'ai' ? T.explainWithAi : T.symbolsPanel)
     this.syncAi()
   }
 
@@ -250,19 +302,19 @@ export class SidePanel {
     if (region) {
       tex = region.tex
       display = region.display
-      meta = region.display ? 'a blocco' : 'in linea'
+      meta = region.display ? T.block : T.inline
       // Sostituisce il comando parziale con il suggerimento selezionato.
       const plain = region.tex.length === region.contentTo - region.contentFrom
       if (item && token && plain && token.from >= region.contentFrom && token.to <= region.contentTo) {
         const a = token.from - region.contentFrom
         const b = token.to - region.contentFrom
         tex = tex.slice(0, a) + formPreviewTex(item.form) + tex.slice(b)
-        meta = `con ${displayCode(item.form)}`
+        meta = T.withCode(displayCode(item.form))
       }
     } else if (item) {
       tex = formPreviewTex(item.form)
       display = true
-      meta = `anteprima di ${displayCode(item.form)}`
+      meta = T.previewOf(displayCode(item.form))
     }
 
     const key = tex === null ? '' : `${display ? 'D' : 'I'}${meta}\u0000${tex}`
@@ -273,14 +325,14 @@ export class SidePanel {
     if (tex === null) {
       this.formulaRender.classList.add('is-empty')
       this.formulaRender.classList.remove('is-stale')
-      this.formulaRender.textContent = 'Metti il cursore dentro una formula ($ … $) per vederla qui mentre scrivi.'
+      this.formulaRender.textContent = T.noFormula
       this.formulaError.textContent = ''
       return
     }
     this.formulaRender.classList.remove('is-empty')
     if (!tex.trim()) {
       this.formulaRender.classList.remove('is-stale')
-      this.formulaRender.textContent = 'Formula vuota: inizia a scrivere…'
+      this.formulaRender.textContent = T.emptyFormula
       this.formulaError.textContent = ''
       return
     }
@@ -387,9 +439,9 @@ export class SidePanel {
   private async copy(text: string): Promise<void> {
     try {
       await navigator.clipboard.writeText(text)
-      this.deps.toast(`Copiato: ${text}`)
+      this.deps.toast(T.copied(text))
     } catch {
-      this.deps.toast('Impossibile copiare negli appunti', 'error')
+      this.deps.toast(T.copyFailed, 'error')
     }
   }
 
@@ -443,10 +495,10 @@ export class SidePanel {
       h(
         'div',
         { class: 'panel-section-head' },
-        h('span', {}, 'Suggerimenti per ', h('code', {}, `\\${token.prefix}`)),
+        h('span', {}, ...rich(T.suggestionsFor, { cmd: h('code', {}, `\\${token.prefix}`) })),
         s.keyboardActive
-          ? h('span', { class: 'panel-hint' }, h('kbd', {}, 'Tab'), ' inserisce · ', h('kbd', {}, '↑↓'), ' scegli · ', h('kbd', {}, 'Esc'))
-          : h('span', { class: 'panel-hint' }, 'clicca per inserire'),
+          ? h('span', { class: 'panel-hint' }, ...rich(T.suggestionKeys, { tab: h('kbd', {}, 'Tab'), arrows: h('kbd', {}, '↑↓'), esc: h('kbd', {}, 'Esc') }))
+          : h('span', { class: 'panel-hint' }, T.clickToInsert),
       ),
     )
     const list = h('div', { class: 'sug-list' })
@@ -491,12 +543,12 @@ export class SidePanel {
         h(
           'div',
           { class: 'answer-card' },
-          h('div', { class: 'answer-kicker' }, 'Risposta'),
+          h('div', { class: 'answer-kicker' }, T.answer),
           h(
             'button',
             {
               class: 'answer-main',
-              title: 'Inserisci nella nota',
+              title: T.insertIntoNote,
               attrs: { type: 'button' },
               on: { mousedown: preventFocusSteal, click: () => this.insert(top.entry, form) },
             },
@@ -506,15 +558,15 @@ export class SidePanel {
           h(
             'div',
             { class: 'answer-actions' },
-            h('button', { class: 'btn btn-primary', attrs: { type: 'button' }, on: { mousedown: preventFocusSteal, click: () => this.insert(top.entry, form) } }, 'Inserisci'),
-            h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => void this.copy(code) } }, icon(ICONS.copy, 14), 'Copia'),
+            h('button', { class: 'btn btn-primary', attrs: { type: 'button' }, on: { mousedown: preventFocusSteal, click: () => this.insert(top.entry, form) } }, T.insert),
+            h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => void this.copy(code) } }, icon(ICONS.copy, 14), T.copy),
           ),
         ),
       )
     }
 
     if (results.length) {
-      this.body.append(h('div', { class: 'panel-section-head' }, h('span', {}, `${results.length} simboli trovati`), h('span', { class: 'panel-hint' }, h('kbd', {}, 'Invio'), ' inserisce')))
+      this.body.append(h('div', { class: 'panel-section-head' }, h('span', {}, T.found(results.length)), h('span', { class: 'panel-hint' }, ...rich(T.enterInserts, { enter: h('kbd', {}, T.enterKey) }))))
       const list = h('div', { class: 'result-list' })
       results.forEach((r, i) => {
         const entry = r.entry
@@ -546,7 +598,7 @@ export class SidePanel {
       })
       this.body.append(list)
     } else {
-      this.body.append(h('div', { class: 'panel-empty' }, 'Nessun simbolo trovato con queste parole.'))
+      this.body.append(h('div', { class: 'panel-empty' }, T.noneFound))
     }
     this.body.append(this.renderAiBox())
   }
@@ -562,29 +614,30 @@ export class SidePanel {
           {
             class: 'btn btn-ai',
             attrs: { type: 'button', disabled: question.length < 2 },
-            title: 'Ctrl+Invio',
+            title: T.askAiKeys,
             on: { click: () => void this.askAi() },
           },
           icon(ICONS.sparkles, 16),
-          ` Chiedi all'AI: «${question.length > 40 ? question.slice(0, 40) + '…' : question}»`,
+          T.askAi(question.length > 40 ? question.slice(0, 40) + '…' : question),
         ),
-        h('p', { class: 'ai-hint' }, 'Per domande più complesse, es. «freccia con scritto sopra n → ∞» o «matrice 4×4 con puntini».'),
+        h('p', { class: 'ai-hint' }, T.askAiHint),
       )
       return box
     }
     if (ai.status === 'loading') {
       box.append(
-        h('div', { class: 'ai-loading' }, h('span', { class: 'spinner', attrs: { 'aria-hidden': 'true' } }), 'Sto cercando la risposta…'),
-        h('button', { class: 'btn btn-small', attrs: { type: 'button' }, on: { click: () => ai.controller.abort() } }, 'Annulla'),
+        h('div', { class: 'ai-loading' }, h('span', { class: 'spinner', attrs: { 'aria-hidden': 'true' } }), T.searching),
+        h('button', { class: 'btn btn-small', attrs: { type: 'button' }, on: { click: () => ai.controller.abort() } }, T.cancel),
       )
       return box
     }
     if (ai.status === 'error') {
       box.append(h('p', { class: 'ai-error' }, ai.message))
-      if (/chiave|impostazioni/i.test(ai.message)) {
-        box.append(h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => this.deps.openSettings() } }, icon(ICONS.settings, 14), ' Apri le impostazioni'))
+      // I messaggi arrivano da src/ai/assistant.ts, in italiano o in inglese: chiave e impostazioni nelle due lingue.
+      if (/chiave|impostazioni|\bkey\b|settings/i.test(ai.message)) {
+        box.append(h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => this.deps.openSettings() } }, icon(ICONS.settings, 14), T.openSettings))
       } else {
-        box.append(h('button', { class: 'btn btn-small', attrs: { type: 'button' }, on: { click: () => void this.askAi() } }, 'Riprova'))
+        box.append(h('button', { class: 'btn btn-small', attrs: { type: 'button' }, on: { click: () => void this.askAi() } }, T.tryAgain))
       }
       return box
     }
@@ -594,11 +647,11 @@ export class SidePanel {
       h(
         'div',
         { class: 'panel-section-head' },
-        h('span', {}, icon(ICONS.sparkles, 14), ' Risposta dell\'AI'),
-        ai.result.model ? h('span', { class: 'ai-model', title: 'Il modello che ha risposto' }, ai.result.model) : null,
+        h('span', {}, icon(ICONS.sparkles, 14), T.aiAnswer),
+        ai.result.model ? h('span', { class: 'ai-model', title: T.modelTitle }, ai.result.model) : null,
       ),
     )
-    if (!ai.result.answers.length) box.append(h('p', { class: 'panel-empty' }, 'Nessuna formula proposta.'))
+    if (!ai.result.answers.length) box.append(h('p', { class: 'panel-empty' }, T.noAnswers))
     for (const a of ai.result.answers) {
       const rendered = a.error ? null : renderTex(a.latex, false).html
       box.append(
@@ -618,9 +671,9 @@ export class SidePanel {
                 attrs: { type: 'button' },
                 on: { mousedown: preventFocusSteal, click: () => this.deps.editor.insert(a.latex, false) },
               },
-              'Inserisci',
+              T.insert,
             ),
-            h('button', { class: 'btn btn-small', attrs: { type: 'button' }, on: { click: () => void this.copy(a.latex) } }, 'Copia'),
+            h('button', { class: 'btn btn-small', attrs: { type: 'button' }, on: { click: () => void this.copy(a.latex) } }, T.copy),
           ),
         ),
       )
@@ -632,7 +685,7 @@ export class SidePanel {
   private renderCategories(): void {
     const tabs = h(
       'div',
-      { class: 'cat-tabs', attrs: { role: 'tablist', 'aria-label': 'Categorie di simboli' } },
+      { class: 'cat-tabs', attrs: { role: 'tablist', 'aria-label': T.categories } },
       CATEGORIES.map((c) =>
         h(
           'button',
@@ -655,7 +708,7 @@ export class SidePanel {
     const current = CATEGORIES.find((c) => c.id === this.category)!
     this.body.append(
       tabs,
-      h('div', { class: 'panel-section-head' }, h('span', {}, current.label), h('span', { class: 'panel-hint' }, 'clicca per inserire')),
+      h('div', { class: 'panel-section-head' }, h('span', {}, current.label), h('span', { class: 'panel-hint' }, T.clickToInsert)),
     )
 
     const container = h('div', { class: 'cat-content' })

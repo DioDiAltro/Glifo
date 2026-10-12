@@ -1,5 +1,6 @@
 import { isWelcome, knowsAccount } from './account/space'
 import type { BackupBoard } from './board/store'
+import { chooseLang, isLang, lang, type Lang } from './i18n'
 import { loadPersonalWords } from './store/dictionary'
 import { FoldersStore } from './store/folders'
 import { noteIdsInBrowser, NotesStore } from './store/notes'
@@ -80,14 +81,19 @@ export interface RelocationPackage {
   tutorialSeen: boolean
   /** L'appunto aperto (fuori dall'account): sul sito nuovo si apre quello. */
   active?: string | null
+  /**
+   * La lingua di Glifo sul vecchio sito (src/i18n.ts). Manca nei pacchi di prima delle due lingue: lì
+   * Glifo era in italiano.
+   */
+  lang?: Lang
 }
 
 const ACCOUNT_PREFIX = 'glifo.u.'
 
-/** Sul vecchio sito: tutto quello che c'è da portare. `welcome`: il testo della nota di benvenuto. */
+/** Sul vecchio sito: tutto quello che c'è da portare. `welcome`: i testi della nota di benvenuto. */
 export async function buildPackage(deps: {
   boards: { exportBoards(notes: string[]): Promise<BackupBoard[]> }
-  welcome: string
+  welcome: string | readonly string[]
   tutorialSeen: boolean
 }): Promise<RelocationPackage> {
   const guest = new NotesStore()
@@ -113,6 +119,7 @@ export async function buildPackage(deps: {
     settings: accountSettings(loadSettings()),
     tutorialSeen: deps.tutorialSeen,
     active: active && notes.some((n) => n.id === active) ? active : null,
+    lang,
   }
 }
 
@@ -142,7 +149,7 @@ export interface RelocationResult {
  */
 export async function importPackage(
   pkg: RelocationPackage,
-  deps: { notes: NotesStore; folders: FoldersStore; boards: RestoreBoards; newStrokeId: () => string; welcome?: string },
+  deps: { notes: NotesStore; folders: FoldersStore; boards: RestoreBoards; newStrokeId: () => string; welcome?: string | readonly string[] },
 ): Promise<{ result: RelocationResult; dictionary: string[]; tutorialSeen: boolean }> {
   const byAccount = new Map<string, [string, string][]>()
   for (const [key, value] of Object.entries(typeof pkg.accounts === 'object' && pkg.accounts ? pkg.accounts : {})) {
@@ -181,9 +188,11 @@ export async function importPackage(
       // Senza lavagne (IndexedDB non disponibile) il resto arriva lo stesso.
     }
   }
-  // Le impostazioni del vecchio sito solo se qui sono ancora quelle di partenza.
+  // Le impostazioni del vecchio sito solo se qui sono ancora quelle di partenza, e così la lingua: sul
+  // sito nuovo, aperto la prima volta, è quella del browser, che può non essere quella di Glifo.
   const untouched = JSON.stringify(accountSettings(loadSettings())) === JSON.stringify(accountSettings(DEFAULT_SETTINGS))
   if (untouched && typeof pkg.settings === 'object' && pkg.settings) saveSettings(validAccountSettings(pkg.settings))
+  if (untouched) chooseLang(isLang(pkg.lang) ? pkg.lang : 'it')
   return {
     result: { added: restored.added, already: restored.already, accountNotes, boards: drawn },
     dictionary: Array.isArray(pkg.dictionary) ? pkg.dictionary.filter((w): w is string => typeof w === 'string') : [],

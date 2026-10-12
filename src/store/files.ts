@@ -1,4 +1,5 @@
 import { hostDownloads, inClaudeViewer } from '../host'
+import { texts } from '../i18n'
 
 /**
  * Apertura e salvataggio di file .md. Su Chrome/Edge usa la File System
@@ -6,6 +7,13 @@ import { hostDownloads, inClaudeViewer } from '../host'
  * altri browser si ripiega su "carica file" e "scarica". Si aprono anche i
  * file di Excel (.xlsx) e .csv, che diventano note con le tabelle.
  */
+
+const T = texts({
+  markdownNotes: ['Appunti Markdown', 'Markdown notes'],
+  notesAndTables: ['Appunti (.md) e tabelle (Excel, .csv)', 'Notes (.md) and tables (Excel, .csv)'],
+  /** Il nome del file quando il titolo della nota non ne dà uno. */
+  defaultFileName: ['appunti', 'notes'],
+})
 
 interface PickerType {
   description: string
@@ -17,16 +25,14 @@ interface FsWindow {
   showSaveFilePicker?: (opts: { suggestedName?: string; types?: PickerType[] }) => Promise<FileSystemFileHandle>
 }
 
-const MD_TYPES: PickerType[] = [
-  { description: 'Appunti Markdown', accept: { 'text/markdown': ['.md', '.markdown', '.txt'] } },
-]
+const mdTypes = (): PickerType[] => [{ description: T.markdownNotes, accept: { 'text/markdown': ['.md', '.markdown', '.txt'] } }]
 
 const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
 /** Quello che si apre: gli appunti e, in un tipo solo perché si vedano tutti insieme, le tabelle. */
-const OPEN_TYPES: PickerType[] = [
+const openTypes = (): PickerType[] => [
   {
-    description: 'Appunti (.md) e tabelle (Excel, .csv)',
+    description: T.notesAndTables,
     accept: { 'text/markdown': ['.md', '.markdown', '.txt'], [XLSX_TYPE]: ['.xlsx'], 'text/csv': ['.csv', '.tsv'] },
   },
 ]
@@ -62,7 +68,7 @@ export async function openMarkdownFiles(): Promise<OpenedFile[]> {
   const w = fsWindow()
   if (w.showOpenFilePicker && !inClaudeViewer()) {
     try {
-      const handles = await w.showOpenFilePicker({ multiple: true, types: OPEN_TYPES })
+      const handles = await w.showOpenFilePicker({ multiple: true, types: openTypes() })
       return Promise.all(
         handles.map(async (handle) => {
           const opened = await readOpened(await handle.getFile())
@@ -102,7 +108,7 @@ export function fileNameFor(title: string, ext = '.md'): string {
     .trim()
     .replace(/\s+/g, '-')
     .slice(0, 60)
-  return (base || 'appunti') + ext
+  return (base || T.defaultFileName) + ext
 }
 
 /**
@@ -124,7 +130,7 @@ export async function saveMarkdownFile(
       return handle
     }
     if (w.showSaveFilePicker) {
-      const h = await w.showSaveFilePicker({ suggestedName: name, types: MD_TYPES })
+      const h = await w.showSaveFilePicker({ suggestedName: name, types: mdTypes() })
       await writeTo(h, await content())
       return h
     }

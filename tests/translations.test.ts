@@ -47,7 +47,7 @@ const ITALIAN_WORDS = new Set(
   (
     'il lo la gli le un uno una di del dello della dei degli delle dal dallo dalla dai dagli dalle nel nello ' +
     'nella nei negli nelle sul sullo sulla sui sugli sulle col con per tra fra che non ma se come più al allo ' +
-    'alla ai agli alle questo questa questi queste quello quella quelli quelle anche già dove quando solo poi ' +
+    'alla agli alle questo questa questi queste quello quella quelli quelle anche già dove quando solo poi ' +
     'qui sono hai puoi ogni tutto tutti tutte niente nessun nessuna oppure ancora prima dopo senza sei siamo ' +
     'essere fatto nota appunti cartella cartelle pagina riga righe colonna colonne parola parole volta volte ' +
     'minuti secondi giorni elementi modifiche commento commenti simbolo simboli risultato passaggi passaggio ' +
@@ -73,7 +73,23 @@ const ITALIAN_LABELS = new Set(
 /** Le lettere accentate e gli apostrofi dell'italiano (l'anteprima, dell'AI, c'è). */
 const ITALIAN_MARKS = /[àèéìòùÀÈÉÌÒÙ]|(^|[^a-z])(l|dell|all|nell|dall|sull|un|quest|quell|c|dov|tutt)'[a-zà-ù]/i
 
+/**
+ * Pezzi di codice, non testi: classi CSS e id («btn btn-ai», «ai-subject»), nomi di file e percorsi
+ * («/nota.html», «glifo-backup-»). Senza spazi, con un trattino, un punto o una barra; oppure parole
+ * minuscole con almeno un trattino.
+ */
+function looksLikeCode(text: string): boolean {
+  const parts = text.split(/\{\w+\}/).map((p) => p.trim()).filter(Boolean)
+  if (!parts.length) return true
+  return parts.every((p) => {
+    if (!/\s/.test(p)) return /[-./_]/.test(p) && !ITALIAN_MARKS.test(p)
+    const tokens = p.split(/\s+/)
+    return tokens.every((t) => /^[a-z0-9-]+$/.test(t)) && tokens.some((t) => t.includes('-'))
+  })
+}
+
 function looksItalian(text: string, template = false): boolean {
+  if (looksLikeCode(text)) return false
   const plain = text.replace(/\{\w+\}/g, ' ')
   if (ITALIAN_MARKS.test(plain)) return true
   const words = plain.toLowerCase().match(/[a-zà-ù]+/g) ?? []
@@ -242,6 +258,9 @@ describe('il controllo delle traduzioni', () => {
     expect(problems("const a = 'Chiudi'")).toHaveLength(1)
     expect(problems('const a = `${n} cartelle`')).toHaveLength(1)
     expect(problems("const a = 'grafico'; const b = 'is-open'; const c = 'Glifo'")).toEqual([])
+    // Classi CSS, id e nomi di file non sono testi.
+    expect(problems("const a = 'btn btn-ai'; const b = `ai-subject${x ? ' is-chosen' : ''}`; const c = `glifo-dati-${d}.json`")).toEqual([])
+    expect(problems("const a = `${origin}/nota.html${hash}`; const b = 'Google AI Studio'")).toEqual([])
     expect(problems("const a = 'Chiudi' // non si traduce")).toEqual([])
     expect(problems("import x from './qui è'")).toEqual([])
     expect(problems("const T = texts({ close: ['Chiudi', 'Close'], n: (k: number) => [`${k} note`, `${k} notes`] })")).toEqual([])

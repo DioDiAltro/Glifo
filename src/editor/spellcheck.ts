@@ -11,9 +11,17 @@ import {
   type TooltipView,
   type ViewUpdate,
 } from '@codemirror/view'
+import { texts } from '../i18n'
 import { parseListLine } from '../lists/markers'
 import { findWords, type WordRange } from '../spell/words'
 import { h } from '../ui/dom'
+
+const T = texts({
+  looking: ['Cerco correzioni…', 'Looking for suggestions…'],
+  addToDictionary: ['Aggiungi al dizionario', 'Add to dictionary'],
+  suggestionsFor: (word: string) => [`Correzioni per «${word}»`, `Suggestions for “${word}”`],
+  noSuggestions: ['Nessuna correzione trovata', 'No suggestions found'],
+})
 
 /**
  * Controllo ortografico nell'editor: sottolinea in rosso le parole
@@ -167,7 +175,7 @@ export function spellcheck(options: SpellcheckOptions): Extension {
   }
 
   function tooltipView(view: EditorView, target: SpellTarget): TooltipView {
-    const list = h('div', { class: 'spell-list' }, h('span', { class: 'spell-note' }, 'Cerco correzioni…'))
+    const list = h('div', { class: 'spell-list' }, h('span', { class: 'spell-note' }, T.looking))
     const add = h(
       'button',
       {
@@ -180,9 +188,9 @@ export function spellcheck(options: SpellcheckOptions): Extension {
           },
         },
       },
-      'Aggiungi al dizionario',
+      T.addToDictionary,
     )
-    const dom = h('div', { class: 'spell-tooltip', attrs: { role: 'group', 'aria-label': `Correzioni per «${target.word}»` } }, list, add)
+    const dom = h('div', { class: 'spell-tooltip', attrs: { role: 'group', 'aria-label': T.suggestionsFor(target.word) } }, list, add)
     // Un clic sui pulsanti non deve togliere il cursore dall'editor.
     dom.addEventListener('mousedown', (ev) => ev.preventDefault())
     // Il fuoco esce dal riquadro e dall'editor: si chiude (fuori dal ciclo di aggiornamento).
@@ -218,7 +226,7 @@ export function spellcheck(options: SpellcheckOptions): Extension {
           ? suggestions.map((s) =>
               h('button', { class: 'spell-suggestion', attrs: { type: 'button' }, on: { click: () => replace(view, s) } }, s),
             )
-          : [h('span', { class: 'spell-note' }, 'Nessuna correzione trovata')]),
+          : [h('span', { class: 'spell-note' }, T.noSuggestions)]),
       )
       if (target.focus && dom.isConnected) dom.querySelector('button')?.focus()
     })

@@ -15,7 +15,8 @@ const server = await preview({ preview: { port: 4174, strictPort: true }, logLev
 const url = server.resolvedUrls.local[0]
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined })
 // Il tutorial della prima apertura ha la sua prova (con `firstVisit`): nelle altre pagine è già
-// visto. Anche browser.newPage passa da browser.newContext.
+// visto. Anche browser.newPage passa da browser.newContext. Il browser è in italiano (Glifo prende la
+// lingua dal browser, src/i18n.ts), salvo nella prova dell'inglese.
 const tutorialSeen = () => {
   try {
     localStorage.setItem('glifo.tutorial.v1', 'visto')
@@ -23,12 +24,12 @@ const tutorialSeen = () => {
 }
 const plainContext = browser.newContext.bind(browser)
 browser.newContext = async (options) => {
-  const context = await plainContext(options)
+  const context = await plainContext({ locale: 'it-IT', ...options })
   await context.addInitScript(tutorialSeen)
   return context
 }
 /** Una pagina come alla prima apertura di Glifo, con il tutorial. */
-const firstVisit = async (options) => (await plainContext(options)).newPage()
+const firstVisit = async (options) => (await plainContext({ locale: 'it-IT', ...options })).newPage()
 /** Il tema si cambia nelle impostazioni (in fondo alla barra laterale). */
 async function chooseTheme(page, label) {
   await page.locator('.side-profile button[aria-label="Impostazioni"]').click()
@@ -129,6 +130,11 @@ try {
   await page.keyboard.type("come faccio il simbolo dell'infinito")
   await page.waitForSelector('.answer-card')
   check((await page.locator('.answer-card code').first().innerText()) === '\\infty', 'la ricerca risponde \\infty')
+  // Con un simbolo solo il conteggio è al singolare (prima diceva «1 simboli trovati»).
+  await page.locator('.panel-search-input').fill('per ogni')
+  await page.waitForFunction(() => document.querySelector('.panel-section-head span')?.textContent?.startsWith('1 '), null, { timeout: 5000 }).catch(() => {})
+  const oneFound = await page.locator('.panel-section-head span').first().innerText()
+  check(oneFound === '1 simbolo trovato', `con un simbolo solo il conteggio è al singolare (${oneFound})`)
 
   // Anteprima Markdown
   await page.waitForTimeout(300)
@@ -3455,25 +3461,28 @@ try {
       video: d.querySelector('video').getAttribute('src'),
       back: !d.querySelector('.tutorial-foot .btn:not(.btn-primary)').hidden,
       next: d.querySelector('.tutorial-next').textContent,
+      pages: d.querySelectorAll('.tutorial-dot').length,
     }))
   const page1 = await tutorialPage()
+  // Le pagine (dal 12 ottobre 2026 anche grafici, tabelle, schemi, «Spiega con l'AI» e la condivisione).
+  const pages = page1.pages
   await first.waitForFunction(() => document.querySelector('dialog.dialog-tutorial video')?.readyState >= 2, null, { timeout: 8000 }).catch(() => {})
   const playing = await tutorial.evaluate((d) => {
     const v = d.querySelector('video')
     return !v.error && v.readyState >= 2 && v.muted && v.loop
   })
   check(
-    page1.step === '1 di 6' && !page1.back && page1.next === 'Avanti' && page1.video.endsWith('scrivere-chiaro.webm') && playing,
+    pages >= 11 && page1.step === `1 di ${pages}` && !page1.back && page1.next === 'Avanti' && page1.video.endsWith('scrivere-chiaro.webm') && playing,
     `la prima volta si apre il tutorial, con il video che si vede (${JSON.stringify(page1)}, ${playing})`,
   )
-  for (let i = 0; i < 5; i++) await tutorial.locator('.tutorial-next').click()
+  for (let i = 1; i < pages; i++) await tutorial.locator('.tutorial-next').click()
   const last = await tutorialPage()
   await tutorial.locator('.tutorial-foot .btn:not(.btn-primary)').click()
   const backOne = await tutorialPage()
   await first.keyboard.press('ArrowRight')
   const keyNext = await tutorialPage()
   check(
-    last.step === '6 di 6' && last.next === 'Inizia' && last.back && backOne.step === '5 di 6' && keyNext.step === '6 di 6',
+    last.step === `${pages} di ${pages}` && last.next === 'Inizia' && last.back && backOne.step === `${pages - 1} di ${pages}` && keyNext.step === `${pages} di ${pages}`,
     `Avanti e Indietro (anche con le frecce) sfogliano le pagine, e l'ultima ha «Inizia» (${JSON.stringify({ last, backOne, keyNext })})`,
   )
   await tutorial.locator('.tutorial-next').click()
@@ -3519,7 +3528,7 @@ try {
   const again = await tutorialPage()
   await tutorial.locator('.tutorial-shortcuts').click()
   check(
-    again.step === '1 di 6' && (await first.locator('dialog table.shortcuts').isVisible()),
+    again.step === `1 di ${pages}` && (await first.locator('dialog table.shortcuts').isVisible()),
     '«Come si usa» riapre il tutorial, e da lì si arriva a tutte le scorciatoie',
   )
   // Chiusa la guida con la x, il fumetto dice dove si rivede il tutorial; poi se ne va da solo
@@ -3557,6 +3566,47 @@ try {
   const darkVideo = await firstDark.locator('dialog.dialog-tutorial video').getAttribute('src')
   check(darkVideo.endsWith('scrivere-scuro.webm'), `nel tema scuro il tutorial mostra i video scuri (${darkVideo})`)
   await firstDark.context().close()
+  // Glifo in inglese (GRAFICA.md, punto 6): con il browser in inglese la prima volta si apre in inglese,
+  // con il tutorial e la nota di benvenuto; dalle impostazioni si torna all'italiano e la pagina si ricarica.
+  const english = await firstVisit({ viewport: { width: 1280, height: 800 }, locale: 'en-US' })
+  english.on('pageerror', (e) => errors.push(e.message))
+  await english.goto(url)
+  const tutorialEn = english.locator('dialog.dialog-tutorial')
+  await tutorialEn.waitFor()
+  const firstEn = await tutorialEn.evaluate((d) => ({
+    title: d.querySelector('.tutorial-title').textContent,
+    step: d.querySelector('.tutorial-step').textContent,
+    next: d.querySelector('.tutorial-next').textContent,
+  }))
+  await tutorialEn.locator('.tutorial-close').click()
+  const uiEn = await english.evaluate(() => ({
+    lang: document.documentElement.lang,
+    views: [...document.querySelectorAll('.view-button')].map((b) => b.getAttribute('aria-label')),
+    symbols: document.querySelector('.symbols-toggle-label')?.textContent,
+    share: document.querySelector('.share-button')?.getAttribute('aria-label'),
+    welcome: document.querySelector('.cm-content')?.textContent?.slice(0, 20),
+  }))
+  check(
+    firstEn.title === 'Welcome to Glifo' && firstEn.step === `1 of ${pages}` && firstEn.next === 'Next' &&
+      uiEn.lang === 'en' && JSON.stringify(uiEn.views) === '["Editor","Split","Preview","Whiteboard"]' &&
+      uiEn.symbols === 'Symbols' && uiEn.share === 'Share' && uiEn.welcome.startsWith('# Welcome to Glifo'),
+    `con il browser in inglese Glifo si apre in inglese, con il tutorial e la nota di benvenuto (${JSON.stringify({ firstEn, uiEn })})`,
+  )
+  await english.locator('.side-profile button[aria-label="Settings"]').click()
+  const languageSection = english.locator('dialog .language-settings')
+  const chosenEn = await languageSection.locator('input[value="en"]').isChecked()
+  await Promise.all([english.waitForEvent('load'), languageSection.locator('label[lang="it"]').click()])
+  await english.waitForSelector('.cm-editor')
+  const uiIt = await english.evaluate(() => ({
+    lang: document.documentElement.lang,
+    split: document.querySelector('.view-button[data-view="split"]')?.getAttribute('aria-label'),
+    saved: localStorage.getItem('glifo.lang.v1'),
+  }))
+  check(
+    chosenEn && uiIt.lang === 'it' && uiIt.split === 'Diviso' && uiIt.saved === 'it',
+    `nelle impostazioni si sceglie l'italiano e Glifo si ricarica in italiano (${JSON.stringify({ chosenEn, uiIt })})`,
+  )
+  await english.context().close()
   // «Spiegami» (in prova): nel pannello della formula i passaggi di un Qwen3 che gira nel browser con
   // WebLLM, con i conti chiesti al motore di Glifo e controllati da lui. Qui Qwen3 non c'è (niente scheda
   // grafica, niente download): il worker di WebLLM è sostituito da uno finto che parla come lui.

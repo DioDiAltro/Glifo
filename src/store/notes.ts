@@ -1,6 +1,12 @@
+import { texts } from '../i18n'
 import { DeletionLog, type Deletion } from './deletions'
 import { isUuid, newId } from './ids'
 import { readItem, readJson, removeItem, storageKeys, writeItem, writeJson } from './storage'
+
+const T = texts({
+  /** Il titolo di una nota senza testo (si salva nell'elenco, come gli altri titoli: vedi `deriveTitle`). */
+  untitled: ['Senza titolo', 'Untitled'],
+})
 
 export interface NoteMeta {
   id: string
@@ -57,7 +63,7 @@ export function deriveTitle(content: string): string {
       .trim()
     if (text) return text.length > 60 ? `${text.slice(0, 57)}…` : text
   }
-  return 'Senza titolo'
+  return T.untitled
 }
 
 /** Le chiavi del testo delle note, senza account (`glifo.note.v1.<id>`) e negli account (`glifo.u.<utente>.note.v1.<id>`). */

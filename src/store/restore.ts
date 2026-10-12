@@ -1,5 +1,27 @@
+import { texts } from '../i18n'
 import type { FoldersStore } from './folders'
 import type { NotesStore } from './notes'
+
+const T = texts({
+  /** Le note c'erano già tutte, ma sono tornate delle lavagne. */
+  onlyBoards: (boards: number) => [
+    `Gli appunti c'erano già: ${boards === 1 ? 'rimessa 1 lavagna' : `rimesse ${boards} lavagne`}`,
+    `The notes were already here: ${boards === 1 ? '1 whiteboard restored' : `${boards} whiteboards restored`}`,
+  ],
+  allThere: ['Gli appunti del backup c\'erano già tutti', 'All the notes in the backup were already here'],
+  /** Le note rimesse, con le lavagne e quelle che c'erano già (se ce ne sono). */
+  restored: (added: number, boards: number, already: number) => {
+    const it =
+      (added === 1 ? 'Ripristinato 1 appunto' : `Ripristinati ${added} appunti`) +
+      (boards ? ` e ${boards === 1 ? '1 lavagna' : `${boards} lavagne`}` : '') +
+      (already ? (already === 1 ? '; uno c\'era già' : `; ${already} c'erano già`) : '')
+    const en =
+      (added === 1 ? 'Restored 1 note' : `Restored ${added} notes`) +
+      (boards ? ` and ${boards === 1 ? '1 whiteboard' : `${boards} whiteboards`}` : '') +
+      (already ? (already === 1 ? '; one was already here' : `; ${already} were already here`) : '')
+    return [it, en]
+  },
+})
 
 /** Una nota come sta nel file di backup (`backup` in main.ts, o «Scarica i miei dati») o arriva dal vecchio Glifo. */
 interface BackupNote {
@@ -90,15 +112,8 @@ export async function restoreBackup(
 
 /** Il messaggio dopo il ripristino. */
 export function restoredMessage({ added, already, boards }: Restored): string {
-  const drawings = boards === 1 ? '1 lavagna' : `${boards} lavagne`
-  if (!added) {
-    if (boards) return `Gli appunti c'erano già: ${boards === 1 ? 'rimessa' : 'rimesse'} ${drawings}`
-    return 'Gli appunti del backup c\'erano già tutti'
-  }
-  let text = added === 1 ? 'Ripristinato 1 appunto' : `Ripristinati ${added} appunti`
-  if (boards) text += ` e ${drawings}`
-  if (already) text += already === 1 ? '; uno c\'era già' : `; ${already} c'erano già`
-  return text
+  if (!added) return boards ? T.onlyBoards(boards) : T.allThere
+  return T.restored(added, boards, already)
 }
 
 function time(value: unknown, fallback: number): number {

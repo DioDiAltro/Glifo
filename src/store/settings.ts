@@ -1,6 +1,15 @@
 import type { ExplainTone } from '../ai/explain'
 import { DEFAULT_LOCAL_MODEL } from '../ai/localModels'
+import { lang, texts } from '../i18n'
 import { readJson, writeJson } from './storage'
+
+const T = texts({
+  italianAndEnglish: ['Italiano e inglese', 'Italian and English'],
+  italianOnly: ['Solo italiano', 'Italian only'],
+  englishOnly: ['Solo inglese', 'English only'],
+  defaultModel: (name: string) => [`${name} (predefinito)`, `${name} (default)`],
+  cheapestModel: (name: string) => [`${name} (il più economico)`, `${name} (cheapest)`],
+})
 
 export type Theme = 'auto' | 'light' | 'dark'
 /** Le viste: il testo, il testo con l'anteprima, l'anteprima, il testo con la lavagna (src/board). */
@@ -38,16 +47,17 @@ export interface Settings {
   explainTone: ExplainTone
 }
 
+/** Le etichette si leggono quando servono (`get`), nella lingua della pagina. */
 export const SPELL_LANGUAGES: { id: SpellLanguages; label: string }[] = [
-  { id: 'it+en', label: 'Italiano e inglese' },
-  { id: 'it', label: 'Solo italiano' },
-  { id: 'en', label: 'Solo inglese' },
+  { id: 'it+en', get label() { return T.italianAndEnglish } },
+  { id: 'it', get label() { return T.italianOnly } },
+  { id: 'en', get label() { return T.englishOnly } },
 ]
 
 export const AI_MODELS = [
-  { id: 'claude-opus-5-5', label: 'Claude Opus 5.5 (predefinito)' },
+  { id: 'claude-opus-5-5', get label() { return T.defaultModel('Claude Opus 5.5') } },
   { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5' },
-  { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5 (il più economico)' },
+  { id: 'claude-haiku-4-5', get label() { return T.cheapestModel('Claude Haiku 4.5') } },
 ] as const
 
 /** Chiave in localStorage: serve anche a riconoscere le modifiche fatte in un'altra scheda. */
@@ -61,7 +71,8 @@ export const DEFAULT_SETTINGS: Settings = {
   view: 'split',
   autoWrap: true,
   spellcheck: true,
-  spellLanguages: 'it+en',
+  // Con Glifo in inglese si scrive di solito in inglese: il controllo ortografico parte con l'inglese solo.
+  spellLanguages: lang === 'it' ? 'it+en' : 'en',
   fontSize: 16,
   notesOpen: true,
   symbolsOpen: true,

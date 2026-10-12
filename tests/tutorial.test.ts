@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
+import { setLangForTests } from '../src/i18n'
 import { TUTORIAL_PAGES, tutorialVideo } from '../src/ui/tutorial'
 
 /** fs di Node: il nome si compone qui, così TypeScript non cerca i tipi di Node (che non ci sono). */
@@ -8,15 +9,43 @@ async function fileSize(path: string): Promise<number> {
   return statSync(path).size
 }
 
+afterEach(() => setLangForTests('it'))
+
 describe('tutorial', () => {
-  it('ogni pagina ha titolo, testo e i video dei due temi (non troppo grandi)', async () => {
-    expect(TUTORIAL_PAGES.length).toBeGreaterThanOrEqual(4)
+  it('le pagine: anche grafici, tabelle, schemi, «Spiega con l\'AI» e la condivisione', () => {
+    expect(TUTORIAL_PAGES.map((p) => p.id)).toEqual([
+      'scrivere',
+      'formule',
+      'simboli',
+      'calcoli',
+      'grafici',
+      'tabelle',
+      'schemi',
+      'spiegami',
+      'lavagna',
+      'barra',
+      'condividi',
+    ])
+  })
+
+  it('in ogni lingua ogni pagina ha il titolo e un testo che sta in quattro righe, con il codice tra apici a coppie', () => {
+    for (const lang of ['it', 'en'] as const) {
+      setLangForTests(lang)
+      for (const page of TUTORIAL_PAGES) {
+        expect(page.title.trim(), `${lang} ${page.id}`).not.toBe('')
+        expect(page.text.length, `${lang} ${page.id}`).toBeGreaterThan(40)
+        // Quattro righe della finestra (larga 720 px): oltre, i pulsanti si spostano da una pagina all'altra.
+        expect(page.text.length, `${lang} ${page.id}`).toBeLessThanOrEqual(340)
+        expect(page.text.split('`').length % 2, `${lang} ${page.id}`).toBe(1)
+      }
+    }
+    setLangForTests('en')
+    expect(TUTORIAL_PAGES[0].title).toBe('Welcome to Glifo')
+  })
+
+  it('ogni pagina ha i video dei due temi (non troppo grandi)', async () => {
     expect(new Set(TUTORIAL_PAGES.map((p) => p.id)).size).toBe(TUTORIAL_PAGES.length)
     for (const page of TUTORIAL_PAGES) {
-      expect(page.title.trim(), page.id).not.toBe('')
-      expect(page.text.length, page.id).toBeGreaterThan(40)
-      // Gli apici inversi del codice vanno a coppie.
-      expect(page.text.split('`').length % 2, page.id).toBe(1)
       for (const dark of [false, true]) {
         const src = tutorialVideo(page, dark)
         expect(src).toBe(`./tutorial/${page.id}-${dark ? 'scuro' : 'chiaro'}.webm`)

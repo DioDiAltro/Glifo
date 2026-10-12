@@ -2,7 +2,8 @@ import 'katex/dist/katex.min.css'
 import './styles/app.css'
 import { redo, undo } from '@codemirror/commands'
 import { EditorSelection } from '@codemirror/state'
-import welcomeNote from './welcome.md?raw'
+import welcomeIt from './welcome.md?raw'
+import welcomeEn from './welcome.en.md?raw'
 import { MarkdownEditor } from './editor/editor'
 import { addToGraphBlock, formulaAtCursor, insertGraphBlock, setGraphLabels } from './editor/graphInsert'
 import { blockMoveTransaction } from './editor/moveBlock'
@@ -42,7 +43,7 @@ import { confirmDialog, openHelpDialog, openSettingsDialog, openTouchLogDialog, 
 import { aiActivity } from './ui/aiActivity'
 import { openCommentsDialog } from './ui/comments'
 import { inClaudeViewer } from './host'
-import { chooseLang, lang, LANG_KEY, rememberLang, texts } from './i18n'
+import { byLang, chooseLang, lang, LANG_KEY, rememberLang, texts } from './i18n'
 import { accountOffMessage, type Site } from './site'
 import { SpellClient } from './spell/client'
 import type { SpellLanguage } from './spell/engine'
@@ -120,12 +121,235 @@ migrateKeyPrefix('matherdown.', 'glifo.')
 rememberLang()
 document.documentElement.lang = lang
 
+/** La nota di benvenuto nella lingua di Glifo; mai toccata, si riconosce in tutte e due. */
+const welcomeNote = byLang({ it: () => welcomeIt, en: () => welcomeEn })
+const WELCOME_NOTES = [welcomeIt, welcomeEn]
+
 const T = texts({
   languageElsewhere: [
     'La lingua di Glifo è cambiata in un\'altra scheda: ricarica per vederla anche qui.',
     'Glifo\'s language changed in another tab: reload to see it here too.',
   ],
   reload: ['Ricarica', 'Reload'],
+  newNoteTitle: ['Nuovi appunti', 'New note'],
+  view: ['Vista', 'View'],
+  viewEditor: ['Editor', 'Editor'],
+  viewSplit: ['Diviso', 'Split'],
+  viewPreview: ['Anteprima', 'Preview'],
+  viewBoard: ['Lavagna', 'Whiteboard'],
+  openSidebar: ['Apri la barra laterale', 'Open sidebar'],
+  closeSidebar: ['Chiudi la barra laterale', 'Close sidebar'],
+  shareHint: ['Condividi la nota con un link, o stampala', 'Share the note with a link, or print it'],
+  share: ['Condividi', 'Share'],
+  howToUse: ['Come si usa', 'How to use'],
+  feedbackHint: [
+    'Commenti: leggi quelli di chi prova Glifo e scrivi il tuo',
+    'Feedback: read comments from people trying Glifo and write your own',
+  ],
+  feedback: ['Commenti', 'Feedback'],
+  settings: ['Impostazioni', 'Settings'],
+  clearBoardTitle: ['Pulire la lavagna?', 'Clear the whiteboard?'],
+  clearBoardMessage: [
+    'Si cancella tutto quello che è scritto sulla lavagna di questa nota.',
+    'Everything written on this note\'s whiteboard will be erased.',
+  ],
+  clearBoardNote: [
+    'Se cambi idea, la freccia «Annulla» della lavagna (o Ctrl+Z) lo fa tornare.',
+    'If you change your mind, the whiteboard\'s “Undo” arrow (or Ctrl+Z) brings it back.',
+  ],
+  clear: ['Pulisci', 'Clear'],
+  spellUnavailable: [
+    'Controllo ortografico non disponibile: non è stato possibile caricare il dizionario.',
+    'Spell check unavailable: the dictionary couldn\'t be loaded.',
+  ],
+  explainHint: [
+    'Spiega con l\'AI: scegli nella nota cosa farti spiegare',
+    'Explain with AI: choose what in the note you want explained',
+  ],
+  explain: ['Spiega con l\'AI', 'Explain with AI'],
+  symbolsHint: ['Mostra/nascondi i simboli', 'Show/hide symbols'],
+  symbolsLabel: ['Mostra o nascondi il pannello dei simboli', 'Show or hide the symbols panel'],
+  symbols: ['Simboli', 'Symbols'],
+  recovered: (count: number) => [
+    count === 1 ? 'Recuperato un appunto che non compariva nell\'elenco' : `Recuperati ${count} appunti che non comparivano nell'elenco`,
+    count === 1 ? 'Recovered a note that wasn\'t showing in the list' : `Recovered ${count} notes that weren't showing in the list`,
+  ],
+  commentsOff: [
+    'Dentro claude.ai i commenti non si vedono: aprili dal sito di Glifo.',
+    'Comments can\'t be seen inside claude.ai: open them from the Glifo website.',
+  ],
+  feedbackOff: [
+    'Dentro claude.ai i messaggi non partono: mandalo dal sito di Glifo.',
+    'Messages can\'t be sent from inside claude.ai: send yours from the Glifo website.',
+  ],
+  storageFull: [
+    'Spazio del browser esaurito: salva la nota come file .md per non perderla.',
+    'The browser is out of space: save the note as a .md file so you don\'t lose it.',
+  ],
+  storageBlocked: [
+    'Questo browser non permette di salvare: usa «Salva .md» per non perdere gli appunti.',
+    'This browser doesn\'t allow saving: use “Save .md” so you don\'t lose your notes.',
+  ],
+  deleteNoteTitle: ['Eliminare la nota?', 'Delete the note?'],
+  deleteNoteEverywhere: (title: string) => [
+    `«${title}» verrà eliminata da tutti i tuoi dispositivi. L'operazione non si può annullare.`,
+    `“${title}” will be deleted from all your devices. This can't be undone.`,
+  ],
+  deleteNoteHere: (title: string) => [
+    `«${title}» verrà eliminata da questo browser. L'operazione non si può annullare.`,
+    `“${title}” will be deleted from this browser. This can't be undone.`,
+  ],
+  delete: ['Elimina', 'Delete'],
+  folderNameMissing: ['Scrivi un nome per la cartella.', 'Enter a name for the folder.'],
+  folderNameTaken: ['C\'è già una cartella con questo nome.', 'There\'s already a folder with this name.'],
+  newFolder: ['Nuova cartella', 'New folder'],
+  folderName: ['Nome della cartella', 'Folder name'],
+  create: ['Crea', 'Create'],
+  renameFolder: ['Rinomina la cartella', 'Rename folder'],
+  rename: ['Rinomina', 'Rename'],
+  deleteFolderTitle: ['Eliminare la cartella?', 'Delete the folder?'],
+  deleteFolderMessage: (name: string, count: number) => {
+    if (count === 0) return [`La cartella «${name}» è vuota.`, `The folder “${name}” is empty.`]
+    return [
+      `La cartella «${name}» verrà eliminata, ma ${count === 1 ? 'la sua nota resta' : `le sue ${count} note restano`}: ${count === 1 ? 'la trovi' : 'le trovi'} fuori dalle cartelle.`,
+      count === 1
+        ? `The folder “${name}” will be deleted, but its note stays: you'll find it outside any folder.`
+        : `The folder “${name}” will be deleted, but its ${count} notes stay: you'll find them outside any folder.`,
+    ]
+  },
+  deleteFolder: ['Elimina cartella', 'Delete folder'],
+  deletedInOtherWindow: (title: string) => [`«${title}» è stata eliminata in un'altra finestra`, `“${title}” was deleted in another window`],
+  cantMoveBlock: (what: string) => [
+    `${what} non si può spostare da qui senza cambiare il resto della nota (per esempio due elenchi diventerebbero uno solo).`,
+    `${what} can't be moved from here without changing the rest of the note (for example, two lists would become one).`,
+  ],
+  moveFailed: ['Lo spostamento non è riuscito: la nota è rimasta com\'era.', 'The move didn\'t work: the note is unchanged.'],
+  opening: (what: string) => [`Apro ${what}…`, `Opening ${what}…`],
+  schemaUnreadable: ['Questo schema non si può aprire.', 'This diagram can\'t be opened.'],
+  schemaEditor: ['l\'editor degli schemi', 'the diagram editor'],
+  schemaEditorFailed: ['L\'editor degli schemi non si è aperto: riprova.', 'The diagram editor didn\'t open: try again.'],
+  schemaPutBack: [
+    'Lo schema non era più al suo posto nella nota: l\'ho rimesso qui.',
+    'The diagram was no longer in its place in the note: I put it back here.',
+  ],
+  sheetEditor: ['l\'editor delle tabelle', 'the table editor'],
+  sheetEditorFailed: ['L\'editor delle tabelle non si è aperto: riprova.', 'The table editor didn\'t open: try again.'],
+  sheetPutBack: [
+    'La tabella non era più al suo posto nella nota: l\'ho rimessa qui.',
+    'The table was no longer in its place in the note: I put it back here.',
+  ],
+  opened: (count: number, name: string) => [
+    count === 1 ? `Aperto «${name}»` : `Aperti ${count} file`,
+    count === 1 ? `Opened “${name}”` : `Opened ${count} files`,
+  ],
+  excelPart: ['la parte che apre i file Excel', 'the part that opens Excel files'],
+  csvPart: ['la parte che apre i file .csv', 'the part that opens .csv files'],
+  extraRows: ['Le righe in più sono rimaste fuori', 'The extra rows were left out'],
+  noCells: (name: string) => [`«${name}» non ha celle da aprire.`, `“${name}” has no cells to open.`],
+  valuesOnly: (count: number) => [
+    `${count === 1 ? 'Una formula usa' : `${count} formule usano`} funzioni o fogli che Glifo non ha: ${count === 1 ? 'resta il suo valore' : 'restano i loro valori'}`,
+    count === 1
+      ? 'One formula uses functions or sheets that Glifo doesn\'t have: its value is kept'
+      : `${count} formulas use functions or sheets that Glifo doesn't have: their values are kept`,
+  ],
+  cantOpenFile: (name: string) => [`«${name}» non si riesce ad aprire.`, `“${name}” can't be opened.`],
+  savedTo: (name: string) => [`Salvato su «${name}»`, `Saved to “${name}”`],
+  mdDownloaded: ['File .md scaricato', '.md file downloaded'],
+  notABackup: ['Il file non sembra un backup di Glifo.', 'The file doesn\'t look like a Glifo backup.'],
+  restoreFailed: [
+    'Il backup non si è potuto ripristinare: forse il browser non ha più spazio.',
+    'The backup couldn\'t be restored: the browser may be out of space.',
+  ],
+  relocationFailed: [
+    'Gli appunti del vecchio Glifo non sono arrivati: riprova dal vecchio sito, oppure usa il backup.',
+    'The notes from the old Glifo didn\'t arrive: try again from the old site, or use the backup.',
+  ],
+  aNote: ['Una nota', 'A note'],
+  conflict: (title: string) => [
+    `«${title}» è cambiata anche su un altro dispositivo: ora ci sono tutte e due le versioni.`,
+    `“${title}” also changed on another device: now you have both versions.`,
+  ],
+  restoredFromDevice: (title: string) => [
+    `«${title}» era stata eliminata qui, ma su un altro dispositivo è cambiata: è tornata tra gli appunti.`,
+    `“${title}” had been deleted here, but it changed on another device: it's back in your notes.`,
+  ],
+  deletedOnOtherDevice: (title: string) => [`«${title}» è stata eliminata su un altro dispositivo`, `“${title}” was deleted on another device`],
+  // `action` è già nella lingua della pagina: `downloadData` o `deleteTheAccount`.
+  needConnection: (action: string) => [`Per ${action} serve la connessione.`, `You need a connection to ${action}.`],
+  signInExpired: (action: string) => [
+    `L'accesso è scaduto: accedi di nuovo, poi riprova a ${action}.`,
+    `Your sign-in has expired: sign in again, then try to ${action} again.`,
+  ],
+  couldNot: (action: string) => [`Non è stato possibile ${action}: riprova tra poco.`, `Couldn't ${action}: try again in a moment.`],
+  downloadData: ['scaricare i dati', 'download your data'],
+  deleteTheAccount: ['eliminare l\'account', 'delete your account'],
+  accountDeleted: [
+    'Account eliminato: sul server non resta niente. Qui ci sono gli appunti fuori dall\'account.',
+    'Account deleted: nothing is left on the server. Here are the notes from outside the account.',
+  ],
+  signedInAs: (email: string, previous: string) => [
+    `Sei entrato come ${email}. Gli appunti di ${previous} restano in questo browser: li ritrovi quando rientri in quell'account.`,
+    `You're signed in as ${email}. The notes of ${previous} stay in this browser: you'll find them when you sign back in to that account.`,
+  ],
+  addGuestTitle: ['Aggiungere gli appunti di questo browser?', 'Add the notes in this browser?'],
+  addGuestMessage: (count: number) => [
+    count === 1
+      ? 'In questo browser c\'è un appunto. Vuoi aggiungerlo al tuo account? Così lo ritrovi anche sugli altri dispositivi.'
+      : `In questo browser ci sono ${count} appunti. Vuoi aggiungerli al tuo account? Così li ritrovi anche sugli altri dispositivi.`,
+    count === 1
+      ? 'There\'s one note in this browser. Do you want to add it to your account? That way you\'ll find it on your other devices too.'
+      : `There are ${count} notes in this browser. Do you want to add them to your account? That way you'll find them on your other devices too.`,
+  ],
+  addGuestNote: (count: number) => [
+    count === 1 ? 'Se lo lasci qui, lo ritrovi quando esci dall\'account.' : 'Se li lasci qui, li ritrovi quando esci dall\'account.',
+    count === 1 ? 'If you leave it here, you\'ll find it when you sign out.' : 'If you leave them here, you\'ll find them when you sign out.',
+  ],
+  addGuestConfirm: (count: number) => [
+    count === 1 ? 'Aggiungilo all\'account' : 'Aggiungili all\'account',
+    count === 1 ? 'Add it to the account' : 'Add them to the account',
+  ],
+  leaveThemHere: ['No, lasciali qui', 'No, leave them here'],
+  switchNeedsConnection: ['Per cambiare account serve la connessione.', 'You need a connection to switch accounts.'],
+  switchAccount: ['Cambia account', 'Switch account'],
+  switchIntro: (email: string, pending: boolean) => [
+    `Scegli l'account in cui entrare. Gli appunti di ${email} restano in questo browser, con le lavagne: li ritrovi quando rientri in quell'account.${pending ? ' Le modifiche che non sono ancora arrivate nell\'account partono allora.' : ''}`,
+    `Choose the account to sign in to. The notes of ${email} stay in this browser, together with the whiteboards: you'll find them when you sign back in to that account.${pending ? ' Changes that haven\'t reached the account yet will be sent then.' : ''}`,
+  ],
+  signOutTitle: ['Uscire lo stesso?', 'Sign out anyway?'],
+  signOutPending: [
+    'Alcune modifiche non sono ancora arrivate nell\'account, per esempio perché manca la connessione. Se esci ora, da questo browser si perdono.',
+    'Some changes haven\'t reached the account yet, for example because there\'s no connection. If you sign out now, they\'ll be lost from this browser.',
+  ],
+  signOutOneBoard: [
+    'La lavagna di una nota sta solo in questo browser, non nell\'account: uscendo si elimina.',
+    'One note\'s whiteboard is only in this browser, not in the account: signing out deletes it.',
+  ],
+  signOutBoards: (count: number) => [
+    `Le lavagne di ${count} note stanno solo in questo browser, non nell'account: uscendo si eliminano.`,
+    `The whiteboards of ${count} notes are only in this browser, not in the account: signing out deletes them.`,
+  ],
+  signOutAnyway: ['Esci lo stesso', 'Sign out anyway'],
+  stay: ['Resta', 'Stay'],
+  saveFirst: [
+    'Prima salva la nota come file .md: il browser non ha più spazio per tenerla.',
+    'First save the note as a .md file: the browser has no more room to keep it.',
+  ],
+  googleIncomplete: [
+    'L\'accesso con Google non è stato completato: riprova da «Accedi».',
+    'Signing in with Google wasn\'t completed: try again from “Sign in”.',
+  ],
+  linkInvalid: [
+    'Il link per entrare non è valido o è già stato usato: chiedi un\'altra email da «Accedi».',
+    'The sign-in link isn\'t valid or has already been used: ask for another email from “Sign in”.',
+  ],
+  linkOtherBrowser: [
+    'Il link va aperto nel browser in cui hai chiesto di entrare. Chiedi un\'altra email da lì: poi apri il link in quel browser, oppure copialo e incollalo nella finestra di Glifo.',
+    'The link has to be opened in the browser where you asked to sign in. Ask for another email from there: then open the link in that browser, or copy it and paste it into the Glifo window.',
+  ],
+  signInFailed: [
+    'Non è stato possibile completare l\'accesso: riprova da «Accedi».',
+    'Couldn\'t complete the sign-in: try again from “Sign in”.',
+  ],
 })
 
 const settings: Settings = loadSettings()
@@ -158,8 +382,8 @@ const notesOverlay = window.matchMedia('(max-width: 1250px)')
 
 // ——— Nota attiva ———
 
-/** Nell'account appena aperto: una nota vuota, che va all'account solo se la si scrive. */
-const STARTER = '# Nuovi appunti\n\n'
+/** Nell'account appena aperto: una nota vuota, che va all'account solo se la si scrive. Anche le note nuove partono così. */
+const STARTER = `# ${T.newNoteTitle}\n\n`
 
 function initialNote(): Note {
   if (!store.list().length) return account ? store.create(STARTER, null, { local: true }) : store.create(welcomeNote)
@@ -182,21 +406,22 @@ saveState('salvato')
 
 const viewButtons = new Map<ViewMode, HTMLButtonElement>()
 /** Le viste a parole, per il registro dei tocchi. */
-const VIEW_NAMES: Record<ViewMode, string> = { editor: 'Editor', split: 'Diviso', preview: 'Anteprima', board: 'Lavagna' }
+const VIEW_NAMES: Record<ViewMode, string> = { editor: 'Editor', split: 'Diviso', preview: 'Anteprima', board: 'Lavagna' } // non si traduce: il registro dei tocchi resta in italiano
 const viewSwitch = h(
   'div',
-  { class: 'view-switch', attrs: { role: 'radiogroup', 'aria-label': 'Vista' } },
+  { class: 'view-switch', attrs: { role: 'radiogroup', 'aria-label': T.view } },
   ([
-    ['editor', 'Editor', ICONS.edit],
-    ['split', 'Diviso', ICONS.split],
-    ['preview', 'Anteprima', ICONS.eye],
-    ['board', 'Lavagna', ICONS.board],
+    ['editor', T.viewEditor, ICONS.edit],
+    ['split', T.viewSplit, ICONS.split],
+    ['preview', T.viewPreview, ICONS.eye],
+    ['board', T.viewBoard, ICONS.board],
   ] as const).map(([mode, label, paths]) => {
     const b = h(
       'button',
       {
         class: 'view-button',
         title: label,
+        data: { view: mode },
         attrs: { type: 'button', role: 'radio', 'aria-label': label },
         on: { click: () => setView(mode) },
       },
@@ -227,19 +452,19 @@ const sidebarToggle = (label: string, className: string) =>
     on: { click: () => setPanels({ notesOpen: !settings.notesOpen }) },
     html: logoMark(),
   })
-const sideOpen = sidebarToggle('Apri la barra laterale', 'side-open')
+const sideOpen = sidebarToggle(T.openSidebar, 'side-open')
 
 // Non c'è più una barra in alto. In cima alla barra laterale il logo e il nome, e subito sotto
 // gli appunti; in fondo i pulsanti della nota, l'account e le impostazioni, come nell'app di Claude.
-const sidebarTop = h('div', { class: 'side-top' }, sidebarToggle('Chiudi la barra laterale', 'side-close'), h('span', { class: 'brand-name' }, 'Glifo'))
+const sidebarTop = h('div', { class: 'side-top' }, sidebarToggle(T.closeSidebar, 'side-close'), h('span', { class: 'brand-name' }, 'Glifo'))
 // Accanto ad «Apri .md» e «Salva .md», in fondo all'elenco, solo con l'icona; da lì anche la
 // stampa e il PDF.
 const shareButton = h(
   'button',
   {
     class: 'btn btn-small share-button',
-    title: 'Condividi la nota con un link, o stampala',
-    attrs: { type: 'button', 'aria-label': 'Condividi' },
+    title: T.shareHint,
+    attrs: { type: 'button', 'aria-label': T.share },
     on: { click: () => openShare() },
   },
   icon(ICONS.share, 15),
@@ -249,15 +474,15 @@ const shareButton = h(
 // (anche il tema). I commenti stanno qui, lontano dagli strumenti della nota.
 const helpButton = h(
   'button',
-  { class: 'icon-button side-help', title: 'Come si usa', attrs: { type: 'button', 'aria-label': 'Come si usa' }, on: { click: () => openGuide() } },
+  { class: 'icon-button side-help', title: T.howToUse, attrs: { type: 'button', 'aria-label': T.howToUse }, on: { click: () => openGuide() } },
   icon(ICONS.help),
 )
 const feedbackButton = h(
   'button',
   {
     class: 'icon-button side-feedback',
-    title: 'Commenti: leggi quelli di chi prova Glifo e scrivi il tuo',
-    attrs: { type: 'button', 'aria-label': 'Commenti' },
+    title: T.feedbackHint,
+    attrs: { type: 'button', 'aria-label': T.feedback },
     on: { click: () => openComments() },
   },
   icon(ICONS.message),
@@ -270,7 +495,7 @@ const sidebarBottom = h(
   helpButton,
   h(
     'button',
-    { class: 'icon-button', title: 'Impostazioni', attrs: { type: 'button', 'aria-label': 'Impostazioni' }, on: { click: () => openSettings() } },
+    { class: 'icon-button', title: T.settings, attrs: { type: 'button', 'aria-label': T.settings }, on: { click: () => openSettings() } },
     icon(ICONS.settings),
   ),
 )
@@ -295,10 +520,10 @@ const board = new Board({
   store: boards,
   confirmClear: () =>
     confirmDialog({
-      title: 'Pulire la lavagna?',
-      message: 'Si cancella tutto quello che è scritto sulla lavagna di questa nota.',
-      note: 'Se cambi idea, la freccia «Annulla» della lavagna (o Ctrl+Z) lo fa tornare.',
-      confirmLabel: 'Pulisci',
+      title: T.clearBoardTitle,
+      message: T.clearBoardMessage,
+      note: T.clearBoardNote,
+      confirmLabel: T.clear,
       danger: true,
     }),
   openLog: () => openTouchLogDialog(),
@@ -352,7 +577,7 @@ function applySpellcheck(): void {
   const client = new SpellClient({
     languages,
     personal: loadPersonalWords(),
-    onError: () => toast('Controllo ortografico non disponibile: non è stato possibile caricare il dizionario.', 'error'),
+    onError: () => toast(T.spellUnavailable, 'error'),
   })
   spell = client
   editor.setSpellcheck({
@@ -413,8 +638,8 @@ const aiToggle = h(
   'button',
   {
     class: 'tool ai-toggle',
-    title: 'Spiega con l\'AI: scegli nella nota cosa farti spiegare',
-    attrs: { type: 'button', 'aria-label': 'Spiega con l\'AI' },
+    title: T.explainHint,
+    attrs: { type: 'button', 'aria-label': T.explain },
     on: { mousedown: (ev) => ev.preventDefault(), click: () => togglePanel('ai') },
   },
   icon(ICONS.sparkles, 17),
@@ -426,12 +651,12 @@ const symbolsToggle = h(
   'button',
   {
     class: 'icon-button float-button symbols-toggle',
-    title: 'Mostra/nascondi i simboli',
-    attrs: { type: 'button', 'aria-label': 'Mostra o nascondi il pannello dei simboli' },
+    title: T.symbolsHint,
+    attrs: { type: 'button', 'aria-label': T.symbolsLabel },
     on: { click: () => togglePanel('symbols') },
   },
   icon(ICONS.panel),
-  h('span', { class: 'symbols-toggle-label' }, 'Simboli'),
+  h('span', { class: 'symbols-toggle-label' }, T.symbols),
 )
 const floatTools = h('div', { class: 'float-tools' }, tools.format)
 const floatRight = h(
@@ -504,13 +729,7 @@ document.getElementById('app')!.replaceWith(app)
 
 preview.update(active.content, true)
 notesPanel.refresh(active.id)
-if (store.recovered) {
-  toast(
-    store.recovered === 1
-      ? 'Recuperato un appunto che non compariva nell\'elenco'
-      : `Recuperati ${store.recovered} appunti che non comparivano nell'elenco`,
-  )
-}
+if (store.recovered) toast(T.recovered(store.recovered))
 
 // ——— Impostazioni, tema e viste ———
 
@@ -544,7 +763,7 @@ function updateSettings(next: Partial<Settings>, fromAccount = false): void {
 }
 
 function setView(mode: ViewMode, focus = true): void {
-  touchLog.add(`vista dell'app: ${VIEW_NAMES[mode]}`)
+  touchLog.add(`vista dell'app: ${VIEW_NAMES[mode]}`) // non si traduce: il registro dei tocchi resta in italiano
   updateSettings({ view: mode })
   app.dataset.view = mode
   for (const [m, b] of viewButtons) b.setAttribute('aria-checked', String(m === mode))
@@ -629,11 +848,11 @@ function openGuide(first = false): void {
 function openComments(): void {
   const inClaude = __GLIFO_SITE__ === 'claude' || inClaudeViewer()
   openCommentsDialog({
-    off: inClaude ? 'Dentro claude.ai i commenti non si vedono: aprili dal sito di Glifo.' : undefined,
+    off: inClaude ? T.commentsOff : undefined,
     feedback: {
       site: inClaude ? 'claude' : __GLIFO_SITE__,
       version: __GLIFO_VERSION__,
-      off: inClaude ? 'Dentro claude.ai i messaggi non partono: mandalo dal sito di Glifo.' : undefined,
+      off: inClaude ? T.feedbackOff : undefined,
     },
   })
 }
@@ -711,12 +930,7 @@ function flushSave(): void {
   changedHere()
   if (!ok && !saveWarningShown) {
     saveWarningShown = true
-    toast(
-      storageAvailable()
-        ? 'Spazio del browser esaurito: salva la nota come file .md per non perderla.'
-        : 'Questo browser non permette di salvare: usa «Salva .md» per non perdere gli appunti.',
-      'error',
-    )
+    toast(storageAvailable() ? T.storageFull : T.storageBlocked, 'error')
   }
   notesPanel.refresh(active.id)
 }
@@ -769,14 +983,14 @@ function currentFolderId(): string | null {
   return folders.get(store.meta(active.id)?.folderId)?.id ?? null
 }
 
-function createNote(content = '# Nuovi appunti\n\n', folderId = currentFolderId()): void {
+function createNote(content = STARTER, folderId = currentFolderId()): void {
   flushSave()
   const note = store.create(content, folderId)
   changedHere()
   switchTo(note.id)
   // Seleziona il titolo, così si può scrivere subito quello vero.
-  if (content.startsWith('# Nuovi appunti')) {
-    editor.view.dispatch({ selection: EditorSelection.single(2, 15) })
+  if (content.startsWith(`# ${T.newNoteTitle}`)) {
+    editor.view.dispatch({ selection: EditorSelection.single(2, 2 + T.newNoteTitle.length) })
   }
 }
 
@@ -784,11 +998,9 @@ async function deleteNote(id: string): Promise<void> {
   const note = store.get(id)
   if (!note) return
   const ok = await confirmDialog({
-    title: 'Eliminare la nota?',
-    message: account
-      ? `«${note.title}» verrà eliminata da tutti i tuoi dispositivi. L'operazione non si può annullare.`
-      : `«${note.title}» verrà eliminata da questo browser. L'operazione non si può annullare.`,
-    confirmLabel: 'Elimina',
+    title: T.deleteNoteTitle,
+    message: account ? T.deleteNoteEverywhere(note.title) : T.deleteNoteHere(note.title),
+    confirmLabel: T.delete,
     danger: true,
   })
   if (!ok) return
@@ -805,7 +1017,7 @@ async function deleteNote(id: string): Promise<void> {
   void boards.remove([id]).catch(() => {})
   changedHere()
   if (id === active.id) {
-    const next = store.list()[0] ?? store.create('# Nuovi appunti\n\n')
+    const next = store.list()[0] ?? store.create(STARTER)
     loadNote(next.id)
   }
   notesPanel.refresh(active.id)
@@ -821,16 +1033,16 @@ function moveNote(id: string, folderId: string | null): void {
 
 /** Il problema del nome scelto per una cartella, oppure null se va bene. */
 function folderNameProblem(name: string, exceptId?: string): string | null {
-  if (!cleanFolderName(name)) return 'Scrivi un nome per la cartella.'
-  if (folders.nameTaken(name, exceptId)) return 'C\'è già una cartella con questo nome.'
+  if (!cleanFolderName(name)) return T.folderNameMissing
+  if (folders.nameTaken(name, exceptId)) return T.folderNameTaken
   return null
 }
 
 async function createFolder(moveNoteId?: string): Promise<void> {
   const name = await promptDialog({
-    title: 'Nuova cartella',
-    label: 'Nome della cartella',
-    confirmLabel: 'Crea',
+    title: T.newFolder,
+    label: T.folderName,
+    confirmLabel: T.create,
     maxLength: FOLDER_NAME_MAX,
     check: (value) => folderNameProblem(value),
   })
@@ -838,7 +1050,7 @@ async function createFolder(moveNoteId?: string): Promise<void> {
   const folder = folders.create(name)
   if (!folder) {
     // Nel frattempo un'altra scheda ha creato una cartella con lo stesso nome.
-    toast('C\'è già una cartella con questo nome.', 'error')
+    toast(T.folderNameTaken, 'error')
     return
   }
   if (moveNoteId) store.move(moveNoteId, folder.id)
@@ -850,15 +1062,15 @@ async function renameFolder(id: string): Promise<void> {
   const folder = folders.get(id)
   if (!folder) return
   const name = await promptDialog({
-    title: 'Rinomina la cartella',
-    label: 'Nome della cartella',
-    confirmLabel: 'Rinomina',
+    title: T.renameFolder,
+    label: T.folderName,
+    confirmLabel: T.rename,
     value: folder.name,
     maxLength: FOLDER_NAME_MAX,
     check: (value) => folderNameProblem(value, id),
   })
   if (name === null) return
-  if (!folders.rename(id, name)) toast('C\'è già una cartella con questo nome.', 'error')
+  if (!folders.rename(id, name)) toast(T.folderNameTaken, 'error')
   changedHere()
   notesPanel.refresh(active.id)
 }
@@ -868,12 +1080,9 @@ async function deleteFolder(id: string): Promise<void> {
   if (!folder) return
   const count = store.list().filter((n) => n.folderId === id).length
   const ok = await confirmDialog({
-    title: 'Eliminare la cartella?',
-    message:
-      count === 0
-        ? `La cartella «${folder.name}» è vuota.`
-        : `La cartella «${folder.name}» verrà eliminata, ma ${count === 1 ? 'la sua nota resta' : `le sue ${count} note restano`}: ${count === 1 ? 'la trovi' : 'le trovi'} fuori dalle cartelle.`,
-    confirmLabel: 'Elimina cartella',
+    title: T.deleteFolderTitle,
+    message: T.deleteFolderMessage(folder.name, count),
+    confirmLabel: T.deleteFolder,
     danger: true,
   })
   if (!ok) return
@@ -932,8 +1141,8 @@ function notesChangedElsewhere(changedId: string | null, content: string | null)
     } else {
       const title = active.title
       fileHandles.delete(active.id)
-      loadNote((store.list()[0] ?? store.create('# Nuovi appunti\n\n')).id)
-      toast(`«${title}» è stata eliminata in un'altra finestra`)
+      loadNote((store.list()[0] ?? store.create(STARTER)).id)
+      toast(T.deletedInOtherWindow(title))
     }
   } else if (changedId === active.id && content !== null && content !== active.content && !unsavedHere) {
     // Modificata altrove: si mostra il testo nuovo. Se qui ci sono modifiche non ancora salvate
@@ -983,8 +1192,8 @@ function moveBlockInNote(kind: BlockKind, line: number, hash: string, dir: MoveD
   const result = blockMoveTransaction(editor.view.state, line, hash, dir)
   if (!result.ok) {
     const what = BLOCK_NAMES[kind].The
-    if (result.reason === 'structure') toast(`${what} non si può spostare da qui senza cambiare il resto della nota (per esempio due elenchi diventerebbero uno solo).`)
-    else if (result.reason === 'guard') toast('Lo spostamento non è riuscito: la nota è rimasta com\'era.', 'error')
+    if (result.reason === 'structure') toast(T.cantMoveBlock(what))
+    else if (result.reason === 'guard') toast(T.moveFailed, 'error')
     // 'edge' e 'stale': niente da dire (in cima, in fondo, o l'anteprima si sta ridisegnando).
     return null
   }
@@ -1001,7 +1210,7 @@ function moveBlockInNote(kind: BlockKind, line: number, hash: string, dir: MoveD
  */
 function loadingEditor(what: string): { done: () => void } {
   let shown: HTMLElement | null = null
-  const timer = window.setTimeout(() => (shown = toast(`Apro ${what}…`, 'info', { sticky: true })), 400)
+  const timer = window.setTimeout(() => (shown = toast(T.opening(what), 'info', { sticky: true })), 400)
   return {
     done: () => {
       clearTimeout(timer)
@@ -1055,16 +1264,16 @@ async function openSchema(line: number | null, source?: string): Promise<void> {
     try {
       schema = parseSchema(found.source)
     } catch (err) {
-      toast(err instanceof SchemaError ? err.message : 'Questo schema non si può aprire.', 'error')
+      toast(err instanceof SchemaError ? err.message : T.schemaUnreadable, 'error')
       return
     }
     block = { source: found.source, from: found.from }
     near = found.from
   }
   schemaOpen = true
-  const loading = loadingEditor('l\'editor degli schemi')
+  const loading = loadingEditor(T.schemaEditor)
   try {
-    const { openSchemaEditor } = await loadPart(() => import('./schema/editor'), 'l\'editor degli schemi')
+    const { openSchemaEditor } = await loadPart(() => import('./schema/editor'), T.schemaEditor)
     loading.done()
     await openSchemaEditor({
       schema,
@@ -1077,7 +1286,7 @@ async function openSchema(line: number | null, source?: string): Promise<void> {
       },
     })
   } catch (err) {
-    if (!(err instanceof PartNotLoaded)) toast('L\'editor degli schemi non si è aperto: riprova.', 'error')
+    if (!(err instanceof PartNotLoaded)) toast(T.schemaEditorFailed, 'error')
   } finally {
     loading.done()
     schemaOpen = false
@@ -1112,7 +1321,7 @@ function saveSchemaBlock(block: { source: string; from: number } | null, near: n
   const prefix = atEmptyLine ? '' : '\n\n'
   const insert = `${prefix}${schemaBlockText(json)}\n`
   view.dispatch({ changes: { from, insert }, selection: EditorSelection.cursor(from + insert.length), userEvent: 'input' })
-  if (block) toast('Lo schema non era più al suo posto nella nota: l\'ho rimesso qui.')
+  if (block) toast(T.schemaPutBack)
   return { source: json, from: from + prefix.length }
 }
 
@@ -1140,9 +1349,9 @@ async function openSheet(line: number | null, match?: { source?: string; hash?: 
     near = found.from
   }
   sheetOpen = true
-  const loading = loadingEditor('l\'editor delle tabelle')
+  const loading = loadingEditor(T.sheetEditor)
   try {
-    const { openSheetEditor } = await loadPart(() => import('./spreadsheet/editor'), 'l\'editor delle tabelle')
+    const { openSheetEditor } = await loadPart(() => import('./spreadsheet/editor'), T.sheetEditor)
     loading.done()
     await openSheetEditor({
       sheet,
@@ -1157,7 +1366,7 @@ async function openSheet(line: number | null, match?: { source?: string; hash?: 
       title: active.title,
     })
   } catch (err) {
-    if (!(err instanceof PartNotLoaded)) toast('L\'editor delle tabelle non si è aperto: riprova.', 'error')
+    if (!(err instanceof PartNotLoaded)) toast(T.sheetEditorFailed, 'error')
   } finally {
     loading.done()
     sheetOpen = false
@@ -1198,7 +1407,7 @@ function saveSheetBlock(block: { source: string; from: number } | null, near: nu
   const prefix = atEmptyLine ? '' : '\n\n'
   const insert = `${prefix}${sheetBlockText(source)}\n`
   view.dispatch({ changes: { from, insert }, selection: EditorSelection.cursor(from + insert.length), userEvent: 'input' })
-  if (block) toast('La tabella non era più al suo posto nella nota: l\'ho rimessa qui.')
+  if (block) toast(T.sheetPutBack)
   return { source, from: from + prefix.length }
 }
 
@@ -1231,7 +1440,7 @@ function placeChart(block: { source: string; from: number }, lines: string[]): v
     }
     end = next.to
   }
-  const insert = `\n\n${indent}\`\`\`grafico\n${body}\n${indent}\`\`\``
+  const insert = `\n\n${indent}\`\`\`grafico\n${body}\n${indent}\`\`\`` // non si traduce: ```grafico è la parola del blocco
   view.dispatch({ changes: { from: end, insert }, selection: EditorSelection.cursor(end + insert.length), scrollIntoView: true, userEvent: 'input' })
 }
 
@@ -1261,7 +1470,7 @@ async function openFiles(): Promise<void> {
   changedHere()
   if (!last) return
   switchTo(last.id)
-  toast([files.length === 1 ? `Aperto «${files[0].name}»` : `Aperti ${files.length} file`, ...notes].join('. '))
+  toast([T.opened(files.length, files[0].name), ...notes].join('. '))
 }
 
 /**
@@ -1271,28 +1480,28 @@ async function openFiles(): Promise<void> {
  */
 async function tablesNote(f: OpenedFile): Promise<{ text: string; note?: string } | null> {
   try {
-    const { baseName, xlsxSheets } = await loadPart(() => import('./spreadsheet/xlsx'), 'la parte che apre i file Excel')
+    const { baseName, xlsxSheets } = await loadPart(() => import('./spreadsheet/xlsx'), T.excelPart)
     const block = (model: SheetModel) => sheetBlockText(serializeSheet(model))
     const title = `# ${baseName(f.name)}\n\n`
     if (!f.bytes) {
-      const { csvToSheet } = await loadPart(() => import('./spreadsheet/csv'), 'la parte che apre i file .csv')
+      const { csvToSheet } = await loadPart(() => import('./spreadsheet/csv'), T.csvPart)
       const { model, cut } = csvToSheet(f.content)
-      return { text: `${title}${block(model)}\n`, ...(cut && { note: 'Le righe in più sono rimaste fuori' }) }
+      return { text: `${title}${block(model)}\n`, ...(cut && { note: T.extraRows }) }
     }
     const sheets = xlsxSheets(f.bytes).filter((sheet) => sheet.model.cells.length)
     if (!sheets.length) {
-      toast(`«${f.name}» non ha celle da aprire.`, 'error')
+      toast(T.noCells(f.name), 'error')
       return null
     }
     const parts = sheets.map((sheet) => (sheets.length > 1 ? `## ${sheet.name}\n\n${block(sheet.model)}\n` : `${block(sheet.model)}\n`))
     const values = sheets.reduce((n, sheet) => n + sheet.valuesOnly, 0)
     const note = [
-      values ? `${values === 1 ? 'Una formula usa' : `${values} formule usano`} funzioni o fogli che Glifo non ha: ${values === 1 ? 'resta il suo valore' : 'restano i loro valori'}` : '',
-      sheets.some((sheet) => sheet.cut) ? 'Le righe in più sono rimaste fuori' : '',
+      values ? T.valuesOnly(values) : '',
+      sheets.some((sheet) => sheet.cut) ? T.extraRows : '',
     ].filter(Boolean).join('. ')
     return { text: title + parts.join('\n'), ...(note && { note }) }
   } catch (err) {
-    if (!(err instanceof PartNotLoaded)) toast(err instanceof Error && err.name === 'XlsxError' ? err.message : `«${f.name}» non si riesce ad aprire.`, 'error')
+    if (!(err instanceof PartNotLoaded)) toast(err instanceof Error && err.name === 'XlsxError' ? err.message : T.cantOpenFile(f.name), 'error')
     return null
   }
 }
@@ -1330,9 +1539,9 @@ async function saveToFile(): Promise<void> {
   if (result === null) return
   if (result) {
     fileHandles.set(active.id, result)
-    toast(`Salvato su «${result.name}»`)
+    toast(T.savedTo(result.name))
   } else {
-    toast('File .md scaricato')
+    toast(T.mdDownloaded)
   }
 }
 
@@ -1380,14 +1589,14 @@ async function restore(): Promise<void> {
       return
     }
     if (!backupNotes(data).length) {
-      toast('Il file non sembra un backup di Glifo.', 'error')
+      toast(T.notABackup, 'error')
       return
     }
     flushSave()
     // Le note che ci sono già non si raddoppiano, e le lavagne tornano sulle loro note (src/store/restore.ts).
     const result = await restoreBackup(data, { notes: store, folders, boards, newStrokeId }).catch(() => null)
     if (!result) {
-      toast('Il backup non si è potuto ripristinare: forse il browser non ha più spazio.', 'error')
+      toast(T.restoreFailed, 'error')
       return
     }
     const dictionary = (data as { dictionary?: unknown }).dictionary
@@ -1406,7 +1615,7 @@ async function restore(): Promise<void> {
 /** Sul vecchio sito: tutti gli appunti di questo browser, per il sito nuovo. */
 function relocationPackage(): Promise<RelocationPackage> {
   flushSave()
-  return buildPackage({ boards, welcome: welcomeNote, tutorialSeen: tutorialSeen() })
+  return buildPackage({ boards, welcome: WELCOME_NOTES, tutorialSeen: tutorialSeen() })
 }
 
 /** «Porta i miei appunti nel nuovo Glifo»: apre glifo.page e glieli passa. */
@@ -1424,7 +1633,7 @@ async function downloadRelocation(): Promise<void> {
 /** Sul sito nuovo: gli appunti arrivati dal vecchio, nello spazio aperto (di solito quello senza account). */
 async function receiveRelocation(pkg: RelocationPackage): Promise<RelocationResult> {
   flushSave()
-  const { result, dictionary, tutorialSeen: seen } = await importPackage(pkg, { notes: store, folders, boards, newStrokeId, welcome: welcomeNote })
+  const { result, dictionary, tutorialSeen: seen } = await importPackage(pkg, { notes: store, folders, boards, newStrokeId, welcome: WELCOME_NOTES })
   if (dictionary.length) setPersonalWords([...loadPersonalWords(), ...dictionary])
   if (seen) markTutorialSeen()
   return result
@@ -1433,7 +1642,7 @@ async function receiveRelocation(pkg: RelocationPackage): Promise<RelocationResu
 /** Gli appunti sono arrivati: la pagina si ricarica (note, account e impostazioni nuove) e poi dice cosa è arrivato. */
 function relocationReceived(result: RelocationResult | null): void {
   if (!result) {
-    toast('Gli appunti del vecchio Glifo non sono arrivati: riprova dal vecchio sito, oppure usa il backup.', 'error')
+    toast(T.relocationFailed, 'error')
     return
   }
   leaveRelocationDone(relocationMessage(result))
@@ -1465,18 +1674,18 @@ function applyAccountChange(change: LocalChange): void {
       }
     }
     if (r.conflict) {
-      toast(`«${store.meta(r.to)?.title ?? 'Una nota'}» è cambiata anche su un altro dispositivo: ora ci sono tutte e due le versioni.`)
+      toast(T.conflict(store.meta(r.to)?.title ?? T.aNote))
     }
   }
   for (const id of change.restored) {
-    toast(`«${store.meta(id)?.title ?? 'Una nota'}» era stata eliminata qui, ma su un altro dispositivo è cambiata: è tornata tra gli appunti.`)
+    toast(T.restoredFromDevice(store.meta(id)?.title ?? T.aNote))
   }
   if (change.removed.length) void boards.remove(change.removed).catch(() => {})
   if (change.removed.includes(active.id)) {
     const title = active.title
     fileHandles.delete(active.id)
     loadNote((store.list()[0] ?? store.create(STARTER, null, { local: true })).id, false)
-    toast(`«${title}» è stata eliminata su un altro dispositivo`)
+    toast(T.deletedOnOtherDevice(title))
   } else if (change.updated.includes(active.id) || change.restored.includes(active.id)) {
     // Prima di cambiare le note si è salvato quello che c'era nell'editor: qui non c'è niente da perdere.
     const note = store.get(active.id)
@@ -1524,10 +1733,10 @@ function openAccount(): void {
       flushSave()
       void sync.syncNow()
     },
-    guestCount: guestNoteCount(welcomeNote),
+    guestCount: guestNoteCount(WELCOME_NOTES),
     onAdoptGuest: () => {
       flushSave()
-      const moved = adoptGuestNotes(account.userId, welcomeNote, (from, to) => void boards.move(from, to).catch(() => {}))
+      const moved = adoptGuestNotes(account.userId, WELCOME_NOTES, (from, to) => void boards.move(from, to).catch(() => {}))
       store.reload()
       folders.reload()
       notesPanel.refresh(active.id)
@@ -1593,12 +1802,12 @@ async function startGoogleSignIn(): Promise<void> {
   await signInWithGoogle()
 }
 
-/** Cosa dire se un'operazione sull'account non riesce (`action`: «scaricare i dati»…). */
+/** Cosa dire se un'operazione sull'account non riesce (`action`: «scaricare i dati»…, nella lingua della pagina). */
 function accountProblem(err: unknown, action: string): string {
   const kind = err instanceof SyncError ? err.kind : 'server'
-  if (kind === 'offline') return `Per ${action} serve la connessione.`
-  if (kind === 'auth') return `L'accesso è scaduto: accedi di nuovo, poi riprova a ${action}.`
-  return `Non è stato possibile ${action}: riprova tra poco.`
+  if (kind === 'offline') return T.needConnection(action)
+  if (kind === 'auth') return T.signInExpired(action)
+  return T.couldNot(action)
 }
 
 /** «Scarica i miei dati»: prima si manda quello che manca, poi si scarica dal server tutto l'account. */
@@ -1613,7 +1822,7 @@ async function downloadAccountData(): Promise<void> {
     const date = new Date().toISOString().slice(0, 10)
     await downloadText(`glifo-dati-account-${date}.json`, accountDataFile(data, account, login, new Date(), links), 'application/json')
   } catch (err) {
-    toast(accountProblem(err, 'scaricare i dati'), 'error')
+    toast(accountProblem(err, T.downloadData), 'error')
   }
 }
 
@@ -1624,7 +1833,7 @@ async function deleteAccount(): Promise<void> {
   try {
     await deleteAccountOnServer(account.userId)
   } catch (err) {
-    toast(accountProblem(err, 'eliminare l\'account'), 'error')
+    toast(accountProblem(err, T.deleteTheAccount), 'error')
     return
   }
   unloading = true
@@ -1633,7 +1842,7 @@ async function deleteAccount(): Promise<void> {
   await signOut()
   setCurrentAccount(null)
   forgetAccount(account.userId)
-  leaveNotice('Account eliminato: sul server non resta niente. Qui ci sono gli appunti fuori dall\'account.')
+  leaveNotice(T.accountDeleted)
   reloadPage()
 }
 
@@ -1653,29 +1862,26 @@ async function completeSignIn(user: SignedIn): Promise<void> {
     // nuovo» e poi un altro account Google): come con «Cambia account», quello di prima resta in
     // questo browser con le sue impostazioni, e quello che non era partito parte quando si rientra.
     setAsidePrefs(account.userId)
-    leaveNotice(`Sei entrato come ${user.email}. Gli appunti di ${account.email} restano in questo browser: li ritrovi quando rientri in quell'account.`)
+    leaveNotice(T.signedInAs(user.email, account.email))
   }
   if (knowsAccount(user.userId)) {
     restorePrefs(user.userId)
   } else {
-    const count = guestNoteCount(welcomeNote)
+    const count = guestNoteCount(WELCOME_NOTES)
     const add =
       count > 0 &&
       (await confirmDialog({
-        title: 'Aggiungere gli appunti di questo browser?',
-        message:
-          count === 1
-            ? 'In questo browser c\'è un appunto. Vuoi aggiungerlo al tuo account? Così lo ritrovi anche sugli altri dispositivi.'
-            : `In questo browser ci sono ${count} appunti. Vuoi aggiungerli al tuo account? Così li ritrovi anche sugli altri dispositivi.`,
-        note: count === 1 ? 'Se lo lasci qui, lo ritrovi quando esci dall\'account.' : 'Se li lasci qui, li ritrovi quando esci dall\'account.',
-        confirmLabel: count === 1 ? 'Aggiungilo all\'account' : 'Aggiungili all\'account',
-        cancelLabel: 'No, lasciali qui',
+        title: T.addGuestTitle,
+        message: T.addGuestMessage(count),
+        note: T.addGuestNote(count),
+        confirmLabel: T.addGuestConfirm(count),
+        cancelLabel: T.leaveThemHere,
       }))
     // Da qui la pagina si ricarica: niente deve tornare tra gli appunti di questo browser.
     unloading = true
     // Le lavagne delle note che cambiano id le seguono, prima di ricaricare.
     const renamed: [string, string][] = []
-    if (add) adoptGuestNotes(user.userId, welcomeNote, (from, to) => renamed.push([from, to]))
+    if (add) adoptGuestNotes(user.userId, WELCOME_NOTES, (from, to) => renamed.push([from, to]))
     await Promise.all(renamed.map(([from, to]) => boards.move(from, to).catch(() => {})))
     // Se l'account ha già delle impostazioni valgono quelle, altrimenti vanno all'account quelle di qui.
     accountSpace(user.userId).state.update(() => ({
@@ -1697,7 +1903,7 @@ async function switchAccount(): Promise<void> {
   if (!account || !sync) return
   if (!navigator.onLine) {
     // Senza rete non si entra nell'altro account: si resta in questo.
-    toast('Per cambiare account serve la connessione.', 'error')
+    toast(T.switchNeedsConnection, 'error')
     return
   }
   flushSave()
@@ -1717,10 +1923,8 @@ async function switchAccount(): Promise<void> {
 /** Dopo «Cambia account»: la finestra per entrare, che dice cosa resta in questo browser. */
 function openSwitchLogin(left: AccountSwitch): void {
   openLoginDialog({
-    title: 'Cambia account',
-    intro:
-      `Scegli l'account in cui entrare. Gli appunti di ${left.email} restano in questo browser, con le lavagne: li ritrovi quando rientri in quell'account.` +
-      (left.pending ? ' Le modifiche che non sono ancora arrivate nell\'account partono allora.' : ''),
+    title: T.switchAccount,
+    intro: T.switchIntro(left.email, left.pending),
     sendCode: sendCodeChecked,
     verifyCode,
     withGoogle: startGoogleSignIn,
@@ -1738,18 +1942,16 @@ async function signOutAccount(): Promise<void> {
   const drawn = await boards.drawn(noteIds).catch(() => 0)
   if (pending || drawn) {
     const ok = await confirmDialog({
-      title: 'Uscire lo stesso?',
+      title: T.signOutTitle,
       message: [
-        pending
-          ? 'Alcune modifiche non sono ancora arrivate nell\'account, per esempio perché manca la connessione. Se esci ora, da questo browser si perdono.'
-          : '',
-        drawn === 1 ? 'La lavagna di una nota sta solo in questo browser, non nell\'account: uscendo si elimina.' : '',
-        drawn > 1 ? `Le lavagne di ${drawn} note stanno solo in questo browser, non nell'account: uscendo si eliminano.` : '',
+        pending ? T.signOutPending : '',
+        drawn === 1 ? T.signOutOneBoard : '',
+        drawn > 1 ? T.signOutBoards(drawn) : '',
       ]
         .filter(Boolean)
         .join(' '),
-      confirmLabel: 'Esci lo stesso',
-      cancelLabel: 'Resta',
+      confirmLabel: T.signOutAnyway,
+      cancelLabel: T.stay,
       danger: true,
     })
     if (!ok) return
@@ -1775,7 +1977,7 @@ function reloadPage(): void {
 function reloadForUpdate(): void {
   flushSave()
   if (store.get(active.id)?.content !== editor.getDoc()) {
-    toast('Prima salva la nota come file .md: il browser non ha più spazio per tenerla.', 'error')
+    toast(T.saveFirst, 'error')
     return
   }
   location.reload()
@@ -1819,16 +2021,9 @@ if (/[?&#](code|access_token|error_description)=/.test(location.search + locatio
       if (user) return void sync?.syncNow()
       // Il link vale solo nel browser in cui si è chiesta l'email (per esempio non sul
       // telefono, se l'ha chiesta il computer), e aprendolo si consuma.
-      toast(
-        viaGoogle
-          ? 'L\'accesso con Google non è stato completato: riprova da «Accedi».'
-          : hadError
-            ? 'Il link per entrare non è valido o è già stato usato: chiedi un\'altra email da «Accedi».'
-            : 'Il link va aperto nel browser in cui hai chiesto di entrare. Chiedi un\'altra email da lì: poi apri il link in quel browser, oppure copialo e incollalo nella finestra di Glifo.',
-        'error',
-      )
+      toast(viaGoogle ? T.googleIncomplete : hadError ? T.linkInvalid : T.linkOtherBrowser, 'error')
     })
-    .catch(() => toast('Non è stato possibile completare l\'accesso: riprova da «Accedi».', 'error'))
+    .catch(() => toast(T.signInFailed, 'error'))
 }
 
 // ——— Scorciatoie globali ———

@@ -13,11 +13,18 @@ import { syntaxTree } from '@codemirror/language'
 import type { Tree } from '@lezer/common'
 import { EditorSelection, type EditorState, type Range } from '@codemirror/state'
 import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from '@codemirror/view'
+import { rich, texts } from '../i18n'
 import type { FormattedResult } from '../math/format'
 import { Sheet, type EqualityCheck } from '../math/sheet'
 import { checkTitle } from '../render/check'
 import { renderTex } from '../render/katex'
 import { regionFromNode, type MathRegion } from './mathContext'
+
+const T = texts({
+  resultTitle: ['Calcolato da Glifo: Tab (o un clic) lo scrive nella formula', 'Calculated by Glifo: Tab (or a click) writes it into the formula'],
+  /** Il ✗ con il valore giusto (come nell'anteprima, src/render/check.ts). */
+  wrongIs: ['✗ fa {value}', '✗ should be {value}'],
+})
 
 export interface CalcResult {
   /** Subito dopo l'«=»: dove va il risultato. */
@@ -128,7 +135,7 @@ class ResultWidget extends WidgetType {
       span.classList.add('is-rich')
       span.setAttribute('aria-label', this.result.text)
     } else span.textContent = this.result.text
-    span.title = 'Calcolato da Glifo: Tab (o un clic) lo scrive nella formula'
+    span.title = T.resultTitle
     if (this.hint) {
       const key = document.createElement('kbd')
       key.textContent = 'Tab'
@@ -174,8 +181,8 @@ class CheckWidget extends WidgetType {
     span.className = `cm-calc-check ${this.check.ok ? 'is-ok' : 'is-wrong'}`
     span.title = checkTitle(this.check)
     span.setAttribute('aria-label', span.title)
-    span.append(this.check.ok ? '✓' : '✗')
-    if (!this.check.ok && this.check.value) span.append(' fa ', valueNode(this.check.value))
+    if (!this.check.ok && this.check.value) span.append(...rich(T.wrongIs, { value: valueNode(this.check.value) }))
+    else span.append(this.check.ok ? '✓' : '✗')
     return span
   }
 

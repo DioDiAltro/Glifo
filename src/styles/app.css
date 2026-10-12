@@ -3188,11 +3188,11 @@ kbd {
   text-wrap: balance;
 }
 
-/* Tre righe anche quando il testo è più corto: i pulsanti restano allo stesso posto. */
+/* Quattro righe anche quando il testo è più corto: i pulsanti restano allo stesso posto. */
 .tutorial-text {
   margin: 0;
   line-height: 1.6;
-  min-height: calc(3 * 1.6em);
+  min-height: calc(4 * 1.6em);
 }
 
 .tutorial-text code {
@@ -5479,7 +5479,7 @@ kbd {
     padding: 0 7px;
   }
 
-  .view-button[aria-label='Diviso'],
+  .view-button[data-view='split'],
   .view-label,
   .symbols-toggle-label,
   .panel-search-kbd {

@@ -8,7 +8,30 @@
  * cambiato, manca la rete) e propone di ricaricare, con la nota salvata prima; e quando si torna sulla
  * pagina `watchSiteUpdates` guarda se sul sito c'è una versione nuova, per dirlo prima.
  */
+import { texts } from '../i18n'
 import { dismissToast, toast } from './toast'
+
+const T = texts({
+  newVersion: [
+    'C\'è una versione nuova di Glifo: ricarica la pagina per usarla. Le note restano salvate.',
+    'There\'s a new version of Glifo: reload the page to use it. Your notes are still saved.',
+  ],
+  thisPart: ['questa parte di Glifo', 'this part of Glifo'],
+  updated: (what: string) => [
+    `Glifo è stato aggiornato mentre la pagina era aperta e non riesco più a caricare ${what}: ricarica la pagina. Le note restano salvate.`,
+    `Glifo was updated while the page was open, and I can't load ${what} anymore: reload the page. Your notes are still saved.`,
+  ],
+  offline: (what: string) => [
+    `Senza connessione non riesco a caricare ${what}: riprova quando sei di nuovo in rete.`,
+    `I can't load ${what} while offline: try again when you're back online.`,
+  ],
+  failed: (what: string) => [
+    `Non riesco a caricare ${what}: controlla la connessione e riprova, o ricarica la pagina.`,
+    `I can't load ${what}: check your connection and try again, or reload the page.`,
+  ],
+  partNotLoaded: ['Una parte di Glifo non si è caricata', 'A part of Glifo didn\'t load'],
+  reload: ['Ricarica', 'Reload'],
+})
 
 /** Gli script con cui parte una pagina (`<script type="module" src>`), con l'indirizzo completo. */
 export function entryScripts(doc: ParentNode, base: string): string[] {
@@ -28,20 +51,20 @@ export function isNewVersion(html: string, base: string, current: readonly strin
 /** Perché una parte di Glifo non si è caricata: il sito è cambiato, manca la rete o non si sa. */
 export type LoadFailure = 'aggiornato' | 'offline' | 'altro'
 
-export const UPDATE_TEXT = 'C\'è una versione nuova di Glifo: ricarica la pagina per usarla. Le note restano salvate.'
+export const UPDATE_TEXT = T.newVersion
 
 /** Il messaggio quando `what` (es. «l'editor degli schemi») non si carica, e se ricaricare la pagina aiuta. */
-export function failureNotice(why: LoadFailure, what = 'questa parte di Glifo'): { text: string; reload: boolean } {
-  if (why === 'aggiornato') return { text: `Glifo è stato aggiornato mentre la pagina era aperta e non riesco più a caricare ${what}: ricarica la pagina. Le note restano salvate.`, reload: true }
+export function failureNotice(why: LoadFailure, what = T.thisPart): { text: string; reload: boolean } {
+  if (why === 'aggiornato') return { text: T.updated(what), reload: true }
   // Senza rete ricaricare farebbe perdere la pagina (sul sito di prova non c'è il service worker).
-  if (why === 'offline') return { text: `Senza connessione non riesco a caricare ${what}: riprova quando sei di nuovo in rete.`, reload: false }
-  return { text: `Non riesco a caricare ${what}: controlla la connessione e riprova, o ricarica la pagina.`, reload: true }
+  if (why === 'offline') return { text: T.offline(what), reload: false }
+  return { text: T.failed(what), reload: true }
 }
 
 /** Una parte di Glifo che non è arrivata: l'avviso l'ha già dato `loadPart`, chi la chiedeva non ne aggiunge altri. */
 export class PartNotLoaded extends Error {
   constructor(readonly reason: unknown) {
-    super('Una parte di Glifo non si è caricata')
+    super(T.partNotLoaded)
     this.name = 'PartNotLoaded'
   }
 }
@@ -64,7 +87,7 @@ let checking = false
 
 function show(text: string, kind: 'info' | 'error', reload: boolean): void {
   if (notice) dismissToast(notice)
-  notice = toast(text, kind, reload ? { action: { label: 'Ricarica', run: () => hooks.reload() } } : {})
+  notice = toast(text, kind, reload ? { action: { label: T.reload, run: () => hooks.reload() } } : {})
 }
 
 /** La pagina sul sito è un'altra versione? Null se non si sa (senza rete, una risposta d'errore). */

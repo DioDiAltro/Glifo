@@ -1,3 +1,4 @@
+import { texts } from '../i18n'
 import { readJson, writeJson } from '../store/storage'
 import { h, icon, ICONS } from '../ui/dom'
 import { appleTouch } from './device'
@@ -59,6 +60,98 @@ import {
  * - Mouse: scrive col tasto sinistro; si sposta con la rotellina, con il tasto centrale o tenendo
  *   premuto lo spazio; Ctrl + rotellina ingrandisce.
  */
+
+const T = texts({
+  board: ['Lavagna', 'Whiteboard'],
+  boardRole: ['lavagna', 'whiteboard'],
+  stageLabel: ['Lavagna: scrivi con la penna, il dito o il mouse', 'Whiteboard: write with a pen, your finger or the mouse'],
+  tools: ['Strumenti della lavagna', 'Whiteboard tools'],
+  pen: ['Penna', 'Pen'],
+  penTitle: ['Penna (premuta di nuovo: lo spessore e le forme automatiche)', 'Pen (press again: thickness and auto shapes)'],
+  highlighter: ['Evidenziatore', 'Highlighter'],
+  highlighterTitle: ['Evidenziatore: trasparente, sotto la scrittura', 'Highlighter: transparent, under the writing'],
+  eraser: ['Gomma', 'Eraser'],
+  eraserTitle: ['Gomma (premuta di nuovo: come cancella e quanto è grande)', 'Eraser (press again: how it erases and how big it is)'],
+  select: ['Selezione', 'Select'],
+  selectTitle: [
+    'Selezione: disegna intorno a quello che vuoi prendere (premuta di nuovo: come si usa)',
+    'Select: draw around what you want to pick up (press again: how to use it)',
+  ],
+  selection: ['Selezione', 'Selection'],
+  penColor: ['Colore della penna', 'Pen color'],
+  highlighterColor: ['Colore dell\'evidenziatore', 'Highlighter color'],
+  highlighterNamed: (name: string) => [`Evidenziatore ${name.toLowerCase()}`, `${name} highlighter`],
+  all: ['Tutto', 'All'],
+  selectAll: ['Seleziona tutto (Ctrl+A)', 'Select all (Ctrl+A)'],
+  paste: ['Incolla', 'Paste'],
+  pasteKeys: ['Incolla (Ctrl+V)', 'Paste (Ctrl+V)'],
+  pasteHere: ['Incolla qui', 'Paste here'],
+  undo: ['Annulla', 'Undo'],
+  undoKeys: ['Annulla (Ctrl+Z)', 'Undo (Ctrl+Z)'],
+  redo: ['Ripeti', 'Redo'],
+  redoKeys: ['Ripeti (Ctrl+Y)', 'Redo (Ctrl+Y)'],
+  undoRedo: ['Annulla e ripeti', 'Undo and redo'],
+  clear: ['Pulisci la lavagna', 'Clear the whiteboard'],
+  clearTitle: ['Pulisci la lavagna: cancella tutto', 'Clear the whiteboard: erase everything'],
+  fullScreen: ['Schermo intero', 'Full screen'],
+  exitFullScreen: ['Esci dallo schermo intero', 'Exit full screen'],
+  touchLog: ['Registro dei tocchi', 'Touch log'],
+  touchLogRecording: ['Registro dei tocchi: sta registrando', 'Touch log: recording'],
+  resetView: ['Torna alla vista di partenza', 'Back to the starting view'],
+  zoomOut: ['Rimpicciolisci', 'Zoom out'],
+  zoomIn: ['Ingrandisci', 'Zoom in'],
+  // Come cancella la gomma (`MODE_NAMES`).
+  wherePasses: ['Dove passa', 'Partial'],
+  wholeLine: ['Linea intera', 'Whole line'],
+  eraserModeTitle: (mode: string) => [`Gomma: ${mode.toLowerCase()} (cambia come cancella)`, `Eraser: ${mode.toLowerCase()} (change how it erases)`],
+  howItErases: ['Come cancella', 'How it erases'],
+  areaHelp: ['Cancella solo dove passa; se la muovi veloce si allarga', 'Erases only where it passes; it gets bigger if you move it fast'],
+  strokeHelp: ['Tocca una linea e la cancella tutta', 'Touch a line to erase all of it'],
+  // Le misure (`SIZE_NAMES`): spessori per penna ed evidenziatore, grandezze per la gomma.
+  penFine: ['fine', 'fine'],
+  penMedium: ['media', 'medium'],
+  penThick: ['spessa', 'thick'],
+  highlighterFine: ['fine', 'fine'],
+  highlighterMedium: ['medio', 'medium'],
+  highlighterWide: ['largo', 'wide'],
+  eraserSmall: ['piccola', 'small'],
+  eraserMedium: ['media', 'medium'],
+  eraserLarge: ['grande', 'large'],
+  size: ['Grandezza', 'Size'],
+  thickness: ['Spessore', 'Thickness'],
+  eraserSize: (size: string) => [`Grandezza della gomma: ${size}`, `Eraser size: ${size}`],
+  penThickness: (size: string) => [`Spessore della penna: ${size}`, `Pen thickness: ${size}`],
+  highlighterThickness: (size: string) => [`Spessore dell'evidenziatore: ${size}`, `Highlighter thickness: ${size}`],
+  autoShapes: ['Forme automatiche', 'Auto shapes'],
+  autoShapesHelp: [
+    'Linee e figure diventano precise da sole. Anche senza: alla fine del tratto tieni ferma la penna.',
+    'Lines and shapes become precise on their own. Even without it: at the end of a stroke, hold the pen still.',
+  ],
+  highlighterHint: ['Alla fine del tratto tieni ferma la penna: la linea diventa dritta.', 'At the end of a stroke, hold the pen still: the line becomes straight.'],
+  selectHelp: [
+    'Disegna intorno a quello che vuoi prendere, o tocca una linea. Poi trascinalo per spostarlo, tira il pallino nell\'angolo per ingrandirlo e toccalo per il menu: taglia, copia, duplica, elimina e colore.',
+    'Draw around what you want to pick up, or touch a line. Then drag it to move it, pull the dot in the corner to resize it, and tap it for the menu: cut, copy, duplicate, delete and color.',
+  ],
+  // Il menu della selezione.
+  selectionCount: (n: number) => [`Selezione: ${n} ${n === 1 ? 'tratto' : 'tratti'}`, `Selection: ${n} ${n === 1 ? 'stroke' : 'strokes'}`],
+  cut: ['Taglia', 'Cut'],
+  cutKeys: ['Taglia (Ctrl+X)', 'Cut (Ctrl+X)'],
+  copy: ['Copia', 'Copy'],
+  copyKeys: ['Copia (Ctrl+C)', 'Copy (Ctrl+C)'],
+  duplicate: ['Duplica', 'Duplicate'],
+  duplicateKeys: ['Duplica (Ctrl+D)', 'Duplicate (Ctrl+D)'],
+  delete: ['Elimina', 'Delete'],
+  deleteKeys: ['Elimina (Canc)', 'Delete (Del)'],
+  color: ['Colore', 'Color'],
+  colorNamed: (name: string) => [`Colore: ${name.toLowerCase()}`, `Color: ${name.toLowerCase()}`],
+  // Gli avvisi.
+  cannotSave: [
+    'Questo browser non permette di salvare la lavagna: quello che scrivi resta finché la pagina è aperta.',
+    'This browser doesn\'t allow saving the whiteboard: what you write stays only while the page is open.',
+  ],
+  notSaved: ['La lavagna non è stata salvata: forse lo spazio del browser è finito.', 'The whiteboard wasn\'t saved: the browser may be out of space.'],
+  cannotRead: ['Non è stato possibile leggere la lavagna di questa nota.', 'Couldn\'t read this note\'s whiteboard.'],
+})
 
 export interface BoardOptions {
   store: BoardStore
@@ -175,12 +268,12 @@ type Action = DrawAction | EraseAction | PanAction | PinchAction | LassoAction |
 
 /** Le azioni, a parole: per il registro dei tocchi. */
 const ACTION_NAMES: Record<Action['kind'], string> = {
-  draw: 'un tratto',
-  erase: 'la gomma',
-  pan: 'uno spostamento',
-  pinch: 'un gesto con due dita',
-  lasso: 'il lazo',
-  move: 'la selezione che si sposta',
+  draw: 'un tratto', // non si traduce: registro dei tocchi
+  erase: 'la gomma', // non si traduce: registro dei tocchi
+  pan: 'uno spostamento', // non si traduce: registro dei tocchi
+  pinch: 'un gesto con due dita', // non si traduce: registro dei tocchi
+  lasso: 'il lazo', // non si traduce: registro dei tocchi
+  move: 'la selezione che si sposta', // non si traduce: registro dei tocchi
 }
 
 interface Finger extends Pt {
@@ -293,12 +386,12 @@ const sizeChoice = (v: unknown): SizeChoice => (v === 0 || v === 1 || v === 2 ? 
 
 /** Le misure a parole: spessori per penna ed evidenziatore, grandezze per la gomma. */
 const SIZE_NAMES: Record<SizedTool, readonly string[]> = {
-  pen: ['fine', 'media', 'spessa'],
-  highlight: ['fine', 'medio', 'largo'],
-  eraser: ['piccola', 'media', 'grande'],
+  pen: [T.penFine, T.penMedium, T.penThick],
+  highlight: [T.highlighterFine, T.highlighterMedium, T.highlighterWide],
+  eraser: [T.eraserSmall, T.eraserMedium, T.eraserLarge],
 }
 const TOOL_NAMES: Record<Tool, string> = { pen: 'penna', highlight: 'evidenziatore', eraser: 'gomma', lasso: 'selezione' }
-const MODE_NAMES: Record<EraserMode, string> = { area: 'Dove passa', stroke: 'Linea intera' }
+const MODE_NAMES: Record<EraserMode, string> = { area: T.wherePasses, stroke: T.wholeLine }
 /** Il pallino delle tre misure (in px), nel pulsante e nel menu. */
 const DOT_SIZES = [7, 11, 16] as const
 
@@ -420,8 +513,8 @@ export class Board {
         attrs: {
           tabindex: 0,
           role: 'application',
-          'aria-roledescription': 'lavagna',
-          'aria-label': 'Lavagna: scrivi con la penna, il dito o il mouse',
+          'aria-roledescription': T.boardRole,
+          'aria-label': T.stageLabel,
         },
       },
       this.canvas,
@@ -454,12 +547,12 @@ export class Board {
         h('span', { class: 'board-swatch' }),
       )
       b.title = highlightName(c)
-      b.setAttribute('aria-label', `Evidenziatore ${highlightName(c).toLowerCase()}`)
+      b.setAttribute('aria-label', T.highlighterNamed(highlightName(c)))
       this.highlightButtons.set(c, b)
       return b
     })
-    this.inkGroup = h('div', { class: 'board-colors', attrs: { role: 'group', 'aria-label': 'Colore della penna' } }, colors)
-    this.highlightGroup = h('div', { class: 'board-colors', attrs: { role: 'group', 'aria-label': 'Colore dell\'evidenziatore' } }, highlights)
+    this.inkGroup = h('div', { class: 'board-colors', attrs: { role: 'group', 'aria-label': T.penColor } }, colors)
+    this.highlightGroup = h('div', { class: 'board-colors', attrs: { role: 'group', 'aria-label': T.highlighterColor } }, highlights)
     // I pulsanti con la freccia aprono il menu: per la gomma come cancella, scritto; per ogni
     // strumento la misura, un pallino grande come il tratto.
     this.modeButton = h(
@@ -477,39 +570,39 @@ export class Board {
     // Con il lazo: seleziona tutto e incolla (senza tastiera, sull'iPad).
     const chip = (cls: string, label: string, title: string, paths: string, onClick: () => void) =>
       h('button', { class: `board-chip ${cls}`, title, attrs: { type: 'button', 'aria-label': title }, on: { click: onClick } }, icon(paths, 16), h('span', {}, label))
-    this.allButton = chip('board-all', 'Tutto', 'Seleziona tutto (Ctrl+A)', ICON.all, () => (this.selectAll(), this.focus()))
-    this.pasteButton = chip('board-paste', 'Incolla', 'Incolla (Ctrl+V)', ICON.paste, () => (this.paste(), this.focus()))
-    this.lassoGroup = h('div', { class: 'board-lasso', attrs: { role: 'group', 'aria-label': 'Selezione' } }, this.allButton, this.pasteButton)
+    this.allButton = chip('board-all', T.all, T.selectAll, ICON.all, () => (this.selectAll(), this.focus()))
+    this.pasteButton = chip('board-paste', T.paste, T.pasteKeys, ICON.paste, () => (this.paste(), this.focus()))
+    this.lassoGroup = h('div', { class: 'board-lasso', attrs: { role: 'group', 'aria-label': T.selection } }, this.allButton, this.pasteButton)
     // Uno sopra l'altro, larghi quanto il più largo: cambiando strumento la barra resta uguale e i
     // pulsanti non si spostano sotto la penna (la barra sta al centro). La misura ha la sua colonna;
     // i pulsanti del lazo prendono il posto di tutte e due.
     const options = h('div', { class: 'board-options' }, this.inkGroup, this.highlightGroup, this.modeButton, this.lassoGroup, this.sizeButton)
     // Il pulsante premuto si spegne quando non c'è più niente da annullare: il fuoco torna alla
     // lavagna, così Ctrl+Z e Ctrl+Y continuano a funzionare.
-    this.undoButton = button('Annulla', ICON.undo, () => (this.undo(), this.focus()), 'Annulla (Ctrl+Z)')
-    this.redoButton = button('Ripeti', ICON.redo, () => (this.redo(), this.focus()), 'Ripeti (Ctrl+Y)')
-    this.clearButton = button('Pulisci la lavagna', ICONS.trash, () => void this.clear(), 'Pulisci la lavagna: cancella tutto')
-    this.fullButton = button('Schermo intero', ICON.full, () => this.setFull(!this.full))
+    this.undoButton = button(T.undo, ICON.undo, () => (this.undo(), this.focus()), T.undoKeys)
+    this.redoButton = button(T.redo, ICON.redo, () => (this.redo(), this.focus()), T.redoKeys)
+    this.clearButton = button(T.clear, ICONS.trash, () => void this.clear(), T.clearTitle)
+    this.fullButton = button(T.fullScreen, ICON.full, () => this.setFull(!this.full))
     // Il registro dei tocchi sta registrando: il pallino rosso lo apre, e segna il momento.
     this.logButton = button(
-      'Registro dei tocchi',
+      T.touchLog,
       ICON.rec,
       () => {
-        touchLog.add('segno: premuto il pallino del registro')
+        touchLog.add('segno: premuto il pallino del registro') // non si traduce: registro dei tocchi
         opts.openLog?.()
       },
-      'Registro dei tocchi: sta registrando',
+      T.touchLogRecording,
     )
     this.logButton.classList.add('board-log')
     this.logButton.hidden = !touchLog.on
     touchLog.onChange(() => (this.logButton.hidden = !touchLog.on))
     const tools = h(
       'div',
-      { class: 'board-tools', attrs: { role: 'toolbar', 'aria-label': 'Strumenti della lavagna' } },
-      toolButton('pen', 'Penna', ICON.pen, 'Penna (premuta di nuovo: lo spessore e le forme automatiche)'),
-      toolButton('highlight', 'Evidenziatore', ICON.highlight, 'Evidenziatore: trasparente, sotto la scrittura'),
-      toolButton('eraser', 'Gomma', ICON.eraser, 'Gomma (premuta di nuovo: come cancella e quanto è grande)'),
-      toolButton('lasso', 'Selezione', ICON.lasso, 'Selezione: disegna intorno a quello che vuoi prendere (premuta di nuovo: come si usa)'),
+      { class: 'board-tools', attrs: { role: 'toolbar', 'aria-label': T.tools } },
+      toolButton('pen', T.pen, ICON.pen, T.penTitle),
+      toolButton('highlight', T.highlighter, ICON.highlight, T.highlighterTitle),
+      toolButton('eraser', T.eraser, ICON.eraser, T.eraserTitle),
+      toolButton('lasso', T.select, ICON.lasso, T.selectTitle),
       sep(),
       options,
       sep(),
@@ -520,13 +613,13 @@ export class Board {
     this.toolsBar = tools
     // In basso a sinistra annulla e ripeti, a destra l'ingrandimento: in alto c'è posto anche
     // quando la lavagna è stretta, e sul telefono si arriva col pollice.
-    const history = h('div', { class: 'board-history', attrs: { role: 'group', 'aria-label': 'Annulla e ripeti' } }, this.undoButton, this.redoButton)
+    const history = h('div', { class: 'board-history', attrs: { role: 'group', 'aria-label': T.undoRedo } }, this.undoButton, this.redoButton)
     this.zoomLevel = h(
       'button',
       {
         class: 'board-zoom-level',
-        title: 'Torna alla vista di partenza',
-        attrs: { type: 'button', 'aria-label': 'Torna alla vista di partenza' },
+        title: T.resetView,
+        attrs: { type: 'button', 'aria-label': T.resetView },
         on: { click: () => this.setView({ ...START }) },
       },
       '100%',
@@ -534,13 +627,13 @@ export class Board {
     const zoom = h(
       'div',
       { class: 'board-zoom' },
-      button('Rimpicciolisci', ICON.minus, () => this.zoomBy(1 / 1.25)),
+      button(T.zoomOut, ICON.minus, () => this.zoomBy(1 / 1.25)),
       this.zoomLevel,
-      button('Ingrandisci', ICONS.plus, () => this.zoomBy(1.25)),
+      button(T.zoomIn, ICONS.plus, () => this.zoomBy(1.25)),
     )
     this.el = h(
       'section',
-      { class: 'board-pane', attrs: { id: 'board-pane', 'aria-label': 'Lavagna' }, data: { strokes: '0', tool: 'pen', selected: '0' } },
+      { class: 'board-pane', attrs: { id: 'board-pane', 'aria-label': T.board }, data: { strokes: '0', tool: 'pen', selected: '0' } },
       this.stage,
       tools,
       history,
@@ -573,7 +666,7 @@ export class Board {
       (ev) => {
         if (ev.pointerType === 'touch' && !stage.contains(ev.target as Node) && this.penMode && this.penNear()) {
           this.palmTaps.add(ev.pointerId)
-          touchLog.add('→ tocco su un pulsante con la penna vicina: è la mano, non vale come clic')
+          touchLog.add('→ tocco su un pulsante con la penna vicina: è la mano, non vale come clic') // non si traduce: registro dei tocchi
         }
       },
       true,
@@ -593,7 +686,7 @@ export class Board {
         this.palmClickUntil = 0
         ev.preventDefault()
         ev.stopPropagation()
-        touchLog.add(`→ clic della mano ignorato · ${where(ev.target)}`)
+        touchLog.add(`→ clic della mano ignorato · ${where(ev.target)}`) // non si traduce: registro dei tocchi
       },
       true,
     )
@@ -605,7 +698,7 @@ export class Board {
     document.addEventListener('fullscreenchange', () => {
       if (!document.fullscreenElement && this.browserFull) {
         this.browserFull = false
-        touchLog.add('il browser è uscito dallo schermo intero: la lavagna torna com\'era')
+        touchLog.add('il browser è uscito dallo schermo intero: la lavagna torna com\'era') // non si traduce: registro dei tocchi
         this.setFull(false)
       }
     })
@@ -710,13 +803,13 @@ export class Board {
     this.full = on
     this.el.classList.toggle('is-full', on)
     document.documentElement.classList.toggle('board-full', on)
-    const label = on ? 'Esci dallo schermo intero' : 'Schermo intero'
+    const label = on ? T.exitFullScreen : T.fullScreen
     this.fullButton.replaceChildren(icon(on ? ICON.exitFull : ICON.full, 18))
     this.fullButton.title = label
     this.fullButton.setAttribute('aria-label', label)
     const root = document.documentElement
     const browser = on && !document.fullscreenElement && !appleTouch() && typeof root.requestFullscreen === 'function'
-    touchLog.add(`schermo intero della lavagna: ${on ? `sì, ${browser ? 'anche del browser' : 'senza quello del browser'}` : 'no'}`)
+    touchLog.add(`schermo intero della lavagna: ${on ? `sì, ${browser ? 'anche del browser' : 'senza quello del browser'}` : 'no'}`) // non si traduce: registro dei tocchi
     if (browser) {
       root
         .requestFullscreen({ navigationUI: 'hide' })
@@ -751,7 +844,7 @@ export class Board {
   }
 
   private setColor(color: InkColor, pickPen = true): void {
-    if (color !== this.color) touchLog.add(`colore della penna: ${inkName(color, this.theme).toLowerCase()}`)
+    if (color !== this.color) touchLog.add(`colore della penna: ${inkName(color, this.theme).toLowerCase()}`) // non si traduce: registro dei tocchi
     this.color = color
     for (const [c, b] of this.colorButtons) b.setAttribute('aria-pressed', String(c === color))
     if (pickPen) {
@@ -762,7 +855,7 @@ export class Board {
   }
 
   private setHighlightColor(color: HighlightColor, pick = true): void {
-    if (color !== this.highlightColor) touchLog.add(`colore dell'evidenziatore: ${highlightName(color).toLowerCase()}`)
+    if (color !== this.highlightColor) touchLog.add(`colore dell'evidenziatore: ${highlightName(color).toLowerCase()}`) // non si traduce: registro dei tocchi
     this.highlightColor = color
     for (const [c, b] of this.highlightButtons) b.setAttribute('aria-pressed', String(c === color))
     if (pick) {
@@ -773,7 +866,7 @@ export class Board {
   }
 
   private setSize(tool: SizedTool, choice: SizeChoice): void {
-    touchLog.add(`misura ${TOOL_NAMES[tool] === 'gomma' ? 'della gomma' : `dell${tool === 'pen' ? 'a penna' : "'evidenziatore"}`}: ${SIZE_NAMES[tool][choice]}`)
+    touchLog.add(`misura ${TOOL_NAMES[tool] === 'gomma' ? 'della gomma' : `dell${tool === 'pen' ? 'a penna' : "'evidenziatore"}`}: ${SIZE_NAMES[tool][choice]}`) // non si traduce: registro dei tocchi
     this.sizes[tool] = choice
     this.savePrefs({ sizes: { ...this.sizes } })
     this.updateToolUi()
@@ -788,7 +881,7 @@ export class Board {
   }
 
   private setEraserMode(mode: EraserMode): void {
-    touchLog.add(`gomma: ${MODE_NAMES[mode].toLowerCase()}`)
+    touchLog.add(`gomma: ${MODE_NAMES[mode].toLowerCase()}`) // non si traduce: registro dei tocchi
     this.eraserMode = mode
     this.el.dataset.eraser = mode
     this.savePrefs({ eraser: mode })
@@ -809,7 +902,7 @@ export class Board {
     this.lassoGroup.classList.toggle('is-off', tool !== 'lasso')
     this.sizeButton.classList.toggle('is-off', tool === 'lasso')
     this.modeButton.querySelector('.board-mode-label')!.textContent = MODE_NAMES[this.eraserMode]
-    this.modeButton.title = `Gomma: ${MODE_NAMES[this.eraserMode].toLowerCase()} (cambia come cancella)`
+    this.modeButton.title = T.eraserModeTitle(MODE_NAMES[this.eraserMode])
     this.modeButton.setAttribute('aria-label', this.modeButton.title)
     // Il lazo non ha misure: il pulsante (nascosto) resta com'era, così la barra non cambia.
     if (tool === 'lasso') {
@@ -817,7 +910,7 @@ export class Board {
       return
     }
     const name = SIZE_NAMES[tool][this.sizes[tool]]
-    const label = tool === 'eraser' ? `Grandezza della gomma: ${name}` : `Spessore ${tool === 'pen' ? 'della penna' : "dell'evidenziatore"}: ${name}`
+    const label = tool === 'eraser' ? T.eraserSize(name) : tool === 'pen' ? T.penThickness(name) : T.highlighterThickness(name)
     this.sizeButton.title = label
     this.sizeButton.setAttribute('aria-label', label)
     const palette = BOARD_PALETTES[this.theme]
@@ -871,13 +964,13 @@ export class Board {
     const parts: Node[] = []
     if (modes) {
       parts.push(
-        h('p', { class: 'board-menu-title' }, 'Come cancella'),
-        option(MODE_NAMES.area, this.eraserMode === 'area', () => this.setEraserMode('area'), null, 'Cancella solo dove passa; se la muovi veloce si allarga'),
-        option(MODE_NAMES.stroke, this.eraserMode === 'stroke', () => this.setEraserMode('stroke'), null, 'Tocca una linea e la cancella tutta'),
+        h('p', { class: 'board-menu-title' }, T.howItErases),
+        option(MODE_NAMES.area, this.eraserMode === 'area', () => this.setEraserMode('area'), null, T.areaHelp),
+        option(MODE_NAMES.stroke, this.eraserMode === 'stroke', () => this.setEraserMode('stroke'), null, T.strokeHelp),
       )
     }
     if (sizesToo) {
-      parts.push(h('p', { class: 'board-menu-title' }, tool === 'eraser' ? 'Grandezza' : 'Spessore'))
+      parts.push(h('p', { class: 'board-menu-title' }, tool === 'eraser' ? T.size : T.thickness))
       const sizes = h('div', { class: 'board-menu-sizes' })
       for (const choice of [0, 1, 2] as SizeChoice[]) {
         const dot = h('span', { class: 'board-size-dot' })
@@ -901,14 +994,14 @@ export class Board {
             },
           },
         },
-        h('span', { class: 'board-menu-text' }, h('strong', {}, 'Forme automatiche'), h('small', {}, 'Linee e figure diventano precise da sole. Anche senza: alla fine del tratto tieni ferma la penna.')),
+        h('span', { class: 'board-menu-text' }, h('strong', {}, T.autoShapes), h('small', {}, T.autoShapesHelp)),
         h('span', { class: 'board-switch', attrs: { 'aria-hidden': 'true' } }),
       )
       parts.push(h('span', { class: 'board-menu-sep', attrs: { 'aria-hidden': 'true' } }), toggle)
     } else if (sizesToo && tool === 'highlight') {
-      parts.push(h('p', { class: 'board-menu-hint' }, 'Alla fine del tratto tieni ferma la penna: la linea diventa dritta.'))
+      parts.push(h('p', { class: 'board-menu-hint' }, T.highlighterHint))
     }
-    const menu = h('div', { class: `board-menu${tool === 'eraser' ? ' is-eraser' : ''}`, attrs: { role: 'group', 'aria-label': tool === 'eraser' ? 'Gomma' : tool === 'pen' ? 'Penna' : 'Evidenziatore' } }, parts)
+    const menu = h('div', { class: `board-menu${tool === 'eraser' ? ' is-eraser' : ''}`, attrs: { role: 'group', 'aria-label': tool === 'eraser' ? T.eraser : tool === 'pen' ? T.pen : T.highlighter } }, parts)
     menu.style.setProperty('--swatch', this.sizeButton.style.getPropertyValue('--swatch'))
     this.showMenu(menu, anchor)
   }
@@ -930,13 +1023,9 @@ export class Board {
   private openLassoHelp(anchor: HTMLElement): void {
     const menu = h(
       'div',
-      { class: 'board-menu', attrs: { role: 'group', 'aria-label': 'Selezione' } },
-      h('p', { class: 'board-menu-title' }, 'Selezione'),
-      h(
-        'p',
-        { class: 'board-menu-hint' },
-        'Disegna intorno a quello che vuoi prendere, o tocca una linea. Poi trascinalo per spostarlo, tira il pallino nell\'angolo per ingrandirlo e toccalo per il menu: taglia, copia, duplica, elimina e colore.',
-      ),
+      { class: 'board-menu', attrs: { role: 'group', 'aria-label': T.select } },
+      h('p', { class: 'board-menu-title' }, T.select),
+      h('p', { class: 'board-menu-hint' }, T.selectHelp),
     )
     this.showMenu(menu, anchor)
   }
@@ -947,7 +1036,7 @@ export class Board {
 
   /** Che cosa fa lo strumento, per il registro dei tocchi. */
   private verb(tool: Tool): string {
-    if (tool === 'lasso') return this.selection ? 'seleziona (c\'è una selezione)' : 'seleziona'
+    if (tool === 'lasso') return this.selection ? 'seleziona (c\'è una selezione)' : 'seleziona' // non si traduce: registro dei tocchi
     return tool === 'pen' ? 'scrive' : tool === 'highlight' ? 'evidenzia' : `cancella (${MODE_NAMES[this.eraserMode].toLowerCase()})`
   }
 
@@ -962,11 +1051,11 @@ export class Board {
     this.penMode = true
     this.el.dataset.pen = 'true'
     this.savePrefs({ pen: true })
-    touchLog.add('→ prima penna su questo dispositivo: da ora un dito solo non fa niente')
+    touchLog.add('→ prima penna su questo dispositivo: da ora un dito solo non fa niente') // non si traduce: registro dei tocchi
     // Il tratto fatto col dito un attimo prima era il palmo, appoggiato prima della penna.
     const last = this.lastTouchStep
     if (last && performance.now() - last.at < 900 && this.undoStack[this.undoStack.length - 1] === last.step) {
-      touchLog.add('→ tolto il tratto fatto un attimo prima col dito: era il palmo')
+      touchLog.add('→ tolto il tratto fatto un attimo prima col dito: era il palmo') // non si traduce: registro dei tocchi
       this.undoStack.pop()
       // Diventato una figura: anche il passo prima, quello del tratto a mano, se ne va.
       if (last.step.pair && this.undoStack[this.undoStack.length - 1]?.added[0] === last.step.removed[0]) this.undoStack.pop()
@@ -1007,16 +1096,16 @@ export class Board {
       this.rememberPen()
       // Le dita e il palmo appoggiati: non scrivono e non spostano niente finché non si alzano.
       this.dropTouches()
-      if (this.action) return void touchLog.add(`→ penna ignorata: c'è già ${ACTION_NAMES[this.action.kind]}`)
+      if (this.action) return void touchLog.add(`→ penna ignorata: c'è già ${ACTION_NAMES[this.action.kind]}`) // non si traduce: registro dei tocchi
       this.capture(ev)
       const tool = penErases(ev) ? 'eraser' : this.tool
-      touchLog.add(`→ penna: ${this.verb(tool)}${penErases(ev) ? ' (gomma della penna)' : ''}`)
+      touchLog.add(`→ penna: ${this.verb(tool)}${penErases(ev) ? ' (gomma della penna)' : ''}`) // non si traduce: registro dei tocchi
       return this.startTool(ev, pos, tool)
     }
-    if (this.action) return void touchLog.add(`→ ${ev.pointerType} ignorato: c'è già ${ACTION_NAMES[this.action.kind]}`)
+    if (this.action) return void touchLog.add(`→ ${ev.pointerType} ignorato: c'è già ${ACTION_NAMES[this.action.kind]}`) // non si traduce: registro dei tocchi
     if (ev.button === 1 || (ev.button === 0 && this.spaceDown)) {
       this.capture(ev)
-      touchLog.add(`→ ${ev.pointerType}: sposta la lavagna`)
+      touchLog.add(`→ ${ev.pointerType}: sposta la lavagna`) // non si traduce: registro dei tocchi
       this.startPan(ev.pointerId, ev.pointerType, pos)
     } else if (ev.button === 0) {
       this.capture(ev)
@@ -1030,23 +1119,23 @@ export class Board {
     const palm = this.penMode && this.penNear()
     this.touches.set(ev.pointerId, { ...pos, ignored: palm })
     if (palm) {
-      const why = this.action?.type === 'pen' ? 'la penna sta scrivendo' : `la penna si è alzata ${Math.round(performance.now() - this.lastPen)} ms fa`
-      return void touchLog.add(`→ mano (${why}): non conta finché non si alza`)
+      const why = this.action?.type === 'pen' ? 'la penna sta scrivendo' : `la penna si è alzata ${Math.round(performance.now() - this.lastPen)} ms fa` // non si traduce: registro dei tocchi
+      return void touchLog.add(`→ mano (${why}): non conta finché non si alza`) // non si traduce: registro dei tocchi
     }
     const active = [...this.touches].filter(([, t]) => !t.ignored).map(([id]) => id)
     const a = this.action
     if (active.length === 1) {
-      if (a) return void touchLog.add(`→ dito ignorato: c'è già ${ACTION_NAMES[a.kind]}`)
+      if (a) return void touchLog.add(`→ dito ignorato: c'è già ${ACTION_NAMES[a.kind]}`) // non si traduce: registro dei tocchi
       this.capture(ev)
       // Con la penna un dito solo non fa niente: è quasi sempre il palmo. Si sposta con due dita.
-      if (this.penMode) return void touchLog.add('→ un dito solo con la penna: non fa niente')
-      touchLog.add(`→ un dito: ${this.verb(this.tool)}`)
+      if (this.penMode) return void touchLog.add('→ un dito solo con la penna: non fa niente') // non si traduce: registro dei tocchi
+      touchLog.add(`→ un dito: ${this.verb(this.tool)}`) // non si traduce: registro dei tocchi
       this.startTool(ev, pos, this.tool)
     } else if (active.length === 2) {
-      if (a && a.type !== 'touch') return void touchLog.add(`→ secondo dito ignorato: c'è già ${ACTION_NAMES[a.kind]} (${a.type})`)
+      if (a && a.type !== 'touch') return void touchLog.add(`→ secondo dito ignorato: c'è già ${ACTION_NAMES[a.kind]} (${a.type})`) // non si traduce: registro dei tocchi
       // Il secondo dito: si sposta e si ingrandisce. Il tratto appena cominciato col primo era l'inizio del gesto.
       const young = a?.kind === 'draw' && !(performance.now() - a.started > YOUNG.ms || a.travel > YOUNG.px)
-      touchLog.add(`→ due dita: spostano e ingrandiscono${young ? ' (il tratto appena cominciato col primo dito era l\'inizio del gesto: tolto)' : ''}`)
+      touchLog.add(`→ due dita: spostano e ingrandiscono${young ? ' (il tratto appena cominciato col primo dito era l\'inizio del gesto: tolto)' : ''}`) // non si traduce: registro dei tocchi
       if (a?.kind === 'draw') this.finishDraw(a, !young)
       else if (a?.kind === 'erase') this.finishErase(a)
       else if (a?.kind === 'pan') this.finishPan()
@@ -1056,7 +1145,7 @@ export class Board {
       this.startPinch(active as [number, number])
     } else {
       this.touches.get(ev.pointerId)!.ignored = true
-      touchLog.add('→ terzo dito: non conta')
+      touchLog.add('→ terzo dito: non conta') // non si traduce: registro dei tocchi
     }
   }
 
@@ -1119,7 +1208,7 @@ export class Board {
     // stava facendo si annulla, come se non fosse successo.
     const dropped = cancelled && a.type === 'touch'
     if (dropped && (a.kind === 'pinch' ? a.pointers.includes(ev.pointerId) : a.pointer === ev.pointerId))
-      touchLog.add(`→ tocco annullato dal sistema: ${ACTION_NAMES[a.kind]} annullato, la lavagna torna com'era`)
+      touchLog.add(`→ tocco annullato dal sistema: ${ACTION_NAMES[a.kind]} annullato, la lavagna torna com'era`) // non si traduce: registro dei tocchi
     if (a.kind === 'pinch') {
       if (!a.pointers.includes(ev.pointerId)) return
       if (dropped) return this.cancelAction()
@@ -1152,7 +1241,7 @@ export class Board {
     const fingers = [...this.touches.values()].filter((t) => !t.ignored).length
     for (const t of this.touches.values()) t.ignored = true
     const busy = this.action?.type === 'touch' ? this.action.kind : null
-    if (fingers || busy) touchLog.add(`→ arriva la penna: ${fingers} ${fingers === 1 ? 'dito appoggiato non conta' : 'dita appoggiate non contano'} più${busy ? `, e ${ACTION_NAMES[busy]} si annulla` : ''}`)
+    if (fingers || busy) touchLog.add(`→ arriva la penna: ${fingers} ${fingers === 1 ? 'dito appoggiato non conta' : 'dita appoggiate non contano'} più${busy ? `, e ${ACTION_NAMES[busy]} si annulla` : ''}`) // non si traduce: registro dei tocchi
     if (busy) this.cancelAction()
   }
 
@@ -1235,7 +1324,7 @@ export class Board {
   private holdShape(a: DrawAction): void {
     if (this.action !== a || a.snapped) return
     const shape = recognize(pointsOf(a.stroke), { unit: 1 / this.view.zoom })
-    if (!shape) return void touchLog.add('→ punta ferma: il tratto non somiglia a una figura')
+    if (!shape) return void touchLog.add('→ punta ferma: il tratto non somiglia a una figura') // non si traduce: registro dei tocchi
     const pts = a.stroke.points
     const anchor = { x: pts[pts.length - 3], y: pts[pts.length - 2] }
     a.snapped = { base: shape, anchor, shape }
@@ -1342,7 +1431,7 @@ export class Board {
     if (a.type === 'touch') this.cursor = null
     const removed = [...a.removed.values()]
     const added = [...a.added.values()]
-    touchLog.add(removed.length ? `gomma: ${removed.length} ${removed.length === 1 ? 'tratto toccato' : 'tratti toccati'}, ${added.length} ${added.length === 1 ? 'pezzo rimasto' : 'pezzi rimasti'}` : 'gomma: niente da cancellare')
+    touchLog.add(removed.length ? `gomma: ${removed.length} ${removed.length === 1 ? 'tratto toccato' : 'tratti toccati'}, ${added.length} ${added.length === 1 ? 'pezzo rimasto' : 'pezzi rimasti'}` : 'gomma: niente da cancellare') // non si traduce: registro dei tocchi
     if (removed.length || added.length) {
       this.record({ removed, added })
       this.persist({ put: added, remove: removed.map((s) => s.id) })
@@ -1442,11 +1531,11 @@ export class Board {
         limits: [Math.min(1, 16 / Math.max(1, side)), Math.max(1, Math.min(20, MAX_SIZE / thickest))],
         menuWasOpen,
       }
-      touchLog.add(hit === 'handle' ? '→ sul pallino della selezione: la ingrandisce' : '→ sulla selezione: la sposta (o, toccandola, il menu)')
+      touchLog.add(hit === 'handle' ? '→ sul pallino della selezione: la ingrandisce' : '→ sulla selezione: la sposta (o, toccandola, il menu)') // non si traduce: registro dei tocchi
       return
     }
     const cleared = !!sel
-    if (sel) touchLog.add('→ fuori dalla selezione: la toglie')
+    if (sel) touchLog.add('→ fuori dalla selezione: la toglie') // non si traduce: registro dei tocchi
     this.clearSelection()
     this.action = { kind: 'lasso', pointer: ev.pointerId, type: ev.pointerType, points: [this.world(pos)], last: pos, travel: 0, cleared }
     this.scheduleLive()
@@ -1468,15 +1557,15 @@ export class Board {
       const reach = (a.type === 'mouse' ? TAP_REACH.mouse : TAP_REACH.touch) / this.view.zoom
       const hit = strokeAt(this.sorted(), p, reach, (s) => this.boxOf(s))
       if (hit) {
-        touchLog.add('lazo: toccata una linea, selezionata')
+        touchLog.add('lazo: toccata una linea, selezionata') // non si traduce: registro dei tocchi
         this.select([hit])
       } else if (clipboard && !a.cleared) {
-        touchLog.add('lazo: toccato un punto vuoto, il menu per incollare')
+        touchLog.add('lazo: toccato un punto vuoto, il menu per incollare') // non si traduce: registro dei tocchi
         this.openPasteMenu(p)
-      } else touchLog.add('lazo: toccato un punto vuoto')
+      } else touchLog.add('lazo: toccato un punto vuoto') // non si traduce: registro dei tocchi
     } else {
       const got = lassoed(this.sorted(), a.points, (s) => this.boxOf(s))
-      touchLog.add(`lazo: ${got.length ? `${got.length} ${got.length === 1 ? 'tratto preso' : 'tratti presi'}` : 'niente dentro'}`)
+      touchLog.add(`lazo: ${got.length ? `${got.length} ${got.length === 1 ? 'tratto preso' : 'tratti presi'}` : 'niente dentro'}`) // non si traduce: registro dei tocchi
       this.select(got)
     }
     this.renderLive()
@@ -1512,13 +1601,13 @@ export class Board {
     if (!a.moved || (!t.dx && !t.dy && t.scale === 1)) {
       // Un tocco sulla selezione: apre o chiude il menu.
       if (a.moved) this.render()
-      else touchLog.add(`selezione: toccata, menu ${a.menuWasOpen ? 'chiuso' : 'aperto'}`)
+      else touchLog.add(`selezione: toccata, menu ${a.menuWasOpen ? 'chiuso' : 'aperto'}`) // non si traduce: registro dei tocchi
       if (!a.menuWasOpen || a.moved) this.openSelMenu()
       this.renderLive()
       return this.ended()
     }
     const before = this.selected()
-    touchLog.add(a.mode === 'move' ? `selezione: spostata di ${Math.round(t.dx)}, ${Math.round(t.dy)}` : `selezione: ingrandita al ${Math.round(t.scale * 100)}%`)
+    touchLog.add(a.mode === 'move' ? `selezione: spostata di ${Math.round(t.dx)}, ${Math.round(t.dy)}` : `selezione: ingrandita al ${Math.round(t.scale * 100)}%`) // non si traduce: registro dei tocchi
     this.replaceSelected(before, transformStrokes(before, t))
     this.ended()
   }
@@ -1541,7 +1630,7 @@ export class Board {
     const list = this.selected()
     if (!list.length || this.action) return
     const ids = list.map((s) => s.id)
-    touchLog.add(`selezione: ${verb} (${list.length} ${list.length === 1 ? 'tratto' : 'tratti'})`)
+    touchLog.add(`selezione: ${verb} (${list.length} ${list.length === 1 ? 'tratto' : 'tratti'})`) // non si traduce: registro dei tocchi
     this.record({ removed: list, added: [], selection: { before: ids, after: [] } })
     this.removeStrokes(ids)
     this.persist({ remove: ids })
@@ -1556,7 +1645,7 @@ export class Board {
     clipboard = { strokes: list.map((s) => ({ ...s, points: s.points.slice() })), box: this.selection.box, shift: cut ? 0 : 1 }
     if (cut) this.deleteSelection('tagliata')
     else {
-      touchLog.add(`selezione: copiata (${list.length} ${list.length === 1 ? 'tratto' : 'tratti'})`)
+      touchLog.add(`selezione: copiata (${list.length} ${list.length === 1 ? 'tratto' : 'tratti'})`) // non si traduce: registro dei tocchi
       this.closeSelMenu()
     }
     this.updateState()
@@ -1589,7 +1678,7 @@ export class Board {
     const list = this.selected()
     if (!list.length || this.action) return
     const d = COPY_SHIFT / this.view.zoom
-    touchLog.add(`selezione: duplicata (${list.length} ${list.length === 1 ? 'tratto' : 'tratti'})`)
+    touchLog.add(`selezione: duplicata (${list.length} ${list.length === 1 ? 'tratto' : 'tratti'})`) // non si traduce: registro dei tocchi
     this.addCopies(copyStrokes(list, d, d, Date.now()))
   }
 
@@ -1609,14 +1698,14 @@ export class Board {
     if (!list.length || this.action) return
     const { before, after } = recolor(list, color, highlight)
     if (!before.length) return
-    touchLog.add(`selezione: colore ${(highlight ? highlightName(color as HighlightColor) : inkName(color as InkColor, this.theme)).toLowerCase()} a ${before.length} ${before.length === 1 ? 'tratto' : 'tratti'}`)
+    touchLog.add(`selezione: colore ${(highlight ? highlightName(color as HighlightColor) : inkName(color as InkColor, this.theme)).toLowerCase()} a ${before.length} ${before.length === 1 ? 'tratto' : 'tratti'}`) // non si traduce: registro dei tocchi
     this.replaceSelected(before, after, list.filter((s) => !before.includes(s)))
   }
 
   private selectAll(): void {
     if (this.action || !this.strokes.size) return
     if (this.tool !== 'lasso') this.setTool('lasso')
-    touchLog.add(`selezione: tutto (${this.strokes.size} tratti)`)
+    touchLog.add(`selezione: tutto (${this.strokes.size} tratti)`) // non si traduce: registro dei tocchi
     this.select(this.sorted())
   }
 
@@ -1664,7 +1753,7 @@ export class Board {
         {
           class: `board-color${highlight ? ' is-highlight' : ''}`,
           title: name,
-          attrs: { type: 'button', 'aria-label': `Colore: ${name.toLowerCase()}`, 'aria-pressed': String(c === current) },
+          attrs: { type: 'button', 'aria-label': T.colorNamed(name), 'aria-pressed': String(c === current) },
           data: { recolor: c },
           on: { click: run(() => this.recolorSelection(c, highlight)) },
         },
@@ -1675,12 +1764,12 @@ export class Board {
     })
     const menu = h(
       'div',
-      { class: 'board-sel-menu', attrs: { role: 'toolbar', 'aria-label': `Selezione: ${list.length} ${list.length === 1 ? 'tratto' : 'tratti'}` }, data: { kind: 'selection' } },
-      item('Taglia', 'Taglia (Ctrl+X)', () => this.copySelection(true)),
-      item('Copia', 'Copia (Ctrl+C)', () => this.copySelection()),
-      item('Duplica', 'Duplica (Ctrl+D)', () => this.duplicate()),
-      item('Elimina', 'Elimina (Canc)', () => this.deleteSelection(), ' is-danger'),
-      h('div', { class: 'board-sel-colors', attrs: { role: 'group', 'aria-label': 'Colore' } }, colors),
+      { class: 'board-sel-menu', attrs: { role: 'toolbar', 'aria-label': T.selectionCount(list.length) }, data: { kind: 'selection' } },
+      item(T.cut, T.cutKeys, () => this.copySelection(true)),
+      item(T.copy, T.copyKeys, () => this.copySelection()),
+      item(T.duplicate, T.duplicateKeys, () => this.duplicate()),
+      item(T.delete, T.deleteKeys, () => this.deleteSelection(), ' is-danger'),
+      h('div', { class: 'board-sel-colors', attrs: { role: 'group', 'aria-label': T.color } }, colors),
     )
     this.el.append(menu)
     this.selMenu = menu
@@ -1694,7 +1783,7 @@ export class Board {
       'button',
       {
         class: 'board-sel-item',
-        title: 'Incolla qui',
+        title: T.pasteHere,
         attrs: { type: 'button' },
         on: {
           click: () => {
@@ -1704,9 +1793,9 @@ export class Board {
           },
         },
       },
-      'Incolla',
+      T.paste,
     )
-    const menu = h('div', { class: 'board-sel-menu', attrs: { role: 'toolbar', 'aria-label': 'Incolla' }, data: { kind: 'paste' } }, button)
+    const menu = h('div', { class: 'board-sel-menu', attrs: { role: 'toolbar', 'aria-label': T.paste }, data: { kind: 'paste' } }, button)
     this.el.append(menu)
     this.selMenu = menu
     this.selMenuAt = at
@@ -1753,7 +1842,7 @@ export class Board {
 
   private finishPan(): void {
     this.action = null
-    touchLog.add(`vista: ingrandita al ${Math.round(this.view.zoom * 100)}%`)
+    touchLog.add(`vista: ingrandita al ${Math.round(this.view.zoom * 100)}%`) // non si traduce: registro dei tocchi
     this.stage.classList.remove('is-panning')
     this.saveViewSoon()
     this.ended()
@@ -1780,7 +1869,7 @@ export class Board {
     const dist = Math.max(1, Math.hypot(p.x - q.x, p.y - q.y))
     // Finché le dita si muovono appena la lavagna sta ferma: la mano che si posa trema un po'.
     if (!a.moving && Math.hypot(mid.x - a.mid.x, mid.y - a.mid.y) < SLOP && Math.abs(dist - a.dist) < SLOP) return
-    if (!a.moving) touchLog.add('→ le dita si muovono: la lavagna le segue')
+    if (!a.moving) touchLog.add('→ le dita si muovono: la lavagna le segue') // non si traduce: registro dei tocchi
     a.moving = true
     const zoom = clampZoom((a.before.zoom * dist) / a.dist)
     // Il punto della lavagna che era sotto le dita resta sotto le dita.
@@ -1791,7 +1880,7 @@ export class Board {
 
   private finishPinch(): void {
     this.action = null
-    touchLog.add(`vista: ingrandita al ${Math.round(this.view.zoom * 100)}%`)
+    touchLog.add(`vista: ingrandita al ${Math.round(this.view.zoom * 100)}%`) // non si traduce: registro dei tocchi
     this.saveViewSoon()
     this.ended()
   }
@@ -2047,8 +2136,8 @@ export class Board {
   private persist(change: BoardChange): void {
     const note = this.note
     if (!note) return
-    if (!this.persistent) this.warnOnce('memoria', 'Questo browser non permette di salvare la lavagna: quello che scrivi resta finché la pagina è aperta.')
-    void this.opts.store.change(note, change).catch(() => this.warnOnce('spazio', 'La lavagna non è stata salvata: forse lo spazio del browser è finito.'))
+    if (!this.persistent) this.warnOnce('memoria', T.cannotSave)
+    void this.opts.store.change(note, change).catch(() => this.warnOnce('spazio', T.notSaved))
   }
 
   private warnOnce(key: string, message: string): void {
@@ -2103,7 +2192,7 @@ export class Board {
       .catch(() => {
         if (token !== this.loadToken) return
         this.el.dataset.loaded = 'true'
-        this.warnOnce('lettura', 'Non è stato possibile leggere la lavagna di questa nota.')
+        this.warnOnce('lettura', T.cannotRead)
       })
   }
 

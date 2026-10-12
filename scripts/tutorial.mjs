@@ -110,6 +110,46 @@ async function startNote(page, text, cursorAt = 'end') {
   await page.waitForTimeout(500)
 }
 
+/**
+ * Il worker di WebLLM finto per la pagina di «Spiega con l'AI» (parla come src/ai/llmWorker.ts, vedi
+ * anche quello di scripts/smoke-test.mjs): chiede al motore la primitiva e poi spiega l'integrale in
+ * quattro passaggi giusti, che Glifo segna con ✓, scrivendoli a pezzi come un modello vero.
+ */
+function tutorialModel() {
+  const call = '<tool_call>{"name": "primitiva", "arguments": {"funzione": "x^2", "variabile": "x"}}</tool_call>'
+  const steps = String.raw`1. Per la regola della potenza una primitiva di $x^2$ è $\frac{x^3}{3}$: si alza l'esponente di uno e si divide per il nuovo esponente. $$\int x^{2} \, dx = \frac{x^{3}}{3} + c$$
+2. Per il teorema fondamentale del calcolo integrale basta calcolare la primitiva agli estremi. $$\int_{0}^{1} x^{2} \, dx = \left[ \frac{x^{3}}{3} \right]_{0}^{1}$$
+3. Sostituisco gli estremi, prima 1 e poi 0, e faccio la differenza. $$\left[ \frac{x^{3}}{3} \right]_{0}^{1} = \frac{1^{3}}{3} - \frac{0^{3}}{3}$$
+4. Quindi l'area sotto la parabola tra 0 e 1 è un terzo. $$\frac{1^{3}}{3} - \frac{0^{3}}{3} = \frac{1}{3}$$`
+  self.addEventListener('message', (ev) => {
+    const msg = ev.data
+    if (msg.type === 'load') {
+      self.postMessage({ id: msg.id, type: 'progress', progress: 0.6, text: 'Fetching param cache[3/5]' })
+      setTimeout(() => self.postMessage({ id: msg.id, type: 'done', value: `${msg.model}-q4f16_1-MLC` }), 400)
+    } else if (msg.type === 'chat') {
+      const reply = msg.messages.some((m) => m.role === 'user' && m.content.includes('<tool_response>')) ? steps : call
+      let at = 0
+      const next = () => {
+        if (at >= reply.length) return self.postMessage({ id: msg.id, type: 'done', value: reply })
+        self.postMessage({ id: msg.id, type: 'delta', text: reply.slice(at, at + 5) })
+        at += 5
+        setTimeout(next, 16)
+      }
+      setTimeout(next, 300)
+    } else if (msg.type === 'remove') self.postMessage({ id: msg.id, type: 'done' })
+  })
+}
+
+/** Il centro di una forma dello schema, dal suo testo. */
+async function schemaShape(page, text) {
+  return page.evaluate((t) => {
+    const label = [...document.querySelectorAll('.schema-canvas foreignObject > div > div > div')].find((d) => d.textContent === t)
+    if (!label) return null
+    const r = label.getBoundingClientRect()
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 }
+  }, text)
+}
+
 const SCENES = {
   // Benvenuto: si scrive una nota e accanto si vede come viene.
   scrivere: {
@@ -175,8 +215,8 @@ const SCENES = {
       await page.waitForTimeout(300)
     },
   },
-  // I calcoli e i grafici: il risultato dopo l'uguale, Tab per scriverlo (✓), il controllo di un risultato
-  // scritto sbagliato (✗), il pulsante del grafico.
+  // I calcoli: il risultato dopo l'uguale, Tab per scriverlo (✓), il controllo di un risultato scritto
+  // sbagliato (✗) e un limite.
   calcoli: {
     settings: { view: 'split' },
     async setup(page) {
@@ -199,10 +239,162 @@ const SCENES = {
       await page.waitForTimeout(1400)
       await page.keyboard.press('Enter')
       await page.keyboard.press('Enter')
-      await type(page, '$f(x) = x^2 - 2x')
+      await type(page, '$\\lim_{x \\to 0} \\frac{\\sin x}{x} =')
+      await page.waitForSelector('.cm-calc-result', { timeout: 5000 })
+      await page.waitForTimeout(900)
+      await page.keyboard.press('Tab')
+      await page.waitForTimeout(600)
+    },
+  },
+  // I grafici: il pulsante con gli assi disegna la funzione su cui c'è il cursore; nel blocco si aggiunge
+  // una parabola con un numero da scegliere, il pulsante sotto il grafico ne fa lo slider e lo si trascina;
+  // poi la freccia ↑ porta il grafico sopra la formula.
+  grafici: {
+    settings: { view: 'split' },
+    async setup(page) {
+      await startNote(page, '## Parabole\n\nLa parabola $f(x) = x^2 - 2x$ ha il vertice in $(1, -1)$.\n')
+      // Il cursore dentro la prima formula.
+      await page.keyboard.press('Control+Home')
+      await page.keyboard.press('ArrowDown')
+      await page.keyboard.press('ArrowDown')
+      await page.keyboard.press('Home')
+      for (let i = 0; i < 'La parabola $f(x) = x'.length; i++) await page.keyboard.press('ArrowRight')
+      await page.mouse.move(470, 330)
+    },
+    async play(page) {
+      await clickOn(page, '.editor-toolbar button[aria-label^="Grafico di una funzione"]')
+      await page.waitForSelector('.preview-pane .graph-block svg', { timeout: 5000 })
+      await page.waitForTimeout(1200)
+      // Nel blocco, sotto la funzione: una parabola con un numero da scegliere.
+      await page.keyboard.press('ArrowUp')
+      await page.keyboard.press('ArrowUp')
+      await page.keyboard.press('End')
+      await page.keyboard.press('Enter')
+      await type(page, 'y = a x^2')
+      await page.waitForSelector('.preview-pane .graph-add-slider', { timeout: 5000 })
+      await page.waitForTimeout(700)
+      await clickOn(page, '.preview-pane .graph-add-slider')
+      await page.waitForSelector('.preview-pane .graph-slider-input', { timeout: 5000 })
+      await page.waitForTimeout(600)
+      // Lo slider: da 1 verso 3, piano, e poi indietro fino a mezzo.
+      const box = await page.locator('.preview-pane .graph-slider-input').first().boundingBox()
+      const at = (v) => box.x + 8 + ((v + 10) / 20) * (box.width - 16)
+      const y = box.y + box.height / 2
+      await page.mouse.move(at(1), y, { steps: 20 })
+      await page.waitForTimeout(300)
+      await page.mouse.down()
+      await page.mouse.move(at(3), y, { steps: 30 })
       await page.waitForTimeout(400)
-      await clickOn(page, '.editor-toolbar button[aria-label^="Grafico"]')
-      await page.waitForSelector('.preview-pane .graph-block svg', { timeout: 5000 }).catch(() => {})
+      await page.mouse.move(at(0.5), y, { steps: 30 })
+      await page.mouse.up()
+      await page.waitForTimeout(900)
+      // La freccia ↑: il grafico va sopra la formula.
+      await clickOn(page, '.preview-pane .graph-block .block-move[data-dir="up"]')
+      await page.waitForTimeout(900)
+    },
+  },
+  // Le tabelle: dal menu «Tabella» quella con le formule; si scrivono le spese (sotto l'intestazione) e il
+  // totale con SOMMA, e con «Fatto» la tabella è nella nota.
+  tabelle: {
+    settings: { view: 'split' },
+    async setup(page) {
+      await startNote(page, '## Spese del mese\n\n')
+      await page.mouse.move(470, 330)
+    },
+    async play(page) {
+      await clickOn(page, '.editor-toolbar button.tool-more[aria-label="Tabella"]')
+      await page.waitForTimeout(500)
+      await clickOn(page, page.locator('.tool-menu-item', { hasText: 'Tabella con le formule' }))
+      await page.waitForSelector('dialog.sheet-editor[open]')
+      await page.waitForTimeout(700)
+      await clickOn(page, '#sheet-0-0', 250)
+      // La prima riga è l'intestazione.
+      const rows = [
+        ['Spesa', 'Euro'],
+        ['Libri', '35'],
+        ['Quaderni', '12'],
+        ['Penne', '6'],
+        ['Totale', '=SOMMA(B2:B4)'],
+      ]
+      for (const [what, amount] of rows) {
+        await type(page, what)
+        await page.keyboard.press('Tab')
+        await type(page, amount)
+        await page.keyboard.press('Enter')
+        await page.waitForTimeout(250)
+      }
+      await page.waitForTimeout(1200)
+      await clickOn(page, 'dialog.sheet-editor .btn-primary')
+      await page.waitForSelector('.preview-pane .sheet-table', { timeout: 5000 })
+      await page.waitForTimeout(600)
+    },
+  },
+  // Gli schemi: l'editor come draw.io, due forme dalla tavolozza, la freccia blu che le collega e una
+  // terza forma collegata con un clic; con «Fatto» lo schema è nella nota.
+  schemi: {
+    settings: { view: 'split' },
+    async setup(page) {
+      await startNote(page, '## Come studio un capitolo\n\n')
+      await page.mouse.move(470, 330)
+    },
+    async play(page) {
+      await clickOn(page, '.editor-toolbar button[aria-label^="Schema"]')
+      await page.waitForSelector('dialog.schema-editor[open]')
+      await page.waitForTimeout(800)
+      await clickOn(page, '.schema-shape[data-shape="rounded"]')
+      await type(page, 'Leggo il capitolo')
+      await page.keyboard.press('Escape')
+      await page.waitForTimeout(300)
+      await clickOn(page, '.schema-shape[data-shape="rhombus"]')
+      await type(page, 'Ho capito?')
+      await page.keyboard.press('Escape')
+      await page.waitForTimeout(400)
+      // La freccia blu sotto la prima forma, trascinata sul rombo.
+      const first = await schemaShape(page, 'Leggo il capitolo')
+      const second = await schemaShape(page, 'Ho capito?')
+      await page.mouse.move(first.x, first.y, { steps: 25 })
+      await page.waitForTimeout(400)
+      const down = await centerOf(page, '.schema-arrow-down')
+      await page.mouse.move(down.x, down.y, { steps: 10 })
+      await page.mouse.down()
+      await page.mouse.move(second.x, second.y, { steps: 25 })
+      await page.mouse.up()
+      await page.waitForTimeout(500)
+      // Un clic sulla freccia a destra del rombo: una forma collegata.
+      await page.mouse.move(second.x, second.y, { steps: 20 })
+      await page.waitForTimeout(400)
+      await clickOn(page, '.schema-arrow-right', 250)
+      await type(page, 'Rifaccio gli esercizi')
+      await page.keyboard.press('Escape')
+      await page.waitForTimeout(1000)
+      await clickOn(page, page.locator('dialog.schema-editor .btn-primary', { hasText: 'Fatto' }))
+      await page.waitForSelector('dialog.schema-editor', { state: 'detached' })
+      await page.waitForTimeout(800)
+    },
+  },
+  // «Spiega con l'AI»: il pulsante ✨ apre l'elenco di cosa si può spiegare nella nota; scelto l'integrale,
+  // il modello (qui finto, vedi tutorialModel) chiede la primitiva e lo spiega, e Glifo controlla i passaggi.
+  spiegami: {
+    settings: { view: 'editor', symbolsOpen: false },
+    model: tutorialModel,
+    async setup(page) {
+      await startNote(page, '## Integrali\n\nL\'area sotto la parabola $y = x^2$ tra 0 e 1:\n\n$$\\int_0^1 x^2 \\, dx = \\frac{1}{3}$$\n')
+      await page.mouse.move(470, 330)
+    },
+    async play(page) {
+      await clickOn(page, '.ai-toggle')
+      await page.waitForSelector('.ai-subject')
+      await page.waitForTimeout(900)
+      await clickOn(page, '.ai-subject[data-kind="conto"]')
+      await page.waitForSelector('.explain-summary', { timeout: 20000 })
+      await page.waitForTimeout(700)
+      // Giù nel pannello, fino al riepilogo di Glifo.
+      await page.mouse.move(820, 420, { steps: 20 })
+      for (let i = 0; i < 12; i++) {
+        await page.mouse.wheel(0, 60)
+        await page.waitForTimeout(60)
+      }
+      await page.waitForTimeout(600)
     },
   },
   // La lavagna: si apre accanto al testo e ci si scrive a mano con una penna (simulata, con la
@@ -338,6 +530,32 @@ const SCENES = {
       await page.mouse.move(profile.x, profile.y, { steps: 30 })
     },
   },
+  // Condividere: «Condividi» in fondo alla barra laterale (senza account: il link vuole l'account, la
+  // stampa no), poi l'account e il fumetto dei commenti.
+  condividi: {
+    settings: { view: 'split', notesOpen: false },
+    async setup(page) {
+      await startNote(page, '# Appunti di Analisi\n\nLa parabola $y = x^2$ è rivolta verso l\'alto: il **vertice** è nell\'origine.\n\n$$\\int_0^1 x^2 \\, dx = \\frac{1}{3}$$\n')
+      await page.mouse.move(480, 300)
+    },
+    async play(page) {
+      await clickOn(page, '.side-open')
+      await page.waitForTimeout(700)
+      await clickOn(page, '.share-button')
+      await page.waitForSelector('dialog.dialog[open]')
+      await page.waitForTimeout(1200)
+      const print = await centerOf(page, '.share-print')
+      await page.mouse.move(print.x, print.y, { steps: 25 })
+      await page.waitForTimeout(1400)
+      await page.keyboard.press('Escape')
+      await page.waitForTimeout(500)
+      const account = await centerOf(page, '.account-button')
+      await page.mouse.move(account.x, account.y, { steps: 25 })
+      await page.waitForTimeout(900)
+      const feedback = await centerOf(page, '.side-feedback')
+      await page.mouse.move(feedback.x, feedback.y, { steps: 20 })
+    },
+  },
 }
 
 const only = process.argv[2]
@@ -357,7 +575,16 @@ try {
       ['scuro', 'dark'],
     ]) {
       const dir = join(work, `${id}-${theme}`)
-      const context = await browser.newContext({ viewport: SIZE, colorScheme: scheme, recordVideo: { dir, size: SIZE } })
+      // Glifo in italiano (prende la lingua dal browser, src/i18n.ts); senza service worker il modello
+      // finto di «Spiega con l'AI» prende il posto di quello vero.
+      const context = await browser.newContext({
+        viewport: SIZE,
+        colorScheme: scheme,
+        locale: 'it-IT',
+        serviceWorkers: 'block',
+        recordVideo: { dir, size: SIZE },
+      })
+      if (scene.model) await context.route('**/assets/llmWorker-*.js', (route) => route.fulfill({ contentType: 'text/javascript', body: `(${scene.model})()` }))
       const started = Date.now()
       await context.addInitScript(fakeCursor)
       await context.addInitScript((settings) => {

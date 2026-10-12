@@ -82,15 +82,18 @@ export function restorePrefs(userId: string): void {
 
 /**
  * La nota di benvenuto mai toccata: non è un appunto da portare nell'account. Anche quella
- * di una versione precedente di Glifo, con un testo un po' diverso.
+ * di una versione precedente di Glifo, con un testo un po' diverso. `welcome`: il suo testo, o i
+ * testi delle due lingue (Glifo può aver creato quella dell'altra lingua, prima di cambiarla).
  */
-export function isWelcome(note: Note, welcome: string): boolean {
-  const title = welcome.split('\n', 1)[0]
-  return note.content === welcome || (note.content.startsWith(title + '\n') && note.updatedAt === note.createdAt)
+export function isWelcome(note: Note, welcome: string | readonly string[]): boolean {
+  return (typeof welcome === 'string' ? [welcome] : welcome).some((text) => {
+    const title = text.split('\n', 1)[0]
+    return note.content === text || (note.content.startsWith(title + '\n') && note.updatedAt === note.createdAt)
+  })
 }
 
 /** Quanti appunti di questo browser sono fuori dall'account e si possono aggiungere. */
-export function guestNoteCount(welcome: string): number {
+export function guestNoteCount(welcome: string | readonly string[]): number {
   const guest = new NotesStore()
   return guest.list().filter((n) => {
     const note = guest.get(n.id)
@@ -104,7 +107,7 @@ export function guestNoteCount(welcome: string): number {
  * `renamed`: una nota ha dovuto cambiare id (quelle di prima delle cartelle non hanno un UUID),
  * così la sua lavagna la segue.
  */
-export function adoptGuestNotes(userId: string, welcome: string, renamed?: (from: string, to: string) => void): number {
+export function adoptGuestNotes(userId: string, welcome: string | readonly string[], renamed?: (from: string, to: string) => void): number {
   const guest = new NotesStore()
   const guestFolders = new FoldersStore()
   const { notes, folders } = accountSpace(userId)

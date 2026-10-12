@@ -2,6 +2,57 @@ import type { AuthError, PostgrestError, SupabaseClient } from '@supabase/supaba
 import { AUTH_STORAGE_KEY, SUPABASE_KEY, SUPABASE_URL } from './config'
 import { SyncError, type PullResult, type PushChanges, type PushResult, type SyncBackend } from './sync'
 import { parseLink, type SharedLink } from '../share/link'
+import { lang, texts } from '../i18n'
+
+const T = texts({
+  // Gli errori dell'accesso, uno per tipo (`AccountError['kind']`).
+  offline: ['Non c\'è connessione: riprova quando sei online.', 'You\'re offline: try again when you\'re back online.'],
+  rate: [
+    'Hai chiesto troppe email di fila: aspetta un po\' e riprova (a volte serve anche un\'ora).',
+    'You asked for too many emails in a row: wait a bit and try again (sometimes it takes up to an hour).',
+  ],
+  code: [
+    'Il link o il codice è sbagliato o scaduto: usa quello dell\'ultima email che hai ricevuto, oppure chiedine un\'altra.',
+    'The link or code is wrong or has expired: use the one in the last email you received, or ask for another one.',
+  ],
+  input: [
+    'Incolla qui il link che trovi nell\'email, oppure scrivi il codice se c\'è.',
+    'Paste the link from the email here, or type the code if there is one.',
+  ],
+  email: ['Controlla l\'indirizzo email: sembra sbagliato.', 'Check your email address: it looks wrong.'],
+  closed: [
+    'A questo indirizzo per ora non possiamo mandare l\'email: entra con «Continua con Google».',
+    'We can\'t send email to this address for now: sign in with “Continue with Google”.',
+  ],
+  captcha: [
+    'Il controllo anti-robot non è andato: riprova, oppure entra con «Continua con Google».',
+    'The anti-robot check didn\'t work: try again, or sign in with “Continue with Google”.',
+  ],
+  other: ['Non è stato possibile accedere. Riprova tra poco.', 'Couldn\'t sign in. Try again in a moment.'],
+  otherAddress: [
+    'Questo link è per un altro indirizzo: usa quello dell\'email che ti abbiamo appena mandato.',
+    'This link is for a different address: use the one in the email we just sent you.',
+  ],
+  googleOff: [
+    'L\'accesso con Google non è ancora attivo: per ora entra con l\'email.',
+    'Signing in with Google isn\'t available yet: for now, sign in with email.',
+  ],
+  // Gli errori della sincronizzazione.
+  noConnection: ['Nessuna connessione', 'No connection'],
+  signInExpired: ['Accesso scaduto', 'Sign-in expired'],
+  otherAccount: ['L\'accesso salvato in questo browser è di un altro account', 'The sign-in saved in this browser belongs to another account'],
+  unexpected: ['Risposta inattesa dal server', 'Unexpected response from the server'],
+  // Lo spazio dell'account è finito: i messaggi del database (supabase/migrations).
+  quotaNotes: [
+    'Spazio esaurito: le note di un account possono occupare al massimo 20 MB.',
+    'Out of space: the notes in an account can take up at most 20 MB.',
+  ],
+  quotaShared: [
+    'Spazio esaurito: le note condivise di un account possono occupare al massimo 20 MB.',
+    'Out of space: the shared notes in an account can take up at most 20 MB.',
+  ],
+  quotaFolders: ['Troppe cartelle: un account può averne al massimo 1000.', 'Too many folders: an account can have at most 1,000.'],
+})
 
 let client: Promise<SupabaseClient> | null = null
 
@@ -38,19 +89,8 @@ export class AccountError extends Error {
   }
 }
 
-const MESSAGES: Record<AccountError['kind'], string> = {
-  offline: 'Non c\'è connessione: riprova quando sei online.',
-  rate: 'Hai chiesto troppe email di fila: aspetta un po\' e riprova (a volte serve anche un\'ora).',
-  code: 'Il link o il codice è sbagliato o scaduto: usa quello dell\'ultima email che hai ricevuto, oppure chiedine un\'altra.',
-  input: 'Incolla qui il link che trovi nell\'email, oppure scrivi il codice se c\'è.',
-  email: 'Controlla l\'indirizzo email: sembra sbagliato.',
-  closed: 'A questo indirizzo per ora non possiamo mandare l\'email: entra con «Continua con Google».',
-  captcha: 'Il controllo anti-robot non è andato: riprova, oppure entra con «Continua con Google».',
-  other: 'Non è stato possibile accedere. Riprova tra poco.',
-}
-
 /** Un errore dell'accesso di quel tipo, con il suo messaggio. */
-export const accountFailure = (kind: AccountError['kind']): AccountError => new AccountError(kind, MESSAGES[kind])
+export const accountFailure = (kind: AccountError['kind']): AccountError => new AccountError(kind, T[kind])
 
 /** Il messaggio da mostrare per un errore dell'accesso (esportata per i test). */
 export function accountError(error: AuthError | null | undefined): AccountError {
@@ -76,7 +116,7 @@ async function loadClient(): Promise<SupabaseClient> {
   try {
     return await supabase()
   } catch {
-    throw new AccountError('offline', MESSAGES.offline)
+    throw new AccountError('offline', T.offline)
   }
 }
 
@@ -84,10 +124,10 @@ async function loadClient(): Promise<SupabaseClient> {
  * Una richiesta che non risponde (rete debole, Wi-Fi con pagina di accesso) non deve restare
  * in sospeso per sempre: dopo un po' vale come «senza connessione».
  */
-function withTimeout<T>(promise: Promise<T>, ms = 20_000): Promise<T> {
+function withTimeout<R>(promise: Promise<R>, ms = 20_000): Promise<R> {
   let timer = 0
   const timeout = new Promise<never>((_, reject) => {
-    timer = window.setTimeout(() => reject(new AccountError('offline', MESSAGES.offline)), ms)
+    timer = window.setTimeout(() => reject(new AccountError('offline', T.offline)), ms)
   })
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
 }
@@ -141,17 +181,17 @@ export function emailLinkToken(text: string): string | null {
 export async function verifyCode(email: string, input: string): Promise<SignedIn> {
   const tokenHash = emailLinkToken(input)
   const code = input.replace(/\s+/g, '')
-  if (!tokenHash && !/^\d{6,10}$/.test(code)) throw new AccountError('input', MESSAGES.input)
+  if (!tokenHash && !/^\d{6,10}$/.test(code)) throw new AccountError('input', T.input)
   const sb = await loadClient()
   const { data, error } = await withTimeout(
     tokenHash ? sb.auth.verifyOtp({ token_hash: tokenHash, type: 'email' }) : sb.auth.verifyOtp({ email, token: code, type: 'email' }),
   )
-  if (error || !data.user) throw error ? accountError(error) : new AccountError('code', MESSAGES.code)
+  if (error || !data.user) throw error ? accountError(error) : new AccountError('code', T.code)
   const user = { userId: data.user.id, email: data.user.email ?? email }
   // Il link di un'email vecchia, per un altro indirizzo: non si entra in un account diverso.
   if (user.email.toLowerCase() !== email.toLowerCase()) {
     await sb.auth.signOut({ scope: 'local' }).catch(() => undefined)
-    throw new AccountError('code', 'Questo link è per un altro indirizzo: usa quello dell\'email che ti abbiamo appena mandato.')
+    throw new AccountError('code', T.otherAddress)
   }
   return user
 }
@@ -174,10 +214,10 @@ export async function signInWithGoogle(): Promise<void> {
     const res = await withTimeout(fetch(`${SUPABASE_URL}/auth/v1/settings`, { headers: { apikey: SUPABASE_KEY } }))
     settings = await res.json()
   } catch {
-    throw new AccountError('offline', MESSAGES.offline)
+    throw new AccountError('offline', T.offline)
   }
   if (!providerEnabled(settings, 'google')) {
-    throw new AccountError('closed', 'L\'accesso con Google non è ancora attivo: per ora entra con l\'email.')
+    throw new AccountError('closed', T.googleOff)
   }
   const { data, error } = await sb.auth.signInWithOAuth({
     provider: 'google',
@@ -212,30 +252,42 @@ export async function signOut(): Promise<void> {
   }
 }
 
+/**
+ * Lo spazio dell'account è finito: il database lo scrive in italiano (supabase/migrations). In
+ * un'altra lingua il messaggio si riconosce e si mostra tradotto; uno che non si riconosce resta com'è.
+ */
+function quotaMessage(message: string): string {
+  if (lang === 'it') return message
+  if (/^Troppe cartelle/.test(message)) return T.quotaFolders
+  if (/note condivise/.test(message)) return T.quotaShared
+  if (/^Spazio esaurito/.test(message)) return T.quotaNotes
+  return message
+}
+
 /** Perché la sincronizzazione non è riuscita, dalla risposta del server (esportata per i test). */
 export function syncError(error: PostgrestError, status: number): SyncError {
-  if (status === 0 || /fetch|network|load failed|abort|timeout/i.test(error.message)) return new SyncError('offline', 'Nessuna connessione')
+  if (status === 0 || /fetch|network|load failed|abort|timeout/i.test(error.message)) return new SyncError('offline', T.noConnection)
   if (status === 401 || status === 403 || error.code === '42501' || error.code === 'PGRST301' || error.code === 'PGRST303') {
-    return new SyncError('auth', 'Accesso scaduto')
+    return new SyncError('auth', T.signInExpired)
   }
-  if (error.hint === 'quota') return new SyncError('quota', error.message, error.hint)
+  if (error.hint === 'quota') return new SyncError('quota', quotaMessage(error.message), error.hint)
   return new SyncError('server', error.message, error.hint ?? undefined)
 }
 
 type Rpc = 'sync_pull' | 'sync_push' | 'delete_account' | 'share_note' | 'set_shared_copy' | 'unshare_note' | 'shared_links'
 
-async function call<T>(name: Rpc, args: Record<string, unknown>): Promise<T> {
+async function call<R>(name: Rpc, args: Record<string, unknown>): Promise<R> {
   let sb: SupabaseClient
   try {
     sb = await supabase()
   } catch {
-    throw new SyncError('offline', 'Nessuna connessione')
+    throw new SyncError('offline', T.noConnection)
   }
   // Dopo 30 secondi senza risposta si lascia perdere: si riprova alla prossima occasione.
   const request = sb.rpc(name, args)
   const { data, error, status } = await (typeof AbortSignal.timeout === 'function' ? request.abortSignal(AbortSignal.timeout(30_000)) : request)
   if (error) throw syncError(error, status)
-  return data as T
+  return data as R
 }
 
 /**
@@ -249,11 +301,11 @@ async function ensureSessionOf(userId: string): Promise<void> {
   try {
     sb = await supabase()
   } catch {
-    throw new SyncError('offline', 'Nessuna connessione')
+    throw new SyncError('offline', T.noConnection)
   }
   const { data, error } = await sb.auth.getSession()
-  if (error && (error.name === 'AuthRetryableFetchError' || error.status === 0)) throw new SyncError('offline', 'Nessuna connessione')
-  if (data.session?.user.id !== userId) throw new SyncError('auth', 'L\'accesso salvato in questo browser è di un altro account')
+  if (error && (error.name === 'AuthRetryableFetchError' || error.status === 0)) throw new SyncError('offline', T.noConnection)
+  if (data.session?.user.id !== userId) throw new SyncError('auth', T.otherAccount)
 }
 
 /** Il server degli account per la sincronizzazione dell'account `userId`. */
@@ -286,7 +338,7 @@ export async function deleteAccount(userId: string): Promise<void> {
 export async function shareNote(userId: string, note: { id: string; title: string; content: string }, allowCopy: boolean): Promise<SharedLink> {
   await ensureSessionOf(userId)
   const link = parseLink(await call<unknown>('share_note', { note: note.id, title: note.title, content: note.content, allow_copy: allowCopy }))
-  if (!link) throw new SyncError('server', 'Risposta inattesa dal server')
+  if (!link) throw new SyncError('server', T.unexpected)
   return link
 }
 

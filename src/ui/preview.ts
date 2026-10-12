@@ -1,12 +1,26 @@
 import { hydrateGraphs, type GraphLabels } from '../graph/preview'
+import { texts } from '../i18n'
 import type { BlockKind, MoveDir } from '../render/blockMove'
 import { renderMarkdown } from '../render/markdown'
 import type { Theme } from '../schema/model'
 import { hydrateSchemas } from '../schema/preview'
 import { hydrateSheets } from '../spreadsheet/preview'
 import { h } from './dom'
-import { BLOCK_NAMES, blockKindOf, MOVABLE_BLOCKS } from './moveButtons'
+import { BLOCK_NAMES, blockHiddenMessage, blockKindOf, blockMovedMessage, MOVABLE_BLOCKS } from './moveButtons'
 import { toast } from './toast'
+
+const T = texts({
+  previewLabel: ['Anteprima degli appunti', 'Notes preview'],
+  /** Il grafico spostato sopra le definizioni che usa (i nomi, per esempio «a» e «f»). */
+  lostDefinitions: (names: string[]) => {
+    const last = names[names.length - 1]
+    const rest = names.slice(0, -1).join(', ')
+    return [
+      `Il grafico ora sta sopra ${names.length === 1 ? 'la definizione' : 'le definizioni'} di ${names.length === 1 ? last : `${rest} e ${last}`}: le definizioni valgono per quello che viene dopo. Ctrl+Z lo riporta dov'era.`,
+      `The graph is now above the ${names.length === 1 ? 'definition' : 'definitions'} of ${names.length === 1 ? last : `${rest} and ${last}`}: definitions apply to what comes after them. Ctrl+Z puts it back where it was.`,
+    ]
+  },
+})
 
 export interface PreviewCallbacks {
   /** Clic su una casella "- [ ]": riga (0-based) dell'elemento nel sorgente. */
@@ -69,7 +83,7 @@ export class Preview {
   private arrowAt = -Infinity
 
   constructor(private readonly cb: PreviewCallbacks) {
-    this.content = h('article', { class: 'markdown-body', attrs: { 'aria-label': 'Anteprima degli appunti' } })
+    this.content = h('article', { class: 'markdown-body', attrs: { 'aria-label': T.previewLabel } })
     this.live = h('div', { class: 'visually-hidden', attrs: { role: 'status', 'aria-live': 'polite' } })
     this.el = h('section', { class: 'preview-pane' }, this.content, this.live)
     this.content.addEventListener('change', (ev) => {
@@ -240,7 +254,7 @@ export class Preview {
       // nasconde quello che c'è dopo o dentro. Lo spostamento si annulla.
       this.cb.onUndo(false)
       this.flush()
-      toast(`${BLOCK_NAMES[kind].The} lì non si vedrebbe: lo nasconde l'HTML scritto nella nota (per esempio un commento «<!--» senza la fine, o un <details> chiuso).`, 'error')
+      toast(blockHiddenMessage(kind), 'error')
       return
     }
     const arrow = moved.querySelector<HTMLElement>(`.block-move[data-dir="${dir}"]`)
@@ -254,7 +268,7 @@ export class Preview {
     requestAnimationFrame(keep)
     arrow?.focus({ preventScroll: true })
     this.markMoved(moved)
-    this.announce(`${BLOCK_NAMES[kind].name} ${kind === 'tabella' ? 'spostata' : 'spostato'} più ${dir === 'up' ? 'su' : 'giù'}`)
+    this.announce(blockMovedMessage(kind, dir))
     if (kind === 'grafico') this.warnLostDefinitions(defs, moved.dataset.defs)
   }
 
@@ -318,7 +332,6 @@ export class Preview {
     const now = new Set(read(after))
     const names = [...new Set(read(before).filter((d) => !now.has(d)).map((d) => d.split(/[(=]/)[0].replace(/\\/g, '').trim()).filter(Boolean))]
     if (!names.length) return
-    const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`
-    toast(`Il grafico ora sta sopra ${names.length === 1 ? 'la definizione' : 'le definizioni'} di ${list}: le definizioni valgono per quello che viene dopo. Ctrl+Z lo riporta dov'era.`)
+    toast(T.lostDefinitions(names))
   }
 }

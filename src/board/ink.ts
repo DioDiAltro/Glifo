@@ -1,4 +1,5 @@
 import { getStroke, type StrokeOptions } from 'perfect-freehand'
+import { texts } from '../i18n'
 import type { HighlightColor, InkColor, Stroke } from './strokes'
 
 /**
@@ -6,6 +7,17 @@ import type { HighlightColor, InkColor, Stroke } from './strokes'
  * cambia con la pressione della penna, o con la velocità per il dito e il mouse) e i colori
  * dipendono dal tema, chiaro o scuro.
  */
+
+const T = texts({
+  white: ['Bianco', 'White'],
+  black: ['Nero', 'Black'],
+  blue: ['Blu', 'Blue'],
+  red: ['Rosso', 'Red'],
+  green: ['Verde', 'Green'],
+  yellow: ['Giallo', 'Yellow'],
+  pink: ['Rosa', 'Pink'],
+  lightBlue: ['Azzurro', 'Light blue'],
+})
 
 export type BoardTheme = 'light' | 'dark'
 
@@ -51,13 +63,13 @@ export const BOARD_PALETTES: Record<BoardTheme, BoardPalette> = {
 
 /** Il nome del colore, per i pulsanti: il primo è nero nel tema chiaro e bianco in quello scuro. */
 export function inkName(color: InkColor, theme: BoardTheme): string {
-  if (color === 'ink') return theme === 'dark' ? 'Bianco' : 'Nero'
-  return { blue: 'Blu', red: 'Rosso', green: 'Verde' }[color]
+  if (color === 'ink') return theme === 'dark' ? T.white : T.black
+  return { blue: T.blue, red: T.red, green: T.green }[color]
 }
 
 /** Il nome del colore di un evidenziatore. */
 export function highlightName(color: HighlightColor): string {
-  return { yellow: 'Giallo', green: 'Verde', pink: 'Rosa', blue: 'Azzurro' }[color]
+  return { yellow: T.yellow, green: T.green, pink: T.pink, blue: T.lightBlue }[color]
 }
 
 /** Lo spessore di partenza della penna, in unità della lavagna. */

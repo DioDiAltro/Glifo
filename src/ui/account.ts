@@ -1,7 +1,129 @@
 import type { SyncStatus } from '../account/controller'
+import { dateLocale, lang, rich, texts } from '../i18n'
 import { dialogShell } from './dialogs'
 import { ICONS, h, icon } from './dom'
 import { privacyLink } from './links'
+
+const T = texts({
+  // Lo stato della sincronizzazione, per intero e in poche parole.
+  syncing: ['Sincronizzazione in corso…', 'Syncing…'],
+  allSynced: (time: string) => [`Tutto sincronizzato (ultimo controllo alle ${time}).`, `Everything is synced (last checked at ${time}).`],
+  syncWaiting: ['Sincronizzazione in attesa.', 'Waiting to sync.'],
+  offline: [
+    'Senza connessione: le modifiche restano qui e partono quando torna la rete.',
+    'Offline: your changes stay here and will be sent when you\'re back online.',
+  ],
+  signInExpired: [
+    'L\'accesso è scaduto: accedi di nuovo per sincronizzare. Intanto le modifiche restano qui.',
+    'Your sign-in has expired: sign in again to sync. In the meantime, your changes stay here.',
+  ],
+  syncFailed: [
+    'La sincronizzazione non è riuscita: riprovo tra poco. Le modifiche restano qui.',
+    'Sync failed: I\'ll try again shortly. Your changes stay here.',
+  ],
+  somethingWrong: ['Qualcosa è andato storto: riprova.', 'Something went wrong: try again.'],
+  shortSyncing: ['Sincronizzo…', 'Syncing…'],
+  shortSynced: ['Sincronizzato', 'Synced'],
+  shortWaiting: ['In attesa', 'Waiting'],
+  shortOffline: ['Senza connessione', 'Offline'],
+  shortExpired: ['Accesso scaduto', 'Sign-in expired'],
+  shortQuota: ['Spazio esaurito', 'Out of space'],
+  shortFailed: ['Sincronizzazione non riuscita', 'Sync failed'],
+  // Il pulsante in fondo alla barra laterale, senza account.
+  guestTitle: ['Accedi per ritrovare gli appunti su ogni dispositivo', 'Sign in to get your notes on every device'],
+  guestLabel: ['Accedi all\'account', 'Sign in to your account'],
+  signIn: ['Accedi', 'Sign in'],
+  noAccount: ['Senza account', 'Not signed in'],
+  // La finestra per entrare.
+  loginTitle: ['Accedi a Glifo', 'Sign in to Glifo'],
+  cancel: ['Annulla', 'Cancel'],
+  sendEmail: ['Mandami l\'email', 'Email me a link'],
+  google: ['Continua con Google', 'Continue with Google'],
+  enterEmail: ['Scrivi il tuo indirizzo email.', 'Enter your email address.'],
+  sending: ['Invio…', 'Sending…'],
+  loginIntro: [
+    'Con l\'account ritrovi gli stessi appunti su computer, tablet e telefono. Niente password: entri con Google o con un\'email.',
+    'With an account, you get the same notes on your computer, tablet and phone. No password: sign in with Google or with an email.',
+  ],
+  orEmail: ['oppure con l\'email', 'or with email'],
+  serversHelp: [
+    'Con l\'account gli appunti vengono salvati anche sui server di Supabase, in Europa. Come li trattiamo: {privacy}.',
+    'With an account, your notes are also saved on Supabase servers in Europe. How we handle them: {privacy}.',
+  ],
+  resendIn: (seconds: number) => [`Mandamene un'altra (tra ${seconds} s)`, `Send another one (in ${seconds} s)`],
+  resend: ['Mandamene un\'altra', 'Send another one'],
+  pasteLink: [
+    'Incolla qui il link che trovi nell\'email, oppure scrivi il codice se c\'è.',
+    'Paste the link from the email here, or type the code if there is one.',
+  ],
+  checking: ['Controllo…', 'Checking…'],
+  emailSent: [
+    'Ti abbiamo mandato un\'email a {email}. Aprila in questo browser e premi il link: entri subito.',
+    'We sent an email to {email}. Open it in this browser and click the link: you\'ll be signed in right away.',
+  ],
+  orPaste: ['Oppure incolla qui il link (o il codice, se c\'è)', 'Or paste the link here (or the code, if there is one)'],
+  otherBrowser: [
+    'Se il link si apre in un altro browser, per esempio sul telefono, copialo senza aprirlo e incollalo qui.',
+    'If the link opens in another browser, for example on your phone, copy it without opening it and paste it here.',
+  ],
+  notArrived: ['Non è arrivata? Guarda anche nello spam. {resend}', 'Didn\'t get it? Check your spam folder too. {resend}'],
+  changeEmail: ['Cambia indirizzo', 'Change email'],
+  // La finestra dell'account.
+  syncNow: ['Sincronizza ora', 'Sync now'],
+  signInAgain: ['Accedi di nuovo', 'Sign in again'],
+  guestNotes: ['Appunti di questo browser', 'Notes in this browser'],
+  guestHelp: (n: number) => [
+    n === 1
+      ? 'In questo browser c\'è anche un appunto fuori dall\'account: lo ritrovi quando esci.'
+      : `In questo browser ci sono anche ${n} appunti fuori dall'account: li ritrovi quando esci.`,
+    n === 1
+      ? 'This browser also has a note outside your account: you\'ll find it again when you sign out.'
+      : `This browser also has ${n} notes outside your account: you'll find them again when you sign out.`,
+  ],
+  added: (n: number) => [
+    n === 1 ? 'Aggiunto all\'account.' : `Aggiunti ${n} appunti all'account.`,
+    n === 1 ? 'Added to your account.' : `Added ${n} notes to your account.`,
+  ],
+  addThem: (n: number) => [
+    n === 1 ? 'Aggiungilo all\'account' : 'Aggiungili all\'account',
+    n === 1 ? 'Add it to your account' : 'Add them to your account',
+  ],
+  downloadData: ['Scarica i miei dati', 'Download my data'],
+  signedInAs: ['Sei entrato come {email}.', 'You\'re signed in as {email}.'],
+  switchOrSignOut: ['Cambiare account o uscire', 'Switch account or sign out'],
+  switchHelp: [
+    'Cambiando account, note, cartelle e lavagne di questo account restano in questo browser: le ritrovi quando rientri. Uscendo si tolgono da qui, e le note restano nell\'account: è la scelta giusta su un computer che non è tuo.',
+    'If you switch accounts, this account\'s notes, folders and whiteboards stay in this browser: you\'ll find them again when you come back. If you sign out, they\'re removed from here and the notes stay in your account: that\'s the right choice on a computer that isn\'t yours.',
+  ],
+  switchAccount: ['Cambia account', 'Switch account'],
+  signOut: ['Esci dall\'account', 'Sign out'],
+  yourData: ['I tuoi dati', 'Your data'],
+  dataHelp: [
+    'Puoi scaricare in un file tutto quello che c\'è nell\'account (note, cartelle, impostazioni e dizionario), oppure eliminarlo: dal server si cancella tutto, per sempre.',
+    'You can download everything in your account to a file (notes, folders, settings and dictionary), or delete it: everything is erased from the server, forever.',
+  ],
+  deleteAccountButton: ['Elimina account…', 'Delete account…'],
+  howWeHandle: ['Come trattiamo i tuoi dati: {privacy}.', 'How we handle your data: {privacy}.'],
+  // La conferma prima di eliminare l'account.
+  deleteAccount: ['Elimina l\'account', 'Delete account'],
+  // La parola da scrivere per confermare.
+  confirmWord: ['elimina', 'delete'],
+  downloadYourData: ['scarica i tuoi dati', 'download your data'],
+  deleteMessage: [
+    'Dal server si cancellano per sempre l\'account {email} e tutto quello che contiene: note, cartelle, impostazioni e dizionario. Non si può annullare.',
+    'The account {email} and everything in it will be erased from the server forever: notes, folders, settings and dictionary. This can\'t be undone.',
+  ],
+  keepCopy: [
+    'Se vuoi tenerne una copia, prima {download}. Gli appunti fuori dall\'account restano in questo browser.',
+    'If you want to keep a copy, {download} first. Notes outside your account stay in this browser.',
+  ],
+  otherDevices: [
+    'Sugli altri dispositivi dove sei entrato, l\'accesso scade entro un\'ora: lì premi «Esci dall\'account» per togliere le note anche da quel browser.',
+    'On other devices where you\'re signed in, access expires within an hour: there, press “Sign out” to remove the notes from that browser too.',
+  ],
+  typeToConfirm: (word: string) => [`Per confermare scrivi «${word}»`, `To confirm, type “${word}”`],
+  deleteTitle: ['Eliminare l\'account?', 'Delete your account?'],
+})
 
 /** Chi è entrato, come lo restituisce il controllo del link o del codice. */
 export interface SignedIn {
@@ -9,42 +131,43 @@ export interface SignedIn {
   email: string
 }
 
-const time = (ms: number) => new Date(ms).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+// «09:05» in italiano, «9:05 AM» in inglese (americano).
+const time = (ms: number) => new Date(ms).toLocaleTimeString(dateLocale(), { hour: lang === 'it' ? '2-digit' : 'numeric', minute: '2-digit' })
 
 export function statusText(status: SyncStatus): string {
   switch (status.kind) {
     case 'syncing':
-      return 'Sincronizzazione in corso…'
+      return T.syncing
     case 'idle':
-      return status.at ? `Tutto sincronizzato (ultimo controllo alle ${time(status.at)}).` : 'Sincronizzazione in attesa.'
+      return status.at ? T.allSynced(time(status.at)) : T.syncWaiting
     case 'offline':
-      return 'Senza connessione: le modifiche restano qui e partono quando torna la rete.'
+      return T.offline
     case 'auth':
-      return 'L\'accesso è scaduto: accedi di nuovo per sincronizzare. Intanto le modifiche restano qui.'
+      return T.signInExpired
     case 'quota':
       return status.message
     case 'error':
-      return 'La sincronizzazione non è riuscita: riprovo tra poco. Le modifiche restano qui.'
+      return T.syncFailed
   }
 }
 
-const messageOf = (err: unknown) => (err instanceof Error && err.message ? err.message : 'Qualcosa è andato storto: riprova.')
+const messageOf = (err: unknown) => (err instanceof Error && err.message ? err.message : T.somethingWrong)
 
 /** Lo stato della sincronizzazione in poche parole, sotto l'indirizzo. */
 export function shortStatus(status: SyncStatus): string {
   switch (status.kind) {
     case 'syncing':
-      return 'Sincronizzo…'
+      return T.shortSyncing
     case 'idle':
-      return status.at ? 'Sincronizzato' : 'In attesa'
+      return status.at ? T.shortSynced : T.shortWaiting
     case 'offline':
-      return 'Senza connessione'
+      return T.shortOffline
     case 'auth':
-      return 'Accesso scaduto'
+      return T.shortExpired
     case 'quota':
-      return 'Spazio esaurito'
+      return T.shortQuota
     case 'error':
-      return 'Sincronizzazione non riuscita'
+      return T.shortFailed
   }
 }
 
@@ -63,11 +186,11 @@ export class AccountButton {
   show(account: { email: string; status: SyncStatus } | null): void {
     if (!account) {
       this.el.className = 'account-button is-guest'
-      this.el.title = 'Accedi per ritrovare gli appunti su ogni dispositivo'
-      this.el.setAttribute('aria-label', 'Accedi all\'account')
+      this.el.title = T.guestTitle
+      this.el.setAttribute('aria-label', T.guestLabel)
       this.el.replaceChildren(
         h('span', { class: 'account-avatar' }, icon(ICONS.user, 16)),
-        h('span', { class: 'account-text' }, h('span', { class: 'account-name' }, 'Accedi'), h('span', { class: 'account-sub' }, 'Senza account')),
+        h('span', { class: 'account-text' }, h('span', { class: 'account-name' }, T.signIn), h('span', { class: 'account-sub' }, T.noAccount)),
       )
       return
     }
@@ -120,7 +243,7 @@ export function openLoginDialog(opts: {
   // Il posto del controllo anti-robot, nel passo che manda l'email.
   const captcha = h('div', { class: 'login-captcha' })
   const body = h('div', { class: 'login' })
-  const dialog = dialogShell(opts.title ?? 'Accedi a Glifo', [body], 'dialog-login')
+  const dialog = dialogShell(opts.title ?? T.loginTitle, [body], 'dialog-login')
   dialog.addEventListener('close', () => clearInterval(cooldown))
 
   const showError = (message: string) => {
@@ -131,7 +254,7 @@ export function openLoginDialog(opts: {
     button.disabled = true
     button.textContent = label
   }
-  const cancel = () => h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => dialog.close() } }, 'Annulla')
+  const cancel = () => h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => dialog.close() } }, T.cancel)
 
   function emailStep(): void {
     error.hidden = true
@@ -139,10 +262,10 @@ export function openLoginDialog(opts: {
       class: 'prompt-input',
       attrs: { type: 'email', value: email, autocomplete: 'email', spellcheck: 'false', readonly: opts.lockEmail },
     })
-    const submit = h('button', { class: 'btn btn-primary', attrs: { type: 'submit' } }, 'Mandami l\'email')
+    const submit = h('button', { class: 'btn btn-primary', attrs: { type: 'submit' } }, T.sendEmail)
     const logo = h('span', { class: 'google-logo' })
     logo.innerHTML = GOOGLE_G
-    const google = h('button', { class: 'btn login-google', attrs: { type: 'button' } }, logo, 'Continua con Google')
+    const google = h('button', { class: 'btn login-google', attrs: { type: 'button' } }, logo, T.google)
     google.addEventListener('click', () => {
       error.hidden = true
       google.disabled = true
@@ -160,11 +283,11 @@ export function openLoginDialog(opts: {
             ev.preventDefault()
             const value = input.value.trim()
             if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-              showError('Scrivi il tuo indirizzo email.')
+              showError(T.enterEmail)
               input.focus()
               return
             }
-            busy(submit, 'Invio…')
+            busy(submit, T.sending)
             opts.sendCode(value, captcha).then(
               () => {
                 email = value
@@ -173,28 +296,18 @@ export function openLoginDialog(opts: {
               (err: unknown) => {
                 showError(messageOf(err))
                 submit.disabled = false
-                submit.textContent = 'Mandami l\'email'
+                submit.textContent = T.sendEmail
               },
             )
           },
         },
       },
-      h(
-        'p',
-        { class: 'login-intro' },
-        opts.intro ?? 'Con l\'account ritrovi gli stessi appunti su computer, tablet e telefono. Niente password: entri con Google o con un\'email.',
-      ),
+      h('p', { class: 'login-intro' }, opts.intro ?? T.loginIntro),
       google,
-      h('p', { class: 'login-or' }, 'oppure con l\'email'),
+      h('p', { class: 'login-or' }, T.orEmail),
       h('label', { class: 'prompt-label' }, h('span', {}, 'Email'), input),
       error,
-      h(
-        'p',
-        { class: 'field-help' },
-        'Con l\'account gli appunti vengono salvati anche sui server di Supabase, in Europa. Come li trattiamo: ',
-        privacyLink(),
-        '.',
-      ),
+      h('p', { class: 'field-help' }, ...rich(T.serversHelp, { privacy: privacyLink() })),
       captcha,
       h('div', { class: 'dialog-actions' }, cancel(), submit),
     )
@@ -209,13 +322,13 @@ export function openLoginDialog(opts: {
       class: 'prompt-input login-code',
       attrs: { type: 'text', autocomplete: 'one-time-code', autocapitalize: 'off', spellcheck: 'false' },
     })
-    const submit = h('button', { class: 'btn btn-primary', attrs: { type: 'submit' } }, 'Accedi')
+    const submit = h('button', { class: 'btn btn-primary', attrs: { type: 'submit' } }, T.signIn)
     const resend = h('button', { class: 'link-button', attrs: { type: 'button' } })
     // Supabase manda al massimo un'email al minuto allo stesso indirizzo.
     let wait = 60
     const tick = () => {
       resend.disabled = wait > 0
-      resend.textContent = wait > 0 ? `Mandamene un'altra (tra ${wait} s)` : 'Mandamene un\'altra'
+      resend.textContent = wait > 0 ? T.resendIn(wait) : T.resend
       wait--
     }
     clearInterval(cooldown)
@@ -243,11 +356,11 @@ export function openLoginDialog(opts: {
             ev.preventDefault()
             const value = input.value.trim()
             if (!value) {
-              showError('Incolla qui il link che trovi nell\'email, oppure scrivi il codice se c\'è.')
+              showError(T.pasteLink)
               input.focus()
               return
             }
-            busy(submit, 'Controllo…')
+            busy(submit, T.checking)
             opts
               .verifyCode(email, value)
               .then(async (user) => {
@@ -257,32 +370,25 @@ export function openLoginDialog(opts: {
               .catch((err: unknown) => {
                 showError(messageOf(err))
                 submit.disabled = false
-                submit.textContent = 'Accedi'
+                submit.textContent = T.signIn
                 input.select()
               })
           },
         },
       },
-      h(
-        'p',
-        { class: 'login-intro' },
-        'Ti abbiamo mandato un\'email a ',
-        h('strong', {}, email),
-        '. Aprila in questo browser e premi il link: entri subito.',
-      ),
-      h('label', { class: 'prompt-label' }, h('span', {}, 'Oppure incolla qui il link (o il codice, se c\'è)'), input),
+      h('p', { class: 'login-intro' }, ...rich(T.emailSent, { email: h('strong', {}, email) })),
+      h('label', { class: 'prompt-label' }, h('span', {}, T.orPaste), input),
       error,
-      h('p', { class: 'field-help' }, 'Se il link si apre in un altro browser, per esempio sul telefono, copialo senza aprirlo e incollalo qui.'),
+      h('p', { class: 'field-help' }, T.otherBrowser),
       h(
         'p',
         { class: 'field-help' },
-        'Non è arrivata? Guarda anche nello spam. ',
-        resend,
+        ...rich(T.notArrived, { resend }),
         opts.lockEmail
           ? null
           : [
               ' · ',
-              h('button', { class: 'link-button', attrs: { type: 'button' }, on: { click: () => emailStep() } }, 'Cambia indirizzo'),
+              h('button', { class: 'link-button', attrs: { type: 'button' }, on: { click: () => emailStep() } }, T.changeEmail),
             ],
       ),
       captcha,
@@ -315,7 +421,7 @@ export function openAccountDialog(opts: {
   onDelete(): void
 }): void {
   const statusEl = h('p', { class: 'account-status', attrs: { 'aria-live': 'polite' } })
-  const syncButton = h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => opts.syncNow() } }, icon(ICONS.refresh, 15), 'Sincronizza ora')
+  const syncButton = h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => opts.syncNow() } }, icon(ICONS.refresh, 15), T.syncNow)
   const relogin = h(
     'button',
     {
@@ -328,7 +434,7 @@ export function openAccountDialog(opts: {
         },
       },
     },
-    'Accedi di nuovo',
+    T.signInAgain,
   )
   const render = (status: SyncStatus) => {
     statusEl.textContent = statusText(status)
@@ -341,14 +447,8 @@ export function openAccountDialog(opts: {
       ? h(
           'fieldset',
           {},
-          h('legend', {}, 'Appunti di questo browser'),
-          h(
-            'p',
-            { class: 'field-help' },
-            opts.guestCount === 1
-              ? 'In questo browser c\'è anche un appunto fuori dall\'account: lo ritrovi quando esci.'
-              : `In questo browser ci sono anche ${opts.guestCount} appunti fuori dall'account: li ritrovi quando esci.`,
-          ),
+          h('legend', {}, T.guestNotes),
+          h('p', { class: 'field-help' }, T.guestHelp(opts.guestCount)),
           h(
             'div',
             { class: 'button-row' },
@@ -361,16 +461,16 @@ export function openAccountDialog(opts: {
                   click: (ev) => {
                     const moved = opts.onAdoptGuest()
                     const row = (ev.currentTarget as HTMLElement).parentElement!
-                    row.replaceChildren(h('p', { class: 'field-help' }, moved === 1 ? 'Aggiunto all\'account.' : `Aggiunti ${moved} appunti all'account.`))
+                    row.replaceChildren(h('p', { class: 'field-help' }, T.added(moved)))
                   },
                 },
               },
-              opts.guestCount === 1 ? 'Aggiungilo all\'account' : 'Aggiungili all\'account',
+              T.addThem(opts.guestCount),
             ),
           ),
         )
       : null
-  const download = h('button', { class: 'btn', attrs: { type: 'button' } }, icon(ICONS.download, 15), 'Scarica i miei dati')
+  const download = h('button', { class: 'btn', attrs: { type: 'button' } }, icon(ICONS.download, 15), T.downloadData)
   download.addEventListener('click', () => {
     download.disabled = true
     void opts.onDownload().finally(() => (download.disabled = false))
@@ -381,7 +481,7 @@ export function openAccountDialog(opts: {
       h(
         'fieldset',
         {},
-        h('p', { class: 'account-email' }, 'Sei entrato come ', h('strong', {}, opts.email), '.'),
+        h('p', { class: 'account-email' }, ...rich(T.signedInAs, { email: h('strong', {}, opts.email) })),
         statusEl,
         h('div', { class: 'button-row' }, syncButton, relogin),
       ),
@@ -389,12 +489,8 @@ export function openAccountDialog(opts: {
       h(
         'fieldset',
         {},
-        h('legend', {}, 'Cambiare account o uscire'),
-        h(
-          'p',
-          { class: 'field-help' },
-          'Cambiando account, note, cartelle e lavagne di questo account restano in questo browser: le ritrovi quando rientri. Uscendo si tolgono da qui, e le note restano nell\'account: è la scelta giusta su un computer che non è tuo.',
-        ),
+        h('legend', {}, T.switchOrSignOut),
+        h('p', { class: 'field-help' }, T.switchHelp),
         h(
           'div',
           { class: 'button-row' },
@@ -410,7 +506,7 @@ export function openAccountDialog(opts: {
                 },
               },
             },
-            'Cambia account',
+            T.switchAccount,
           ),
           h(
             'button',
@@ -424,19 +520,15 @@ export function openAccountDialog(opts: {
                 },
               },
             },
-            'Esci dall\'account',
+            T.signOut,
           ),
         ),
       ),
       h(
         'fieldset',
         {},
-        h('legend', {}, 'I tuoi dati'),
-        h(
-          'p',
-          { class: 'field-help' },
-          'Puoi scaricare in un file tutto quello che c\'è nell\'account (note, cartelle, impostazioni e dizionario), oppure eliminarlo: dal server si cancella tutto, per sempre.',
-        ),
+        h('legend', {}, T.yourData),
+        h('p', { class: 'field-help' }, T.dataHelp),
         h(
           'div',
           { class: 'button-row' },
@@ -453,10 +545,10 @@ export function openAccountDialog(opts: {
                 },
               },
             },
-            'Elimina account…',
+            T.deleteAccountButton,
           ),
         ),
-        h('p', { class: 'field-help' }, 'Come trattiamo i tuoi dati: ', privacyLink(), '.'),
+        h('p', { class: 'field-help' }, ...rich(T.howWeHandle, { privacy: privacyLink() })),
       ),
     ],
     'dialog-account',
@@ -478,9 +570,9 @@ export function confirmAccountDeletion(opts: { email: string; onDownload(): Prom
       class: 'prompt-input',
       attrs: { type: 'text', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' },
     })
-    const submit = h('button', { class: 'btn btn-danger', attrs: { type: 'submit', disabled: true } }, 'Elimina l\'account')
-    input.addEventListener('input', () => (submit.disabled = input.value.trim().toLowerCase() !== 'elimina'))
-    const download = h('button', { class: 'link-button', attrs: { type: 'button' } }, 'scarica i tuoi dati')
+    const submit = h('button', { class: 'btn btn-danger', attrs: { type: 'submit', disabled: true } }, T.deleteAccount)
+    input.addEventListener('input', () => (submit.disabled = input.value.trim().toLowerCase() !== T.confirmWord))
+    const download = h('button', { class: 'link-button', attrs: { type: 'button' } }, T.downloadYourData)
     download.addEventListener('click', () => {
       download.disabled = true
       void opts.onDownload().finally(() => (download.disabled = false))
@@ -498,28 +590,18 @@ export function confirmAccountDeletion(opts: { email: string; onDownload(): Prom
           },
         },
       },
-      h(
-        'p',
-        { class: 'confirm-message' },
-        'Dal server si cancellano per sempre l\'account ',
-        h('strong', {}, opts.email),
-        ' e tutto quello che contiene: note, cartelle, impostazioni e dizionario. Non si può annullare.',
-      ),
-      h('p', { class: 'field-help' }, 'Se vuoi tenerne una copia, prima ', download, '. Gli appunti fuori dall\'account restano in questo browser.'),
-      h(
-        'p',
-        { class: 'field-help' },
-        'Sugli altri dispositivi dove sei entrato, l\'accesso scade entro un\'ora: lì premi «Esci dall\'account» per togliere le note anche da quel browser.',
-      ),
-      h('label', { class: 'prompt-label' }, h('span', {}, 'Per confermare scrivi «elimina»'), input),
+      h('p', { class: 'confirm-message' }, ...rich(T.deleteMessage, { email: h('strong', {}, opts.email) })),
+      h('p', { class: 'field-help' }, ...rich(T.keepCopy, { download })),
+      h('p', { class: 'field-help' }, T.otherDevices),
+      h('label', { class: 'prompt-label' }, h('span', {}, T.typeToConfirm(T.confirmWord)), input),
       h(
         'div',
         { class: 'dialog-actions' },
-        h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => dialog.close() } }, 'Annulla'),
+        h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => dialog.close() } }, T.cancel),
         submit,
       ),
     )
-    const dialog = dialogShell('Eliminare l\'account?', [form], 'dialog-delete-account')
+    const dialog = dialogShell(T.deleteTitle, [form], 'dialog-delete-account')
     dialog.addEventListener('close', () => resolve(confirmed))
     dialog.showModal()
     input.focus()

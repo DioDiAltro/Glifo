@@ -8,9 +8,45 @@
  * di feedback.ts; dentro claude.ai i commenti non si leggono e non partono.
  */
 import { SUPABASE_KEY, SUPABASE_URL } from '../account/config'
+import { dateLocale, texts } from '../i18n'
 import { dialogShell } from './dialogs'
 import { h } from './dom'
 import { openFeedbackDialog, type FeedbackDeps, type FeedbackKind } from './feedback'
+
+const T = texts({
+  problems: ['Problemi', 'Problems'],
+  noProblems: ['Nessun problema, per ora.', 'No problems so far.'],
+  ideas: ['Idee', 'Ideas'],
+  noIdeas: ['Nessuna idea, per ora.', 'No ideas so far.'],
+  other: ['Altro', 'Other'],
+  nothingYet: ['Ancora niente, qui.', 'Nothing here yet.'],
+  offline: [
+    'Senza connessione i commenti non si vedono: riprova quando sei di nuovo in rete.',
+    'You can\'t see the comments while offline: try again when you\'re back online.',
+  ],
+  checkConnection: [
+    'Non riesco a caricare i commenti: controlla la connessione e riprova.',
+    'I can\'t load the comments: check your connection and try again.',
+  ],
+  loadFailed: ['Non riesco a caricare i commenti: riprova tra poco.', 'I can\'t load the comments: try again in a moment.'],
+  todayAt: (time: string) => [`oggi alle ${time}`, `today at ${time}`],
+  yesterdayAt: (time: string) => [`ieri alle ${time}`, `yesterday at ${time}`],
+  anonymous: ['Anonimo', 'Anonymous'],
+  reply: ['Risposta di chi fa Glifo', 'Reply from the Glifo team'],
+  whichComments: ['Quali commenti', 'Which comments'],
+  loading: ['Carico i commenti…', 'Loading comments…'],
+  retry: ['Riprova', 'Try again'],
+  // `empty`: la frase della scheda vuota («Ancora niente, qui.»).
+  emptyTab: (empty: string) => [`${empty} Se hai qualcosa da dire, scrivilo tu.`, `${empty} If you have something to say, be the first to write it.`],
+  latest: (n: number) => [`Qui ci sono i ${n} commenti più recenti.`, `These are the ${n} most recent comments.`],
+  title: ['Commenti', 'Feedback'],
+  intro: [
+    'Problemi, idee e altro da chi prova Glifo: guarda se qualcuno l\'ha già scritto, se no scrivilo tu.',
+    'Problems, ideas and more from people trying Glifo: see if someone has already written it, and if not, write it yourself.',
+  ],
+  close: ['Chiudi', 'Close'],
+  write: ['Scrivi un commento', 'Write a comment'],
+})
 
 /** Un commento come lo vede chiunque nella pagina. */
 export interface PublicComment {
@@ -28,9 +64,9 @@ export const PUBLIC_COLUMNS = 'id,created_at,kind,author,message,reply'
 export const COMMENTS_MAX = 300
 
 const TABS: { kind: FeedbackKind; label: string; empty: string }[] = [
-  { kind: 'problema', label: 'Problemi', empty: 'Nessun problema, per ora.' },
-  { kind: 'idea', label: 'Idee', empty: 'Nessuna idea, per ora.' },
-  { kind: 'altro', label: 'Altro', empty: 'Ancora niente, qui.' },
+  { kind: 'problema', label: T.problems, empty: T.noProblems },
+  { kind: 'idea', label: T.ideas, empty: T.noIdeas },
+  { kind: 'altro', label: T.other, empty: T.nothingYet },
 ]
 const KINDS = new Set<unknown>(TABS.map((tab) => tab.kind))
 
@@ -61,13 +97,11 @@ export async function loadComments(fetchImpl: typeof fetch = (...args) => fetch(
     })
   } catch {
     throw new CommentsError(
-      navigator.onLine === false
-        ? 'Senza connessione i commenti non si vedono: riprova quando sei di nuovo in rete.'
-        : 'Non riesco a caricare i commenti: controlla la connessione e riprova.',
+      navigator.onLine === false ? T.offline : T.checkConnection,
     )
   }
   const rows: unknown = response.ok ? await response.json().catch(() => null) : null
-  if (!Array.isArray(rows)) throw new CommentsError('Non riesco a caricare i commenti: riprova tra poco.')
+  if (!Array.isArray(rows)) throw new CommentsError(T.loadFailed)
   return rows.filter(isComment)
 }
 
@@ -76,11 +110,11 @@ export function commentDate(iso: string, now: Date): string {
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return ''
   const day = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
-  const time = date.toLocaleTimeString('it-IT', { hour: 'numeric', minute: '2-digit' })
+  const time = date.toLocaleTimeString(dateLocale(), { hour: 'numeric', minute: '2-digit' })
   const days = Math.round((day(now) - day(date)) / 86_400_000)
-  if (days === 0) return `oggi alle ${time}`
-  if (days === 1) return `ieri alle ${time}`
-  return date.toLocaleDateString('it-IT', {
+  if (days === 0) return T.todayAt(time)
+  if (days === 1) return T.yesterdayAt(time)
+  return date.toLocaleDateString(dateLocale(), {
     day: 'numeric',
     month: 'long',
     year: date.getFullYear() === now.getFullYear() ? undefined : 'numeric',
@@ -94,12 +128,12 @@ function commentItem(comment: PublicComment, now: Date): HTMLLIElement {
     h(
       'div',
       { class: 'comment-head' },
-      h('span', { class: comment.author ? 'comment-author' : 'comment-author is-anonymous' }, comment.author ?? 'Anonimo'),
+      h('span', { class: comment.author ? 'comment-author' : 'comment-author is-anonymous' }, comment.author ?? T.anonymous),
       h('time', { attrs: { datetime: comment.created_at } }, commentDate(comment.created_at, now)),
     ),
     h('p', { class: 'comment-text' }, comment.message),
     comment.reply
-      ? h('div', { class: 'comment-reply' }, h('span', { class: 'comment-reply-label' }, 'Risposta di chi fa Glifo'), h('p', {}, comment.reply))
+      ? h('div', { class: 'comment-reply' }, h('span', { class: 'comment-reply-label' }, T.reply), h('p', {}, comment.reply))
       : null,
   )
 }
@@ -126,7 +160,7 @@ export function openCommentsDialog(deps: CommentsDeps): HTMLDialogElement {
   const counts = new Map<FeedbackKind, HTMLElement>()
   const tabs = h(
     'div',
-    { class: 'segmented comments-tabs', attrs: { role: 'radiogroup', 'aria-label': 'Quali commenti' } },
+    { class: 'segmented comments-tabs', attrs: { role: 'radiogroup', 'aria-label': T.whichComments } },
     TABS.map(({ kind, label }) => {
       const count = h('span', { class: 'comments-count' })
       counts.set(kind, count)
@@ -154,8 +188,8 @@ export function openCommentsDialog(deps: CommentsDeps): HTMLDialogElement {
       counts.get(kind)!.textContent = n === undefined ? '' : String(n)
     }
     if (state || !comments) {
-      body.replaceChildren(h('p', { class: 'comments-state' }, state?.text ?? 'Carico i commenti…'))
-      if (state?.retry) body.append(h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => refresh() } }, 'Riprova'))
+      body.replaceChildren(h('p', { class: 'comments-state' }, state?.text ?? T.loading))
+      if (state?.retry) body.append(h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => refresh() } }, T.retry))
       return
     }
     const tab = TABS.find((t) => t.kind === lastTab)!
@@ -164,9 +198,9 @@ export function openCommentsDialog(deps: CommentsDeps): HTMLDialogElement {
     body.replaceChildren(
       shown.length
         ? h('ol', { class: 'comments-list', attrs: { 'aria-label': tab.label } }, shown.map((c) => commentItem(c, now)))
-        : h('p', { class: 'comments-state' }, tab.empty, ' Se hai qualcosa da dire, scrivilo tu.'),
+        : h('p', { class: 'comments-state' }, T.emptyTab(tab.empty)),
     )
-    if (comments.length >= COMMENTS_MAX) body.append(h('p', { class: 'comments-more' }, `Qui ci sono i ${COMMENTS_MAX} commenti più recenti.`))
+    if (comments.length >= COMMENTS_MAX) body.append(h('p', { class: 'comments-more' }, T.latest(COMMENTS_MAX)))
   }
 
   function refresh(): void {
@@ -182,7 +216,7 @@ export function openCommentsDialog(deps: CommentsDeps): HTMLDialogElement {
       },
       (err: unknown) => {
         if (mine !== ticket) return
-        state = { text: err instanceof CommentsError ? err.message : 'Non riesco a caricare i commenti: riprova tra poco.', retry: true }
+        state = { text: err instanceof CommentsError ? err.message : T.loadFailed, retry: true }
         render()
       },
     )
@@ -203,16 +237,16 @@ export function openCommentsDialog(deps: CommentsDeps): HTMLDialogElement {
   }
 
   const dialog = dialogShell(
-    'Commenti',
+    T.title,
     [
-      h('p', { class: 'comments-intro' }, 'Problemi, idee e altro da chi prova Glifo: guarda se qualcuno l\'ha già scritto, se no scrivilo tu.'),
+      h('p', { class: 'comments-intro' }, T.intro),
       tabs,
       body,
       h(
         'div',
         { class: 'dialog-actions' },
-        h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => dialog.close() } }, 'Chiudi'),
-        h('button', { class: 'btn btn-primary comments-write', attrs: { type: 'button' }, on: { click: write } }, 'Scrivi un commento'),
+        h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => dialog.close() } }, T.close),
+        h('button', { class: 'btn btn-primary comments-write', attrs: { type: 'button' }, on: { click: write } }, T.write),
       ),
     ],
     'dialog-comments',

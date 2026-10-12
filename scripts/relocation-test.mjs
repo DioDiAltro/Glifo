@@ -68,7 +68,7 @@ const check = (ok, msg) => {
 
 /** Un browser con i due indirizzi, senza service worker (le pagine finte passano da `route`). */
 async function newBrowser(viewport = { width: 1280, height: 800 }) {
-  const context = await browser.newContext({ serviceWorkers: 'block', viewport, acceptDownloads: true })
+  const context = await browser.newContext({ serviceWorkers: 'block', viewport, acceptDownloads: true, locale: 'it-IT' })
   await context.route(`${OLD}/**`, serve('/Glifo/'))
   await context.route(`${NEW}/**`, serve('/'))
   // Il Supabase vero non si chiama mai.

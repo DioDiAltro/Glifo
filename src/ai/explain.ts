@@ -13,6 +13,7 @@
  * Un modello piccolo sbaglia più di uno grande: per questo i conti li firma Glifo, e i passaggi che non
  * tornano si vedono con il ✗.
  */
+import { texts } from '../i18n'
 import type { FormattedResult } from '../math/format'
 import { toLatex } from '../math/latex'
 import { children, namesIn, parseMath, type MathNode } from '../math/parse'
@@ -22,9 +23,15 @@ import { checkFormula, nameLike, runTool, toolCallsIn, toolResponses, toolsPromp
 
 export type ExplainTone = 'professore' | 'semplice'
 
-export const EXPLAIN_TONES: { id: ExplainTone; label: string }[] = [
-  { id: 'professore', label: 'Come il professore' },
-  { id: 'semplice', label: 'Più semplice' },
+// Per ora solo le etichette dei toni nelle impostazioni (src/ui/dialogs.ts): i messaggi per il modello si traducono dopo.
+const T = texts({
+  professor: ['Come il professore', 'Like a professor'],
+  simple: ['Più semplice', 'Simpler'],
+})
+
+export const EXPLAIN_TONES: { id: ExplainTone; readonly label: string }[] = [
+  { id: 'professore', get label() { return T.professor } },
+  { id: 'semplice', get label() { return T.simple } },
 ]
 
 /** Il conto da spiegare: un risultato dopo «=», un risultato scritto (giusto o sbagliato) o le soluzioni dopo ⇒. */

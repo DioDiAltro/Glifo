@@ -1,3 +1,4 @@
+import { lang } from '../i18n'
 import { TURNSTILE_SITE_KEY } from './config'
 import { accountFailure } from './supabase'
 
@@ -68,7 +69,8 @@ export async function captchaToken(host: HTMLElement, theme: 'light' | 'dark'): 
       action: 'accesso',
       appearance: 'interaction-only',
       theme,
-      language: 'it',
+      // La lingua della pagina (Turnstile conosce sia 'it' sia 'en').
+      language: lang,
       size: width > 0 && width < 300 ? 'compact' : 'flexible',
       'response-field': false,
       callback: (token: string) => finish(() => resolve(token)),

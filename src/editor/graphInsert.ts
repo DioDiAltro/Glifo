@@ -94,7 +94,7 @@ export function setGraphLabels(view: EditorView, line: number, labels: GraphLabe
   if (!m) return false
   const indent = m[1]
   const wanted: [key: 'title' | 'x' | 'y' | 'z', text: string][] = [
-    ['title', labels.title ? `titolo: ${labels.title}` : ''],
+    ['title', labels.title ? `titolo: ${labels.title}` : ''], // non si traduce: la riga del blocco che Glifo legge
     ['x', labels.x ? `asse x: ${labels.x}` : ''],
     ['y', labels.y ? `asse y: ${labels.y}` : ''],
   ]

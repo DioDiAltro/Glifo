@@ -1,13 +1,53 @@
 import { EditorSelection } from '@codemirror/state'
 import type { MarkdownEditor } from '../editor/editor'
 import { insertBlock, toggleLinePrefix, wrapSelection } from '../editor/insert'
-import { LIST_STYLES, applyListStyle, indentListItems, outdentListItems, type ListStyle } from '../editor/lists'
+import { LIST_STYLES, applyListStyle, indentListItems, outdentListItems, type ListStyle, type ListStyleId } from '../editor/lists'
+import { texts } from '../i18n'
 import { ICONS, h, icon } from './dom'
+
+const T = texts({
+  formatting: ['Formattazione', 'Formatting'],
+  insert: ['Inserisci', 'Insert'],
+  heading: ['Titolo (## )', 'Heading (## )'],
+  bold: ['Grassetto (Ctrl+B)', 'Bold (Ctrl+B)'],
+  italic: ['Corsivo (Ctrl+I)', 'Italic (Ctrl+I)'],
+  strike: ['Barrato', 'Strikethrough'],
+  bulleted: ['Elenco con i trattini', 'Bulleted list'],
+  numbered: ['Elenco numerato 1) 2) 3)', 'Numbered list 1) 2) 3)'],
+  todo: ['Lista di cose da fare', 'To-do list'],
+  quote: ['Citazione', 'Quote'],
+  code: ['Codice', 'Code'],
+  link: ['Link', 'Link'],
+  schema: ['Schema: forme e frecce, come in draw.io', 'Diagram: shapes and arrows, like draw.io'],
+  graph: [
+    'Grafico di una funzione (con il cursore su una formula come y = x^2, disegna quella)',
+    'Graph of a function (with the cursor on a formula like y = x^2, it draws that one)',
+  ],
+  inlineMath: ['Formula in linea (Ctrl+M)', 'Inline formula (Ctrl+M)'],
+  blockMath: ['Formula a blocco (Ctrl+Maiusc+M)', 'Block formula (Ctrl+Shift+M)'],
+  listsHint: ['Tutti i tipi di elenco e i rientri', 'All list types and indentation'],
+  lists: ['Tutti i tipi di elenco', 'All list types'],
+  indent: ['Rientra', 'Indent'],
+  outdent: ['Riduci rientro', 'Outdent'],
+  outdentKeys: ['Maiusc+Tab', 'Shift+Tab'],
+  tableHint: ['Tabella: con le formule, come in Excel, o di testo', 'Table: with formulas, like Excel, or text'],
+  table: ['Tabella', 'Table'],
+  sheet: ['Tabella con le formule, come in Excel', 'Table with formulas, like Excel'],
+  textTable: ['Tabella di testo (Markdown)', 'Text table (Markdown)'],
+  // Il testo che i pulsanti scrivono nella nota quando non c'è niente di selezionato (si scrive sopra).
+  tableHeader: ['| Colonna 1 | Colonna 2 |', '| Column 1 | Column 2 |'],
+  linkText: ['testo del link', 'link text'],
+  codeText: ['codice', 'code'],
+  boldText: ['grassetto', 'bold'],
+  italicText: ['corsivo', 'italic'],
+  strikeText: ['barrato', 'strikethrough'],
+})
 
 type Action = { icon?: keyof typeof ICONS; text?: string; title: string; run: () => void } | 'sep' | HTMLElement
 
-function listStyle(label: string): ListStyle {
-  return LIST_STYLES.find((s) => s.label === label)!.style
+/** Lo stile del menu degli elenchi con quell'id (le etichette cambiano con la lingua). */
+function listStyle(id: ListStyleId): ListStyle {
+  return LIST_STYLES.find((s) => s.id === id)!.style
 }
 
 interface MenuItem {
@@ -103,13 +143,13 @@ function toolMenu(editor: MarkdownEditor, opts: { icon: keyof typeof ICONS; titl
 function listMenu(editor: MarkdownEditor): HTMLElement {
   return toolMenu(editor, {
     icon: 'listOrdered',
-    title: 'Tutti i tipi di elenco e i rientri',
-    label: 'Tutti i tipi di elenco',
+    title: T.listsHint,
+    label: T.lists,
     items: [
       ...LIST_STYLES.map((s) => ({ example: s.example, label: s.label, run: () => applyListStyle(editor.view, s.style) })),
       'sep',
-      { example: '→', label: 'Rientra', run: () => indentListItems(editor.view), keys: 'Tab' },
-      { example: '←', label: 'Riduci rientro', run: () => outdentListItems(editor.view), keys: 'Maiusc+Tab' },
+      { example: '→', label: T.indent, run: () => indentListItems(editor.view), keys: 'Tab' },
+      { example: '←', label: T.outdent, run: () => outdentListItems(editor.view), keys: T.outdentKeys },
     ],
   })
 }
@@ -121,14 +161,18 @@ function listMenu(editor: MarkdownEditor): HTMLElement {
 function tableMenu(editor: MarkdownEditor, more: ToolbarActions): HTMLElement {
   return toolMenu(editor, {
     icon: 'sheet',
-    title: 'Tabella: con le formule, come in Excel, o di testo',
-    label: 'Tabella',
+    title: T.tableHint,
+    label: T.table,
     items: [
-      { example: '=B2*C2', label: 'Tabella con le formule, come in Excel', run: () => more.onSheet() },
+      { example: '=B2*C2', label: T.sheet, run: () => more.onSheet() },
       {
         example: '| a | b |',
-        label: 'Tabella di testo (Markdown)',
-        run: () => insertBlock(editor.view, '| Colonna 1 | Colonna 2 |\n| --- | --- |\n|  |  |', '| Colonna 1 | Colonna 2 |\n| --- | --- |\n| '.length),
+        label: T.textTable,
+        run: () => {
+          // Il cursore nella prima cella vuota.
+          const head = `${T.tableHeader}\n| --- | --- |\n| `
+          insertBlock(editor.view, `${head} |  |`, head.length)
+        },
       },
     ],
   })
@@ -137,7 +181,7 @@ function tableMenu(editor: MarkdownEditor, more: ToolbarActions): HTMLElement {
 function insertLink(editor: MarkdownEditor): void {
   const view = editor.view
   const sel = view.state.selection.main
-  const text = view.state.sliceDoc(sel.from, sel.to) || 'testo del link'
+  const text = view.state.sliceDoc(sel.from, sel.to) || T.linkText
   const insert = `[${text}](https://)`
   const urlFrom = sel.from + text.length + 3
   view.dispatch({
@@ -156,7 +200,7 @@ function insertCode(editor: MarkdownEditor): void {
     const block = '```\n' + text + '\n```'
     insertBlock(view, block, 4 + text.length)
   } else {
-    wrapSelection(view, '`', '`', 'codice')
+    wrapSelection(view, '`', '`', T.codeText)
   }
 }
 
@@ -179,29 +223,29 @@ export interface ToolbarActions {
 export function createToolbar(editor: MarkdownEditor, more: ToolbarActions): { format: HTMLElement; insert: HTMLElement } {
   const v = () => editor.view
   const format: Action[] = [
-    { icon: 'heading', title: 'Titolo (## )', run: () => toggleLinePrefix(v(), '## ', /^#{1,6}\s+/) },
-    { icon: 'bold', title: 'Grassetto (Ctrl+B)', run: () => wrapSelection(v(), '**', '**', 'grassetto') },
-    { icon: 'italic', title: 'Corsivo (Ctrl+I)', run: () => wrapSelection(v(), '*', '*', 'corsivo') },
-    { icon: 'strike', title: 'Barrato', run: () => wrapSelection(v(), '~~', '~~', 'barrato') },
+    { icon: 'heading', title: T.heading, run: () => toggleLinePrefix(v(), '## ', /^#{1,6}\s+/) },
+    { icon: 'bold', title: T.bold, run: () => wrapSelection(v(), '**', '**', T.boldText) },
+    { icon: 'italic', title: T.italic, run: () => wrapSelection(v(), '*', '*', T.italicText) },
+    { icon: 'strike', title: T.strike, run: () => wrapSelection(v(), '~~', '~~', T.strikeText) },
     'sep',
-    { icon: 'list', title: 'Elenco con i trattini', run: () => applyListStyle(v(), listStyle('Trattini')) },
-    { icon: 'listOrdered', title: 'Elenco numerato 1) 2) 3)', run: () => applyListStyle(v(), listStyle('Numeri')) },
-    { icon: 'tasks', title: 'Lista di cose da fare', run: () => applyListStyle(v(), listStyle('Cose da fare')) },
+    { icon: 'list', title: T.bulleted, run: () => applyListStyle(v(), listStyle('dashes')) },
+    { icon: 'listOrdered', title: T.numbered, run: () => applyListStyle(v(), listStyle('numbers')) },
+    { icon: 'tasks', title: T.todo, run: () => applyListStyle(v(), listStyle('todo')) },
     listMenu(editor),
-    { icon: 'quote', title: 'Citazione', run: () => toggleLinePrefix(v(), '> ', /^>\s?/) },
+    { icon: 'quote', title: T.quote, run: () => toggleLinePrefix(v(), '> ', /^>\s?/) },
   ]
   const insert: Action[] = [
-    { icon: 'code', title: 'Codice', run: () => insertCode(editor) },
-    { icon: 'link', title: 'Link', run: () => insertLink(editor) },
+    { icon: 'code', title: T.code, run: () => insertCode(editor) },
+    { icon: 'link', title: T.link, run: () => insertLink(editor) },
     tableMenu(editor, more),
-    { icon: 'schema', title: 'Schema: forme e frecce, come in draw.io', run: () => more.onSchema() },
-    { icon: 'graph', title: 'Grafico di una funzione (con il cursore su una formula come y = x^2, disegna quella)', run: () => more.onGraph() },
+    { icon: 'schema', title: T.schema, run: () => more.onSchema() },
+    { icon: 'graph', title: T.graph, run: () => more.onGraph() },
     'sep',
-    { text: '$x$', title: 'Formula in linea (Ctrl+M)', run: () => editor.insertInlineMath() },
-    { text: '$$', title: 'Formula a blocco (Ctrl+Maiusc+M)', run: () => editor.insertBlockMath() },
+    { text: '$x$', title: T.inlineMath, run: () => editor.insertInlineMath() },
+    { text: '$$', title: T.blockMath, run: () => editor.insertBlockMath() },
     more.explain,
   ]
-  return { format: toolbar('Formattazione', format), insert: toolbar('Inserisci', insert) }
+  return { format: toolbar(T.formatting, format), insert: toolbar(T.insert, insert) }
 }
 
 function toolbar(label: string, actions: Action[]): HTMLElement {

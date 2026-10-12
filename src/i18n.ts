@@ -23,7 +23,7 @@ export const LANGUAGES: readonly { id: Lang; name: string }[] = [
 /** Chiave in localStorage: fuori dagli spazi degli account, perché è del dispositivo. */
 export const LANG_KEY = 'glifo.lang.v1'
 
-function isLang(value: unknown): value is Lang {
+export function isLang(value: unknown): value is Lang {
   return value === 'it' || value === 'en'
 }
 

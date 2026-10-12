@@ -5,9 +5,27 @@
  * riepilogo delle formule controllate.
  */
 import type { Explanation } from '../ai/explain'
+import { texts } from '../i18n'
 import { checkHtml } from '../render/check'
 import { escapeHtml, renderTex } from '../render/katex'
 import { h } from './dom'
+
+const T = texts({
+  uncheckedTitle: ['Glifo non sa controllare questo passaggio', 'Glifo can\'t check this step'],
+  unchecked: ['non controllato', 'not checked'],
+  noFormulas: (what: string) => [
+    `Glifo non ha formule da controllare in ${what}: le frasi le scrive il modello, e possono sbagliare.`,
+    `Glifo has no formulas to check in ${what}: the sentences are written by the model and may be wrong.`,
+  ],
+  notChecked: (what: string) => [
+    `Glifo non ha potuto controllare le formule di ${what}: le frasi le scrive il modello, e possono sbagliare.`,
+    `Glifo couldn't check the formulas in ${what}: the sentences are written by the model and may be wrong.`,
+  ],
+  formulasChecked: (count: number, total: number, wrong: number) => [
+    `${wrong ? '✗' : '✓'} Formule controllate da Glifo: ${count} su ${total}${wrong ? `, ${wrong} sbagliat${wrong === 1 ? 'a' : 'e'}` : ', tutte giuste'}. Le frasi le scrive il modello.`,
+    `${wrong ? '✗' : '✓'} Formulas checked by Glifo: ${count} of ${total}${wrong ? `, ${wrong} wrong` : ', all correct'}. The sentences are written by the model.`,
+  ],
+})
 
 /**
  * Una frase con le formule in linea ($…$): il testo sempre come testo, le formule con KaTeX. La
@@ -44,7 +62,7 @@ export function stepsList(e: Explanation): HTMLElement {
     const mark = step.formula
       ? step.check
         ? checkHtml(step.check.ok ? { ok: true, ...(step.check.rounded && { rounded: true }) } : { ok: false, ...(step.check.value && { value: step.check.value }) })
-        : '<span class="explain-unchecked" title="Glifo non sa controllare questo passaggio">non controllato</span>'
+        : `<span class="explain-unchecked" title="${escapeHtml(T.uncheckedTitle)}">${escapeHtml(T.unchecked)}</span>`
       : ''
     list.append(
       h(
@@ -61,16 +79,12 @@ export function stepsList(e: Explanation): HTMLElement {
 /**
  * Il riepilogo quando non c'è un risultato a cui arrivare (un grafico, un teorema, una risposta della
  * chat): quante formule ha controllato Glifo, e che le frasi le scrive il modello. `what`: «questa
- * spiegazione», «questa risposta».
+ * spiegazione», «questa risposta» (nella lingua della pagina).
  */
 export function formulasSummary(e: Explanation, what: string): HTMLElement {
   const formulas = e.steps.filter((s) => s.formula)
   const checked = formulas.filter((s) => s.check?.ok).length
   const wrong = formulas.filter((s) => s.check && !s.check.ok).length
-  const text = !formulas.length
-    ? `Glifo non ha formule da controllare in ${what}: le frasi le scrive il modello, e possono sbagliare.`
-    : !checked && !wrong
-      ? `Glifo non ha potuto controllare le formule di ${what}: le frasi le scrive il modello, e possono sbagliare.`
-      : `${wrong ? '✗' : '✓'} Formule controllate da Glifo: ${checked + wrong} su ${formulas.length}${wrong ? `, ${wrong} sbagliat${wrong === 1 ? 'a' : 'e'}` : ', tutte giuste'}. Le frasi le scrive il modello.`
+  const text = !formulas.length ? T.noFormulas(what) : !checked && !wrong ? T.notChecked(what) : T.formulasChecked(checked + wrong, formulas.length, wrong)
   return h('p', { class: `explain-summary${checked && !wrong ? ' is-ok' : wrong ? ' is-wrong' : ''}`, attrs: { role: 'status' } }, text)
 }

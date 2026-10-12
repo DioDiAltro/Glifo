@@ -25,7 +25,7 @@ const elapsed = () => `${Math.round((Date.now() - started) / 1000)} s`
 let ok = false
 
 try {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block' })
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block', locale: 'it-IT' })
   await context.addInitScript((chosen) => {
     localStorage.setItem('glifo.tutorial.v1', 'visto')
     localStorage.setItem('glifo.settings.v1', JSON.stringify({ localModel: chosen }))
