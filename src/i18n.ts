@@ -137,3 +137,17 @@ export function dateLocale(): string {
   if (lang === 'it') return 'it-IT'
   return browserLanguages().find((l) => l.toLowerCase().startsWith('en')) ?? 'en-GB'
 }
+
+/** Per i numeri con `toLocaleString` e `Intl.NumberFormat`: 1.234,5 in italiano, 1,234.5 in inglese. */
+export function numberLocale(): string {
+  return dateLocale()
+}
+
+/**
+ * I numeri che Glifo scrive da sé (risultati, tabelle, grafici) hanno la virgola per i decimali in
+ * italiano (0,5 e nelle formule 0{,}5) e il punto in inglese (0.5). Quando il numero viene da come l'ha
+ * scritto chi prende appunti, si tiene il suo modo: questo vale solo quando non si sa.
+ */
+export function usesDecimalComma(): boolean {
+  return lang === 'it'
+}

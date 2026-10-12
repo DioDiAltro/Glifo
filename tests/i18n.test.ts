@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { browserLang, byLang, dateLocale, detectLang, lang, LANGUAGES, rich, savedLang, setLangForTests, texts } from '../src/i18n'
+import { browserLang, byLang, dateLocale, detectLang, lang, LANGUAGES, numberLocale, rich, savedLang, setLangForTests, texts, usesDecimalComma } from '../src/i18n'
 import { accountSettings, ACCOUNT_SETTINGS, loadSettings, rememberLanguage, saveSettings, validAccountSettings } from '../src/store/settings'
 
 function browserLanguages(languages: string[]): void {
@@ -115,5 +115,13 @@ describe('i testi nelle due lingue', () => {
     expect(dateLocale()).toBe('en-GB')
     browserLanguages(['en-US', 'it'])
     expect(dateLocale()).toBe('en-US')
+  })
+
+  it('i numeri: la virgola per i decimali in italiano, il punto in inglese', () => {
+    expect(usesDecimalComma()).toBe(true)
+    expect((12345.5).toLocaleString(numberLocale())).toBe('12.345,5')
+    setLangForTests('en')
+    expect(usesDecimalComma()).toBe(false)
+    expect((12345.5).toLocaleString(numberLocale())).toBe('12,345.5')
   })
 })
