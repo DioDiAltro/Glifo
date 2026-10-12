@@ -1,10 +1,15 @@
 /**
- * I numeri delle tabelle all'italiana, come in Excel: si scrivono con la virgola (1,5), i punti
- * delle migliaia (1.000), in euro (1,50 €) o in percentuale (22%); si mostrano nel formato della
- * cella. I formati sono pochi: generale (come sono), numero con i decimali fissi e i punti delle
- * migliaia, euro e percentuale.
+ * I numeri delle tabelle, come in Excel. Nella nota sono sempre scritti all'italiana: con la virgola
+ * (1,5), i punti delle migliaia (1.000), in euro (1,50 €) o in percentuale (22%); il lettore capisce
+ * anche il punto dei decimali, quando non sono migliaia (3.14). Così una nota dà gli stessi numeri in
+ * italiano e in inglese. Si mostrano nel formato della cella e nella lingua di Glifo: 1.234,50 € in
+ * italiano, €1,234.50 in inglese (`shownStyle`). Con Glifo in inglese si scrivono all'inglese
+ * (`readEnglishNumber`): quello che si scrive torna all'italiana prima di andare nella nota
+ * (`italianNumber`, vedi input.ts). I formati sono pochi: generale (come sono), numero con i decimali
+ * fissi e i punti delle migliaia, euro e percentuale.
  */
-import { ERROR_NAMES, sheetError, type Value } from './values'
+import { usesDecimalComma } from '../i18n'
+import { ENGLISH_ERRORS, ERROR_NAMES, sheetError, type ErrorCode, type Value } from './values'
 
 export type Format =
   | { kind: 'general' }
@@ -24,6 +29,26 @@ export function decimalsOf(f: Format): number {
   return f.kind === 'general' ? 0 : f.decimals
 }
 
+/**
+ * Come si scrivono numeri, VERO/FALSO ed errori: all'italiana (1.234,5 €, VERO, #N/D: quello che si
+ * salva nella nota) o all'inglese (€1,234.5, TRUE, #N/A).
+ */
+export interface NumberStyle {
+  readonly english: boolean
+  /** Il separatore dei decimali. */
+  readonly decimal: string
+  /** Il separatore delle migliaia. */
+  readonly group: string
+}
+
+export const ITALIAN: NumberStyle = { english: false, decimal: ',', group: '.' }
+export const ENGLISH: NumberStyle = { english: true, decimal: '.', group: ',' }
+
+/** Lo stile di quello che Glifo mostra: quello della lingua della pagina. */
+export function shownStyle(): NumberStyle {
+  return usesDecimalComma() ? ITALIAN : ENGLISH
+}
+
 // ——— Leggere quello che si scrive in una cella ———
 
 /** 1.234,5 (con i punti delle migliaia; il primo gruppo non comincia con 0). */
@@ -33,6 +58,10 @@ const COMMA = /^\d+(?:,\d+)?$|^,\d+$/
 /** 3.14 o .5: il punto come in inglese, quando non sono migliaia. */
 const DOT = /^\d+\.\d+$|^\.\d+$/
 const EXPONENT = /^\d+(?:[.,]\d+)?[eE][-+]?\d+$/
+/** All'inglese: 1,234.5 (le virgole delle migliaia), 1234.5 o .5, 1.5e3. */
+const EN_GROUPED = /^[1-9]\d{0,2}(?:,\d{3})+(?:\.\d+)?$/
+const EN_PLAIN = /^\d+(?:\.\d+)?$|^\.\d+$/
+const EN_EXPONENT = /^\d+(?:\.\d+)?[eE][-+]?\d+$/
 
 interface Unsigned {
   value: number
@@ -56,13 +85,36 @@ function readUnsigned(s: string): Unsigned | null {
   return null
 }
 
-/** Un numero scritto in una cella, con il formato che fa capire: «1,50 €» è in euro con due decimali. */
-export function readNumber(text: string): { value: number; format: Format } | null {
-  let s = text.replace(/[  ]/g, ' ').trim()
-  let sign = 1
+/** Le cifre scritte all'inglese (1,234.5, 1234.5, .5, 1.5e3). */
+function readEnglishUnsigned(s: string): Unsigned | null {
+  if (EN_GROUPED.test(s)) {
+    const [int, dec = ''] = s.split('.')
+    return { value: Number(int.replace(/,/g, '') + (dec ? `.${dec}` : '')), decimals: dec.length, grouped: true }
+  }
+  if (EN_PLAIN.test(s)) {
+    const [int, dec = ''] = s.split('.')
+    return { value: Number((int || '0') + (dec ? `.${dec}` : '')), decimals: dec.length, grouped: false }
+  }
+  if (EN_EXPONENT.test(s)) return { value: Number(s), decimals: 0, grouped: false }
+  return null
+}
+
+/** I pezzi di un numero scritto in una cella: il segno, euro o percentuale e le cifre senza segno. */
+interface NumberParts {
+  negative: boolean
+  euro: boolean
+  percent: boolean
+  /** Le cifre come sono scritte, senza il segno e i simboli. */
+  digits: string
+  unsigned: Unsigned
+}
+
+function numberParts(text: string, english: boolean): NumberParts | null {
+  let s = text.replace(/[\u00a0\u202f]/g, ' ').trim()
+  let negative = false
   const takeSign = () => {
     if (/^[-−–]/.test(s)) {
-      sign = -sign
+      negative = !negative
       s = s.slice(1).trim()
     } else if (s.startsWith('+')) {
       s = s.slice(1).trim()
@@ -85,21 +137,67 @@ export function readNumber(text: string): { value: number; format: Format } | nu
     percent = true
     s = s.slice(0, -1).trim()
   }
-  const n = readUnsigned(s)
-  if (!n || !Number.isFinite(n.value)) return null
-  const value = sign * n.value
+  const unsigned = english ? readEnglishUnsigned(s) : readUnsigned(s)
+  if (!unsigned || !Number.isFinite(unsigned.value)) return null
+  return { negative, euro, percent, digits: s, unsigned }
+}
+
+function numberFrom(parts: NumberParts | null): { value: number; format: Format } | null {
+  if (!parts) return null
+  const n = parts.unsigned
+  const value = (parts.negative ? -1 : 1) * n.value
   const decimals = Math.min(n.decimals, MAX_DECIMALS)
-  if (percent) return { value: tidy(value / 100), format: { kind: 'percent', decimals } }
+  if (parts.percent) return { value: tidy(value / 100), format: { kind: 'percent', decimals } }
   // Come Excel: 10 € senza decimali, 1,5 € con due.
-  if (euro) return { value, format: { kind: 'euro', decimals: decimals > 0 ? Math.max(2, decimals) : 0 } }
+  if (parts.euro) return { value, format: { kind: 'euro', decimals: decimals > 0 ? Math.max(2, decimals) : 0 } }
   if (n.grouped) return { value, format: { kind: 'number', decimals } }
   return { value, format: GENERAL }
+}
+
+/** Un numero scritto in una cella (all'italiana, come nella nota), con il formato che fa capire: «1,50 €» è in euro con due decimali. */
+export function readNumber(text: string): { value: number; format: Format } | null {
+  return numberFrom(numberParts(text, false))
+}
+
+/** Un numero scritto all'inglese, come si scrive con Glifo in inglese: «€1.50», «1,234.5», «12.5%». */
+export function readEnglishNumber(text: string): { value: number; format: Format } | null {
+  return numberFrom(numberParts(text, true))
+}
+
+/** Le cifre all'inglese: 1.234,5 → 1,234.5; 1234,5 → 1234.5; 3.14 resta. */
+function swapSeparators(digits: string): string {
+  return digits.replace(/[.,]/g, (ch) => (ch === '.' ? ',' : '.'))
+}
+
+/**
+ * Un numero scritto all'italiana (come nella nota) scritto all'inglese, con le stesse cifre:
+ * «1.234,50 €» → «€1,234.50», «12,5%» → «12.5%». Null se non è un numero.
+ */
+export function englishNumber(text: string): string | null {
+  const parts = numberParts(text, false)
+  if (!parts) return null
+  const digits = parts.unsigned.grouped ? swapSeparators(parts.digits) : parts.digits.replace(',', '.')
+  const sign = parts.negative ? '-' : ''
+  return parts.euro ? `${sign}€${digits}` : `${sign}${digits}${parts.percent ? '%' : ''}`
+}
+
+/**
+ * Un numero scritto all'inglese scritto all'italiana, come va nella nota, con le stesse cifre:
+ * «€1,234.50» → «1.234,50 €», «.5» → «,5». Null se non è un numero scritto all'inglese.
+ */
+export function italianNumber(text: string): string | null {
+  const parts = numberParts(text, true)
+  if (!parts) return null
+  const digits = parts.unsigned.grouped ? swapSeparators(parts.digits) : parts.digits.replace('.', ',')
+  const sign = parts.negative ? '-' : ''
+  return `${sign}${digits}${parts.euro ? ' €' : parts.percent ? '%' : ''}`
 }
 
 /**
  * Il valore di quello che si scrive in una cella che non è una formula: un numero (anche in euro o
  * in percentuale), VERO o FALSO, un errore come #N/D, o un testo. Con l'apostrofo davanti è
- * sempre testo, come in Excel: '0123.
+ * sempre testo, come in Excel: '0123. È la lettura di quello che c'è nella nota, uguale in tutte e due
+ * le lingue.
  */
 export function readInput(text: string): { value: Value; format: Format } {
   const s = text.trim()
@@ -109,6 +207,24 @@ export function readInput(text: string): { value: Value; format: Format } {
   if (upper === 'VERO') return { value: true, format: GENERAL }
   if (upper === 'FALSO') return { value: false, format: GENERAL }
   const number = readNumber(s)
+  if (number) return number
+  const error = ERROR_NAMES[upper]
+  if (error) return { value: sheetError(error), format: GENERAL }
+  return { value: s, format: GENERAL }
+}
+
+/**
+ * Come `readInput`, ma per quello che si scrive con Glifo in inglese: i numeri all'inglese, TRUE e
+ * FALSE (VERO e FALSO sono testi), gli errori con i due nomi.
+ */
+export function readEnglishInput(text: string): { value: Value; format: Format } {
+  const s = text.trim()
+  if (!s) return { value: null, format: GENERAL }
+  if (s.startsWith("'")) return { value: s.slice(1), format: GENERAL }
+  const upper = s.toUpperCase()
+  if (upper === 'TRUE') return { value: true, format: GENERAL }
+  if (upper === 'FALSE') return { value: false, format: GENERAL }
+  const number = readEnglishNumber(s)
   if (number) return number
   const error = ERROR_NAMES[upper]
   if (error) return { value: sheetError(error), format: GENERAL }
@@ -136,57 +252,72 @@ export function roundTo(x: number, digits: number, mode: 'round' | 'up' | 'down'
   return whole === 0 ? 0 : sign * shift(whole, -digits)
 }
 
-/** Le cifre intere con i punti delle migliaia: 1234567 → 1.234.567. */
-function group(int: string): string {
-  return int.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+/** Le cifre intere con i separatori delle migliaia: 1234567 → 1.234.567 (1,234,567 in inglese). */
+function group(int: string, style: NumberStyle): string {
+  return int.replace(/\B(?=(\d{3})+(?!\d))/g, style.group)
 }
 
-/** Con `decimals` decimali fissi e i punti delle migliaia: 1.234,50. */
-export function fixedNumber(x: number, decimals: number): string {
+/** Con `decimals` decimali fissi e i separatori delle migliaia: 1.234,50 (1,234.50 in inglese). */
+export function fixedNumber(x: number, decimals: number, style: NumberStyle = shownStyle()): string {
   const r = roundTo(x, decimals)
-  if (Math.abs(r) >= 1e15) return generalNumber(r)
+  if (Math.abs(r) >= 1e15) return generalNumber(r, style)
   const [int, dec] = Math.abs(r).toFixed(decimals).split('.')
-  return `${r < 0 ? '-' : ''}${group(int)}${dec ? `,${dec}` : ''}`
+  return `${r < 0 ? '-' : ''}${group(int, style)}${dec ? `${style.decimal}${dec}` : ''}`
 }
 
 /**
  * Il formato generale, come in Excel: al massimo 10 cifre significative, senza zeri in fondo e senza
- * i punti delle migliaia; i numeri molto grandi o molto piccoli con l'esponente (1,5E+12).
+ * i separatori delle migliaia; i numeri molto grandi o molto piccoli con l'esponente (1,5E+12).
  */
-export function generalNumber(x: number): string {
+export function generalNumber(x: number, style: NumberStyle = shownStyle()): string {
   if (x === 0 || Object.is(x, -0)) return '0'
   const abs = Math.abs(x)
   if (abs >= 1e11 || abs < 1e-6) {
     const [m, e] = x.toExponential(5).split('e')
     const exp = Number(e)
-    return `${m.replace(/\.?0+$/, '').replace('.', ',')}E${exp < 0 ? '-' : '+'}${String(Math.abs(exp)).padStart(2, '0')}`
+    return `${m.replace(/\.?0+$/, '').replace('.', style.decimal)}E${exp < 0 ? '-' : '+'}${String(Math.abs(exp)).padStart(2, '0')}`
   }
   const r = Number.isInteger(x) ? x : Number(x.toPrecision(10))
-  return String(r).replace('.', ',')
+  return String(r).replace('.', style.decimal)
 }
 
-/** Il numero nel formato della cella. */
-export function formatNumber(x: number, format: Format): string {
+/** Il numero nel formato della cella (e nella lingua di Glifo, se non si dice lo stile). */
+export function formatNumber(x: number, format: Format, style: NumberStyle = shownStyle()): string {
   if (!Number.isFinite(x)) return '#NUM!'
   switch (format.kind) {
     case 'general':
-      return generalNumber(x)
+      return generalNumber(x, style)
     case 'number':
-      return fixedNumber(x, format.decimals)
-    case 'euro':
-      return `${fixedNumber(x, format.decimals)} €`
+      return fixedNumber(x, format.decimals, style)
+    case 'euro': {
+      const n = fixedNumber(x, format.decimals, style)
+      // In inglese il simbolo va davanti, dopo il segno: -€1,234.50.
+      if (style.english) return n.startsWith('-') ? `-€${n.slice(1)}` : `€${n}`
+      return `${n} €`
+    }
     case 'percent':
-      return `${fixedNumber(tidy(x * 100), format.decimals)}%`
+      return `${fixedNumber(tidy(x * 100), format.decimals, style)}%`
   }
 }
 
+/** VERO o FALSO (TRUE o FALSE in inglese). */
+export function booleanText(v: boolean, style: NumberStyle = shownStyle()): string {
+  if (style.english) return v ? 'TRUE' : 'FALSE'
+  return v ? 'VERO' : 'FALSO'
+}
+
+/** Il codice di un errore: #N/D (#N/A in inglese). */
+export function errorText(error: ErrorCode, style: NumberStyle = shownStyle()): string {
+  return style.english ? ENGLISH_ERRORS[error] : error
+}
+
 /** Il valore come si vede nella cella. */
-export function formatValue(value: Value, format: Format): string {
+export function formatValue(value: Value, format: Format, style: NumberStyle = shownStyle()): string {
   if (value === null) return ''
-  if (typeof value === 'boolean') return value ? 'VERO' : 'FALSO'
+  if (typeof value === 'boolean') return booleanText(value, style)
   if (typeof value === 'string') return value
-  if (typeof value === 'number') return formatNumber(value, format)
-  return value.error
+  if (typeof value === 'number') return formatNumber(value, format, style)
+  return errorText(value.error, style)
 }
 
 // ——— I formati scritti nella tabella ———
@@ -194,7 +325,7 @@ export function formatValue(value: Value, format: Format): string {
 /**
  * Il codice del formato, come quelli di Excel: «0,00 €», «0%», «0,0», «generale». Si scrive tra
  * graffe dopo il contenuto della cella, quando il formato non si capisce già da quello che c'è
- * scritto: =B2/B5 {0,0%}.
+ * scritto: =B2/B5 {0,0%}. È scritto nella nota, quindi sempre all'italiana.
  */
 export function formatCode(f: Format): string {
   if (f.kind === 'general') return 'generale'
@@ -211,6 +342,22 @@ export function parseFormatCode(code: string): Format | null {
   if (s === '€' || s === 'euro') return { kind: 'euro', decimals: 2 }
   if (s === '%') return { kind: 'percent', decimals: 0 }
   const m = /^(€ ?)?(?:#\.##)?0(?:,(0{1,10}))?(?: ?(€|%))?$/.exec(s)
+  if (!m || (m[1] && m[3])) return null
+  const decimals = m[2]?.length ?? 0
+  if (m[1] || m[3] === '€') return { kind: 'euro', decimals }
+  if (m[3] === '%') return { kind: 'percent', decimals }
+  return { kind: 'number', decimals }
+}
+
+/**
+ * Il formato di TESTO: come i codici delle celle («0,00 €», «#.##0,00») o all'inglese («0.00»,
+ * «#,##0.00», «€0.00»), così la stessa formula va in tutte e due le lingue.
+ */
+export function parseTextFormat(code: string): Format | null {
+  const italian = parseFormatCode(code)
+  if (italian) return italian
+  const s = code.trim().toLowerCase().replace(/\s+/g, ' ')
+  const m = /^(€ ?)?(?:#,##)?0(?:\.(0{1,10}))?(?: ?(€|%))?$/.exec(s)
   if (!m || (m[1] && m[3])) return null
   const decimals = m[2]?.length ?? 0
   if (m[1] || m[3] === '€') return { kind: 'euro', decimals }

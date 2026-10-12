@@ -4,12 +4,25 @@
  * da altre celle, è un riferimento circolare: #RIF!. Il formato del risultato viene da quello che
  * la formula usa (vedi `addFormat` e le altre in format.ts), se la cella non ne ha uno suo.
  */
+import { texts } from '../i18n'
 import { formulaBody, FormulaError, isFormula, parseFormula, type FormulaNode, type Ref } from './formula'
 import { addFormat, divFormat, GENERAL, mulFormat, readInput, tidy, type Format } from './format'
 import { callFunction, compareValues, power, toNumber, toText, type Arg, type Ctx, type RangeArg, type Res } from './functions'
 import type { SheetModel } from './model'
 import { cellName } from './refs'
 import { isError, sheetError, type SheetError, type Value } from './values'
+
+const T = texts({
+  circular: (cell: string) => [`Riferimento circolare: ${cell} usa il proprio risultato`, `Circular reference: ${cell} uses its own result`],
+  tooDeep: ['Troppe formule una dentro l\'altra', 'Too many formulas nested inside each other'],
+  unknownName: (name: string) => [
+    `Non conosco il nome «${name}»: le funzioni vogliono le parentesi, i testi le virgolette`,
+    `Unknown name “${name}”: functions need parentheses, texts need quotes`,
+  ],
+  rangeAlone: ['Un intervallo come A1:B5 va dentro una funzione, come SOMMA(A1:B5)', 'A range like A1:B5 goes inside a function, like SUM(A1:B5)'],
+  textTooLong: ['Il testo è troppo lungo', 'The text is too long'],
+  tooBig: ['Il risultato è troppo grande', 'The result is too large'],
+})
 
 export interface CellResult {
   value: Value
@@ -78,10 +91,10 @@ export class SheetEvaluator {
     } else {
       if (this.visiting.has(key)) {
         // Non si ricorda: il valore lo decide la cella che ha chiuso il giro.
-        return { value: sheetError('#RIF!', `Riferimento circolare: ${cellName(row, col)} usa il proprio risultato`), format: GENERAL, formula: true }
+        return { value: sheetError('#RIF!', T.circular(cellName(row, col))), format: GENERAL, formula: true }
       }
       if (this.depth >= MAX_DEPTH) {
-        return { value: sheetError('#RIF!', 'Troppe formule una dentro l\'altra'), format: GENERAL, formula: true }
+        return { value: sheetError('#RIF!', T.tooDeep), format: GENERAL, formula: true }
       }
       this.visiting.add(key)
       this.depth++
@@ -171,13 +184,13 @@ export class SheetEvaluator {
       case 'missing':
         return { v: null, f: GENERAL }
       case 'name':
-        return { v: sheetError('#NOME?', `Non conosco il nome «${node.name}»: le funzioni vogliono le parentesi, i testi le virgolette`), f: GENERAL }
+        return { v: sheetError('#NOME?', T.unknownName(node.name)), f: GENERAL }
       case 'ref': {
         const cell = this.cell(node.ref.row, node.ref.col)
         return { v: cell.value, f: cell.format }
       }
       case 'range':
-        return { v: sheetError('#VALORE!', 'Un intervallo come A1:B5 va dentro una funzione, come SOMMA(A1:B5)'), f: GENERAL }
+        return { v: sheetError('#VALORE!', T.rangeAlone), f: GENERAL }
       case 'neg': {
         const a = this.evaluate(node.a)
         const n = isError(a.v) ? a.v : toNumber(a.v)
@@ -205,7 +218,7 @@ export class SheetEvaluator {
     const bv = b.v as Exclude<Value, SheetError>
     if (op === '&') {
       const text = (toText(av) as string) + (toText(bv) as string)
-      return text.length > MAX_TEXT ? { v: sheetError('#VALORE!', 'Il testo è troppo lungo'), f: GENERAL } : { v: text, f: GENERAL }
+      return text.length > MAX_TEXT ? { v: sheetError('#VALORE!', T.textTooLong), f: GENERAL } : { v: text, f: GENERAL }
     }
     if (op === '=' || op === '<>' || op === '<' || op === '>' || op === '<=' || op === '>=') {
       const d = compareValues(av, bv)
@@ -232,7 +245,7 @@ export class SheetEvaluator {
 }
 
 function number(n: number, f: Format): Res {
-  return Number.isFinite(n) ? { v: tidy(n), f } : { v: sheetError('#NUM!', 'Il risultato è troppo grande'), f: GENERAL }
+  return Number.isFinite(n) ? { v: tidy(n), f } : { v: sheetError('#NUM!', T.tooBig), f: GENERAL }
 }
 
 /** I risultati di tutte le celle della tabella. */

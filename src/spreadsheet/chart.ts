@@ -4,13 +4,35 @@
  * dell'intervallo va sull'asse x, le altre sono le linee; la prima riga, se è di testo, ne dà i nomi.
  * I numeri sono quelli calcolati dalle formule, con il formato della colonna. Il pulsante «Grafico»
  * dell'editor delle tabelle sceglie le celle (`chartRange`) e scrive le righe del blocco
- * (`chartLines`), con `pareggio:` quando ci sono i ricavi e i costi totali.
+ * (`chartLines`), con `pareggio:` quando ci sono i ricavi e i costi totali. Le parole delle righe
+ * (`titolo:`, `asse x:`, `dati:`, `pareggio:`) sono quelle del blocco ```grafico e per ora restano
+ * italiane; il titolo che si scrive dopo `titolo:` è nella lingua di Glifo.
  */
+import { texts } from '../i18n'
 import { SheetEvaluator, type CellResult } from './evaluate'
 import { GENERAL, type Format } from './format'
 import { parseSheet, type SheetModel } from './model'
 import type { CellRange } from './ops'
 import { colIndex, colName, rangeName } from './refs'
+
+const T = texts({
+  noTable: [
+    'Prima del grafico, nella nota, non c\'è una tabella: i dati vengono dalla tabella scritta sopra',
+    'There\'s no table before the graph in the note: the data come from the table written above it',
+  ],
+  badRange: ['Scrivi le celle dei dati come in Excel, per esempio dati: A8:D13', 'Write the data cells as in Excel, for example dati: A8:D13'],
+  twoColumns: [
+    'Servono almeno due colonne: la prima con i numeri dell\'asse x, le altre con le linee',
+    'At least two columns are needed: the first with the numbers for the x-axis, the others with the lines',
+  ],
+  column: (letter: string) => [`Colonna ${letter}`, `Column ${letter}`],
+  twoNumbers: (column: string) => [
+    `Nella prima colonna (${column}) servono almeno due numeri: sono i valori dell'asse x`,
+    `The first column (${column}) needs at least two numbers: they're the values on the x-axis`,
+  ],
+  noLines: ['Nelle altre colonne servono dei numeri: sono le linee del grafico', 'The other columns need numbers: they\'re the lines of the graph'],
+  breakEven: ['Punto di pareggio', 'Break-even point'],
+})
 
 export interface ChartTable {
   /** L'intervallo, come nella riga del blocco (A8:D13). */
@@ -26,7 +48,16 @@ export interface ChartTable {
 /** I dati per il grafico, o perché non ci sono (il messaggio sotto il grafico). */
 export type ChartData = { table: ChartTable; error?: undefined } | { table?: undefined; error: string }
 
-export const NO_TABLE = 'Prima del grafico, nella nota, non c\'è una tabella: i dati vengono dalla tabella scritta sopra'
+/** Il messaggio quando prima del grafico non c'è una tabella, nella lingua di Glifo. */
+export function noTable(): string {
+  return T.noTable
+}
+
+/**
+ * Lo stesso messaggio, letto quando si carica il modulo: va bene nell'app (la lingua non cambia con la
+ * pagina aperta), ma chi può usi `noTable()`.
+ */
+export const NO_TABLE: string = noTable()
 
 const RANGE = /^\$?([A-Za-z]{1,3})\$?([1-9]\d{0,6})\s*:\s*\$?([A-Za-z]{1,3})\$?([1-9]\d{0,6})$/
 
@@ -40,9 +71,9 @@ export function parseRange(text: string): CellRange | null {
 
 /** I dati dell'intervallo `range` della tabella `source` (il testo del blocco ```tabella; null se non c'è). */
 export function chartData(source: string | null | undefined, range: string): ChartData {
-  if (source == null) return { error: NO_TABLE }
+  if (source == null) return { error: noTable() }
   const r = parseRange(range)
-  if (!r) return { error: 'Scrivi le celle dei dati come in Excel, per esempio dati: A8:D13' }
+  if (!r) return { error: T.badRange }
   return chartFrom(new SheetEvaluator(parseSheet(source)), r)
 }
 
@@ -51,14 +82,14 @@ type Results = Pick<SheetEvaluator, 'result'>
 const isNumber = (res: CellResult) => typeof res.value === 'number' && Number.isFinite(res.value)
 
 function chartFrom(sheet: Results, r: CellRange): ChartData {
-  if (r.right === r.left) return { error: 'Servono almeno due colonne: la prima con i numeri dell\'asse x, le altre con le linee' }
+  if (r.right === r.left) return { error: T.twoColumns }
   const cols = r.right - r.left + 1
   const first = Array.from({ length: cols }, (_, c) => sheet.result(r.top, r.left + c))
   // La prima riga è quella dei nomi se non ha numeri e ha almeno un testo (come in Excel).
   const header = first.every((res) => !isNumber(res)) && first.some((res) => typeof res.value === 'string' && res.value.trim() !== '')
   const names = first.map((res, c) => {
     const text = header && typeof res.value === 'string' ? res.value.trim() : ''
-    return text || (c ? `Colonna ${colName(r.left + c)}` : '')
+    return text || (c ? T.column(colName(r.left + c)) : '')
   })
   const rows: (number | null)[][] = []
   const formats: (Format | null)[] = Array.from({ length: cols }, () => null)
@@ -72,8 +103,8 @@ function chartFrom(sheet: Results, r: CellRange): ChartData {
     }))
   }
   const xName = colName(r.left)
-  if (rows.length < 2) return { error: `Nella prima colonna (${xName}) servono almeno due numeri: sono i valori dell'asse x` }
-  if (!rows.some((row) => row.slice(1).some((v) => v !== null))) return { error: 'Nelle altre colonne servono dei numeri: sono le linee del grafico' }
+  if (rows.length < 2) return { error: T.twoNumbers(xName) }
+  if (!rows.some((row) => row.slice(1).some((v) => v !== null))) return { error: T.noLines }
   return { table: { range: rangeName(r.top, r.left, r.bottom, r.right), names, rows, formats: formats.map((f) => f ?? GENERAL) } }
 }
 
@@ -127,10 +158,10 @@ export function chartRange(model: SheetModel, selection: CellRange): CellRange {
   return here
 }
 
-/** Le colonne dei ricavi e dei costi totali (per il punto di pareggio), e quelle del risultato. */
-export const REVENUE = /^(ricavi|ricavo|fatturato|rt)\b/i
-export const TOTAL_COST = /^(costi totali|costo totale|ct)\b/i
-const RESULT = /^(utile|perdita|risultato|reddito)\b/i
+/** Le colonne dei ricavi e dei costi totali (per il punto di pareggio), e quelle del risultato: con i nomi italiani o inglesi. */
+export const REVENUE = /^(ricavi|ricavo|fatturato|rt|revenues?|sales|total revenues?|tr)\b/i
+export const TOTAL_COST = /^(costi totali|costo totale|ct|total costs?|tc)\b/i
+const RESULT = /^(utile|perdita|risultato|reddito|profit|loss|result|net income)\b/i
 
 /**
  * Le righe del blocco ```grafico per le celle `range`: i nomi degli assi, `dati:` e, se ci sono i
@@ -156,11 +187,12 @@ export function chartLines(model: SheetModel, range: CellRange): { lines: string
   }
   const { names, formats } = data.table
   const lines: string[] = []
-  if (breakEven) lines.push('titolo: Punto di pareggio')
+  // Le parole delle righe sono quelle del blocco ```grafico; il titolo è nella lingua di Glifo.
+  if (breakEven) lines.push(`titolo: ${T.breakEven}`) // non si traduce: «titolo:» è una parola del blocco
   // Nei nomi degli assi le formule stanno tra $: un $ del testo non deve aprirne una.
-  if (names[0]) lines.push(`asse x: ${names[0].replace(/\$/g, '')}`)
-  if (formats.slice(1).every((f) => f.kind === 'euro')) lines.push('asse y: €')
-  lines.push(`dati: ${data.table.range}`)
-  if (breakEven) lines.push(`pareggio: ${revenue}, ${cost}`)
+  if (names[0]) lines.push(`asse x: ${names[0].replace(/\$/g, '')}`) // non si traduce: «asse x:» è una parola del blocco
+  if (formats.slice(1).every((f) => f.kind === 'euro')) lines.push('asse y: €') // non si traduce: «asse y:» è una parola del blocco
+  lines.push(`dati: ${data.table.range}`) // non si traduce: «dati:» è una parola del blocco
+  if (breakEven) lines.push(`pareggio: ${revenue}, ${cost}`) // non si traduce: «pareggio:» è una parola del blocco
   return { lines }
 }

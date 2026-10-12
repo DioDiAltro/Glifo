@@ -1,12 +1,31 @@
 /**
  * Le formule delle tabelle, come nell'Excel italiano: cominciano con =, i numeri hanno la virgola,
- * gli argomenti si separano con il punto e virgola: =SE(B2>100; B2*0,9; B2). Qui la lettura (i pezzi
- * e l'albero) e le modifiche al testo che servono all'editor: i nomi in maiuscolo, i riferimenti che
- * si spostano quando si copia una formula o si aggiunge una riga.
+ * gli argomenti si separano con il punto e virgola: =SE(B2>100; B2*0,9; B2). Così sono scritte nella
+ * nota, in tutte e due le lingue di Glifo; con Glifo in inglese l'editor le mostra e le legge come
+ * l'Excel inglese, =IF(B2>100, B2*0.9, B2) (`englishFormula`, `italianFormula`). Qui la lettura (i
+ * pezzi e l'albero) e le modifiche al testo che servono all'editor: i nomi in maiuscolo, i riferimenti
+ * che si spostano quando si copia una formula o si aggiunge una riga.
  */
-import { lookupFunction } from './functions'
+import { pick, texts } from '../i18n'
+import { englishName, lookupFunction, shownName } from './functions'
 import { colIndex, colName } from './refs'
-import { ERROR_NAMES, type ErrorCode } from './values'
+import { ENGLISH_ERRORS, ERROR_NAMES, type ErrorCode } from './values'
+
+const T = texts({
+  missingQuote: ['Manca la virgoletta " che chiude il testo', 'The closing quote " of the text is missing'],
+  unknownError: (name: string) => [`Non conosco l'errore «${name}»`, `Unknown error “${name}”`],
+  dollar: ['Dopo il $ ci vuole il nome di una cella, come $B$2', 'After $ there must be a cell name, like $B$2'],
+  symbol: (ch: string) => [`Il simbolo «${ch}» non si può usare nelle formule`, `The symbol “${ch}” can't be used in formulas`],
+  empty: ['Dopo l\'= manca la formula', 'The formula after = is missing'],
+  extraParen: ['C\'è una parentesi chiusa di troppo', 'There\'s one closing parenthesis too many'],
+  missingOperator: (text: string) => [`Manca un operatore prima di «${text}»`, `An operator is missing before “${text}”`],
+  badRange: ['Un intervallo si scrive con due celle, come A1:B5', 'A range is written with two cells, like A1:B5'],
+  incomplete: ['La formula è incompleta: manca qualcosa alla fine', 'The formula is incomplete: something is missing at the end'],
+  missingParen: ['Manca una parentesi chiusa )', 'A closing parenthesis ) is missing'],
+  unexpected: (text: string) => [`Non mi aspettavo «${text}» qui`, `“${text}” wasn't expected here`],
+  missingCallParen: (name: string) => [`Manca la parentesi chiusa ) di ${name}`, `The closing parenthesis ) of ${name} is missing`],
+  separator: (name: string) => [`Tra gli argomenti di ${name} ci vuole il punto e virgola ;`, `Separate the arguments of ${name} with a comma ,`],
+})
 
 export interface Ref {
   row: number
@@ -52,13 +71,19 @@ export function isFormula(input: string): boolean {
 const REF = /^(\$?)([A-Za-z]{1,3})(\$?)([1-9]\d{0,6})(?![A-Za-z0-9_.À-ÖØ-öø-ÿ(])/
 const NAME = /^[A-Za-zÀ-ÖØ-öø-ÿ_][A-Za-z0-9_.À-ÖØ-öø-ÿ]*/
 const NUMBER = /^(?:\d+(?:[.,]\d+)?|[.,]\d+)(?:[eE][-+]?\d+)?/
+/** I numeri all'inglese: solo il punto per i decimali (la virgola separa gli argomenti). */
+const ENGLISH_NUMBER = /^(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][-+]?\d+)?/
 /** I simboli che si scrivono con la tastiera dei telefoni o si copiano dai libri. */
 const UNICODE_OPS: Record<string, string> = { '×': '*', '·': '*', '÷': '/', '−': '-', '–': '-', '≤': '<=', '≥': '>=', '≠': '<>' }
 const ERRORS_BY_LENGTH = Object.keys(ERROR_NAMES).sort((a, b) => b.length - a.length)
 const OPERATORS = new Set(['+', '-', '*', '/', '^', '&', '=', '<', '>', '%', '<=', '>=', '<>'])
 
-/** I pezzi della formula (senza l'= iniziale), con la loro posizione nel testo. */
-export function tokenize(src: string): Token[] {
+/**
+ * I pezzi della formula (senza l'= iniziale), con la loro posizione nel testo. Con `english` la
+ * formula è scritta come nell'Excel inglese: la virgola separa sempre gli argomenti e il punto è dei
+ * decimali (=ROUND(A1*1.5, 2)).
+ */
+export function tokenize(src: string, english = false): Token[] {
   const tokens: Token[] = []
   /** L'ultimo pezzo chiude un valore (un numero, una cella, una parentesi, un %). */
   const isValue = () => {
@@ -74,7 +99,7 @@ export function tokenize(src: string): Token[] {
     }
     const rest = src.slice(i)
     // La virgola dopo un valore separa gli argomenti (come in inglese): =SOMMA(A1,B1). Altrimenti è la virgola dei decimali.
-    const number = (ch === ',' || ch === '.') && isValue() ? null : NUMBER.exec(rest)
+    const number = english ? ENGLISH_NUMBER.exec(rest) : (ch === ',' || ch === '.') && isValue() ? null : NUMBER.exec(rest)
     if (number && /[\d.,]/.test(ch)) {
       const text = number[0]
       const dec = /[.,](\d+)/.exec(text.split(/[eE]/)[0])
@@ -86,7 +111,7 @@ export function tokenize(src: string): Token[] {
       let j = i + 1
       let value = ''
       for (;;) {
-        if (j >= src.length) throw new FormulaError('Manca la virgoletta " che chiude il testo')
+        if (j >= src.length) throw new FormulaError(T.missingQuote)
         if (src[j] === '"') {
           if (src[j + 1] === '"') {
             value += '"'
@@ -103,7 +128,7 @@ export function tokenize(src: string): Token[] {
     }
     if (ch === '#') {
       const name = ERRORS_BY_LENGTH.find((e) => rest.toUpperCase().startsWith(e))
-      if (!name) throw new FormulaError(`Non conosco l'errore «${rest.split(/[\s;,)]/)[0]}»`)
+      if (!name) throw new FormulaError(T.unknownError(rest.split(/[\s;,)]/)[0]))
       tokens.push({ k: 'err', v: ERROR_NAMES[name], from: i, to: i + name.length })
       i += name.length
       continue
@@ -139,9 +164,9 @@ export function tokenize(src: string): Token[] {
     } else if (ch === ';' || ch === ',') {
       tokens.push({ k: 'sep', from: i, to: i + 1 })
     } else if (ch === '$') {
-      throw new FormulaError('Dopo il $ ci vuole il nome di una cella, come $B$2')
+      throw new FormulaError(T.dollar)
     } else {
-      throw new FormulaError(`Il simbolo «${ch}» non si può usare nelle formule`)
+      throw new FormulaError(T.symbol(ch))
     }
     i++
   }
@@ -155,12 +180,12 @@ class Parser {
   constructor(private readonly tokens: Token[]) {}
 
   parse(): FormulaNode {
-    if (!this.tokens.length) throw new FormulaError('Dopo l\'= manca la formula')
+    if (!this.tokens.length) throw new FormulaError(T.empty)
     const node = this.comparison()
     const extra = this.tokens[this.i]
     if (extra) {
-      if (extra.k === ')') throw new FormulaError('C\'è una parentesi chiusa di troppo')
-      throw new FormulaError(`Manca un operatore prima di «${this.text(extra)}»`)
+      if (extra.k === ')') throw new FormulaError(T.extraParen)
+      throw new FormulaError(T.missingOperator(this.text(extra)))
     }
     return node
   }
@@ -176,7 +201,8 @@ class Parser {
       case 'ref':
         return colName(t.ref.col) + (t.ref.row + 1)
       case 'sep':
-        return ';'
+        // Il separatore come lo scrive chi usa Glifo: il punto e virgola in italiano, la virgola in inglese.
+        return pick([';', ','])
       default:
         return t.k
     }
@@ -259,14 +285,14 @@ class Parser {
     if (this.tokens[this.i]?.k !== ':') return node
     this.i++
     const end = this.tokens[this.i]
-    if (start.k !== 'ref' || end?.k !== 'ref') throw new FormulaError('Un intervallo si scrive con due celle, come A1:B5')
+    if (start.k !== 'ref' || end?.k !== 'ref') throw new FormulaError(T.badRange)
     this.i++
     return { t: 'range', from: start.ref, to: end.ref }
   }
 
   private primary(): FormulaNode {
     const t = this.tokens[this.i]
-    if (!t) throw new FormulaError('La formula è incompleta: manca qualcosa alla fine')
+    if (!t) throw new FormulaError(T.incomplete)
     this.i++
     switch (t.k) {
       case 'num':
@@ -286,12 +312,12 @@ class Parser {
       }
       case '(': {
         const node = this.comparison()
-        if (this.tokens[this.i]?.k !== ')') throw new FormulaError('Manca una parentesi chiusa )')
+        if (this.tokens[this.i]?.k !== ')') throw new FormulaError(T.missingParen)
         this.i++
         return node
       }
       default:
-        throw new FormulaError(`Non mi aspettavo «${this.text(t)}» qui`)
+        throw new FormulaError(T.unexpected(this.text(t)))
     }
   }
 
@@ -304,7 +330,7 @@ class Parser {
     }
     for (;;) {
       const t = this.tokens[this.i]
-      if (!t) throw new FormulaError(`Manca la parentesi chiusa ) di ${name}`)
+      if (!t) throw new FormulaError(T.missingCallParen(shownName(name)))
       args.push(t.k === 'sep' || t.k === ')' ? { t: 'missing' } : this.comparison())
       const next = this.tokens[this.i]
       if (next?.k === 'sep') {
@@ -315,8 +341,8 @@ class Parser {
         this.i++
         break
       }
-      if (!next) throw new FormulaError(`Manca la parentesi chiusa ) di ${name}`)
-      throw new FormulaError(`Tra gli argomenti di ${name} ci vuole il punto e virgola ;`)
+      if (!next) throw new FormulaError(T.missingCallParen(shownName(name)))
+      throw new FormulaError(T.separator(shownName(name)))
     }
     return { t: 'call', name: lookupFunction(name)?.name ?? name, args }
   }
@@ -447,13 +473,91 @@ export function normalizeFormula(input: string): string {
   return `=${(out + body.slice(pos)).trim()}`
 }
 
-/** I riferimenti della formula, con la loro posizione nel testo (l'input intero): per colorarli nell'editor. */
-export function formulaRefs(input: string): { from: number; to: number; top: number; left: number; bottom: number; right: number }[] {
+/**
+ * La formula della nota come la scrive l'Excel inglese, per Glifo in inglese: =SE(B2>100; B2*0,9; B2)
+ * → =IF(B2>100, B2*0.9, B2), con #N/A per #N/D e TRUE per VERO. Gli spazi e i testi tra virgolette
+ * restano com'erano; una formula che non si legge resta com'è.
+ */
+export function englishFormula(input: string): string {
+  if (!isFormula(input)) return input
+  const lead = input.indexOf('=')
+  const body = input.slice(lead + 1)
+  let tokens: Token[]
+  try {
+    tokens = tokenize(body)
+  } catch {
+    return input
+  }
+  let out = ''
+  let pos = 0
+  tokens.forEach((t, i) => {
+    let text: string | null = null
+    if (t.k === 'num') text = body.slice(t.from, t.to).replace(',', '.')
+    else if (t.k === 'sep') text = ','
+    else if (t.k === 'err') text = ENGLISH_ERRORS[t.v]
+    else if (t.k === 'name') {
+      const upper = t.v.toUpperCase()
+      if (tokens[i + 1]?.k === '(') {
+        const spec = lookupFunction(upper)
+        if (spec) text = englishName(spec)
+      } else if (upper === 'VERO' || upper === 'TRUE') text = 'TRUE'
+      else if (upper === 'FALSO' || upper === 'FALSE') text = 'FALSE'
+    }
+    if (text === null) return
+    out += body.slice(pos, t.from) + text
+    pos = t.to
+  })
+  return input.slice(0, lead + 1) + out + body.slice(pos)
+}
+
+/**
+ * Una formula scritta come nell'Excel inglese (=round(a1*1.5, 2)) come va nella nota, all'italiana
+ * e riscritta come `normalizeFormula`: =ARROTONDA(A1*1,5; 2). Se non si legge resta com'è.
+ */
+export function italianFormula(input: string): string {
+  if (!isFormula(input)) return input
+  const lead = input.indexOf('=')
+  const body = input.slice(lead + 1)
+  let tokens: Token[]
+  try {
+    tokens = tokenize(body, true)
+  } catch {
+    return input.trim()
+  }
+  let out = ''
+  let pos = 0
+  tokens.forEach((t, i) => {
+    let text: string | null = null
+    if (t.k === 'num') {
+      const s = body.slice(t.from, t.to)
+      // .5 diventa 0,5: «,5» dopo un valore sarebbe il separatore.
+      text = (s.startsWith('.') ? '0' : '') + s.replace('.', ',')
+    } else if (t.k === 'sep') text = ';'
+    else if (t.k === 'err') text = t.v
+    else if (t.k === 'ref') text = body.slice(t.from, t.to).toUpperCase()
+    else if (t.k === 'name') {
+      const upper = t.v.toUpperCase()
+      if (tokens[i + 1]?.k === '(') text = lookupFunction(upper)?.name ?? upper
+      else if (upper === 'TRUE' || upper === 'VERO') text = 'VERO'
+      else if (upper === 'FALSE' || upper === 'FALSO') text = 'FALSO'
+    }
+    if (text === null) return
+    out += body.slice(pos, t.from) + text
+    pos = t.to
+  })
+  return `=${(out + body.slice(pos)).trim()}`
+}
+
+/**
+ * I riferimenti della formula, con la loro posizione nel testo (l'input intero): per colorarli
+ * nell'editor. Con `english` la formula è scritta all'inglese (vedi `tokenize`).
+ */
+export function formulaRefs(input: string, english = false): { from: number; to: number; top: number; left: number; bottom: number; right: number }[] {
   if (!input.trimStart().startsWith('=')) return []
   const start = input.indexOf('=') + 1
   let tokens: Token[]
   try {
-    tokens = tokenize(input.slice(start))
+    tokens = tokenize(input.slice(start), english)
   } catch {
     return []
   }

@@ -5,90 +5,32 @@
  * l'intestazione bloccata; si legge un foglio di un file fatto con Excel, LibreOffice o Fogli Google.
  * Nei file le formule sono in inglese con la virgola tra gli argomenti (=SUM(B2,C2)): si traducono dai
  * nomi italiani di Glifo e ritorno. Le formule che Glifo non sa fare (altre funzioni, altri fogli)
- * restano con il loro valore.
+ * restano con il loro valore. Nei file i numeri sono numeri veri: si leggono uguali in tutte e due le
+ * lingue e nella nota si scrivono all'italiana, come sempre (vedi input.ts).
  */
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
+import { dateLocale, lang, texts } from '../i18n'
 import { SheetEvaluator } from './evaluate'
 import { formulaBody, isFormula, parseFormula, shiftFormula, tokenize, type Token } from './formula'
-import { formatNumber, readNumber, sameFormat, type Format } from './format'
-import { allFunctions, lookupFunction } from './functions'
+import { formatNumber, ITALIAN, readNumber, sameFormat, type Format } from './format'
+import { allFunctions, ENGLISH_NAMES, lookupFunction } from './functions'
 import { emptySheet, MAX_COLS, MAX_ROWS, sheetSize, type SheetCell, type SheetModel } from './model'
 import { cellName, colIndex } from './refs'
 import { ERROR_NAMES, isError, type ErrorCode } from './values'
 
+const T = texts({
+  table: ['Tabella', 'Table'],
+  sheet: (n: number) => [`Foglio${n}`, `Sheet${n}`],
+  damaged: ['Il file è rovinato: una sua parte non si legge', 'The file is damaged: part of it can\'t be read'],
+  notExcel: ['Il file non è un file di Excel (.xlsx), o è rovinato', 'The file isn\'t an Excel file (.xlsx), or it\'s damaged'],
+  noWorkbook: ['Il file non è un file di Excel (.xlsx): manca la cartella di lavoro', 'The file isn\'t an Excel file (.xlsx): the workbook is missing'],
+  noSheet: ['Nel file non c\'è un foglio da aprire', 'There\'s no sheet to open in the file'],
+})
+
 // ——— Le formule: dall'italiano all'inglese e ritorno ———
 
 /** Il nome di ogni funzione nell'Excel inglese, quello scritto nei file (anche nell'Excel italiano). */
-export const EXCEL_NAMES: Record<string, string> = {
-  'AMMORT.COST': 'SLN',
-  'ANNULLA.SPAZI': 'TRIM',
-  ARROTONDA: 'ROUND',
-  'ARROTONDA.PER.DIF': 'ROUNDDOWN',
-  'ARROTONDA.PER.ECC': 'ROUNDUP',
-  ASS: 'ABS',
-  'CERCA.ORIZZ': 'HLOOKUP',
-  'CERCA.VERT': 'VLOOKUP',
-  CONCATENA: 'CONCATENATE',
-  CONFRONTA: 'MATCH',
-  'CONTA.NUMERI': 'COUNT',
-  'CONTA.SE': 'COUNTIF',
-  'CONTA.VALORI': 'COUNTA',
-  'CONTA.VUOTE': 'COUNTBLANK',
-  DESTRA: 'RIGHT',
-  'DEV.ST': 'STDEV',
-  'DEV.ST.P': 'STDEVP',
-  E: 'AND',
-  EXP: 'EXP',
-  FALSO: 'FALSE',
-  GRANDE: 'LARGE',
-  INDICE: 'INDEX',
-  INT: 'INT',
-  INTERESSI: 'IPMT',
-  LN: 'LN',
-  LOG: 'LOG',
-  LOG10: 'LOG10',
-  LUNGHEZZA: 'LEN',
-  MAIUSC: 'UPPER',
-  MAX: 'MAX',
-  MEDIA: 'AVERAGE',
-  'MEDIA.SE': 'AVERAGEIF',
-  MEDIANA: 'MEDIAN',
-  MIN: 'MIN',
-  MINUSC: 'LOWER',
-  MODA: 'MODE',
-  NON: 'NOT',
-  O: 'OR',
-  'P.RATA': 'PPMT',
-  'PI.GRECO': 'PI',
-  PICCOLO: 'SMALL',
-  POTENZA: 'POWER',
-  PRODOTTO: 'PRODUCT',
-  RADQ: 'SQRT',
-  RATA: 'PMT',
-  RESTO: 'MOD',
-  SE: 'IF',
-  'SE.ERRORE': 'IFERROR',
-  SEGNO: 'SIGN',
-  SINISTRA: 'LEFT',
-  SOMMA: 'SUM',
-  'SOMMA.PRODOTTO': 'SUMPRODUCT',
-  'SOMMA.SE': 'SUMIF',
-  'STRINGA.ESTRAI': 'MID',
-  TESTO: 'TEXT',
-  'TIR.COST': 'IRR',
-  TRONCA: 'TRUNC',
-  VA: 'PV',
-  'VAL.ERRORE': 'ISERROR',
-  'VAL.FUT': 'FV',
-  'VAL.NUMERO': 'ISNUMBER',
-  'VAL.TESTO': 'ISTEXT',
-  'VAL.VUOTO': 'ISBLANK',
-  VALORE: 'VALUE',
-  VAN: 'NPV',
-  VAR: 'VAR',
-  'VAR.P': 'VARP',
-  VERO: 'TRUE',
-}
+export const EXCEL_NAMES: Record<string, string> = ENGLISH_NAMES
 
 const EXCEL_ERRORS: Record<ErrorCode, string> = {
   '#DIV/0!': '#DIV/0!',
@@ -231,11 +173,11 @@ function excelFormatCode(f: Format): string | null {
 /** Il nome del foglio come lo vuole Excel: al massimo 31 caratteri, senza \ / ? * [ ] : */
 export function sheetTitle(name: string): string {
   const clean = name.replace(/[\\/?*[\]:]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 31).replace(/^'|'$/g, '')
-  return clean || 'Tabella'
+  return clean || T.table
 }
 
 /** La tabella come file .xlsx, con un foglio solo (`name`). */
-export function sheetToXlsx(model: SheetModel, name = 'Tabella'): Uint8Array {
+export function sheetToXlsx(model: SheetModel, name = T.table): Uint8Array {
   const sheet = new SheetEvaluator(model)
   const { rows, cols } = sheetSize(model)
   // Gli stili: uno per ogni coppia formato e grassetto usata (lo 0 è quello di sempre).
@@ -292,7 +234,7 @@ export function sheetToXlsx(model: SheetModel, name = 'Tabella'): Uint8Array {
     if (cells.length) rowsXml.push(`<row r="${r + 1}">${cells.join('')}</row>`)
   }
   const frozen = model.header && rows > 1 ? '<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>' : ''
-  const colsXml = cols ? `<cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols>` : ''
+  const colsXml = cols ? `<cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols>` : '' // non si traduce: l'XML del file
   const worksheet = `${XML_HEAD}<worksheet xmlns="${MAIN_NS}" xmlns:r="${REL_NS}"><sheetViews><sheetView workbookViewId="0">${frozen}</sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/>${colsXml}<sheetData>${rowsXml.join('')}</sheetData></worksheet>`
   const numFmts = formats.length ? `<numFmts count="${formats.length}">${formats.map((code, i) => `<numFmt numFmtId="${164 + i}" formatCode="${xml(code)}"/>`).join('')}</numFmts>` : ''
   const xfs = styles.map((st) => `<xf numFmtId="${st.numFmt}" fontId="${st.bold ? 1 : 0}" fillId="0" borderId="0" xfId="0"${st.numFmt ? ' applyNumberFormat="1"' : ''}${st.bold ? ' applyFont="1"' : ''}/>`)
@@ -370,7 +312,7 @@ export function formatFromExcel(id: number, code: string | undefined): Format | 
 
 function parseXml(text: string): Document {
   const doc = new DOMParser().parseFromString(text, 'application/xml')
-  if (doc.getElementsByTagName('parsererror').length) throw new XlsxError('Il file è rovinato: una sua parte non si legge')
+  if (doc.getElementsByTagName('parsererror').length) throw new XlsxError(T.damaged)
   return doc
 }
 
@@ -391,20 +333,27 @@ function richText(el: Element): string {
     .join('')
 }
 
-/** La data seriale di Excel come testo all'italiana (12/10/2026; con l'ora se c'è). */
+/**
+ * La data seriale di Excel come testo all'italiana (12/10/2026; con l'ora se c'è). Con Glifo in inglese
+ * come la scrive il browser (10/12/2026 negli Stati Uniti, 12/10/2026 nel Regno Unito): è un testo,
+ * da leggere senza sbagliare il giorno e il mese.
+ */
 function serialDate(v: number, kind: 'date' | 'time'): string {
   const ms = Math.round((v - 25569) * 86400000)
   const d = new Date(ms)
   const two = (n: number) => String(n).padStart(2, '0')
   const time = `${two(d.getUTCHours())}:${two(d.getUTCMinutes())}`
-  if (kind === 'time') return v < 1 ? time : `${two(d.getUTCDate())}/${two(d.getUTCMonth() + 1)}/${d.getUTCFullYear()} ${time}`
-  return `${two(d.getUTCDate())}/${two(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`
+  const date = lang === 'it'
+    ? `${two(d.getUTCDate())}/${two(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`
+    : new Intl.DateTimeFormat(dateLocale(), { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }).format(d)
+  if (kind === 'time') return v < 1 ? time : `${date} ${time}`
+  return date
 }
 
-/** Un numero come si scrive in una cella di Glifo, con il formato (scritto come si vede, se torna uguale). */
+/** Un numero come si scrive in una cella di Glifo (all'italiana, come nella nota), con il formato (scritto come si vede, se torna uguale). */
 function numberCell(v: number, format: Format | null): SheetCell {
   if (format) {
-    const shown = formatNumber(v, format)
+    const shown = formatNumber(v, format, ITALIAN)
     const back = readNumber(shown)
     if (back && Math.abs(back.value - v) <= 1e-9 * Math.max(1, Math.abs(v)) && back.format.kind === format.kind) {
       // Il formato si capisce già da come è scritto (1,50 €): niente graffe.
@@ -421,11 +370,11 @@ export function xlsxSheets(bytes: Uint8Array): XlsxSheet[] {
   try {
     files = unzipSync(bytes)
   } catch {
-    throw new XlsxError('Il file non è un file di Excel (.xlsx), o è rovinato')
+    throw new XlsxError(T.notExcel)
   }
   const text = (path: string) => (files[path] ? strFromU8(files[path]) : null)
   const workbookText = text('xl/workbook.xml')
-  if (!workbookText) throw new XlsxError('Il file non è un file di Excel (.xlsx): manca la cartella di lavoro')
+  if (!workbookText) throw new XlsxError(T.noWorkbook)
   const workbook = parseXml(workbookText)
   const rels = new Map<string, string>()
   const relsText = text('xl/_rels/workbook.xml.rels')
@@ -457,14 +406,14 @@ export function xlsxSheets(bytes: Uint8Array): XlsxSheet[] {
   }
   const sheets: XlsxSheet[] = []
   for (const sheetEl of children(workbook, 'sheet')) {
-    const name = sheetEl.getAttribute('name') ?? `Foglio${sheets.length + 1}`
+    const name = sheetEl.getAttribute('name') ?? T.sheet(sheets.length + 1)
     const id = sheetEl.getAttribute('r:id') ?? [...sheetEl.attributes].find((a) => a.localName === 'id')?.value ?? ''
     const path = rels.get(id) ?? `xl/worksheets/sheet${sheets.length + 1}.xml`
     const sheetText = text(path)
     if (!sheetText) continue
     sheets.push(readWorksheet(name, parseXml(sheetText), strings, styles))
   }
-  if (!sheets.length) throw new XlsxError('Nel file non c\'è un foglio da aprire')
+  if (!sheets.length) throw new XlsxError(T.noSheet)
   return sheets
 }
 
@@ -575,7 +524,7 @@ export function textCell(text: string): SheetCell | undefined {
 
 /** Il nome del file senza l'estensione, per il nome della tabella e della nota. */
 export function baseName(file: string): string {
-  return file.replace(/\.[^.]+$/, '').trim() || 'Tabella'
+  return file.replace(/\.[^.]+$/, '').trim() || T.table
 }
 
 /** I nomi delle funzioni senza il nome inglese (servono ai test: ogni funzione nuova deve averne uno). */

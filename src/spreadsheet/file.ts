@@ -13,11 +13,15 @@
  *     …
  *     -->
  */
+import { texts } from '../i18n'
 import { findFencedBlocks } from '../schema/blocks'
 import { sheetMarkdown } from './render'
 
+const T = texts({
+  hint: ['per modificare la tabella con le formule apri questo file con Glifo', 'to edit the table with its formulas, open this file with Glifo'],
+})
+
 const MARKER = 'glifo-tabella'
-const HINT = 'per modificare la tabella con le formule apri questo file con Glifo'
 /** Una riga che apre o chiude un blocco di codice (come in src/schema/blocks.ts). */
 const FENCE = /^\s*(`{3,}|~{3,})(.*)$/
 const OPEN = new RegExp(`^([ \\t]*)<!-- ${MARKER}\\b`)
@@ -41,7 +45,7 @@ export function sheetsForFile(text: string): string {
     const indent = /^[ \t]*/.exec(text.slice(block.from))![0]
     const table = sheetMarkdown(block.source)
     const lines = table ? [...table.split('\n').map((l) => indent + l), ''] : []
-    lines.push(`${indent}<!-- ${MARKER} · ${HINT}`, hide(block.source), `${indent}-->`)
+    lines.push(`${indent}<!-- ${MARKER} · ${T.hint}`, hide(block.source), `${indent}-->`)
     out += text.slice(pos, block.from) + lines.join('\n')
     pos = block.to
   }
@@ -81,7 +85,7 @@ export function sheetsFromFile(text: string): string {
     if (last - first >= 2) out.length = first + 1
     const indent = open[1]
     const source = unhide(lines.slice(i + 1, end).join('\n'))
-    out.push(`${indent}\`\`\`tabella`, ...(source ? [source] : []), `${indent}\`\`\``)
+    out.push(`${indent}\`\`\`tabella`, ...(source ? [source] : []), `${indent}\`\`\``) // non si traduce: ```tabella è la parola del blocco
     i = end
   }
   return out.join('\n')

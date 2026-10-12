@@ -1,7 +1,8 @@
 /**
  * Le tabelle nella nota: un blocco ```tabella con una riga di testo per ogni riga della tabella,
  * le celle separate da |, come le tabelle di Markdown. Quello che c'è nelle celle è quello che si
- * scrive in Excel: numeri, testi, formule.
+ * scrive nell'Excel italiano: numeri, testi, formule. Così anche con Glifo in inglese, che le mostra
+ * e le legge all'inglese (vedi input.ts): la nota dà gli stessi valori nelle due lingue.
  *
  * ```tabella
  * | Prodotto | Quantità | Prezzo | Totale |
