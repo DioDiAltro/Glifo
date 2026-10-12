@@ -90,7 +90,8 @@ Com'è oggi ogni punto, le proposte di Claude, le domande e le decisioni sono in
 [GRAFICA.md](GRAFICA.md), un file solo per questo lavoro: quando i punti sono fatti si cancella, e qui
 resta solo quello che non è stato fatto. Si fanno sul ramo `prova`, con le foto; fino al trasloco del
 18 ottobre il sito vero cambia il meno possibile. Il punto 1, «Cambia account», è sul sito dal 12
-ottobre 2026: lo studente ha detto «va bene» per provarlo, perché sul sito di prova l'account è spento.
+ottobre 2026: lo studente ha detto «va bene» per provarlo, perché sul sito di prova l'account è spento,
+e poi, lo stesso giorno, «il punto 1 va bene».
 
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 

@@ -145,9 +145,6 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
   Table Editor → `feedback`, dove ci sono anche quelli privati. Lì si risponde (colonna `reply`: si
   vede sotto il commento), si nasconde dalla pagina un commento che non va (`visible` → false) e si
   cancellano quelli che non servono più; oppure lo si chiede a Claude.
-- Provare «Cambia account» sul sito (dal 12 ottobre 2026), con due account Google: dalla finestra
-  dell'account si passa all'altro e Google deve chiedere quale usare; rientrando nel primo tornano i
-  suoi appunti, le sue lavagne e il suo tema. Poi dire com'è andata.
 - Provare la lavagna sull'iPad con la Apple Pencil, quando l'avrà di nuovo: le correzioni del 5
   ottobre 2026 sono già online. Prima accendere il registro dei tocchi (Impostazioni, in fondo).
   Scrivendo non si deve selezionare niente, a tutto schermo la lavagna non si deve chiudere e la

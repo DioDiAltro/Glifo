@@ -13,7 +13,7 @@ quando i punti sono tutti fatti si cancella, insieme alla voce «La grafica» di
 
 | Punto | Cosa | Stato |
 |---|---|---|
-| 1 | «Cambia account» | fatto: sul sito dal 12 ottobre, da provare con il Google vero |
+| 1 | «Cambia account» | fatto: sul sito dal 12 ottobre; lo studente: «va bene» |
 | 2 | La pagina dei commenti, tipo FAQ | da decidere |
 | 3 | Le impostazioni divise in sezioni | da decidere |
 | 4 | Più modelli per «Spiegami» | da decidere |
@@ -103,7 +103,9 @@ Sul sito di prova l'account è spento, quindi lì «Cambia account» non si prov
 vede nelle foto, e la prova nel browser (`scripts/account-test.mjs`, con il Supabase finto) fa tutto il
 giro con due account Google. Lo studente, viste le foto: «va bene, portalo sul ramo principale anche
 perché sul ramo di prova non posso provarlo». Sul sito dal 12 ottobre 2026 (glifo.page e il vecchio
-indirizzo): resta da provarlo con il Google vero.
+indirizzo). Lo studente, il 12 ottobre 2026: «il punto 1 va bene». L'elenco «Account su questo
+dispositivo» e la foto e il nome di Google nel pulsante restano idee per dopo: quando questo file si
+cancella vanno in «Account» di ROADMAP.md.
 
 ## 2. La pagina dei commenti, tipo FAQ
 
