@@ -2,6 +2,7 @@
  * Registra i video del tutorial (src/ui/tutorial.ts) dall'app vera, nel tema chiaro e in quello
  * scuro, e li mette in public/tutorial/<pagina>-chiaro.webm e -scuro.webm:
  *   npm run build && node scripts/tutorial.mjs
+ * Con LINGUA=en registra quelli con Glifo in inglese, in public/tutorial/en/.
  * Va rifatto quando cambia l'interfaccia che i video mostrano. Serve Chromium (CHROMIUM_PATH) e il
  * programma ffmpeg che Playwright usa per i suoi video (o FFMPEG_PATH).
  * Con un nome (node scripts/tutorial.mjs formule) rifà solo quella pagina.
@@ -13,7 +14,91 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync } fro
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-const OUT = new URL('../public/tutorial/', import.meta.url).pathname
+/** La lingua di Glifo nei video: LINGUA=en per l'inglese. */
+const LANG = process.env.LINGUA === 'en' ? 'en' : 'it'
+const OUT = new URL(LANG === 'en' ? '../public/tutorial/en/' : '../public/tutorial/', import.meta.url).pathname
+
+/** I testi che si scrivono nelle scene e le etichette dei pulsanti da premere, nelle due lingue. */
+const L = {
+  it: {
+    title: '# Appunti di Analisi',
+    parabola: 'La parabola $y = x^2',
+    parabolaEnd: ' è rivolta verso l\'alto: il **vertice** è nell\'origine.',
+    note: '# Appunti di Analisi\n\nLa parabola $y = x^2$ è rivolta verso l\'alto: il **vertice** è nell\'origine.\n',
+    series: '## Serie\n\n',
+    seriesText: 'La serie $\\sum',
+    root: 'e la radice $\\radice',
+    limits: '## Limiti\n\nIl limite per $x \\to $',
+    search: 'infinito',
+    insert: 'Inserisci',
+    integrals: '## Integrali\n\n',
+    parabolas: '## Parabole\n\nLa parabola $f(x) = x^2 - 2x$ ha il vertice in $(1, -1)$.\n',
+    beforeCursor: 'La parabola $f(x) = x',
+    graphButton: 'Grafico di una funzione',
+    expenses: '## Spese del mese\n\n',
+    tableButton: 'Tabella',
+    tableWithFormulas: 'Tabella con le formule',
+    rows: [
+      ['Spesa', 'Euro'],
+      ['Libri', '35'],
+      ['Quaderni', '12'],
+      ['Penne', '6'],
+      ['Totale', '=SOMMA(B2:B4)'],
+    ],
+    chapter: '## Come studio un capitolo\n\n',
+    diagramButton: 'Schema',
+    read: 'Leggo il capitolo',
+    understood: 'Ho capito?',
+    redo: 'Rifaccio gli esercizi',
+    done: 'Fatto',
+    area: '## Integrali\n\nL\'area sotto la parabola $y = x^2$ tra 0 e 1:\n\n$$\\int_0^1 x^2 \\, dx = \\frac{1}{3}$$\n',
+    whiteboard: 'Lavagna',
+    highlighter: 'Evidenziatore',
+    pen: 'Penna',
+    select: 'Selezione',
+    preview: 'Anteprima',
+    split: 'Diviso',
+  },
+  en: {
+    title: '# Calculus notes',
+    parabola: 'The parabola $y = x^2',
+    parabolaEnd: ' opens upward: its **vertex** is at the origin.',
+    note: '# Calculus notes\n\nThe parabola $y = x^2$ opens upward: its **vertex** is at the origin.\n',
+    series: '## Series\n\n',
+    seriesText: 'The series $\\sum',
+    root: 'and the root $\\sqrt',
+    limits: '## Limits\n\nThe limit as $x \\to $',
+    search: 'infinity',
+    insert: 'Insert',
+    integrals: '## Integrals\n\n',
+    parabolas: '## Parabolas\n\nThe parabola $f(x) = x^2 - 2x$ has its vertex at $(1, -1)$.\n',
+    beforeCursor: 'The parabola $f(x) = x',
+    graphButton: 'Graph of a function',
+    expenses: '## Monthly expenses\n\n',
+    tableButton: 'Table',
+    tableWithFormulas: 'Table with formulas',
+    rows: [
+      ['Expense', 'Amount'],
+      ['Books', '35'],
+      ['Notebooks', '12'],
+      ['Pens', '6'],
+      ['Total', '=SUM(B2:B4)'],
+    ],
+    chapter: '## How I study a chapter\n\n',
+    diagramButton: 'Diagram',
+    read: 'Read the chapter',
+    understood: 'Did I get it?',
+    redo: 'Redo the exercises',
+    done: 'Done',
+    area: '## Integrals\n\nThe area under the parabola $y = x^2$ between 0 and 1:\n\n$$\\int_0^1 x^2 \\, dx = \\frac{1}{3}$$\n',
+    whiteboard: 'Whiteboard',
+    highlighter: 'Highlighter',
+    pen: 'Pen',
+    select: 'Select',
+    preview: 'Preview',
+    split: 'Split',
+  },
+}[LANG]
 const SIZE = { width: 960, height: 600 }
 /** Il primo e l'ultimo istante restano fermi un po', così il video ricomincia senza scatti. */
 const HOLD = 1200
@@ -159,12 +244,12 @@ const SCENES = {
       await page.mouse.move(470, 330)
     },
     async play(page) {
-      await type(page, '# Appunti di Analisi')
+      await type(page, L.title)
       await page.keyboard.press('Enter')
       await page.keyboard.press('Enter')
-      await type(page, 'La parabola $y = x^2')
+      await type(page, L.parabola)
       await page.keyboard.press('End')
-      await type(page, ' è rivolta verso l\'alto: il **vertice** è nell\'origine.')
+      await type(page, L.parabolaEnd)
     },
   },
   // Le formule: i suggerimenti dopo la barra (nel pannello dei simboli), Tab e i segnaposto;
@@ -172,11 +257,11 @@ const SCENES = {
   formule: {
     settings: { view: 'editor', symbolsOpen: true },
     async setup(page) {
-      await startNote(page, '## Serie\n\n')
+      await startNote(page, L.series)
       await page.mouse.move(480, 330)
     },
     async play(page) {
-      await type(page, 'La serie $\\sum')
+      await type(page, L.seriesText)
       await page.waitForSelector('.sug-list')
       await page.waitForTimeout(900)
       await page.keyboard.press('Tab')
@@ -188,7 +273,7 @@ const SCENES = {
       await page.keyboard.press('End')
       await page.keyboard.press('Enter')
       await page.keyboard.press('Enter')
-      await type(page, 'e la radice $\\radice')
+      await type(page, L.root)
       await page.waitForSelector('.sug-list')
       await page.waitForTimeout(700)
       await page.keyboard.press('Tab')
@@ -200,7 +285,7 @@ const SCENES = {
   simboli: {
     settings: { view: 'editor', symbolsOpen: false },
     async setup(page) {
-      await startNote(page, '## Limiti\n\nIl limite per $x \\to $')
+      await startNote(page, L.limits)
       await page.keyboard.press('ArrowLeft')
       await page.mouse.move(480, 330)
     },
@@ -209,9 +294,9 @@ const SCENES = {
       await page.waitForSelector('.symbols-panel', { state: 'visible' })
       await page.waitForTimeout(500)
       await clickOn(page, '.panel-search-input', 200)
-      await type(page, 'infinito')
+      await type(page, L.search)
       await page.waitForTimeout(700)
-      await clickOn(page, page.locator('.symbols-panel .answer-card button', { hasText: 'Inserisci' }))
+      await clickOn(page, page.locator('.symbols-panel .answer-card button', { hasText: L.insert }))
       await page.waitForTimeout(300)
     },
   },
@@ -220,7 +305,7 @@ const SCENES = {
   calcoli: {
     settings: { view: 'split' },
     async setup(page) {
-      await startNote(page, '## Integrali\n\n')
+      await startNote(page, L.integrals)
       await page.mouse.move(470, 330)
     },
     async play(page) {
@@ -252,17 +337,17 @@ const SCENES = {
   grafici: {
     settings: { view: 'split' },
     async setup(page) {
-      await startNote(page, '## Parabole\n\nLa parabola $f(x) = x^2 - 2x$ ha il vertice in $(1, -1)$.\n')
+      await startNote(page, L.parabolas)
       // Il cursore dentro la prima formula.
       await page.keyboard.press('Control+Home')
       await page.keyboard.press('ArrowDown')
       await page.keyboard.press('ArrowDown')
       await page.keyboard.press('Home')
-      for (let i = 0; i < 'La parabola $f(x) = x'.length; i++) await page.keyboard.press('ArrowRight')
+      for (let i = 0; i < L.beforeCursor.length; i++) await page.keyboard.press('ArrowRight')
       await page.mouse.move(470, 330)
     },
     async play(page) {
-      await clickOn(page, '.editor-toolbar button[aria-label^="Grafico di una funzione"]')
+      await clickOn(page, `.editor-toolbar button[aria-label^="${L.graphButton}"]`)
       await page.waitForSelector('.preview-pane .graph-block svg', { timeout: 5000 })
       await page.waitForTimeout(1200)
       // Nel blocco, sotto la funzione: una parabola con un numero da scegliere.
@@ -298,25 +383,18 @@ const SCENES = {
   tabelle: {
     settings: { view: 'split' },
     async setup(page) {
-      await startNote(page, '## Spese del mese\n\n')
+      await startNote(page, L.expenses)
       await page.mouse.move(470, 330)
     },
     async play(page) {
-      await clickOn(page, '.editor-toolbar button.tool-more[aria-label="Tabella"]')
+      await clickOn(page, `.editor-toolbar button.tool-more[aria-label="${L.tableButton}"]`)
       await page.waitForTimeout(500)
-      await clickOn(page, page.locator('.tool-menu-item', { hasText: 'Tabella con le formule' }))
+      await clickOn(page, page.locator('.tool-menu-item', { hasText: L.tableWithFormulas }))
       await page.waitForSelector('dialog.sheet-editor[open]')
       await page.waitForTimeout(700)
       await clickOn(page, '#sheet-0-0', 250)
       // La prima riga è l'intestazione.
-      const rows = [
-        ['Spesa', 'Euro'],
-        ['Libri', '35'],
-        ['Quaderni', '12'],
-        ['Penne', '6'],
-        ['Totale', '=SOMMA(B2:B4)'],
-      ]
-      for (const [what, amount] of rows) {
+      for (const [what, amount] of L.rows) {
         await type(page, what)
         await page.keyboard.press('Tab')
         await type(page, amount)
@@ -334,24 +412,24 @@ const SCENES = {
   schemi: {
     settings: { view: 'split' },
     async setup(page) {
-      await startNote(page, '## Come studio un capitolo\n\n')
+      await startNote(page, L.chapter)
       await page.mouse.move(470, 330)
     },
     async play(page) {
-      await clickOn(page, '.editor-toolbar button[aria-label^="Schema"]')
+      await clickOn(page, `.editor-toolbar button[aria-label^="${L.diagramButton}"]`)
       await page.waitForSelector('dialog.schema-editor[open]')
       await page.waitForTimeout(800)
       await clickOn(page, '.schema-shape[data-shape="rounded"]')
-      await type(page, 'Leggo il capitolo')
+      await type(page, L.read)
       await page.keyboard.press('Escape')
       await page.waitForTimeout(300)
       await clickOn(page, '.schema-shape[data-shape="rhombus"]')
-      await type(page, 'Ho capito?')
+      await type(page, L.understood)
       await page.keyboard.press('Escape')
       await page.waitForTimeout(400)
       // La freccia blu sotto la prima forma, trascinata sul rombo.
-      const first = await schemaShape(page, 'Leggo il capitolo')
-      const second = await schemaShape(page, 'Ho capito?')
+      const first = await schemaShape(page, L.read)
+      const second = await schemaShape(page, L.understood)
       await page.mouse.move(first.x, first.y, { steps: 25 })
       await page.waitForTimeout(400)
       const down = await centerOf(page, '.schema-arrow-down')
@@ -364,10 +442,10 @@ const SCENES = {
       await page.mouse.move(second.x, second.y, { steps: 20 })
       await page.waitForTimeout(400)
       await clickOn(page, '.schema-arrow-right', 250)
-      await type(page, 'Rifaccio gli esercizi')
+      await type(page, L.redo)
       await page.keyboard.press('Escape')
       await page.waitForTimeout(1000)
-      await clickOn(page, page.locator('dialog.schema-editor .btn-primary', { hasText: 'Fatto' }))
+      await clickOn(page, page.locator('dialog.schema-editor .btn-primary', { hasText: L.done }))
       await page.waitForSelector('dialog.schema-editor', { state: 'detached' })
       await page.waitForTimeout(800)
     },
@@ -378,7 +456,7 @@ const SCENES = {
     settings: { view: 'editor', symbolsOpen: false },
     model: tutorialModel,
     async setup(page) {
-      await startNote(page, '## Integrali\n\nL\'area sotto la parabola $y = x^2$ tra 0 e 1:\n\n$$\\int_0^1 x^2 \\, dx = \\frac{1}{3}$$\n')
+      await startNote(page, L.area)
       await page.mouse.move(470, 330)
     },
     async play(page) {
@@ -404,11 +482,11 @@ const SCENES = {
   lavagna: {
     settings: { view: 'editor', notesOpen: false },
     async setup(page) {
-      await startNote(page, '# Appunti di Analisi\n\nLa parabola $y = x^2$ è rivolta verso l\'alto: il **vertice** è nell\'origine.\n')
+      await startNote(page, L.note)
       await page.mouse.move(470, 330)
     },
     async play(page) {
-      await clickOn(page, '.view-button[aria-label="Lavagna"]')
+      await clickOn(page, `.view-button[aria-label="${L.whiteboard}"]`)
       await page.waitForSelector('.board-pane[data-loaded="true"]')
       await page.waitForTimeout(700)
       const stage = await page.locator('.board-stage').boundingBox()
@@ -482,10 +560,10 @@ const SCENES = {
       await pen([[380, 145], [358, 170]], (t) => 0.4 + 0.3 * t)
       await pen([[386, 133], [389, 128], [394, 126], [399, 129], [398, 134], [387, 145], [400, 145]], () => 0.45)
       // L'evidenziatore giallo su «y = x²»: passato dopo, resta sotto la scrittura.
-      await color('highlight', '.board-button[aria-label="Evidenziatore"]')
+      await color('highlight', `.board-button[aria-label="${L.highlighter}"]`)
       await pen([[284, 160], [344, 158], [406, 159]], () => 0.5, 8)
       // Il vertice cerchiato in rosso: prima si torna alla penna (con l'evidenziatore si vedono i suoi colori).
-      await color('pen', '.board-button[aria-label="Penna"]')
+      await color('pen', `.board-button[aria-label="${L.pen}"]`)
       await color('red')
       const circle = Array.from({ length: 33 }, (_, i) => {
         const a = (i / 30) * 2 * Math.PI - 0.6
@@ -494,7 +572,7 @@ const SCENES = {
       await pen(circle, () => 0.55, 6)
       // Il lazo intorno a «y = x²» (con l'evidenziatore), poi trascinato più in basso; la penna, scelta
       // di nuovo, toglie la selezione.
-      await color('lasso', '.board-button[aria-label="Selezione"]')
+      await color('lasso', `.board-button[aria-label="${L.select}"]`)
       const loop = Array.from({ length: 37 }, (_, i) => {
         const a = (i / 34) * 2 * Math.PI + 0.4
         return [345 + 78 * Math.cos(a), 160 + 44 * Math.sin(a)]
@@ -503,7 +581,7 @@ const SCENES = {
       await page.waitForTimeout(700)
       await pen([[345, 160], [350, 172], [357, 190], [362, 205], [365, 214]], () => 0.5, 40)
       await page.waitForTimeout(900)
-      await color('pen', '.board-button[aria-label="Penna"]')
+      await color('pen', `.board-button[aria-label="${L.pen}"]`)
       await page.mouse.move(stage.x + 330, stage.y + 470, { steps: 20 })
     },
   },
@@ -511,15 +589,15 @@ const SCENES = {
   barra: {
     settings: { view: 'split', notesOpen: false },
     async setup(page) {
-      await startNote(page, '# Appunti di Analisi\n\nLa parabola $y = x^2$ è rivolta verso l\'alto: il **vertice** è nell\'origine.\n\n$$\\int_0^1 x^2 \\, dx = \\frac{1}{3}$$\n')
+      await startNote(page, `${L.note}\n$$\\int_0^1 x^2 \\, dx = \\frac{1}{3}$$\n`)
       await page.mouse.move(480, 300)
     },
     async play(page) {
-      await clickOn(page, '.view-button[aria-label="Anteprima"]')
+      await clickOn(page, `.view-button[aria-label="${L.preview}"]`)
       await page.waitForTimeout(900)
       await clickOn(page, '.view-button[aria-label="Editor"]')
       await page.waitForTimeout(900)
-      await clickOn(page, '.view-button[aria-label="Diviso"]')
+      await clickOn(page, `.view-button[aria-label="${L.split}"]`)
       await page.waitForTimeout(700)
       await clickOn(page, '.side-open')
       await page.waitForTimeout(700)
@@ -535,7 +613,7 @@ const SCENES = {
   condividi: {
     settings: { view: 'split', notesOpen: false },
     async setup(page) {
-      await startNote(page, '# Appunti di Analisi\n\nLa parabola $y = x^2$ è rivolta verso l\'alto: il **vertice** è nell\'origine.\n\n$$\\int_0^1 x^2 \\, dx = \\frac{1}{3}$$\n')
+      await startNote(page, `${L.note}\n$$\\int_0^1 x^2 \\, dx = \\frac{1}{3}$$\n`)
       await page.mouse.move(480, 300)
     },
     async play(page) {
@@ -575,12 +653,12 @@ try {
       ['scuro', 'dark'],
     ]) {
       const dir = join(work, `${id}-${theme}`)
-      // Glifo in italiano (prende la lingua dal browser, src/i18n.ts); senza service worker il modello
-      // finto di «Spiega con l'AI» prende il posto di quello vero.
+      // Glifo nella lingua dei video (la prende dal browser e dalle impostazioni, src/i18n.ts); senza
+      // service worker il modello finto di «Spiega con l'AI» prende il posto di quello vero.
       const context = await browser.newContext({
         viewport: SIZE,
         colorScheme: scheme,
-        locale: 'it-IT',
+        locale: LANG === 'en' ? 'en-US' : 'it-IT',
         serviceWorkers: 'block',
         recordVideo: { dir, size: SIZE },
       })
@@ -593,7 +671,7 @@ try {
           'glifo.settings.v1',
           JSON.stringify({ theme: 'auto', fontSize: 17, spellcheck: false, notesOpen: false, symbolsOpen: false, ...settings }),
         )
-      }, scene.settings)
+      }, { language: LANG, ...scene.settings })
       const page = await context.newPage()
       await page.goto(url)
       await page.waitForSelector('.cm-editor')

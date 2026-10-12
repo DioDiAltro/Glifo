@@ -195,6 +195,28 @@ due: `Il tuo accesso a Glifo`. Testo di **Magic Link**:
 
 Per **Confirm signup** lo stesso testo, con il titolo `<h2>Ti diamo il benvenuto in Glifo</h2>`.
 
+**Con Glifo anche in inglese** (ottobre 2026) l'email è in tutte e due le lingue, perché Supabase
+manda lo stesso modello a tutti: prima l'italiano, poi l'inglese, con un solo codice. Da mettere
+nei due modelli (lo fa lo studente: da qui i modelli non si cambiano). Oggetto di tutti e due:
+`Il tuo accesso a Glifo · Your Glifo sign-in`. Testo di **Magic Link**:
+
+```html
+<h2>Entra in Glifo</h2>
+<p>Se stai leggendo questa email nel browser in cui usi Glifo, premi qui:</p>
+<p><a href="{{ .ConfirmationURL }}">Entra in Glifo</a></p>
+<p>Se la leggi altrove, per esempio sul telefono, scrivi questo codice nella finestra di Glifo:</p>
+<p style="font-size:28px;font-weight:bold;letter-spacing:4px">{{ .Token }}</p>
+<p>Il link e il codice valgono una volta sola. Se non hai chiesto tu di entrare in Glifo, ignora questa email.</p>
+<hr>
+<h2 lang="en">Sign in to Glifo</h2>
+<p lang="en">If you're reading this email in the browser where you use Glifo, press here: <a href="{{ .ConfirmationURL }}">Sign in to Glifo</a></p>
+<p lang="en">If you're reading it somewhere else, for example on your phone, type the code above in the Glifo window.</p>
+<p lang="en">The link and the code work only once. If you didn't ask to sign in to Glifo, ignore this email.</p>
+```
+
+Per **Confirm signup** lo stesso testo, con i titoli `<h2>Ti diamo il benvenuto in Glifo</h2>` e
+`<h2 lang="en">Welcome to Glifo</h2>`.
+
 ### Il controllo anti-robot (CAPTCHA, ottobre 2026)
 
 Con l'email aperta a tutti, chiunque potrebbe usare la finestra «Accedi» per farci mandare email a

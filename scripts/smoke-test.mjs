@@ -3607,6 +3607,94 @@ try {
     `nelle impostazioni si sceglie l'italiano e Glifo si ricarica in italiano (${JSON.stringify({ chosenEn, uiIt })})`,
   )
   await english.context().close()
+
+  // Glifo tutto in inglese (GRAFICA.md, punto 6): una nota scritta con le parole inglesi, con conti,
+  // grafico, tabella e schema. Nell'anteprima, nel pannello dei simboli, negli editor della tabella e dello
+  // schema, nel pannello ✨ e nelle impostazioni non si vede italiano, e i numeri hanno il punto.
+  {
+    const enContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'en-US', serviceWorkers: 'block' })
+    await enContext.addInitScript(() => {
+      if (!localStorage.getItem('glifo.settings.v1')) {
+        localStorage.setItem('glifo.settings.v1', JSON.stringify({ language: 'en', view: 'split', spellcheck: false, symbolsOpen: false }))
+      }
+    })
+    const en = await enContext.newPage()
+    en.on('pageerror', (e) => errors.push(e.message))
+    await en.goto(url)
+    await en.waitForSelector('.cm-editor')
+    const enTable = ['| Item | Price | Quantity | Total |', '| --- | --- | --- | --- |', '| Pens | 2 | 3 | =B2*C2 |', '| Notebooks | 4.5 | 5 | =B3*C3 |', '| Sum | | | =SUM(D2:D3) |'].join('\n')
+    const enSchema = '{"v":1,"nodes":[{"id":"a","shape":"ellipse","x":40,"y":40,"w":120,"h":60,"text":"Start"},{"id":"b","shape":"rect","x":40,"y":160,"w":120,"h":60,"text":"Order"},{"id":"c","shape":"ellipse","x":40,"y":280,"w":120,"h":60,"text":"End"}],"edges":[{"id":"e1","from":"a","to":"b"},{"id":"e2","from":"b","to":"c"}]}'
+    const enNote = [
+      '# Calculus notes',
+      '',
+      '$f(x) = x^2 - 4$',
+      '',
+      'Values: $f(3) =$ and $\\sqrt{2} =$ and $\\int_0^1 x^2 \\, dx =$ and $\\lim_{x \\to 0} \\frac{\\sin x}{x} =$.',
+      '',
+      'A wrong one: $2 + 2 = 5$, and one that cannot be done: $\\frac{1}{0} =$.',
+      '',
+      '$\\det \\begin{pmatrix} 1 & 2 \\\\ 3 & 4 \\end{pmatrix} =$',
+      '',
+      '```graph',
+      'title: A parabola',
+      'y = x^2 - 4',
+      '```',
+      '',
+      '```table',
+      enTable,
+      '```',
+      '',
+      '```diagram',
+      enSchema,
+      '```',
+      '',
+    ].join('\n')
+    await en.locator('.cm-content').click()
+    await en.keyboard.press('Control+a')
+    await en.keyboard.insertText(enNote)
+    await en.waitForSelector('.preview-pane .graph-block svg', { timeout: 10000 })
+    await en.waitForSelector('.preview-pane .sheet-table', { timeout: 10000 })
+    await en.waitForSelector('.preview-pane .schema-block svg', { timeout: 10000 })
+    await en.waitForTimeout(800)
+    /** Le parole italiane in un testo dell'interfaccia inglese, con un po' di testo intorno per capire dov'è. */
+    const ITALIAN = /\b(il|lo|gli|della|delle|degli|dello|dei|nel|nella|nelle|alla|alle|che|una|sono|questo|questa|anche|oppure|scrivi|premi|apri|chiudi|annulla|salva|inserisci|nota|appunti|cartella|grafico|tabella|riga|colonna|valore|errore|manca|risultato|funzione|derivata|integrale|limite|dominio|matrice|vero|falso|perché|così|già|più|può)\b|[àèìòù]/gi
+    const italianIn = (where, text) =>
+      [...text.matchAll(ITALIAN)].map((m) => `${where}: «${text.slice(Math.max(0, m.index - 30), m.index + 30).replace(/\s+/g, ' ')}»`)
+    const found = []
+    found.push(...italianIn('pagina', await en.locator('.app').innerText()))
+    const enPreview = await en.locator('.preview-pane').innerText()
+    // I simboli, cercati a parole inglesi.
+    await en.locator('.symbols-toggle').click()
+    await en.locator('.panel-search-input').fill('integral')
+    await en.waitForTimeout(600)
+    const enSymbols = await en.locator('.symbols-panel').innerText()
+    found.push(...italianIn('simboli', enSymbols))
+    // Il pannello ✨ con l'elenco di cosa si può spiegare.
+    await en.locator('.ai-toggle').click()
+    await en.waitForSelector('.ai-subject', { timeout: 5000 })
+    found.push(...italianIn('pannello AI', await en.locator('.ai-panel').innerText()))
+    await en.locator('.ai-toggle').click()
+    // Gli editor della tabella e dello schema, dal primo pulsante del riquadro nell'editor.
+    for (const kind of ['tabella', 'schema']) {
+      await en.locator(`.cm-schema[data-kind="${kind}"] button`).first().click()
+      const dialog = await en.waitForSelector('dialog[open]', { timeout: 5000 })
+      await en.waitForTimeout(500)
+      found.push(...italianIn(`editor ${kind}`, await dialog.innerText()))
+      await en.keyboard.press('Escape')
+      await en.waitForFunction(() => !document.querySelector('dialog[open]'), null, { timeout: 3000 }).catch(async () => {
+        await en.locator('dialog[open] button', { hasText: /^(Close|Cancel|Done)$/ }).first().click()
+      })
+    }
+    // Le impostazioni.
+    await en.locator('.side-profile button[aria-label="Settings"]').click()
+    found.push(...italianIn('impostazioni', await en.locator('dialog[open]').innerText()))
+    await en.keyboard.press('Escape')
+    check(
+      !found.length && enPreview.includes('1.414213') && !enPreview.includes('1,414213') && enSymbols.toLowerCase().includes('integral'),
+      `con Glifo in inglese non si vede italiano, e i numeri hanno il punto (${found.length ? found.slice(0, 12).join(' · ') : 'nessuna parola italiana'})`,
+    )
+    await enContext.close()
+  }
   // «Spiegami» (in prova): nel pannello della formula i passaggi di un Qwen3 che gira nel browser con
   // WebLLM, con i conti chiesti al motore di Glifo e controllati da lui. Qui Qwen3 non c'è (niente scheda
   // grafica, niente download): il worker di WebLLM è sostituito da uno finto che parla come lui.
