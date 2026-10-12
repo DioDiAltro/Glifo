@@ -198,11 +198,21 @@ async function startNote(page, text, cursorAt = 'end') {
 /**
  * Il worker di WebLLM finto per la pagina di «Spiega con l'AI» (parla come src/ai/llmWorker.ts, vedi
  * anche quello di scripts/smoke-test.mjs): chiede al motore la primitiva e poi spiega l'integrale in
- * quattro passaggi giusti, che Glifo segna con ✓, scrivendoli a pezzi come un modello vero.
+ * quattro passaggi giusti, che Glifo segna con ✓, scrivendoli a pezzi come un modello vero. Nei video
+ * inglesi parla inglese, con i nomi inglesi degli strumenti (src/ai/tools.ts).
  */
-function tutorialModel() {
-  const call = '<tool_call>{"name": "primitiva", "arguments": {"funzione": "x^2", "variabile": "x"}}</tool_call>'
-  const steps = String.raw`1. Per la regola della potenza una primitiva di $x^2$ è $\frac{x^3}{3}$: si alza l'esponente di uno e si divide per il nuovo esponente. $$\int x^{2} \, dx = \frac{x^{3}}{3} + c$$
+function tutorialModel(lang) {
+  const call =
+    lang === 'en'
+      ? '<tool_call>{"name": "antiderivative", "arguments": {"function": "x^2", "variable": "x"}}</tool_call>'
+      : '<tool_call>{"name": "primitiva", "arguments": {"funzione": "x^2", "variabile": "x"}}</tool_call>'
+  const steps =
+    lang === 'en'
+      ? String.raw`1. By the power rule an antiderivative of $x^2$ is $\frac{x^3}{3}$: raise the exponent by one and divide by the new exponent. $$\int x^{2} \, dx = \frac{x^{3}}{3} + c$$
+2. By the fundamental theorem of calculus we only need the antiderivative at the endpoints. $$\int_{0}^{1} x^{2} \, dx = \left[ \frac{x^{3}}{3} \right]_{0}^{1}$$
+3. I plug in the endpoints, first 1 and then 0, and take the difference. $$\left[ \frac{x^{3}}{3} \right]_{0}^{1} = \frac{1^{3}}{3} - \frac{0^{3}}{3}$$
+4. So the area under the parabola between 0 and 1 is one third. $$\frac{1^{3}}{3} - \frac{0^{3}}{3} = \frac{1}{3}$$`
+      : String.raw`1. Per la regola della potenza una primitiva di $x^2$ è $\frac{x^3}{3}$: si alza l'esponente di uno e si divide per il nuovo esponente. $$\int x^{2} \, dx = \frac{x^{3}}{3} + c$$
 2. Per il teorema fondamentale del calcolo integrale basta calcolare la primitiva agli estremi. $$\int_{0}^{1} x^{2} \, dx = \left[ \frac{x^{3}}{3} \right]_{0}^{1}$$
 3. Sostituisco gli estremi, prima 1 e poi 0, e faccio la differenza. $$\left[ \frac{x^{3}}{3} \right]_{0}^{1} = \frac{1^{3}}{3} - \frac{0^{3}}{3}$$
 4. Quindi l'area sotto la parabola tra 0 e 1 è un terzo. $$\frac{1^{3}}{3} - \frac{0^{3}}{3} = \frac{1}{3}$$`
@@ -662,7 +672,7 @@ try {
         serviceWorkers: 'block',
         recordVideo: { dir, size: SIZE },
       })
-      if (scene.model) await context.route('**/assets/llmWorker-*.js', (route) => route.fulfill({ contentType: 'text/javascript', body: `(${scene.model})()` }))
+      if (scene.model) await context.route('**/assets/llmWorker-*.js', (route) => route.fulfill({ contentType: 'text/javascript', body: `(${scene.model})(${JSON.stringify(LANG)})` }))
       const started = Date.now()
       await context.addInitScript(fakeCursor)
       await context.addInitScript((settings) => {

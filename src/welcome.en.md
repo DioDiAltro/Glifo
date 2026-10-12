@@ -39,9 +39,9 @@ $$
 
 Write a formula ending in `=` and Glifo does the math, like Math Notes on the iPad: $\frac{3}{4} + \frac{1}{6} =$ — with the cursor right after the equals sign, **Tab** writes the result into the formula. Definitions written earlier apply: with $a = 3$ and $f(x) = x^2 - a$, here is $f(2) =$
 
-For a graph there's the button with the axes in the bar (with the cursor on a function like $f(x)$ above, it plots that one), or a `grafico` block with one line for each thing to draw. Drag it to move the view; the + and − buttons zoom in and out, and the ↑ ↓ arrows next to them move it up or down in the note. Below it there's the **slider** for $a$: move it, or type a value in the box next to it, and the parabola changes, while 3 stays written here; ▶ moves it by itself.
+For a graph there's the button with the axes in the bar (with the cursor on a function like $f(x)$ above, it plots that one), or a `graph` block with one line for each thing to draw. Drag it to move the view; the + and − buttons zoom in and out, and the ↑ ↓ arrows next to them move it up or down in the note. Below it there's the **slider** for $a$: move it, or type a value in the box next to it, and the parabola changes, while 3 stays written here; ▶ moves it by itself.
 
-```grafico
+```graph
 f(x)
 y = 2x
 P = (3, 6)

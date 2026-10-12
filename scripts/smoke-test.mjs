@@ -3680,10 +3680,20 @@ try {
       const dialog = await en.waitForSelector('dialog[open]', { timeout: 5000 })
       await en.waitForTimeout(500)
       found.push(...italianIn(`editor ${kind}`, await dialog.innerText()))
+      // Si chiude con Esc o con il pulsante inglese (Close, Cancel, Done); se no la prova lo segnala.
       await en.keyboard.press('Escape')
-      await en.waitForFunction(() => !document.querySelector('dialog[open]'), null, { timeout: 3000 }).catch(async () => {
-        await en.locator('dialog[open] button', { hasText: /^(Close|Cancel|Done)$/ }).first().click()
-      })
+      const closed = await en
+        .waitForFunction(() => !document.querySelector('dialog[open]'), null, { timeout: 3000 })
+        .then(() => true)
+        .catch(() => false)
+      if (!closed) {
+        await en.locator('dialog[open] button', { hasText: /^(Close|Cancel|Done)$/ }).first().click({ timeout: 3000 }).catch(() => {})
+        const shut = await en.waitForFunction(() => !document.querySelector('dialog[open]'), null, { timeout: 3000 }).then(() => true, () => false)
+        if (!shut) {
+          found.push(`editor ${kind}: non si chiude con Esc né con Close/Cancel/Done`)
+          await en.evaluate(() => document.querySelectorAll('dialog[open]').forEach((d) => d.close()))
+        }
+      }
     }
     // Le impostazioni.
     await en.locator('.side-profile button[aria-label="Settings"]').click()
