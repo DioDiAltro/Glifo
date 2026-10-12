@@ -10,7 +10,7 @@ export type SpellRequest =
 
 export function createSpellService(): (req: SpellRequest) => Promise<unknown> {
   let engine: Promise<SpellEngine> | null = null
-  const ready = () => engine ?? Promise.reject(new Error('Correttore non ancora avviato'))
+  const ready = () => engine ?? Promise.reject(new Error('Correttore non ancora avviato')) // non si traduce: errore interno, chi usa Glifo vede il messaggio di main.ts
 
   return async (req) => {
     switch (req.type) {

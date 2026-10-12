@@ -95,7 +95,6 @@ import {
   isRelocationPackage,
   openedForRelocation,
   receiveFromOldSite,
-  relocationMessage,
   relocationPhase,
   sendToNewSite,
   type RelocationPackage,
@@ -1671,7 +1670,7 @@ function relocationReceived(result: RelocationResult | null): void {
     toast(T.relocationFailed, 'error')
     return
   }
-  leaveRelocationDone(relocationMessage(result))
+  leaveRelocationDone(result)
   reloadPage()
 }
 

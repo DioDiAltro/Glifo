@@ -873,7 +873,16 @@ try {
   // ——— L'informativa sulla privacy ———
   const privacy = await altro.context.newPage()
   await privacy.goto(`${url}privacy.html`)
-  check((await privacy.locator('h1').innerText()) === 'Informativa sulla privacy', 'l\'informativa sulla privacy si apre')
+  check((await privacy.locator('h1:visible').innerText()) === 'Informativa sulla privacy', 'l\'informativa sulla privacy si apre')
+  // In inglese: con #en, e dai due link in alto.
+  await privacy.goto(`${url}privacy.html#en`)
+  await privacy.reload()
+  check(
+    (await privacy.locator('h1:visible').innerText()) === 'Privacy policy' && (await privacy.evaluate(() => document.documentElement.lang)) === 'en',
+    'l\'informativa si legge anche in inglese',
+  )
+  await privacy.locator('.langs a[hreflang="it"]').click()
+  check((await privacy.locator('h1:visible').innerText()) === 'Informativa sulla privacy', 'dall\'inglese si torna all\'italiano con il link in alto')
   await privacy.close()
 
   const errors = [...pc.errors, ...tel.errors]

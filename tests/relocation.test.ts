@@ -23,6 +23,7 @@ import { loadPersonalWords, savePersonalWords } from '../src/store/dictionary'
 import { FoldersStore } from '../src/store/folders'
 import { NotesStore } from '../src/store/notes'
 import { loadSettings, saveSettings } from '../src/store/settings'
+import { setLangForTests } from '../src/i18n'
 
 const WELCOME = '# Benvenuto in Glifo\n\nScrivi qui.'
 const ID_A = '0b6f2a52-3c1d-4e0f-9a7b-1c2d3e4f5a6b'
@@ -221,6 +222,25 @@ describe('trasloco su glifo.page: il pacco degli appunti', () => {
     expect(relocationMessage({ added: 1, already: 1, accountNotes: 0, boards: 1 })).toBe(
       'Dal vecchio Glifo sono arrivati 1 appunto e 1 lavagna (uno c\'era già). Da ora Glifo è qui, su glifo.page.',
     )
+  })
+
+  it('in inglese, il messaggio e il giorno del trasloco', () => {
+    setLangForTests('en')
+    try {
+      expect(relocationMessage({ added: 0, already: 0, accountNotes: 0, boards: 0 })).toBe(
+        'There were no notes to bring over from the old Glifo. From now on Glifo is here, at glifo.page.',
+      )
+      expect(relocationMessage({ added: 0, already: 2, accountNotes: 0, boards: 0 })).toBe(
+        'All the notes from the old Glifo were already here. From now on Glifo is here, at glifo.page.',
+      )
+      expect(relocationMessage({ added: 2, already: 1, accountNotes: 1, boards: 1 })).toBe(
+        '3 notes and 1 whiteboard arrived from the old Glifo (one was already here). From now on Glifo is here, at glifo.page. You\'ll see the notes of your account when you sign in to it.',
+      )
+      expect(relocationMessage({ added: 0, already: 0, accountNotes: 0, boards: 1 })).toBe('1 whiteboard arrived from the old Glifo. From now on Glifo is here, at glifo.page.')
+      expect(moveDayLabel({ notice: '2026-10-12', move: '2026-10-18' })).toMatch(/^Sunday,? (18 October|October 18)$/)
+    } finally {
+      setLangForTests('it')
+    }
   })
 })
 

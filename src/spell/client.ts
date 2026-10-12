@@ -31,7 +31,7 @@ function workerBackend(): Backend {
   })
   worker.addEventListener('error', (ev) => {
     ev.preventDefault()
-    const err = answered ? new Error(ev.message || 'Errore del correttore') : new WorkerUnavailable()
+    const err = answered ? new Error(ev.message || 'Errore del correttore') : new WorkerUnavailable() // non si traduce: errore interno, chi usa Glifo vede il messaggio di main.ts
     for (const p of pending.values()) p.reject(err)
     pending.clear()
   })

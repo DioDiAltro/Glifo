@@ -6,6 +6,7 @@ import { noteIdsInBrowser, NotesStore } from './store/notes'
 import { restoreBackup, type RestoreBoards } from './store/restore'
 import { accountSettings, DEFAULT_SETTINGS, loadSettings, saveSettings, validAccountSettings, type Settings } from './store/settings'
 import { readItem, storageKeys, writeItem } from './store/storage'
+import { dateLocale, texts, type Text } from './i18n'
 
 /**
  * Il trasloco di Glifo (ROADMAP.md, «Trasloco»): dal 9 ottobre 2026 il sito ha un dominio tutto suo,
@@ -54,9 +55,9 @@ function startOf(day: string): Date {
   return new Date(y, m - 1, d)
 }
 
-/** Il giorno del trasloco da scrivere: «domenica 18 ottobre». */
+/** Il giorno del trasloco da scrivere: «domenica 18 ottobre» (in inglese «Sunday, October 18»). */
 export function moveDayLabel(dates: RelocationDates = RELOCATION_DATES): string {
-  return startOf(dates.move).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })
+  return startOf(dates.move).toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
 /** Quello che il vecchio Glifo passa al nuovo. */
@@ -198,23 +199,37 @@ export async function importPackage(
 
 /** Il messaggio sul sito nuovo, dopo il trasloco degli appunti. */
 export function relocationMessage(r: RelocationResult): string {
-  const here = ' Da ora Glifo è qui, su glifo.page.'
   const notes = r.added + r.accountNotes
-  if (!notes && !r.boards) {
-    return (r.already ? 'Gli appunti del vecchio Glifo c\'erano già tutti.' : 'Nel vecchio Glifo non c\'erano appunti da portare.') + here
-  }
-  const parts = [
-    ...(notes ? [notes === 1 ? '1 appunto' : `${notes} appunti`] : []),
-    ...(r.boards ? [r.boards === 1 ? '1 lavagna' : `${r.boards} lavagne`] : []),
-  ]
-  // «è arrivato 1 appunto», «è arrivata 1 lavagna», «sono arrivate 2 lavagne», «sono arrivati 3 appunti e 1 lavagna».
-  const verb = notes + r.boards === 1 ? (notes ? 'è arrivato' : 'è arrivata') : notes ? 'sono arrivati' : 'sono arrivate'
-  let text = `Dal vecchio Glifo ${verb} ${parts.join(' e ')}`
-  if (r.already) text += r.already === 1 ? ' (uno c\'era già)' : ` (${r.already} c'erano già)`
-  text += `.${here}`
-  if (r.accountNotes) text += ' Gli appunti dell\'account li vedi entrando con l\'account.'
+  if (!notes && !r.boards) return `${r.already ? T.allThere : T.nothingToBring} ${T.here}`
+  let text = T.arrived(notes, r.boards)
+  if (r.already) text += T.alreadyThere(r.already)
+  text += `. ${T.here}`
+  if (r.accountNotes) text += ` ${T.accountNotes}`
   return text
 }
+
+const T = texts({
+  here: ['Da ora Glifo è qui, su glifo.page.', 'From now on Glifo is here, at glifo.page.'],
+  allThere: ['Gli appunti del vecchio Glifo c\'erano già tutti.', 'All the notes from the old Glifo were already here.'],
+  nothingToBring: ['Nel vecchio Glifo non c\'erano appunti da portare.', 'There were no notes to bring over from the old Glifo.'],
+  // «è arrivato 1 appunto», «è arrivata 1 lavagna», «sono arrivate 2 lavagne», «sono arrivati 3 appunti e 1 lavagna».
+  arrived: (notes: number, boards: number): Text => {
+    const what = [
+      ...(notes ? [notes === 1 ? '1 appunto' : `${notes} appunti`] : []),
+      ...(boards ? [boards === 1 ? '1 lavagna' : `${boards} lavagne`] : []),
+    ].join(' e ')
+    const verb = notes + boards === 1 ? (notes ? 'è arrivato' : 'è arrivata') : notes ? 'sono arrivati' : 'sono arrivate'
+    const it = `Dal vecchio Glifo ${verb} ${what}`
+    const whatEn = [
+      ...(notes ? [notes === 1 ? '1 note' : `${notes} notes`] : []),
+      ...(boards ? [boards === 1 ? '1 whiteboard' : `${boards} whiteboards`] : []),
+    ].join(' and ')
+    const en = `${whatEn} arrived from the old Glifo`
+    return [it, en]
+  },
+  alreadyThere: (n: number) => [n === 1 ? ' (uno c\'era già)' : ` (${n} c'erano già)`, n === 1 ? ' (one was already here)' : ` (${n} were already here)`],
+  accountNotes: ['Gli appunti dell\'account li vedi entrando con l\'account.', 'You\'ll see the notes of your account when you sign in to it.'],
+})
 
 /** Perché il trasloco non è riuscito: finestra bloccata, il sito nuovo non risponde, un errore. */
 export class RelocationError extends Error {

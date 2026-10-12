@@ -25,13 +25,16 @@ const TRANSLATED = [
   'src/editor/',
   'src/render/',
   'src/store/',
+  'src/spell/',
+  'src/lists/',
+  'src/host.ts',
+  'src/relocation.ts',
 ]
 
 /** Dentro le parti tradotte, i file che restano in italiano (e perché). */
 const NOT_TRANSLATED: Record<string, string> = {
   'src/ui/touchLogPanel.ts': 'il registro dei tocchi si toglie (GRAFICA.md, punto 7)',
   'src/board/touchlog.ts': 'il registro dei tocchi si toglie (GRAFICA.md, punto 7)',
-  'src/ui/relocation.ts': 'il trasloco su glifo.page riguarda solo chi usava già Glifo, in italiano',
 }
 
 const sources = import.meta.glob('../src/**/*.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>

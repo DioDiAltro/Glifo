@@ -53,7 +53,8 @@ export default defineConfig({
           manifest: {
             name: 'Glifo',
             short_name: 'Glifo',
-            description: 'Appunti in Markdown per ogni materia: formule LaTeX con anteprima dei simboli, codice, tabelle.',
+            // In italiano e in inglese: il manifest è uno solo per tutte e due le lingue di Glifo.
+            description: 'Appunti in Markdown per ogni materia, con le formule LaTeX. Markdown notes for every subject, with LaTeX formulas.',
             lang: 'it',
             start_url: '.',
             scope: '.',

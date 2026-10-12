@@ -7,7 +7,7 @@
  * maiuscolo; i cognomi valgono con la maiuscola.
  */
 
-const ANALISI_ALGEBRA = `
+const ANALISI_ALGEBRA = /* non si traduce: parole per il correttore */ `
   iniettivo iniettiva iniettivi iniettive iniettività suriettivo suriettiva suriettivi suriettive suriettività
   biiettivo biiettiva biiettivi biiettive biiettività biiezione biiezioni
   bigettivo bigettiva bigettivi bigettive surgettivo surgettiva surgettivi surgettive
@@ -34,7 +34,7 @@ const ANALISI_ALGEBRA = `
   triangolabile triangolabili triangolarizzazione
 `
 
-const STATISTICA = `
+const STATISTICA = /* non si traduce: parole per il correttore */ `
   poissoniano poissoniana poissoniani poissoniane markoviano markoviana markoviani markoviane
   bayesiano bayesiana bayesiani bayesiane
   eteroschedasticità eteroschedastico eteroschedastica eteroschedastici eteroschedastiche
@@ -77,7 +77,7 @@ const ABBREVIAZIONI = `def dim oss prop teor cor eq fig tab cap pag cfr cvd qed 
 /** Nomi dei tasti, per scrivere le scorciatoie («Ctrl + S»). */
 const TASTI = `ctrl esc alt altgr maiusc canc cmd fn backspace`
 
-const COGNOMI = `
+const COGNOMI = /* non si traduce: parole per il correttore */ `
   Abel Adams Agnesi Ampère Archimede Arrhenius Arzelà Ascoli Avogadro Backus Baire Banach Bayes Bellman Beltrami
   Bernoulli Bertrand Bessel Betti Bézier Binet Biot Bode Bohr Boltzmann Bolzano Bombelli Boole Borel Bose Boyle
   Bragg Brayton Brønsted Cantor Capelli Cardano Carnot Cartesio Cauchy Cavalieri Cayley Celsius Cesàro Chatelier

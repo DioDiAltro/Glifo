@@ -14,7 +14,7 @@ const FILES: Record<SpellLanguage, [aff: string, dic: string]> = {
 
 async function download(url: string): Promise<Uint8Array> {
   const res = await fetch(url)
-  if (!res.ok) throw new Error(`Dizionario non trovato (${res.status})`)
+  if (!res.ok) throw new Error(`Dizionario non trovato (${res.status})`) // non si traduce: errore interno, chi usa Glifo vede il messaggio di main.ts
   return new Uint8Array(await res.arrayBuffer())
 }
 

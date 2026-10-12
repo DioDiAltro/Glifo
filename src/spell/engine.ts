@@ -18,17 +18,17 @@ export interface DictionaryData {
 
 /** Articoli, preposizioni e parole che si elidono davanti a una vocale. */
 const ELISIONS = new Set(
-  "l' un' dell' all' dall' nell' sull' coll' quest' quell' bell' sant' d' c' s' m' t' v' n' tutt' senz' anch' com' dov' cos' quand'".split(' '),
+  "l' un' dell' all' dall' nell' sull' coll' quest' quell' bell' sant' d' c' s' m' t' v' n' tutt' senz' anch' com' dov' cos' quand'".split(' '), // non si traduce: parole italiane per il correttore
 )
 
 /** Errori comuni per cui il dizionario non propone la forma giusta. */
 const COMMON_FIXES: Record<string, string[]> = {
-  "e'": ['è'],
-  "E'": ['È'],
+  "e'": ['è'], // non si traduce: parole italiane per il correttore
+  "E'": ['È'], // non si traduce: parole italiane per il correttore
   pò: ["po'"],
   Pò: ["Po'"],
-  "qual'è": ['qual è'],
-  "Qual'è": ['Qual è'],
+  "qual'è": ['qual è'], // non si traduce: parole italiane per il correttore
+  "Qual'è": ['Qual è'], // non si traduce: parole italiane per il correttore
 }
 
 function lower(word: string): string {
