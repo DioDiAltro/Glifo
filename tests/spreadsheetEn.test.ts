@@ -458,7 +458,8 @@ describe('i modelli pronti in inglese', () => {
   it('«Graph» sul punto di pareggio scrive le righe del blocco, con il titolo in inglese', () => {
     const model = parseSheet(template('Break-even point'))
     const made = chartLines(model, chartRange(model, { top: 9, left: 1, bottom: 9, right: 1 }))
-    expect(made.lines).toEqual(['titolo: Break-even point', 'asse x: Quantity', 'asse y: €', 'dati: A8:D13', 'pareggio: Revenue, Total costs'])
+    // In inglese le righe del blocco hanno le parole inglesi (src/noteWords.ts).
+    expect(made.lines).toEqual(['title: Break-even point', 'x axis: Quantity', 'y axis: €', 'data: A8:D13', 'break-even: Revenue, Total costs'])
   })
 
   it('il Gantt in inglese ha le attività per il diagramma, con le unità di sempre', () => {
@@ -477,7 +478,7 @@ describe('i modelli pronti in inglese', () => {
 describe('grafici e progetti: i messaggi in inglese', () => {
   it('chartData e planData spiegano in inglese cosa non va', () => {
     expect(chartData(null, 'A1:B2').error).toBe('There\'s no table before the graph in the note: the data come from the table written above it')
-    expect(chartData('| a |', 'nonsense').error).toBe('Write the data cells as in Excel, for example dati: A8:D13')
+    expect(chartData('| a |', 'nonsense').error).toBe('Write the data cells as in Excel, for example data: A8:D13')
     expect(chartData('| 1 | 2 |', 'A1:A1').error).toMatch(/^At least two columns are needed/)
     expect(chartData('| 1 | 2 |\n| 2 | 3 |', 'A1:B2').table?.names).toEqual(['', 'Column B'])
     expect(planData('| A | B |', 'A1:B1').error).toBe('The duration column is missing: call it “Duration” (or “Duration (weeks)”, “Working days”…)')

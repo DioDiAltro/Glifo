@@ -8,7 +8,7 @@
  */
 import { texts } from '../i18n'
 import { parseGraphKey } from '../noteWords'
-import { NO_TABLE, parseRange, REVENUE, TOTAL_COST, type ChartData } from '../spreadsheet/chart'
+import { noTable, parseRange, REVENUE, TOTAL_COST, type ChartData } from '../spreadsheet/chart'
 import { formatNumber, roundTo, type Format } from '../spreadsheet/format'
 import { colName } from '../spreadsheet/refs'
 import type { GraphError, GraphItem } from './spec'
@@ -116,7 +116,7 @@ export function tableItems(lines: readonly DataLine[], data: ChartData | null | 
     return { items, errors }
   }
   if (!data?.table) {
-    fail(dati, data?.error ?? NO_TABLE)
+    fail(dati, data?.error ?? noTable())
     return { items, errors }
   }
   const table = data.table

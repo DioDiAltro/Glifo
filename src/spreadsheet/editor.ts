@@ -14,6 +14,7 @@
  * (€1.50, =SUM(B2, C2)); nella nota le celle vanno sempre all'italiana (vedi input.ts).
  */
 import { texts } from '../i18n'
+import { graphKeyLine } from '../noteWords'
 import { confirmDialog } from '../ui/dialogs'
 import { h, icon, ICONS } from '../ui/dom'
 import { SheetEvaluator, type CellResult } from './evaluate'
@@ -1337,9 +1338,9 @@ class SheetEditor {
       const box = (button ?? this.grid).getBoundingClientRect()
       this.openMenu(
         [
-          // Le parole delle righe (titolo:, gantt:, reticolo:) sono quelle del blocco ```grafico; il titolo è nella lingua di Glifo.
-          { label: T.gantt, run: () => make([`titolo: ${T.gantt}`, `gantt: ${cells}`]) }, // non si traduce: «titolo:» e «gantt:» sono parole del blocco
-          { label: T.network, run: () => make([`titolo: ${T.networkTitle}`, `reticolo: ${cells}`]) }, // non si traduce: «titolo:» e «reticolo:» sono parole del blocco
+          // Le parole delle righe (titolo:, gantt:, reticolo:; title:, gantt:, network:) e il titolo sono nella lingua di Glifo.
+          { label: T.gantt, run: () => make([graphKeyLine('titolo', T.gantt), graphKeyLine('gantt', cells)]) },
+          { label: T.network, run: () => make([graphKeyLine('titolo', T.networkTitle), graphKeyLine('reticolo', cells)]) },
         ],
         box.left,
         box.bottom + 4,

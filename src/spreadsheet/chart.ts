@@ -5,10 +5,11 @@
  * I numeri sono quelli calcolati dalle formule, con il formato della colonna. Il pulsante «Grafico»
  * dell'editor delle tabelle sceglie le celle (`chartRange`) e scrive le righe del blocco
  * (`chartLines`), con `pareggio:` quando ci sono i ricavi e i costi totali. Le parole delle righe
- * (`titolo:`, `asse x:`, `dati:`, `pareggio:`) sono quelle del blocco ```grafico e per ora restano
- * italiane; il titolo che si scrive dopo `titolo:` è nella lingua di Glifo.
+ * (`titolo:`, `asse x:`, `dati:`, `pareggio:`, in inglese `title:`, `x axis:`, `data:`, `break-even:`:
+ * src/noteWords.ts) e il titolo sono nella lingua di Glifo.
  */
 import { texts } from '../i18n'
+import { graphKeyLine } from '../noteWords'
 import { SheetEvaluator, type CellResult } from './evaluate'
 import { GENERAL, type Format } from './format'
 import { parseSheet, type SheetModel } from './model'
@@ -20,7 +21,7 @@ const T = texts({
     'Prima del grafico, nella nota, non c\'è una tabella: i dati vengono dalla tabella scritta sopra',
     'There\'s no table before the graph in the note: the data come from the table written above it',
   ],
-  badRange: ['Scrivi le celle dei dati come in Excel, per esempio dati: A8:D13', 'Write the data cells as in Excel, for example dati: A8:D13'],
+  badRange: ['Scrivi le celle dei dati come in Excel, per esempio dati: A8:D13', 'Write the data cells as in Excel, for example data: A8:D13'],
   twoColumns: [
     'Servono almeno due colonne: la prima con i numeri dell\'asse x, le altre con le linee',
     'At least two columns are needed: the first with the numbers for the x-axis, the others with the lines',
@@ -52,12 +53,6 @@ export type ChartData = { table: ChartTable; error?: undefined } | { table?: und
 export function noTable(): string {
   return T.noTable
 }
-
-/**
- * Lo stesso messaggio, letto quando si carica il modulo: va bene nell'app (la lingua non cambia con la
- * pagina aperta), ma chi può usi `noTable()`.
- */
-export const NO_TABLE: string = noTable()
 
 const RANGE = /^\$?([A-Za-z]{1,3})\$?([1-9]\d{0,6})\s*:\s*\$?([A-Za-z]{1,3})\$?([1-9]\d{0,6})$/
 
@@ -187,12 +182,12 @@ export function chartLines(model: SheetModel, range: CellRange): { lines: string
   }
   const { names, formats } = data.table
   const lines: string[] = []
-  // Le parole delle righe sono quelle del blocco ```grafico; il titolo è nella lingua di Glifo.
-  if (breakEven) lines.push(`titolo: ${T.breakEven}`) // non si traduce: «titolo:» è una parola del blocco
+  // Le parole delle righe e il titolo sono nella lingua di Glifo.
+  if (breakEven) lines.push(graphKeyLine('titolo', T.breakEven))
   // Nei nomi degli assi le formule stanno tra $: un $ del testo non deve aprirne una.
-  if (names[0]) lines.push(`asse x: ${names[0].replace(/\$/g, '')}`) // non si traduce: «asse x:» è una parola del blocco
-  if (formats.slice(1).every((f) => f.kind === 'euro')) lines.push('asse y: €') // non si traduce: «asse y:» è una parola del blocco
-  lines.push(`dati: ${data.table.range}`) // non si traduce: «dati:» è una parola del blocco
-  if (breakEven) lines.push(`pareggio: ${revenue}, ${cost}`) // non si traduce: «pareggio:» è una parola del blocco
+  if (names[0]) lines.push(graphKeyLine('asse x', names[0].replace(/\$/g, '')))
+  if (formats.slice(1).every((f) => f.kind === 'euro')) lines.push(graphKeyLine('asse y', '€'))
+  lines.push(graphKeyLine('dati', data.table.range))
+  if (breakEven) lines.push(graphKeyLine('pareggio', `${revenue}, ${cost}`))
   return { lines }
 }

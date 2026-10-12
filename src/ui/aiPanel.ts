@@ -13,6 +13,7 @@ import { formulaTopic, graphTopic, schemaTopic, tableTopic, theoremTopic } from 
 import type { MarkdownEditor } from '../editor/editor'
 import { subjectsIn, type NoteSubject, type SubjectKind } from '../editor/explainSubjects'
 import { rich, texts } from '../i18n'
+import { parseGraphKey } from '../noteWords'
 import { escapeHtml, renderTex } from '../render/katex'
 import type { Settings } from '../store/settings'
 import { ICONS, h, icon } from './dom'
@@ -85,8 +86,9 @@ function topicOf(s: NoteSubject): ExplainTopic | null {
 /** Come si vede un grafico nell'elenco: il titolo scritto nel blocco, se no la prima riga, disegnata. */
 function graphLabel(source: string): string {
   const lines = source.split('\n').map((l) => l.trim()).filter(Boolean)
-  const title = lines.find((l) => /^titolo\s*:/i.test(l))
-  if (title) return escapeHtml(title.replace(/^titolo\s*:\s*/i, '').replace(/\$/g, ''))
+  // La riga del titolo, scritta in italiano o in inglese (titolo:, title:).
+  const title = lines.map((l) => parseGraphKey(l)).find((k) => k?.key === 'titolo')
+  if (title) return escapeHtml(title.value.replace(/\$/g, ''))
   return texInline(lines[0] ?? '')
 }
 
