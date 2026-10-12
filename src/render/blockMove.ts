@@ -1,4 +1,5 @@
 import type { Token } from 'markdown-it'
+import { blockKind } from '../noteWords'
 
 /**
  * Spostare uno schema, un grafico o una tabella nella nota, come le celle di Colab: le frecce ↑ ↓ dell'anteprima lo
@@ -21,9 +22,9 @@ export interface MoveHint {
 
 const MOVABLE = new Set<string>(['grafico', 'schema', 'tabella'])
 
-/** Il nome del blocco di codice: la prima parola dopo ```, in minuscolo (come nel renderer). */
+/** Il nome del blocco di codice: la prima parola dopo ```, in minuscolo e con il nome italiano (come nel renderer). */
 export function fenceName(t: Token): string {
-  return t.info.trim().split(/\s+/)[0].toLowerCase()
+  return blockKind(t.info)
 }
 
 const movable = (t: Token) => t.type === 'fence' && MOVABLE.has(fenceName(t))

@@ -1,3 +1,5 @@
+import { blockKind, blockWord } from '../noteWords'
+
 /** I blocchi ```schema (e ```grafico) nel testo di una nota: dove sono e cosa contengono. */
 
 export interface SchemaBlock {
@@ -30,7 +32,10 @@ export function findSchemaBlocks(text: string): SchemaBlock[] {
   return findFencedBlocks(text, 'schema')
 }
 
-/** I blocchi di codice con questo nome (```schema, ```grafico), in ordine; quelli dentro altri blocchi non contano. */
+/**
+ * I blocchi di codice con questo nome (```schema, ```grafico), in ordine; quelli dentro altri blocchi non
+ * contano. Il nome è quello italiano, e vale anche quello inglese (```diagram, ```graph: src/noteWords.ts).
+ */
 export function findFencedBlocks(text: string, name: string): SchemaBlock[] {
   const blocks: SchemaBlock[] = []
   const add = (open: OpenFence, to: number, contentTo: number, closed: boolean) =>
@@ -48,8 +53,7 @@ export function findFencedBlocks(text: string, name: string): SchemaBlock[] {
         open = null
       }
     } else if (m && !(m[1][0] === '`' && m[2].includes('`'))) {
-      const info = m[2].trim().split(/\s+/)[0].toLowerCase()
-      open = { marker: m[1], schema: info === name, from: pos, contentFrom: Math.min(end + 1, text.length), line }
+      open = { marker: m[1], schema: blockKind(m[2]) === name, from: pos, contentFrom: Math.min(end + 1, text.length), line }
     }
     if (newline < 0) break
     pos = newline + 1
@@ -76,7 +80,7 @@ export function findSchemaBlock(text: string, source: string, near: number): Sch
   return best
 }
 
-/** Il blocco da mettere nella nota. */
+/** Il blocco da mettere nella nota, con il nome nella lingua di Glifo (```schema o ```diagram). */
 export function schemaBlockText(json: string): string {
-  return '```schema\n' + json + '\n```'
+  return '```' + blockWord('schema') + '\n' + json + '\n```'
 }

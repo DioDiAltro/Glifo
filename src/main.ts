@@ -27,6 +27,7 @@ import {
 } from './store/settings'
 import { downloadText, fileNameFor, openMarkdownFiles, saveMarkdownFile, type OpenedFile } from './store/files'
 import { findFencedBlocks, findSchemaBlock, findSchemaBlocks, schemaBlockAtLine, schemaBlockText } from './schema/blocks'
+import { blockWord } from './noteWords'
 import { graphImagesFor, graphsForFile, graphsFromFile } from './graph/file'
 import { remapGraphLines, renameGraphScope } from './graph/preview'
 import { schemasForFile, schemasFromFile } from './schema/file'
@@ -1465,7 +1466,7 @@ function placeChart(block: { source: string; from: number }, lines: string[]): v
     }
     end = next.to
   }
-  const insert = `\n\n${indent}\`\`\`grafico\n${body}\n${indent}\`\`\`` // non si traduce: ```grafico è la parola del blocco
+  const insert = `\n\n${indent}\`\`\`${blockWord('grafico')}\n${body}\n${indent}\`\`\``
   view.dispatch({ changes: { from: end, insert }, selection: EditorSelection.cursor(end + insert.length), scrollIntoView: true, userEvent: 'input' })
 }
 

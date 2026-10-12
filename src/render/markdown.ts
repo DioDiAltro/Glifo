@@ -32,6 +32,7 @@ import { graphNames } from '../graph/spec'
 import { dataRange } from '../graph/tableGraph'
 import { planRange } from '../graph/planBlock'
 import { markMoves, moveAttrs } from './blockMove'
+import { blockKind } from '../noteWords'
 import { Sheet } from '../math/sheet'
 import { chartData } from '../spreadsheet/chart'
 import { planData } from '../spreadsheet/plan'
@@ -202,7 +203,7 @@ function createMarkdownIt(): MarkdownIt {
   const fence = md.renderer.rules.fence!
   md.renderer.rules.fence = (tokens, idx, options, env, self) => {
     const token = tokens[idx]
-    const info = token.info.trim().split(/\s+/)[0].toLowerCase()
+    const info = blockKind(token.info)
     const line = token.map?.[0]
     const attr = line === undefined ? '' : ` data-line="${line}"`
     if (info === 'math') {

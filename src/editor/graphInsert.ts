@@ -45,8 +45,10 @@ export function insertGraphBlock(view: EditorView, line: string | null, after?: 
   const above = empty && anchor.number > 1 ? state.doc.line(anchor.number - 1).text.trim() : ''
   const prefix = empty ? (above ? '\n' : '') : '\n\n'
   const body = line ?? 'y = '
-  const insert = `${prefix}${graphBlockText([body])}\n`
-  const cursor = line === null ? from + prefix.length + '```grafico\n'.length + body.length : from + insert.length
+  const block = graphBlockText([body])
+  const insert = `${prefix}${block}\n`
+  // Senza funzione il cursore va dopo `y = `, sulla riga sotto quella che apre il blocco.
+  const cursor = line === null ? from + prefix.length + block.indexOf('\n') + 1 + body.length : from + insert.length
   view.dispatch({
     changes: { from, insert },
     selection: EditorSelection.cursor(Math.min(cursor, state.doc.length + insert.length)),
@@ -64,7 +66,7 @@ export function addToGraphBlock(view: EditorView, line: number, text: string): b
   const { doc } = view.state
   if (!text || line < 0 || line >= doc.lines) return false
   const fence = doc.line(line + 1)
-  const m = /^([ \t]*)(?:`{3,}|~{3,})[ \t]*grafico[ \t]*$/.exec(fence.text)
+  const m = /^([ \t]*)(?:`{3,}|~{3,})[ \t]*(?:grafico|graph)[ \t]*$/i.exec(fence.text)
   if (!m) return false
   const lines = text.split('\n').map((t) => m[1] + t)
   const changes =
@@ -90,7 +92,7 @@ export function setGraphLabels(view: EditorView, line: number, labels: GraphLabe
   const { doc } = view.state
   if (line < 0 || line >= doc.lines) return false
   const fence = doc.line(line + 1)
-  const m = /^([ \t]*)(`{3,}|~{3,})[ \t]*grafico[ \t]*$/.exec(fence.text)
+  const m = /^([ \t]*)(`{3,}|~{3,})[ \t]*(?:grafico|graph)[ \t]*$/i.exec(fence.text)
   if (!m) return false
   const indent = m[1]
   const wanted: [key: 'title' | 'x' | 'y' | 'z', text: string][] = [
