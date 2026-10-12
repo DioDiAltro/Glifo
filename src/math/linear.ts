@@ -11,12 +11,131 @@
  * interi ha le frazioni giuste) e, se non si può (π, radici), con la virgola: `Field` è il tipo di
  * numero, `Rational` o `number`.
  */
+import { texts, usesDecimalComma } from '../i18n'
 import { compile, MathError, UndefinedName, type Scope } from './evaluate'
 import { ExactUnavailable, Rational } from './exact'
 import { formatNumber, formatRational, type FormatOptions, type FormattedResult } from './format'
 import { numericRoots, rationalRoots } from './polynomial'
 import type { MathNode } from './parse'
 import { correlation, covariance, DATA_FUNCTIONS, statistic, type Data } from './statistics'
+
+const T = texts({
+  divisionByZero: ['Divisione per zero', 'Division by zero'],
+  matrixHere: ['Qui va una matrice', 'A matrix goes here'],
+  multiplySizes: (columns: number, rows: number) => [
+    `Per moltiplicare due matrici le colonne della prima (${columns}) devono essere quante le righe della seconda (${rows})`,
+    `To multiply two matrices, the number of columns of the first (${columns}) must equal the number of rows of the second (${rows})`,
+  ],
+  determinantSquare: (n: number, c: number) => [
+    `Il determinante si calcola per le matrici quadrate (questa è ${n} × ${c})`,
+    `The determinant is defined for square matrices (this one is ${n} × ${c})`,
+  ],
+  inverseSquare: (n: number, c: number) => [`Solo le matrici quadrate hanno l'inversa (questa è ${n} × ${c})`, `Only square matrices have an inverse (this one is ${n} × ${c})`],
+  notInvertible: ['La matrice non è invertibile: il determinante è 0', 'The matrix is not invertible: the determinant is 0'],
+  powerSquare: ['Le potenze si fanno con le matrici quadrate', 'Powers are only for square matrices'],
+  exponentTooLarge: ["L'esponente è troppo grande", 'The exponent is too large'],
+  /** `what`: chi vuole il numero o la matrice (Il rango, \det…). */
+  wantsNumber: (what: string) => [`${what} vuole un numero, non una matrice`, `${what} needs a number, not a matrix`],
+  wantsMatrix: (what: string) => [`${what} vuole una matrice`, `${what} needs a matrix`],
+  component: ['Una componente', 'A component'],
+  matrixEntry: ['Un elemento della matrice', 'A matrix entry'],
+  theRank: ['Il rango', 'The rank'],
+  theTrace: ['La traccia', 'The trace'],
+  theRowReduction: ['La riduzione a scala', 'Row reduction'],
+  theKernel: ['Il nucleo', 'The kernel'],
+  theSpan: ['Lo span', 'The span'],
+  theRoot: ['La radice', 'The square root'],
+  theExponent: ["L'esponente", 'The exponent'],
+  subspaces: ['Con i sottospazi non si fanno i conti', "You can't do calculations with subspaces"],
+  addNumber: ['Non si somma un numero e una matrice: forse manca la I (A - \\lambda I)?', "You can't add a number and a matrix: is the I missing (A - \\lambda I)?"],
+  subtractNumber: ['Non si sottrae un numero e una matrice: forse manca la I (A - \\lambda I)?', "You can't subtract a number and a matrix: is the I missing (A - \\lambda I)?"],
+  identitySize: ['Di che misura è la I? Scrivi I_2, I_3…', 'What size is I? Write I_2, I_3…'],
+  // «Si sottraeno» è com'era scritto prima delle due lingue (il messaggio italiano non cambia).
+  addSizes: (ar: number, ac: number, br: number, bc: number) => [
+    `Si sommano matrici della stessa misura (${ar} × ${ac} e ${br} × ${bc})`,
+    `Only matrices of the same size can be added (${ar} × ${ac} and ${br} × ${bc})`,
+  ],
+  subtractSizes: (ar: number, ac: number, br: number, bc: number) => [
+    `Si sottraeno matrici della stessa misura (${ar} × ${ac} e ${br} × ${bc})`,
+    `Only matrices of the same size can be subtracted (${ar} × ${ac} and ${br} × ${bc})`,
+  ],
+  dotSizes: (a: number, b: number) => [
+    `Il prodotto scalare vuole due vettori con lo stesso numero di componenti (${a} e ${b})`,
+    `The dot product needs two vectors with the same number of components (${a} and ${b})`,
+  ],
+  crossThree: ['Il prodotto vettoriale si fa tra due vettori con tre componenti', 'The cross product is between two vectors with three components'],
+  vectorSizes: ['I vettori hanno un numero diverso di componenti', 'The vectors have different numbers of components'],
+  figures: [
+    'Con le rette, le circonferenze e i poligoni non si fanno i conti: usa le funzioni (\\operatorname{area}, d(P, r)…)',
+    "You can't do calculations with lines, circles and polygons: use the functions (\\operatorname{area}, d(P, r)…)",
+  ],
+  twoComponents: ['Un vettore ha almeno due componenti', 'A vector has at least two components'],
+  divideMatrix: ["Non si divide per una matrice: moltiplica per l'inversa, A^{-1}", "You can't divide by a matrix: multiply by the inverse, A^{-1}"],
+  crossTwo: ['Il prodotto vettoriale si fa tra due vettori', 'The cross product is between two vectors'],
+  complement: ['Il complemento ortogonale è di un sottospazio o di un vettore', 'The orthogonal complement is for a subspace or a vector'],
+  zeroComplement: ['Del sottospazio nullo il complemento è tutto lo spazio', 'The complement of the zero subspace is the whole space'],
+  transpose: ['La trasposta è di una matrice o di un vettore', 'The transpose is for a matrix or a vector'],
+  exponentNumber: ["L'esponente è un numero", 'The exponent must be a number'],
+  integerPower: ["Le potenze di una matrice hanno l'esponente intero (A^{-1} è l'inversa)", 'Powers of a matrix have an integer exponent (A^{-1} is the inverse)'],
+  // \operatorname{media}, \operatorname{quartili}…: i nomi che si scrivono nella nota (per ora italiani).
+  dataForm: [
+    'I dati si scrivono in un vettore, $x = (2, 3, 5, 7)$, o uno per uno: \\operatorname{media}(2, 3, 5, 7)',
+    'Write the data in a vector, $x = (2, 3, 5, 7)$, or one by one: \\operatorname{media}(2, 3, 5, 7)',
+  ],
+  quantileForm: (name: string) => [
+    `Si scrive \\operatorname{${name}}(x, ${name === 'quantile' ? '0{,}9' : '90'}), con x i dati`,
+    `Write \\operatorname{${name}}(x, ${name === 'quantile' ? '0.9' : '90'}), with x the data`,
+  ],
+  pairForm: (name: string) => [`Si scrive \\operatorname{${name}}(x, y), con x e y due vettori di dati`, `Write \\operatorname{${name}}(x, y), with x and y two data vectors`],
+  askAlone: ['Questa si chiede da sola, con «=» in fondo: \\operatorname{quartili}(x) =', 'Ask for this one on its own, with “=” at the end: \\operatorname{quartili}(x) ='],
+  oneValue: (name: string) => [`\\${name} vuole un valore solo`, `\\${name} takes a single value`],
+  traceSquare: ['La traccia è delle matrici quadrate', 'The trace is only for square matrices'],
+  imaginaryPart: [
+    '\\operatorname{Im} di un numero reale è 0: per i numeri complessi scrivi la i',
+    '\\operatorname{Im} of a real number is 0: for complex numbers write the i',
+  ],
+  dimension: ['\\dim è la dimensione di un sottospazio: \\dim \\ker A', '\\dim is the dimension of a subspace: \\dim \\ker A'],
+  dotTwo: ['Il prodotto scalare si fa tra due vettori', 'The dot product is between two vectors'],
+  projectionForm: [
+    'Si scrive \\operatorname{proiezione}(v, U), con U un sottospazio (o un vettore)',
+    'Write \\operatorname{proiezione}(v, U), with U a subspace (or a vector)',
+  ],
+  projectionOnto: ['Si proietta su un sottospazio (\\operatorname{span}(…)) o su un vettore', 'You project onto a subspace (\\operatorname{span}(…)) or onto a vector'],
+  eigenvaluesAlone: ['Gli autovalori si chiedono da soli: \\operatorname{autovalori}(A) =', 'Ask for the eigenvalues on their own: \\operatorname{autovalori}(A) ='],
+  // La geometria.
+  coordinates: ['I punti hanno un numero diverso di coordinate', 'The points have different numbers of coordinates'],
+  angleSides: ['Un angolo vuole due lati non nulli', 'An angle needs two nonzero sides'],
+  pointHere: ['Qui va un punto, come A = (1, 2)', 'A point goes here, like A = (1, 2)'],
+  pointsHere: (n: number) => [`Qui vanno ${n} punti`, `This needs ${n} points`],
+  conjugate: ['Il coniugato è dei numeri complessi: \\overline{z} con z = 1 + i', 'The conjugate is for complex numbers: \\overline{z} with z = 1 + i'],
+  segmentEnds: ['Un segmento ha due estremi: \\overline{AB}', 'A segment has two endpoints: \\overline{AB}'],
+  equalPoints: ['Per due punti uguali passano infinite rette', 'Infinitely many lines pass through two equal points'],
+  polygonVertices: ['Un poligono ha almeno tre vertici', 'A polygon has at least three vertices'],
+  triangleVertices: ['Un triangolo ha tre vertici: \\triangle ABC', 'A triangle has three vertices: \\triangle ABC'],
+  circlePlane3: ['La circonferenza per tre punti si fa nel piano', 'The circle through three points must be in the plane'],
+  collinearCircle: ["I tre punti sono allineati: non c'è una circonferenza che passa per tutti", 'The three points are collinear: no circle passes through all of them'],
+  circleForm: ['La circonferenza vuole il centro e il raggio (o un suo punto), o tre punti', 'A circle needs the center and the radius (or one of its points), or three points'],
+  circlePlane: ['La circonferenza si fa nel piano', 'A circle must be in the plane'],
+  angleForm: [
+    'Un angolo vuole tre punti (\\widehat{ABC}, con il vertice in mezzo) o due vettori',
+    'An angle needs three points (\\widehat{ABC}, with the vertex in the middle) or two vectors',
+  ],
+  planeSpace: ['Il piano per tre punti si fa nello spazio', 'The plane through three points must be in space'],
+  collinearPlane: ['I tre punti sono allineati: per loro passano infiniti piani', 'The three points are collinear: infinitely many planes pass through them'],
+  planeForm: ['Il piano vuole tre punti, o un punto e la normale', 'A plane needs three points, or a point and the normal'],
+  distanceForm: ['La distanza è tra due cose: d(A, B), d(P, r)', 'A distance is between two things: d(A, B), d(P, r)'],
+  distancePoint: ['La distanza vuole almeno un punto', 'A distance needs at least one point'],
+  distanceFigures: ['La distanza si calcola da punti, rette e piani', 'Distances are calculated between points, lines and planes'],
+  intersectionTwo: ["L'intersezione è tra due figure", 'An intersection is between two figures'],
+  skew: ['Le rette sono sghembe: non si incontrano', "The lines are skew: they don't meet"],
+  parallelLines: ['Le rette sono parallele (o la stessa retta)', 'The lines are parallel (or the same line)'],
+  parallelLinePlane: ['La retta è parallela al piano', 'The line is parallel to the plane'],
+  parallelPlanes: ['I piani sono paralleli', 'The planes are parallel'],
+  intersectionFigures: ['Le intersezioni si fanno tra sottospazi, rette, piani e circonferenze', 'Intersections are between subspaces, lines, planes and circles'],
+  notNumber: ['Non è un numero', 'Not a number'],
+  eigenvaluesSquare: ['Gli autovalori sono delle matrici quadrate', 'Eigenvalues are only for square matrices'],
+  noPoints: ['∅ (nessun punto)', '∅ (no points)'],
+})
 
 // ——— I numeri: frazioni o con la virgola ———
 
@@ -78,7 +197,7 @@ export const EXACT: Field<Rational> = {
   sub: (a, b) => a.sub(b),
   mul: (a, b) => a.mul(b),
   div: (a, b) => {
-    if (b.sign === 0) throw new MathError('Divisione per zero')
+    if (b.sign === 0) throw new MathError(T.divisionByZero)
     return a.div(b)
   },
   neg: (a) => a.neg(),
@@ -200,7 +319,7 @@ function asMatrix<T>(F: Field<T>, v: Lin<T>, n: number): Mat<T> {
     const c = v.c
     return c === null ? id : id.map((row) => row.map((x) => F.mul(c, x)))
   }
-  throw new MathError('Qui va una matrice')
+  throw new MathError(T.matrixHere)
 }
 
 function transpose<T>(m: Mat<T>): Mat<T> {
@@ -211,7 +330,7 @@ function transpose<T>(m: Mat<T>): Mat<T> {
 function multiply<T>(F: Field<T>, a: Mat<T>, b: Mat<T>): Mat<T> {
   const [ar, ac] = dims(a)
   const [br, bc] = dims(b)
-  if (ac !== br) throw new MathError(`Per moltiplicare due matrici le colonne della prima (${ac}) devono essere quante le righe della seconda (${br})`)
+  if (ac !== br) throw new MathError(T.multiplySizes(ac, br))
   return Array.from({ length: ar }, (_, i) =>
     Array.from({ length: bc }, (_, j) => {
       let s = F.zero()
@@ -262,7 +381,7 @@ export function rref<T>(F: Field<T>, m: Mat<T>): { r: Mat<T>; pivots: number[]; 
 
 export function determinant<T>(F: Field<T>, m: Mat<T>): T {
   const [n, c] = dims(m)
-  if (n !== c) throw new MathError(`Il determinante si calcola per le matrici quadrate (questa è ${n} × ${c})`)
+  if (n !== c) throw new MathError(T.determinantSquare(n, c))
   const a = m.map((row) => [...row])
   const tol = tolerance(F, m)
   let det = F.one()
@@ -289,21 +408,21 @@ export function determinant<T>(F: Field<T>, m: Mat<T>): T {
 
 export function inverse<T>(F: Field<T>, m: Mat<T>): Mat<T> {
   const [n, c] = dims(m)
-  if (n !== c) throw new MathError(`Solo le matrici quadrate hanno l'inversa (questa è ${n} × ${c})`)
+  if (n !== c) throw new MathError(T.inverseSquare(n, c))
   const id = identity(F, n)
   const { r, pivots } = rref(
     F,
     m.map((row, i) => [...row, ...id[i]]),
   )
-  if (pivots.length < n || pivots[n - 1] !== n - 1) throw new MathError('La matrice non è invertibile: il determinante è 0')
+  if (pivots.length < n || pivots[n - 1] !== n - 1) throw new MathError(T.notInvertible)
   return r.map((row) => row.slice(n))
 }
 
 function power<T>(F: Field<T>, m: Mat<T>, e: number): Mat<T> {
   const [n, c] = dims(m)
-  if (n !== c) throw new MathError('Le potenze si fanno con le matrici quadrate')
+  if (n !== c) throw new MathError(T.powerSquare)
   if (e < 0) return power(F, inverse(F, m), -e)
-  if (e > 1000) throw new MathError('L\'esponente è troppo grande')
+  if (e > 1000) throw new MathError(T.exponentTooLarge)
   let r = identity(F, n)
   let base = m
   for (let k = e; k > 0; k = Math.floor(k / 2)) {
@@ -337,28 +456,28 @@ export function image<T>(F: Field<T>, m: Mat<T>): Mat<T>[] {
 function scalarOf<T>(v: Lin<T>, what: string): T {
   if (v.k === 'scalar') return v.v
   if (v.k === 'matrix' && v.m.length === 1 && v.m[0].length === 1) return v.m[0][0]
-  throw new MathError(`${what} vuole un numero, non una matrice`)
+  throw new MathError(T.wantsNumber(what))
 }
 
 function matrixOf<T>(v: Lin<T>, what: string): Mat<T> {
   if (v.k === 'matrix') return v.m
-  throw new MathError(`${what} vuole una matrice`)
+  throw new MathError(T.wantsMatrix(what))
 }
 
-function elementwise<T>(F: Field<T>, a: Lin<T>, b: Lin<T>, op: (x: T, y: T) => T, word: string): Lin<T> {
+function elementwise<T>(F: Field<T>, a: Lin<T>, b: Lin<T>, op: (x: T, y: T) => T, kind: 'add' | 'subtract'): Lin<T> {
   if (a.k === 'scalar' && b.k === 'scalar') return { k: 'scalar', v: op(a.v, b.v) }
-  if (a.k === 'span' || b.k === 'span') throw new MathError('Con i sottospazi non si fanno i conti')
-  if (a.k === 'scalar' || b.k === 'scalar') throw new MathError(`Non si ${word} un numero e una matrice: forse manca la I (A - \\lambda I)?`)
+  if (a.k === 'span' || b.k === 'span') throw new MathError(T.subspaces)
+  if (a.k === 'scalar' || b.k === 'scalar') throw new MathError(kind === 'add' ? T.addNumber : T.subtractNumber)
   const size = a.k === 'matrix' ? a.m.length : b.k === 'matrix' ? b.m.length : 0
   if (a.k === 'identity' && b.k === 'identity') {
-    if (a.n !== b.n) throw new MathError('Di che misura è la I? Scrivi I_2, I_3…')
+    if (a.n !== b.n) throw new MathError(T.identitySize)
     return { k: 'identity', n: a.n, c: op(a.c ?? F.one(), b.c ?? F.one()) }
   }
   const ma = asMatrix(F, a, size)
   const mb = asMatrix(F, b, size)
   const [ar, ac] = dims(ma)
   const [br, bc] = dims(mb)
-  if (ar !== br || ac !== bc) throw new MathError(`Si ${word}no matrici della stessa misura (${ar} × ${ac} e ${br} × ${bc})`)
+  if (ar !== br || ac !== bc) throw new MathError(kind === 'add' ? T.addSizes(ar, ac, br, bc) : T.subtractSizes(ar, ac, br, bc))
   return { k: 'matrix', m: ma.map((row, i) => row.map((x, j) => op(x, mb[i][j]))), tuple: (a.k === 'matrix' && a.tuple) || (b.k === 'matrix' && b.tuple) }
 }
 
@@ -369,18 +488,18 @@ function scale<T>(F: Field<T>, s: T, v: Lin<T>, divide = false): Lin<T> {
     const c = v.c ?? F.one()
     return { k: 'identity', n: v.n, c: divide ? F.div(c, s) : F.mul(s, c) }
   }
-  throw new MathError('Con i sottospazi non si fanno i conti')
+  throw new MathError(T.subspaces)
 }
 
 function dot<T>(F: Field<T>, a: Mat<T>, b: Mat<T>): T {
-  if (a.length !== b.length) throw new MathError(`Il prodotto scalare vuole due vettori con lo stesso numero di componenti (${a.length} e ${b.length})`)
+  if (a.length !== b.length) throw new MathError(T.dotSizes(a.length, b.length))
   let s = F.zero()
   for (let i = 0; i < a.length; i++) s = F.add(s, F.mul(a[i][0], b[i][0]))
   return s
 }
 
 function cross<T>(F: Field<T>, a: Mat<T>, b: Mat<T>): Mat<T> {
-  if (a.length !== 3 || b.length !== 3) throw new MathError('Il prodotto vettoriale si fa tra due vettori con tre componenti')
+  if (a.length !== 3 || b.length !== 3) throw new MathError(T.crossThree)
   const [x1, y1, z1] = a.map((r) => r[0])
   const [x2, y2, z2] = b.map((r) => r[0])
   return [[F.sub(F.mul(y1, z2), F.mul(z1, y2))], [F.sub(F.mul(z1, x2), F.mul(x1, z2))], [F.sub(F.mul(x1, y2), F.mul(y1, x2))]]
@@ -394,7 +513,7 @@ function norm<T>(F: Field<T>, v: Mat<T>): T {
 export function basisOf<T>(F: Field<T>, vectors: Mat<T>[]): Mat<T>[] {
   if (!vectors.length) return []
   const n = vectors[0].length
-  if (vectors.some((v) => v.length !== n)) throw new MathError('I vettori hanno un numero diverso di componenti')
+  if (vectors.some((v) => v.length !== n)) throw new MathError(T.vectorSizes)
   const m: Mat<T> = Array.from({ length: n }, (_, i) => vectors.map((v) => v[i][0]))
   return image(F, m)
 }
@@ -451,7 +570,7 @@ function plain<T>(F: Field<T>, v: Lin<T>): Lin<T> {
     case 'plane':
     case 'polygon':
     case 'points':
-      throw new MathError('Con le rette, le circonferenze e i poligoni non si fanno i conti: usa le funzioni (\\operatorname{area}, d(P, r)…)')
+      throw new MathError(T.figures)
   }
   return v
 }
@@ -477,10 +596,10 @@ function evaluate<T>(ctx: Ctx<T>, node: MathNode): Lin<T> {
       throw new UndefinedName(node.name)
     }
     case 'tuple':
-      if (node.items.length < 2) throw new MathError('Un vettore ha almeno due componenti')
-      return { k: 'matrix', m: node.items.map((n) => [scalarOf(ev(n), 'Una componente')]), tuple: true }
+      if (node.items.length < 2) throw new MathError(T.twoComponents)
+      return { k: 'matrix', m: node.items.map((n) => [scalarOf(ev(n), T.component)]), tuple: true }
     case 'matrix':
-      return { k: 'matrix', m: node.rows.map((row) => row.map((n) => scalarOf(ev(n), 'Un elemento della matrice'))), tuple: false }
+      return { k: 'matrix', m: node.rows.map((row) => row.map((n) => scalarOf(ev(n), T.matrixEntry))), tuple: false }
     case 'neg':
       return scale(F, F.int(-1), ev(node.a))
     case 'bin': {
@@ -491,19 +610,19 @@ function evaluate<T>(ctx: Ctx<T>, node: MathNode): Lin<T> {
         case '+':
           // La somma di due sottospazi: lo span di tutti i vettori.
           if (a.k === 'span' && b.k === 'span') return { k: 'span', basis: basisOf(F, [...a.basis, ...b.basis]) }
-          return elementwise(F, a, b, F.add, 'somma')
+          return elementwise(F, a, b, F.add, 'add')
         case '-':
-          return elementwise(F, a, b, F.sub, 'sottrae')
+          return elementwise(F, a, b, F.sub, 'subtract')
         case '/':
-          if (b.k !== 'scalar') throw new MathError('Non si divide per una matrice: moltiplica per l\'inversa, A^{-1}')
+          if (b.k !== 'scalar') throw new MathError(T.divideMatrix)
           return scale(F, b.v, a, true)
         case '*': {
           if (node.cap) return intersection(F, a, b)
           if (a.k === 'scalar') return scale(F, a.v, b)
           if (b.k === 'scalar') return scale(F, b.v, a)
-          if (a.k === 'span' || b.k === 'span') throw new MathError('Con i sottospazi non si fanno i conti')
+          if (a.k === 'span' || b.k === 'span') throw new MathError(T.subspaces)
           if (node.cross) {
-            if (!isVector(a) || !isVector(b)) throw new MathError('Il prodotto vettoriale si fa tra due vettori')
+            if (!isVector(a) || !isVector(b)) throw new MathError(T.crossTwo)
             return { k: 'matrix', m: cross(F, a.m, b.m), tuple: a.tuple }
           }
           // Due vettori: il prodotto scalare (u \cdot v).
@@ -548,17 +667,17 @@ function powerOf<T>(ctx: Ctx<T>, node: Extract<MathNode, { k: 'bin' }>): Lin<T> 
   // U^⊥: il complemento ortogonale (di un sottospazio o di un vettore): il nucleo della matrice con i vettori in riga.
   if (node.b.k === 'name' && node.b.name === '⊥') {
     const basis = base.k === 'span' ? base.basis : isVector(base) ? [base.m] : null
-    if (!basis) throw new MathError('Il complemento ortogonale è di un sottospazio o di un vettore')
-    if (!basis.length) throw new MathError('Del sottospazio nullo il complemento è tutto lo spazio')
+    if (!basis) throw new MathError(T.complement)
+    if (!basis.length) throw new MathError(T.zeroComplement)
     return { k: 'span', basis: kernel(F, basis.map((b) => b.map((r) => r[0]))) }
   }
   // A^T: la trasposta (se T non è un numero definito).
   if (node.b.k === 'name' && node.b.name === 'T' && !valueOf(ctx, 'T')) {
-    if (base.k !== 'matrix') throw new MathError('La trasposta è di una matrice o di un vettore')
+    if (base.k !== 'matrix') throw new MathError(T.transpose)
     return { k: 'matrix', m: transpose(base.m), tuple: false }
   }
   const e = evaluate(ctx, node.b)
-  if (e.k !== 'scalar') throw new MathError('L\'esponente è un numero')
+  if (e.k !== 'scalar') throw new MathError(T.exponentNumber)
   if (base.k === 'scalar') {
     const n = F.integer(e.v)
     if (n !== null) {
@@ -570,9 +689,9 @@ function powerOf<T>(ctx: Ctx<T>, node: Extract<MathNode, { k: 'bin' }>): Lin<T> 
     if (F.exact) unavailable()
     return { k: 'scalar', v: F.fromFloat(Math.pow(F.toNumber(base.v), F.toNumber(e.v))) }
   }
-  if (base.k !== 'matrix') throw new MathError('Qui va una matrice')
+  if (base.k !== 'matrix') throw new MathError(T.matrixHere)
   const n = F.integer(e.v)
-  if (n === null) throw new MathError('Le potenze di una matrice hanno l\'esponente intero (A^{-1} è l\'inversa)')
+  if (n === null) throw new MathError(T.integerPower)
   return { k: 'matrix', m: power(F, base.m, n), tuple: false }
 }
 
@@ -585,7 +704,7 @@ export function dataOf<T>(args: Lin<T>[]): Data<T> {
   if (args.length === 1 && isVector(args[0])) return { values: column(args[0]), weights: null }
   if (args.length === 2 && isVector(args[0]) && isVector(args[1])) return { values: column(args[0]), weights: column(args[1]) }
   if (args.length && args.every((a) => a.k === 'scalar')) return { values: args.map((a) => (a as { v: T }).v), weights: null }
-  throw new MathError('I dati si scrivono in un vettore, $x = (2, 3, 5, 7)$, o uno per uno: \\operatorname{media}(2, 3, 5, 7)')
+  throw new MathError(T.dataForm)
 }
 
 /** La statistica dei dati (\operatorname{media}(x), \operatorname{Var}(x, f), \operatorname{corr}(x, y)); null se è altro. */
@@ -593,14 +712,14 @@ function statisticOf<T>(F: Field<T>, name: string, args: Lin<T>[]): Lin<T> | nul
   if (DATA_FUNCTIONS.has(name)) {
     if (name === 'quantile' || name === 'percentile') {
       const last = args[args.length - 1]
-      if (args.length < 2 || last.k !== 'scalar') throw new MathError(`Si scrive \\operatorname{${name}}(x, ${name === 'quantile' ? '0{,}9' : '90'}), con x i dati`)
+      if (args.length < 2 || last.k !== 'scalar') throw new MathError(T.quantileForm(name))
       return { k: 'scalar', v: statistic(F, name, dataOf(args.slice(0, -1)), last.v) }
     }
     return { k: 'scalar', v: statistic(F, name, dataOf(args)) }
   }
   if (name === 'cov' || name === 'corr') {
     const [x, y] = args
-    if (args.length !== 2 || !isVector(x) || !isVector(y)) throw new MathError(`Si scrive \\operatorname{${name === 'cov' ? 'Cov' : 'corr'}}(x, y), con x e y due vettori di dati`)
+    if (args.length !== 2 || !isVector(x) || !isVector(y)) throw new MathError(T.pairForm(name === 'cov' ? 'Cov' : 'corr'))
     const xs = x.m.map((r) => r[0])
     const ys = y.m.map((r) => r[0])
     return { k: 'scalar', v: name === 'cov' ? covariance(F, xs, ys) : correlation(F, xs, ys) }
@@ -609,7 +728,7 @@ function statisticOf<T>(F: Field<T>, name: string, args: Lin<T>[]): Lin<T> | nul
     const values = args.flatMap((a) => (isVector(a) ? a.m.map((r) => r[0]) : [scalarOf(a, `\\${name}`)]))
     return { k: 'scalar', v: values.reduce((p, q) => ((name === 'max' ? F.cmp(q, p) > 0 : F.cmp(q, p) < 0) ? q : p)) }
   }
-  if (STATISTICS_SHOWN.has(name)) throw new MathError('Questa si chiede da sola, con «=» in fondo: \\operatorname{quartili}(x) =')
+  if (STATISTICS_SHOWN.has(name)) throw new MathError(T.askAlone)
   return null
 }
 
@@ -621,7 +740,7 @@ function functionOf<T>(ctx: Ctx<T>, node: Extract<MathNode, { k: 'fn' }>): Lin<T
   const stat = statisticOf(F, node.name, args)
   if (stat) return stat
   const one = () => {
-    if (args.length !== 1) throw new MathError(`\\${node.name} vuole un valore solo`)
+    if (args.length !== 1) throw new MathError(T.oneValue(node.name))
     return args[0]
   }
   let out: Lin<T>
@@ -630,40 +749,40 @@ function functionOf<T>(ctx: Ctx<T>, node: Extract<MathNode, { k: 'fn' }>): Lin<T
       out = { k: 'scalar', v: determinant(F, matrixOf(one(), '\\det')) }
       break
     case 'rank':
-      out = { k: 'scalar', v: F.int(rref(F, matrixOf(one(), 'Il rango')).pivots.length) }
+      out = { k: 'scalar', v: F.int(rref(F, matrixOf(one(), T.theRank)).pivots.length) }
       break
     case 'tr': {
-      const m = matrixOf(one(), 'La traccia')
-      if (m.length !== m[0].length) throw new MathError('La traccia è delle matrici quadrate')
+      const m = matrixOf(one(), T.theTrace)
+      if (m.length !== m[0].length) throw new MathError(T.traceSquare)
       let s = F.zero()
       m.forEach((row, i) => (s = F.add(s, row[i])))
       out = { k: 'scalar', v: s }
       break
     }
     case 'rref':
-      out = { k: 'matrix', m: rref(F, matrixOf(one(), 'La riduzione a scala')).r, tuple: false }
+      out = { k: 'matrix', m: rref(F, matrixOf(one(), T.theRowReduction)).r, tuple: false }
       break
     case 'ker':
-      out = { k: 'span', basis: kernel(F, matrixOf(one(), 'Il nucleo')) }
+      out = { k: 'span', basis: kernel(F, matrixOf(one(), T.theKernel)) }
       break
     case 'im': {
       const a = one()
-      if (a.k !== 'matrix') throw new MathError('\\operatorname{Im} di un numero reale è 0: per i numeri complessi scrivi la i')
+      if (a.k !== 'matrix') throw new MathError(T.imaginaryPart)
       out = { k: 'span', basis: image(F, a.m) }
       break
     }
     case 'span':
-      out = { k: 'span', basis: basisOf(F, args.map((a) => (isVector(a) ? a.m : matrixOf(a, 'Lo span')))) }
+      out = { k: 'span', basis: basisOf(F, args.map((a) => (isVector(a) ? a.m : matrixOf(a, T.theSpan)))) }
       break
     case 'dim': {
       const a = one()
       if (a.k === 'span') out = { k: 'scalar', v: F.int(a.basis.length) }
-      else throw new MathError('\\dim è la dimensione di un sottospazio: \\dim \\ker A')
+      else throw new MathError(T.dimension)
       break
     }
     case 'dot': {
       const [a, b] = args
-      if (!isVector(a) || !isVector(b)) throw new MathError('Il prodotto scalare si fa tra due vettori')
+      if (!isVector(a) || !isVector(b)) throw new MathError(T.dotTwo)
       out = { k: 'scalar', v: dot(F, a.m, b.m) }
       break
     }
@@ -673,14 +792,14 @@ function functionOf<T>(ctx: Ctx<T>, node: Extract<MathNode, { k: 'fn' }>): Lin<T
       break
     }
     case 'sqrt':
-      out = { k: 'scalar', v: F.sqrt(scalarOf(one(), 'La radice')) }
+      out = { k: 'scalar', v: F.sqrt(scalarOf(one(), T.theRoot)) }
       break
     case 'projection': {
       // La proiezione ortogonale di v su U: Σ (v·uᵢ)/(uᵢ·uᵢ) uᵢ, con una base ortogonale di U (Gram–Schmidt).
       const [v, U] = args
-      if (args.length !== 2 || !isVector(v)) throw new MathError('Si scrive \\operatorname{proiezione}(v, U), con U un sottospazio (o un vettore)')
+      if (args.length !== 2 || !isVector(v)) throw new MathError(T.projectionForm)
       const basis = U.k === 'span' ? U.basis : isVector(U) ? [U.m] : null
-      if (!basis) throw new MathError('Si proietta su un sottospazio (\\operatorname{span}(…)) o su un vettore')
+      if (!basis) throw new MathError(T.projectionOnto)
       const orthogonal: Mat<T>[] = []
       for (const b of basis) {
         let u = b
@@ -694,7 +813,7 @@ function functionOf<T>(ctx: Ctx<T>, node: Extract<MathNode, { k: 'fn' }>): Lin<T
     }
     case 'eig':
     case 'eigvec':
-      throw new MathError('Gli autovalori si chiedono da soli: \\operatorname{autovalori}(A) =')
+      throw new MathError(T.eigenvaluesAlone)
     default: {
       // Le altre funzioni (sin, ln…) dei numeri, con la virgola.
       if (F.exact) unavailable()
@@ -708,7 +827,7 @@ function functionOf<T>(ctx: Ctx<T>, node: Extract<MathNode, { k: 'fn' }>): Lin<T
     const n = p.k === 'scalar' ? F.integer(p.v) : null
     if (n === null) {
       if (F.exact) unavailable()
-      return { k: 'scalar', v: F.fromFloat(Math.pow(F.toNumber(out.v), F.toNumber(scalarOf(p, 'L\'esponente')))) }
+      return { k: 'scalar', v: F.fromFloat(Math.pow(F.toNumber(out.v), F.toNumber(scalarOf(p, T.theExponent)))) }
     }
     let r = F.one()
     for (let k = 0; k < Math.abs(n); k++) r = F.mul(r, out.v)
@@ -720,12 +839,12 @@ function functionOf<T>(ctx: Ctx<T>, node: Extract<MathNode, { k: 'fn' }>): Lin<T
 // ——— La geometria ———
 
 function minus<T>(F: Field<T>, a: Mat<T>, b: Mat<T>): Mat<T> {
-  if (a.length !== b.length) throw new MathError('I punti hanno un numero diverso di coordinate')
+  if (a.length !== b.length) throw new MathError(T.coordinates)
   return a.map((r, i) => [F.sub(r[0], b[i][0])])
 }
 
 function plus<T>(F: Field<T>, a: Mat<T>, b: Mat<T>): Mat<T> {
-  if (a.length !== b.length) throw new MathError('I punti hanno un numero diverso di coordinate')
+  if (a.length !== b.length) throw new MathError(T.coordinates)
   return a.map((r, i) => [F.add(r[0], b[i][0])])
 }
 
@@ -741,7 +860,7 @@ function squaredLength<T>(F: Field<T>, v: Mat<T>): T {
 function angleBetween<T>(F: Field<T>, u: Mat<T>, v: Mat<T>): number {
   const nu = Math.sqrt(F.toNumber(squaredLength(F, u)))
   const nv = Math.sqrt(F.toNumber(squaredLength(F, v)))
-  if (!nu || !nv) throw new MathError('Un angolo vuole due lati non nulli')
+  if (!nu || !nv) throw new MathError(T.angleSides)
   return Math.acos(Math.max(-1, Math.min(1, F.toNumber(dot(F, u, v)) / (nu * nv))))
 }
 
@@ -763,7 +882,7 @@ function figureNodes(args: MathNode[]): MathNode[] {
 /** Un punto (o un vettore): le sue coordinate, in colonna. */
 function pointOf<T>(ctx: Ctx<T>, node: MathNode): Mat<T> {
   const v = plain(ctx.F, evaluate(ctx, node))
-  if (v.k !== 'matrix' || v.m[0].length !== 1 || v.m.length < 2 || v.m.length > 3) throw new MathError('Qui va un punto, come A = (1, 2)')
+  if (v.k !== 'matrix' || v.m[0].length !== 1 || v.m.length < 2 || v.m.length > 3) throw new MathError(T.pointHere)
   return v.m
 }
 
@@ -787,7 +906,7 @@ function geometryOf<T>(ctx: Ctx<T>, name: string, args: MathNode[]): Lin<T> | nu
   const nodes = () => figureNodes(args)
   const points = (count?: number) => {
     const list = nodes().map((n) => pointOf(ctx, n))
-    if (count !== undefined && list.length !== count) throw new MathError(`Qui vanno ${count} punti`)
+    if (count !== undefined && list.length !== count) throw new MathError(T.pointsHere(count))
     return list
   }
   switch (name) {
@@ -796,8 +915,8 @@ function geometryOf<T>(ctx: Ctx<T>, name: string, args: MathNode[]): Lin<T> | nu
       // \overline{AB}: il segmento (con due punti; se no è il coniugato di un numero complesso).
       const list = nodes()
       if (list.length !== 2 || !list.every((n) => n.k === 'name')) {
-        if (name === 'conj') throw new MathError('Il coniugato è dei numeri complessi: \\overline{z} con z = 1 + i')
-        throw new MathError('Un segmento ha due estremi: \\overline{AB}')
+        if (name === 'conj') throw new MathError(T.conjugate)
+        throw new MathError(T.segmentEnds)
       }
       const [a, b] = points(2)
       return { k: 'segment', a, b }
@@ -809,14 +928,14 @@ function geometryOf<T>(ctx: Ctx<T>, name: string, args: MathNode[]): Lin<T> | nu
     case 'line': {
       const [a, b] = points(2)
       const dir = minus(F, b, a)
-      if (dir.every((r) => F.isZero(r[0], 0))) throw new MathError('Per due punti uguali passano infinite rette')
+      if (dir.every((r) => F.isZero(r[0], 0))) throw new MathError(T.equalPoints)
       return { k: 'line', p: a, dir }
     }
     case 'triangle':
     case 'polygon': {
       const list = points()
-      if (list.length < 3) throw new MathError('Un poligono ha almeno tre vertici')
-      if (name === 'triangle' && list.length !== 3) throw new MathError('Un triangolo ha tre vertici: \\triangle ABC')
+      if (list.length < 3) throw new MathError(T.polygonVertices)
+      if (name === 'triangle' && list.length !== 3) throw new MathError(T.triangleVertices)
       return { k: 'polygon', points: list }
     }
     case 'circle': {
@@ -824,22 +943,22 @@ function geometryOf<T>(ctx: Ctx<T>, name: string, args: MathNode[]): Lin<T> | nu
       if (list.length === 3) {
         // Per tre punti: il centro è dove si incontrano gli assi di due lati.
         const [a, b, c] = points(3)
-        if (a.length !== 2) throw new MathError('La circonferenza per tre punti si fa nel piano')
+        if (a.length !== 2) throw new MathError(T.circlePlane3)
         const [ax, ay] = a.map((r) => r[0])
         const [bx, by] = b.map((r) => r[0])
         const [cx, cy] = c.map((r) => r[0])
         const two = F.int(2)
         const d = F.mul(two, F.add(F.add(F.mul(ax, F.sub(by, cy)), F.mul(bx, F.sub(cy, ay))), F.mul(cx, F.sub(ay, by))))
-        if (F.isZero(d, 1e-12)) throw new MathError('I tre punti sono allineati: non c\'è una circonferenza che passa per tutti')
+        if (F.isZero(d, 1e-12)) throw new MathError(T.collinearCircle)
         const sq = (x: T, y: T) => F.add(F.mul(x, x), F.mul(y, y))
         const ux = F.div(F.add(F.add(F.mul(sq(ax, ay), F.sub(by, cy)), F.mul(sq(bx, by), F.sub(cy, ay))), F.mul(sq(cx, cy), F.sub(ay, by))), d)
         const uy = F.div(F.add(F.add(F.mul(sq(ax, ay), F.sub(cx, bx)), F.mul(sq(bx, by), F.sub(ax, cx))), F.mul(sq(cx, cy), F.sub(bx, ax))), d)
         const center = [[ux], [uy]]
         return { k: 'circle', c: center, r2: squaredLength(F, minus(F, a, center)) }
       }
-      if (list.length !== 2) throw new MathError('La circonferenza vuole il centro e il raggio (o un suo punto), o tre punti')
+      if (list.length !== 2) throw new MathError(T.circleForm)
       const c = pointOf(ctx, list[0])
-      if (c.length !== 2) throw new MathError('La circonferenza si fa nel piano')
+      if (c.length !== 2) throw new MathError(T.circlePlane)
       const second = plain(F, figureOf(ctx, list[1]))
       if (second.k === 'scalar') return { k: 'circle', c, r2: F.mul(second.v, second.v) }
       return { k: 'circle', c, r2: squaredLength(F, minus(F, pointOf(ctx, list[1]), c)) }
@@ -863,7 +982,7 @@ function geometryOf<T>(ctx: Ctx<T>, name: string, args: MathNode[]): Lin<T> | nu
       const list = nodes()
       const value = list.length === 1 ? figureOf(ctx, list[0]) : null
       const vertices = value?.k === 'polygon' ? value.points : points()
-      if (vertices.length < 3) throw new MathError('Un poligono ha almeno tre vertici')
+      if (vertices.length < 3) throw new MathError(T.polygonVertices)
       if (name === 'perimeter') {
         let total = F.zero()
         vertices.forEach((v, i) => (total = F.add(total, F.sqrt(squaredLength(F, minus(F, vertices[(i + 1) % vertices.length], v))))))
@@ -890,7 +1009,7 @@ function geometryOf<T>(ctx: Ctx<T>, name: string, args: MathNode[]): Lin<T> | nu
         const [a, v, b] = points(3)
         return { k: 'angle', a, v, b }
       }
-      if (list.length !== 2) throw new MathError('Un angolo vuole tre punti (\\widehat{ABC}, con il vertice in mezzo) o due vettori')
+      if (list.length !== 2) throw new MathError(T.angleForm)
       // Tra due vettori o due rette: con il vertice nell'origine.
       const direction = (n: MathNode) => {
         const value = figureOf(ctx, n)
@@ -906,9 +1025,9 @@ function geometryOf<T>(ctx: Ctx<T>, name: string, args: MathNode[]): Lin<T> | nu
       const list = nodes()
       if (list.length === 3) {
         const [a, b, c] = points(3)
-        if (a.length !== 3) throw new MathError('Il piano per tre punti si fa nello spazio')
+        if (a.length !== 3) throw new MathError(T.planeSpace)
         const n = cross(F, minus(F, b, a), minus(F, c, a))
-        if (n.every((r) => F.isZero(r[0], 1e-12))) throw new MathError('I tre punti sono allineati: per loro passano infiniti piani')
+        if (n.every((r) => F.isZero(r[0], 1e-12))) throw new MathError(T.collinearPlane)
         return { k: 'plane', n, d: dot(F, n, a) }
       }
       if (list.length === 2) {
@@ -917,16 +1036,16 @@ function geometryOf<T>(ctx: Ctx<T>, name: string, args: MathNode[]): Lin<T> | nu
         const n = pointOf(ctx, list[1])
         return { k: 'plane', n, d: dot(F, n, p) }
       }
-      throw new MathError('Il piano vuole tre punti, o un punto e la normale')
+      throw new MathError(T.planeForm)
     }
     case 'dist': {
       const list = nodes()
-      if (list.length !== 2) throw new MathError('La distanza è tra due cose: d(A, B), d(P, r)')
+      if (list.length !== 2) throw new MathError(T.distanceForm)
       const [first, second] = list.map((n) => figureOf(ctx, n))
       const point = (v: Lin<T>) => (v.k === 'matrix' && v.m[0].length === 1 ? v.m : null)
       const p = point(first) ?? point(second)
       const other = point(first) ? second : first
-      if (!p) throw new MathError('La distanza vuole almeno un punto')
+      if (!p) throw new MathError(T.distancePoint)
       // Le distanze si calcolano al quadrato: così restano esatte (√2/2).
       if (point(other)) return { k: 'length', sq: squaredLength(F, minus(F, point(other)!, p)) }
       if (other.k === 'line') {
@@ -946,11 +1065,11 @@ function geometryOf<T>(ctx: Ctx<T>, name: string, args: MathNode[]): Lin<T> | nu
         const from = Math.sqrt(F.toNumber(squaredLength(F, minus(F, p, other.c))))
         return { k: 'scalar', v: F.fromFloat(Math.abs(from - Math.sqrt(F.toNumber(other.r2)))) }
       }
-      throw new MathError('La distanza si calcola da punti, rette e piani')
+      throw new MathError(T.distanceFigures)
     }
     case 'intersect': {
       const list = nodes()
-      if (list.length !== 2) throw new MathError('L\'intersezione è tra due figure')
+      if (list.length !== 2) throw new MathError(T.intersectionTwo)
       return intersection(F, figureOf(ctx, list[0]), figureOf(ctx, list[1]))
     }
   }
@@ -988,22 +1107,22 @@ function intersection<T>(F: Field<T>, a: Lin<T>, b: Lin<T>): Lin<T> {
         if (other.every((r, k) => Math.abs(F.toNumber(r[0]) - F.toNumber(point[k][0])) <= 1e-9 * Math.max(1, Math.abs(F.toNumber(point[k][0]))))) {
           return { k: 'matrix', m: point, tuple: true }
         }
-        throw new MathError('Le rette sono sghembe: non si incontrano')
+        throw new MathError(T.skew)
       }
     }
-    throw new MathError('Le rette sono parallele (o la stessa retta)')
+    throw new MathError(T.parallelLines)
   }
   if ((a.k === 'line' && b.k === 'plane') || (a.k === 'plane' && b.k === 'line')) {
     const line = a.k === 'line' ? a : (b as Extract<Lin<T>, { k: 'line' }>)
     const plane = a.k === 'plane' ? a : (b as Extract<Lin<T>, { k: 'plane' }>)
     const den = dot(F, plane.n, line.dir)
-    if (F.isZero(den, 1e-12)) throw new MathError('La retta è parallela al piano')
+    if (F.isZero(den, 1e-12)) throw new MathError(T.parallelLinePlane)
     const t = F.div(F.sub(plane.d, dot(F, plane.n, line.p)), den)
     return { k: 'matrix', m: plus(F, line.p, times(F, t, line.dir)), tuple: true }
   }
   if (a.k === 'plane' && b.k === 'plane') {
     const dir = cross(F, a.n, b.n)
-    if (dir.every((r) => F.isZero(r[0], 1e-12))) throw new MathError('I piani sono paralleli')
+    if (dir.every((r) => F.isZero(r[0], 1e-12))) throw new MathError(T.parallelPlanes)
     // Un punto: risolvendo con la coordinata dove la direzione è più grande uguale a zero.
     const k = [0, 1, 2].reduce((m, i) => (F.size(dir[i][0]) > F.size(dir[m][0]) ? i : m), 0)
     const [i, j] = [0, 1, 2].filter((x) => x !== k)
@@ -1039,7 +1158,7 @@ function intersection<T>(F: Field<T>, a: Lin<T>, b: Lin<T>): Lin<T> {
     const t2 = F.div(F.add(F.neg(B), root), F.mul(F.int(2), A))
     return { k: 'points', list: [plus(F, line.p, times(F, t1, line.dir)), plus(F, line.p, times(F, t2, line.dir))] }
   }
-  throw new MathError('Le intersezioni si fanno tra sottospazi, rette, piani e circonferenze')
+  throw new MathError(T.intersectionFigures)
 }
 
 // ——— Autovalori e polinomio caratteristico ———
@@ -1091,7 +1210,7 @@ function interpolateFloat(ys: number[]): number[] {
 export function polynomialIn(node: MathNode, name: string, scope: LinearScope, most = 12): Rational[] | null {
   const at = (x: number) => {
     const v = evaluateLinear(node, scope, EXACT, new Map([[name, Rational.int(x)]]))
-    if (v.k !== 'scalar') throw new MathError('Non è un numero')
+    if (v.k !== 'scalar') throw new MathError(T.notNumber)
     return v.v
   }
   try {
@@ -1132,7 +1251,7 @@ export function characteristicPolynomial(scope: LinearScope, A: LinearValue): Ra
 /** Gli autovalori di una matrice quadrata, dal polinomio caratteristico. */
 export function eigenvalues(scope: LinearScope, A: LinearValue): Eigenvalue[] {
   const m = A.float.k === 'matrix' ? A.float.m : null
-  if (!m || m.length !== m[0].length) throw new MathError('Gli autovalori sono delle matrici quadrate')
+  if (!m || m.length !== m[0].length) throw new MathError(T.eigenvaluesSquare)
   const n = m.length
   const lambda = 'λ\u0000'
   const node: MathNode = {
@@ -1258,7 +1377,7 @@ export function formatLinear<T>(F: Field<T>, v: Lin<T>, options: FormatOptions):
         })
         return { tex: two.map((t) => t.tex).join(';\\ '), text: two.map((t) => t.text).join('; '), rich: true }
       }
-      if (!v.list.length) return { tex: '\\varnothing', text: '∅ (nessun punto)' }
+      if (!v.list.length) return { tex: '\\varnothing', text: T.noPoints }
       const list = v.list.map((m) => tupleTex(F, m, options))
       return { tex: list.map((t) => t.tex).join(';\\ '), text: list.map((t) => t.text).join('; '), rich: true }
     }
@@ -1286,7 +1405,7 @@ export function splitRoot(r: Rational): { k: Rational; m: bigint } | null {
 
 /** Il numero a + b√m (con le frazioni) con un denominatore solo: (1 + √5)/2, −√2, 3 − 2√3. */
 export function surdText(a: Rational, b: Rational, m: bigint): FormattedResult {
-  if (b.n === 0n) return formatRational(a, { comma: true, decimal: false })
+  if (b.n === 0n) return formatRational(a, { comma: usesDecimalComma(), decimal: false })
   const g = (x: bigint, y: bigint): bigint => (y ? g(y, x % y) : x)
   const q = (a.d / g(a.d, b.d)) * b.d
   const top = (a.n * q) / a.d

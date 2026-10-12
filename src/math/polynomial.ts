@@ -4,7 +4,12 @@
  * razionali (con Ruffini) e con la virgola (anche complesse), la scomposizione in fattori di primo e
  * di secondo grado e i fratti semplici (per le primitive delle funzioni razionali).
  */
+import { texts } from '../i18n'
 import { Rational } from './exact'
+
+const T = texts({
+  zeroDivisor: ['Divisione per il polinomio nullo', 'Division by the zero polynomial'],
+})
 
 export type Poly = Rational[]
 
@@ -51,7 +56,7 @@ export function ppow(p: Poly, k: number): Poly {
 /** a = q b + r, con il grado di r minore di quello di b. */
 export function pdivmod(a: Poly, b: Poly): { q: Poly; r: Poly } {
   b = trim(b)
-  if (!b.length) throw new RangeError('Divisione per il polinomio nullo')
+  if (!b.length) throw new RangeError(T.zeroDivisor)
   let r = trim([...a])
   const q: Poly = Array.from({ length: Math.max(0, r.length - b.length + 1) }, () => ZERO)
   const lead = b[b.length - 1]

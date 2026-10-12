@@ -5,6 +5,7 @@
  * cinese del resto), le basi (binario, esadecimale); per i polinomi la scomposizione in fattori, lo
  * sviluppo, la divisione con il resto, la regola di Ruffini (con la tabella), il mcd e il mcm.
  */
+import { texts } from '../i18n'
 import { modInverse, modPow, Rational } from './exact'
 import type { FormattedResult } from './format'
 import { toLatex } from './latex'
@@ -12,6 +13,40 @@ import type { MathNode } from './parse'
 import { factorQ, pdivmod, pgcd, pmul, trim, type Poly } from './polynomial'
 import { asFraction, polyEx } from './primitive'
 import { add, exOf, expand, mul, num, plainText, pow, sym, symbols, tidy, toNode, type Ex, type SymbolScope } from './symbolic'
+
+const T = texts({
+  /** Il massimo comun divisore nel testo (nella formula è \\gcd). */
+  gcd: ['mcd', 'gcd'],
+  noSolution: ['nessuna soluzione', 'no solution'],
+  incompatible: ['nessuna soluzione (le congruenze non sono compatibili)', 'no solution (the congruences are incompatible)'],
+  everyTex: (x: string) => [`\\text{ogni } ${x} \\in \\mathbb{Z}`, `\\text{every } ${x} \\in \\mathbb{Z}`],
+  everyText: (x: string) => [`ogni ${x} intero`, `every integer ${x}`],
+  /** x ≡ 4 (mod 5), cioè x ≡ 4, 9 (mod 10). */
+  thatIsTex: (x: string, r: bigint, n: bigint, all: string, m: bigint) => [
+    `${x} \\equiv ${r} \\pmod{${n}},\\ \\text{cioè } ${x} \\equiv ${all} \\pmod{${m}}`,
+    `${x} \\equiv ${r} \\pmod{${n}},\\ \\text{i.e. } ${x} \\equiv ${all} \\pmod{${m}}`,
+  ],
+  thatIsText: (x: string, r: bigint, n: bigint, all: string, m: bigint) => [
+    `${x} ≡ ${r} (mod ${n}), cioè ${x} ≡ ${all} (mod ${m})`,
+    `${x} ≡ ${r} (mod ${n}), i.e. ${x} ≡ ${all} (mod ${m})`,
+  ],
+  noIntegerTex: (a: bigint, b: bigint, g: bigint, c: bigint) => [
+    `\\text{nessuna soluzione intera: } \\gcd(${a}, ${b}) = ${g} \\text{ non divide } ${c}`,
+    `\\text{no integer solutions: } \\gcd(${a}, ${b}) = ${g} \\text{ does not divide } ${c}`,
+  ],
+  noIntegerText: (a: bigint, b: bigint, g: bigint, c: string) => [
+    `nessuna soluzione intera: mcd(${a}, ${b}) = ${g} non divide ${c}`,
+    `no integer solutions: gcd(${a}, ${b}) = ${g} does not divide ${c}`,
+  ],
+  irreducibleTex: ['\\quad (\\text{irriducibile in } \\mathbb{Q})', '\\quad (\\text{irreducible over } \\mathbb{Q})'],
+  irreducibleText: [' (irriducibile in ℚ)', ' (irreducible over ℚ)'],
+  quotientRemainder: (q: string, r: bigint) => [`(quoziente ${q}, resto ${r})`, `(quotient ${q}, remainder ${r})`],
+  /** Dopo il numero dei divisori: «(6 divisori)». */
+  divisors: (n: number) => ['divisori', n === 1 ? 'divisor' : 'divisors'],
+  primeTex: (n: bigint) => [`\\text{sì, } ${n} \\text{ è primo}`, `\\text{yes, } ${n} \\text{ is prime}`],
+  primeText: (n: bigint) => [`sì, ${n} è primo`, `yes, ${n} is prime`],
+  noInverse: (x: bigint, m: bigint, g: bigint) => [`non esiste (mcd(${x}, ${m}) = ${g})`, `does not exist (gcd(${x}, ${m}) = ${g})`],
+})
 
 const R = (n: number | bigint, d: number | bigint = 1) => new Rational(BigInt(n), BigInt(d))
 const ZERO = R(0)
@@ -172,7 +207,7 @@ function euclidShown(a: bigint, b: bigint): FormattedResult | null {
     ;[x, y] = [y, r]
   }
   tex.push(`\\gcd(${a}, ${b}) = ${x}`)
-  text.push(`mcd = ${x}`)
+  text.push(`${T.gcd} = ${x}`)
   return { tex: `\\begin{array}{l} ${tex.join(' \\\\ ')} \\end{array}`, text: text.join('; '), rich: true }
 }
 
@@ -205,7 +240,8 @@ function integerPoly(F: Ex, x: string): bigint[] | null {
   return coeffs.every((c) => c.isInteger) ? coeffs.map((c) => c.n) : null
 }
 
-const NONE: FormattedResult = { tex: '\\text{nessuna soluzione}', text: 'nessuna soluzione' }
+/** «Nessuna soluzione», nella lingua di quando si chiede. */
+const none = (): FormattedResult => ({ tex: `\\text{${T.noSolution}}`, text: T.noSolution })
 
 /**
  * Le congruenze di una richiesta con ⇒ (3x \equiv 2 \pmod{5}, anche più insieme): la soluzione
@@ -242,27 +278,24 @@ export function solveCongruences(nodes: MathNode[], scope: SymbolScope): Formatt
       for (let k = c.length - 1; k >= 0; k--) v = (v * r + c[k]) % m
       if (v === 0n) roots.push(r)
     }
-    if (!roots.length) return NONE
+    if (!roots.length) return none()
     return { tex: `${name} \\equiv ${roots.join(', ')} \\pmod{${m}}`, text: `${name} ≡ ${roots.join(', ')} (mod ${m})` }
   }
   let acc: { r: bigint; n: bigint } = { r: 0n, n: 1n }
   for (const { c, m } of polys) {
     const sol = linearCongruence(c[1] ?? 0n, -(c[0] ?? 0n), m)
-    if (!sol) return NONE
+    if (!sol) return none()
     const next = combine(acc, sol)
-    if (!next) return { tex: '\\text{nessuna soluzione (le congruenze non sono compatibili)}', text: 'nessuna soluzione (le congruenze non sono compatibili)' }
+    if (!next) return { tex: `\\text{${T.incompatible}}`, text: T.incompatible }
     acc = next
   }
   const { r, n } = acc
-  if (n === 1n) return { tex: `\\text{ogni } ${name} \\in \\mathbb{Z}`, text: `ogni ${name} intero` }
+  if (n === 1n) return { tex: T.everyTex(name), text: T.everyText(name) }
   // Una congruenza sola con il modulo diviso (6x ≡ 4 mod 10 → x ≡ 4 mod 5): anche i resti modulo 10.
   const m = polys.length === 1 ? polys[0].m : n
   if (m !== n && m / n <= 12n) {
     const all = Array.from({ length: Number(m / n) }, (_, k) => r + BigInt(k) * n)
-    return {
-      tex: `${name} \\equiv ${r} \\pmod{${n}},\\ \\text{cioè } ${name} \\equiv ${all.join(', ')} \\pmod{${m}}`,
-      text: `${name} ≡ ${r} (mod ${n}), cioè ${name} ≡ ${all.join(', ')} (mod ${m})`,
-    }
+    return { tex: T.thatIsTex(name, r, n, all.join(', '), m), text: T.thatIsText(name, r, n, all.join(', '), m) }
   }
   return { tex: `${name} \\equiv ${r} \\pmod{${n}}`, text: `${name} ≡ ${r} (mod ${n})` }
 }
@@ -311,10 +344,7 @@ function diophantineShown(node: MathNode, scope: SymbolScope): FormattedResult |
   if (a === 0n || b === 0n) return null
   const { g, x: s } = bezout(a, b)
   if (mod(c, g) !== 0n) {
-    return {
-      tex: `\\text{nessuna soluzione intera: } \\gcd(${abs(a)}, ${abs(b)}) = ${g} \\text{ non divide } ${c}`,
-      text: `nessuna soluzione intera: mcd(${abs(a)}, ${abs(b)}) = ${g} non divide ${int(c)}`,
-    }
+    return { tex: T.noIntegerTex(abs(a), abs(b), g, c), text: T.noIntegerText(abs(a), abs(b), g, int(c)) }
   }
   // La soluzione con x il più piccolo possibile tra 0 e |b|/d − 1, e il passo di x positivo.
   const sx = abs(b) / g
@@ -564,8 +594,8 @@ function factorShown(e: Ex, letters: string[], note = true): FormattedResult | n
   // In una lettera, di secondo o terzo grado senza radici frazioni: non si scompone (con le frazioni).
   const irreducible = note && alone && letters.length === 1 && parts[0].deg >= 2 && parts[0].deg <= 3
   return {
-    tex: `${constant.tex}${shown.map((f) => f.tex).join('')}${irreducible ? '\\quad (\\text{irriducibile in } \\mathbb{Q})' : ''}`,
-    text: `${constant.text}${shown.map((f) => f.text).join('')}${irreducible ? ' (irriducibile in ℚ)' : ''}`,
+    tex: `${constant.tex}${shown.map((f) => f.tex).join('')}${irreducible ? T.irreducibleTex : ''}`,
+    text: `${constant.text}${shown.map((f) => f.text).join('')}${irreducible ? T.irreducibleText : ''}`,
   }
 }
 
@@ -578,7 +608,7 @@ function divisionShown(a: MathNode, b: MathNode, scope: SymbolScope): FormattedR
     // Il resto tra 0 e |d| − 1.
     const r = mod(n, abs(d))
     const q = (n - r) / d
-    return { tex: `${n} = ${d} \\cdot ${factorTex(q)} + ${r}`, text: `${int(n)} = ${int(d)} · ${factorText(q)} + ${r} (quoziente ${int(q)}, resto ${r})` }
+    return { tex: `${n} = ${d} \\cdot ${factorTex(q)} + ${r}`, text: `${int(n)} = ${int(d)} · ${factorText(q)} + ${r} ${T.quotientRemainder(int(q), r)}` }
   }
   const P = polynomialOf(a, scope)
   const D = polynomialOf(b, scope)
@@ -665,12 +695,12 @@ export function arithmeticShown(node: MathNode, scope: SymbolScope): FormattedRe
       const n = one ? integerOf(a, scope) : null
       if (n === null || n === 0n) return null
       const ds = divisors(n)
-      return ds && { tex: `${ds.join(',\\ ')}\\quad (${ds.length}\\ \\text{divisori})`, text: `${ds.join(', ')} (${ds.length} divisori)` }
+      return ds && { tex: `${ds.join(',\\ ')}\\quad (${ds.length}\\ \\text{${T.divisors(ds.length)}})`, text: `${ds.join(', ')} (${ds.length} ${T.divisors(ds.length)})` }
     }
     case 'isprime': {
       const n = one ? integerOf(a, scope) : null
       if (n === null) return null
-      if (isPrime(n)) return { tex: `\\text{sì, } ${n} \\text{ è primo}`, text: `sì, ${n} è primo` }
+      if (isPrime(n)) return { tex: T.primeTex(n), text: T.primeText(n) }
       const f = n >= 2n ? factorsShown(n) : null
       return f ? { tex: `\\text{no: } ${n} = ${f.tex}`, text: `no: ${n} = ${f.text}` } : { tex: '\\text{no}', text: 'no' }
     }
@@ -701,7 +731,7 @@ export function arithmeticShown(node: MathNode, scope: SymbolScope): FormattedRe
       if (x === null || m === null || m < 2n) return null
       const inv = modInverse(x, m)
       return inv === null
-        ? { tex: `\\nexists\\ (\\gcd(${x}, ${m}) = ${gcd(x, m)})`, text: `non esiste (mcd(${x}, ${m}) = ${gcd(x, m)})` }
+        ? { tex: `\\nexists\\ (\\gcd(${x}, ${m}) = ${gcd(x, m)})`, text: T.noInverse(x, m, gcd(x, m)) }
         : { tex: `${inv}\\quad (${x} \\cdot ${inv} \\equiv 1 \\pmod{${m}})`, text: `${inv} (${x} · ${inv} ≡ 1 mod ${m})` }
     }
     case 'base':
@@ -722,7 +752,7 @@ export function arithmeticShown(node: MathNode, scope: SymbolScope): FormattedRe
       const { g, x: s, y: t } = bezout(x, y)
       return {
         tex: `\\gcd(${x}, ${y}) = ${g} = ${factorTex(x)} \\cdot ${factorTex(s)} + ${factorTex(y)} \\cdot ${factorTex(t)}`,
-        text: `mcd = ${g} = ${factorText(x)} · ${factorText(s)} + ${factorText(y)} · ${factorText(t)}`,
+        text: `${T.gcd} = ${g} = ${factorText(x)} · ${factorText(s)} + ${factorText(y)} · ${factorText(t)}`,
       }
     }
     case 'euclid': {

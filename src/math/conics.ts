@@ -5,11 +5,58 @@
  * matrice completa dice se è degenere, quello della parte quadratica il tipo; gli autovalori la forma
  * canonica. I conti sono esatti (frazioni e radici) quando gli assi sono paralleli a quelli cartesiani.
  */
+import { texts, usesDecimalComma } from '../i18n'
 import { Rational } from './exact'
 import type { FormattedResult } from './format'
 import { nameLatex, toLatex } from './latex'
 import type { MathNode } from './parse'
 import { add, exOf, expand, mul, neg, num, plainText, pow, sub, sym, tidy, toNode, type Ex, type SymbolScope } from './symbolic'
+
+const T = texts({
+  // Le coniche.
+  degeneratePoint: ['conica degenere: un punto solo', 'degenerate conic: a single point'],
+  degenerateCrossing: ['conica degenere: due rette incidenti', 'degenerate conic: two intersecting lines'],
+  degenerateParallel: ['conica degenere: rette parallele, una retta doppia o nessun punto', 'degenerate conic: parallel lines, a double line or no points'],
+  degenerateTwoParallel: ['conica degenere: due rette parallele', 'degenerate conic: two parallel lines'],
+  imaginaryEllipse: ['ellisse immaginaria: nessun punto reale', 'imaginary ellipse: no real points'],
+  circle: ['circonferenza', 'circle'],
+  ellipse: ['ellisse', 'ellipse'],
+  hyperbola: ['iperbole', 'hyperbola'],
+  rectangularHyperbola: ['iperbole equilatera', 'rectangular hyperbola'],
+  verticalParabola: ["parabola con l'asse verticale", 'parabola with a vertical axis'],
+  horizontalParabola: ["parabola con l'asse orizzontale", 'parabola with a horizontal axis'],
+  asymptotesTex: (list: string) => [`\\text{asintoti: } ${list}`, `\\text{asymptotes: } ${list}`],
+  asymptotesText: (list: string) => [`asintoti: ${list}`, `asymptotes: ${list}`],
+  canonicalTex: (equation: string) => [`\\text{forma canonica: } ${equation}`, `\\text{canonical form: } ${equation}`],
+  canonicalText: (equation: string) => [`forma canonica: ${equation}`, `canonical form: ${equation}`],
+  directrixTex: (w: string, d: string, u: string, a: string) => [
+    `\\text{direttrice } ${w} = ${d},\\ \\text{asse } ${u} = ${a}`,
+    `\\text{directrix } ${w} = ${d},\\ \\text{axis } ${u} = ${a}`,
+  ],
+  directrixText: (w: string, d: string, u: string, a: string) => [`direttrice ${w} = ${d}, asse ${u} = ${a}`, `directrix ${w} = ${d}, axis ${u} = ${a}`],
+  rotatedTex: (angle: string) => [`\\text{(gli assi ruotati di } \\theta = ${angle}\\text{)}`, `\\text{(axes rotated by } \\theta = ${angle}\\text{)}`],
+  rotatedText: (angle: string) => [`(gli assi ruotati di θ = ${angle})`, `(axes rotated by θ = ${angle})`],
+  // Le quadriche.
+  degenerateQuadricPoint: ['quadrica degenere: un punto solo', 'degenerate quadric: a single point'],
+  cone: ['cono', 'cone'],
+  ellipsoid: ['ellissoide', 'ellipsoid'],
+  oneSheet: ['iperboloide a una falda (iperbolico)', 'hyperboloid of one sheet (hyperbolic)'],
+  twoSheets: ['iperboloide a due falde (ellittico)', 'hyperboloid of two sheets (elliptic)'],
+  imaginaryEllipsoid: ['ellissoide immaginario: nessun punto reale', 'imaginary ellipsoid: no real points'],
+  sphere: ['sfera', 'sphere'],
+  ellipticParaboloid: ['paraboloide ellittico', 'elliptic paraboloid'],
+  hyperbolicParaboloid: ['paraboloide iperbolico (a sella)', 'hyperbolic paraboloid (saddle)'],
+  degenerateLine: ['quadrica degenere: una retta', 'degenerate quadric: a line'],
+  degenerateCrossingPlanes: ['quadrica degenere: due piani incidenti', 'degenerate quadric: two intersecting planes'],
+  noRealPoints: ['nessun punto reale', 'no real points'],
+  circularCylinder: ['cilindro circolare', 'circular cylinder'],
+  ellipticCylinder: ['cilindro ellittico', 'elliptic cylinder'],
+  hyperbolicCylinder: ['cilindro iperbolico', 'hyperbolic cylinder'],
+  ellipticOrDegenerate: ['cilindro ellittico (o degenere)', 'elliptic cylinder (or degenerate)'],
+  hyperbolicOrPlanes: ['cilindro iperbolico (o due piani incidenti)', 'hyperbolic cylinder (or two intersecting planes)'],
+  parabolicCylinder: ['cilindro parabolico', 'parabolic cylinder'],
+  degeneratePlanes: ['quadrica degenere: due piani, un piano doppio o nessun punto', 'degenerate quadric: two planes, a double plane or no points'],
+})
 
 const R = (n: number | bigint, d: number | bigint = 1) => new Rational(BigInt(n), BigInt(d))
 const ZERO = R(0)
@@ -162,26 +209,26 @@ export function conicOf(node: MathNode, scope: SymbolScope, vars: [string, strin
     // a (x − x₀)² + c (y − y₀)² = k
     const k = a.mul(x0).mul(x0).add(cc.mul(y0).mul(y0)).sub(f)
     if (k.sign === 0) {
-      if (detM.sign > 0) return { shown: rows([words('conica degenere: un punto solo'), point(num(x0), num(y0))]), elements: null }
+      if (detM.sign > 0) return { shown: rows([words(T.degeneratePoint), point(num(x0), num(y0))]), elements: null }
       // Due rette per il centro: y − y₀ = ±√(−a/c) (x − x₀).
       const m = sqrt(a.neg().div(cc))
       const lines = [add(num(y0), mul(m, shifted(X, x0))), add(num(y0), neg(mul(m, shifted(X, x0))))].map((l) => {
         const s = shownOf(l)
         return { tex: `${nameLatex(Y)} = ${s.tex}`, text: `${Y} = ${s.text}` }
       })
-      return { shown: rows([words('conica degenere: due rette incidenti'), { tex: lines.map((l) => l.tex).join(',\\quad '), text: lines.map((l) => l.text).join(', ') }]), elements: null }
+      return { shown: rows([words(T.degenerateCrossing), { tex: lines.map((l) => l.tex).join(',\\quad '), text: lines.map((l) => l.text).join(', ') }]), elements: null }
     }
     const A2 = k.div(a)
     const B2 = k.div(cc)
     const center = point(num(x0), num(y0))
     const centerNums: [number, number] = [x0.toNumber(), y0.toNumber()]
-    if (A2.sign < 0 && B2.sign < 0) return { shown: rows([words('ellisse immaginaria: nessun punto reale')]), elements: null }
+    if (A2.sign < 0 && B2.sign < 0) return { shown: rows([words(T.imaginaryEllipse)]), elements: null }
     if (A2.sign > 0 && B2.sign > 0) {
       if (A2.cmp(B2) === 0) {
         const r = shownOf(sqrt(A2))
         const canonical = { tex: `${square(X, x0, R(1)).tex} + ${square(Y, y0, R(1)).tex} = ${shownOf(num(A2)).tex}`, text: `${square(X, x0, R(1)).text} + ${square(Y, y0, R(1)).text} = ${shownOf(num(A2)).text}` }
         return {
-          shown: rows([words('circonferenza'), canonical, { tex: `C = ${center.tex},\\ r = ${r.tex}`, text: `C = ${center.text}, r = ${r.text}` }]),
+          shown: rows([words(T.circle), canonical, { tex: `C = ${center.tex},\\ r = ${r.tex}`, text: `C = ${center.text}, r = ${r.text}` }]),
           elements: { kind: 'circle', center: centerNums, foci: [], vertices: [], lines: [] },
         }
       }
@@ -197,7 +244,7 @@ export function conicOf(node: MathNode, scope: SymbolScope, vars: [string, strin
       const bv = Math.sqrt(B2.toNumber())
       return {
         shown: rows([
-          words('ellisse'),
+          words(T.ellipse),
           canonical,
           { tex: `C = ${center.tex},\\ a = ${shownOf(sqrt(A2)).tex},\\ b = ${shownOf(sqrt(B2)).tex}`, text: `C = ${center.text}, a = ${shownOf(sqrt(A2)).text}, b = ${shownOf(sqrt(B2)).text}` },
           { tex: `F_{1} = ${foci[0].tex},\\ F_{2} = ${foci[1].tex}`, text: `F₁ = ${foci[0].text}, F₂ = ${foci[1].text}` },
@@ -233,11 +280,11 @@ export function conicOf(node: MathNode, scope: SymbolScope, vars: [string, strin
     const m = by / ax
     return {
       shown: rows([
-        words(pos.cmp(negative) === 0 ? 'iperbole equilatera' : 'iperbole'),
+        words(pos.cmp(negative) === 0 ? T.rectangularHyperbola : T.hyperbola),
         canonical,
         { tex: `C = ${center.tex},\\ e = ${ecc.tex}`, text: `C = ${center.text}, e = ${ecc.text}` },
         { tex: `F_{1} = ${foci[0].tex},\\ F_{2} = ${foci[1].tex}`, text: `F₁ = ${foci[0].text}, F₂ = ${foci[1].text}` },
-        { tex: `\\text{asintoti: } ${asymptotes.map((l) => l.tex).join(',\\quad ')}`, text: `asintoti: ${asymptotes.map((l) => l.text).join(', ')}` },
+        { tex: T.asymptotesTex(asymptotes.map((l) => l.tex).join(',\\quad ')), text: T.asymptotesText(asymptotes.map((l) => l.text).join(', ')) },
       ]),
       elements: {
         kind: 'hyperbola',
@@ -250,12 +297,12 @@ export function conicOf(node: MathNode, scope: SymbolScope, vars: [string, strin
     }
   }
   // Una parabola (o degenere): a = 0 o c = 0.
-  if (detA.sign === 0) return { shown: rows([words('conica degenere: rette parallele, una retta doppia o nessun punto')]), elements: null }
+  if (detA.sign === 0) return { shown: rows([words(T.degenerateParallel)]), elements: null }
   // y = αx² + βx + γ (con c = 0) o x = αy² + βy + γ (con a = 0).
   const vertical = cc.sign === 0
   const [u, w] = vertical ? [X, Y] : [Y, X]
   const lin = vertical ? e : d
-  if (lin.sign === 0) return { shown: rows([words('conica degenere: due rette parallele')]), elements: null }
+  if (lin.sign === 0) return { shown: rows([words(T.degenerateTwoParallel)]), elements: null }
   const alpha = (vertical ? a : cc).neg().div(lin)
   const beta = (vertical ? d : e).neg().div(lin)
   const gamma = f.neg().div(lin)
@@ -271,13 +318,13 @@ export function conicOf(node: MathNode, scope: SymbolScope, vars: [string, strin
   const right = shownOf(mul(num(R(1).div(alpha)), shifted(w, v2)))
   return {
     shown: rows([
-      words(vertical ? "parabola con l'asse verticale" : "parabola con l'asse orizzontale"),
+      words(vertical ? T.verticalParabola : T.horizontalParabola),
       { tex: `${nameLatex(w)} = ${eq.tex}`, text: `${w} = ${eq.text}` },
-      { tex: `\\text{forma canonica: } ${shiftU.tex} = ${right.tex}`, text: `forma canonica: ${shiftU.text} = ${right.text}` },
+      { tex: T.canonicalTex(`${shiftU.tex} = ${right.tex}`), text: T.canonicalText(`${shiftU.text} = ${right.text}`) },
       { tex: `V = ${pt(v1, v2).tex},\\ F = ${pt(v1, f2).tex}`, text: `V = ${pt(v1, v2).text}, F = ${pt(v1, f2).text}` },
       {
-        tex: `\\text{direttrice } ${nameLatex(w)} = ${shownOf(num(dir)).tex},\\ \\text{asse } ${nameLatex(u)} = ${shownOf(num(v1)).tex}`,
-        text: `direttrice ${w} = ${shownOf(num(dir)).text}, asse ${u} = ${shownOf(num(v1)).text}`,
+        tex: T.directrixTex(nameLatex(w), shownOf(num(dir)).tex, nameLatex(u), shownOf(num(v1)).tex),
+        text: T.directrixText(w, shownOf(num(dir)).text, u, shownOf(num(v1)).text),
       },
     ]),
     elements: {
@@ -301,21 +348,24 @@ function rotatedConic(a: Rational, b: Rational, c: Rational, detM: Rational, det
   // L'angolo: tan 2θ = b/(a − c).
   const theta = a.cmp(c) === 0 ? Math.PI / 4 : Math.atan(b.toNumber() / a.sub(c).toNumber()) / 2
   const quarter = Math.round((theta / Math.PI) * 12)
-  const angle = Math.abs(theta - (quarter * Math.PI) / 12) < 1e-12 ? shownOf(mul(num(R(quarter, 12)), sym('π'))) : { tex: `${theta.toFixed(4).replace('.', '{,}')}`, text: theta.toFixed(4).replace('.', ',') }
-  const turned = { tex: `\\text{(gli assi ruotati di } \\theta = ${angle.tex}\\text{)}`, text: `(gli assi ruotati di θ = ${angle.text})` }
+  // Le cifre con la virgola in italiano, con il punto in inglese.
+  const digits = theta.toFixed(4)
+  const comma = usesDecimalComma()
+  const angle = Math.abs(theta - (quarter * Math.PI) / 12) < 1e-12 ? shownOf(mul(num(R(quarter, 12)), sym('π'))) : { tex: comma ? digits.replace('.', '{,}') : digits, text: comma ? digits.replace('.', ',') : digits }
+  const turned = { tex: T.rotatedTex(angle.tex), text: T.rotatedText(angle.text) }
   const [X, Y] = ['X', 'Y']
   if (detM.sign === 0) {
-    if (detA.sign === 0) return { shown: rows([words('conica degenere: rette parallele, una retta doppia o nessun punto')]), elements: null }
+    if (detA.sign === 0) return { shown: rows([words(T.degenerateParallel)]), elements: null }
     // Parabola: λ Y² = 2p X con p = √(−det A/λ³).
     const lambda = tr
     const p = tidy(sqrt(detA.neg().div(lambda.mul(lambda).mul(lambda))))
     const twoP = shownOf(mul(num(2), p))
-    const factor = /^[\d,]+$/.test(twoP.text) ? twoP.text : `(${twoP.text})`
+    const factor = /^[\d,.]+$/.test(twoP.text) ? twoP.text : `(${twoP.text})`
     return { shown: rows([words('parabola'), { tex: `${Y}^{2} = ${twoP.tex} ${X}`, text: `${Y}² = ${factor}${X}` }, turned]), elements: null }
   }
   const k = detA.neg().div(detM)
   if (k.sign === 0) {
-    return { shown: rows([words(detM.sign > 0 ? 'conica degenere: un punto solo' : 'conica degenere: due rette incidenti')]), elements: null }
+    return { shown: rows([words(detM.sign > 0 ? T.degeneratePoint : T.degenerateCrossing)]), elements: null }
   }
   // λ₁ X² + λ₂ Y² = k: X²/(k/λ₁) + Y²/(k/λ₂) = 1.
   const A2 = tidy(mul(num(k), pow(l1, num(-1))))
@@ -327,13 +377,13 @@ function rotatedConic(a: Rational, b: Rational, c: Rational, detM: Rational, det
   const a2 = Number(evaluateRough(A2))
   const b2 = Number(evaluateRough(B2))
   if (detM.sign > 0) {
-    if (a2 < 0 && b2 < 0) return { shown: rows([words('ellisse immaginaria: nessun punto reale')]), elements: null }
+    if (a2 < 0 && b2 < 0) return { shown: rows([words(T.imaginaryEllipse)]), elements: null }
     const t1 = term(X, A2)
     const t2 = term(Y, B2)
-    return { shown: rows([words('ellisse'), { tex: `${t1.tex} + ${t2.tex} = 1`, text: `${t1.text} + ${t2.text} = 1` }, turned]), elements: null }
+    return { shown: rows([words(T.ellipse), { tex: `${t1.tex} + ${t2.tex} = 1`, text: `${t1.text} + ${t2.text} = 1` }, turned]), elements: null }
   }
   const [first, second] = a2 > 0 ? [term(X, A2), term(Y, neg(B2))] : [term(Y, B2), term(X, neg(A2))]
-  return { shown: rows([words('iperbole'), { tex: `${first.tex} - ${second.tex} = 1`, text: `${first.text} − ${second.text} = 1` }, turned]), elements: null }
+  return { shown: rows([words(T.hyperbola), { tex: `${first.tex} - ${second.tex} = 1`, text: `${first.text} − ${second.text} = 1` }, turned]), elements: null }
 }
 
 /** Il valore con la virgola di un'espressione senza lettere (radici comprese). */
@@ -425,12 +475,12 @@ export function quadricOf(node: MathNode, scope: SymbolScope): FormattedResult |
     const k = det4.toNumber() / det3(M).toNumber()
     // λ₁X² + λ₂Y² + λ₃Z² + k = 0
     if (Math.abs(k) < 1e-12 * scale) {
-      kind = pos === 3 || neg0 === 3 ? 'quadrica degenere: un punto solo' : 'cono'
-      if (diagonal && kind === 'cono') canonical = coneCanonical(M, lin, vars)
+      kind = pos === 3 || neg0 === 3 ? T.degenerateQuadricPoint : T.cone
+      if (diagonal && kind === T.cone) canonical = coneCanonical(M, lin, vars)
     }
     else {
       const right = signs.map((s) => s * -Math.sign(k)).filter((s) => s > 0).length
-      kind = right === 3 ? 'ellissoide' : right === 2 ? 'iperboloide a una falda (iperbolico)' : right === 1 ? 'iperboloide a due falde (ellittico)' : 'ellissoide immaginario: nessun punto reale'
+      kind = right === 3 ? T.ellipsoid : right === 2 ? T.oneSheet : right === 1 ? T.twoSheets : T.imaginaryEllipsoid
       if (diagonal) canonical = centralCanonical(M, lin, f, vars)
       if (right === 3 && diagonal && M[0][0].cmp(M[1][1]) === 0 && M[1][1].cmp(M[2][2]) === 0) {
         // La sfera: il centro e il raggio.
@@ -440,32 +490,32 @@ export function quadricOf(node: MathNode, scope: SymbolScope): FormattedResult |
         const r = shownOf(sqrt(r2))
         const squares = [0, 1, 2].map((i) => square(vars[i], centers[i], R(1)))
         const sphere = { tex: `${squares.map((q) => q.tex).join(' + ')} = ${shownOf(num(r2)).tex}`, text: `${squares.map((q) => q.text).join(' + ')} = ${shownOf(num(r2)).text}` }
-        return rows([words('sfera'), sphere, { tex: `C = ${C.tex},\\ r = ${r.tex}`, text: `C = ${C.text}, r = ${r.text}` }])
+        return rows([words(T.sphere), sphere, { tex: `C = ${C.tex},\\ r = ${r.tex}`, text: `C = ${C.text}, r = ${r.text}` }])
       }
     }
   } else if (rank === 2) {
     // Il termine lineare lungo la direzione dell'autovalore nullo: c'è (paraboloide) o no (cilindro).
-    if (det4.sign !== 0) kind = pos === 2 || neg0 === 2 ? 'paraboloide ellittico' : 'paraboloide iperbolico (a sella)'
+    if (det4.sign !== 0) kind = pos === 2 || neg0 === 2 ? T.ellipticParaboloid : T.hyperbolicParaboloid
     else if (diagonal) {
       // Un cilindro: la conica nelle due variabili con l'autovalore, la terza è libera.
       const used = [0, 1, 2].filter((i) => M[i][i].sign !== 0)
       const centers = used.map((i) => lin[i].neg().div(M[i][i].mul(R(2))))
       const k = used.reduce((s, i, j) => s.add(M[i][i].mul(centers[j]).mul(centers[j])), ZERO).sub(f)
       const ratios = used.map((i) => k.div(M[i][i]))
-      if (k.sign === 0) kind = pos === 2 || neg0 === 2 ? 'quadrica degenere: una retta' : 'quadrica degenere: due piani incidenti'
-      else if (ratios.every((r) => r.sign < 0)) kind = 'nessun punto reale'
+      if (k.sign === 0) kind = pos === 2 || neg0 === 2 ? T.degenerateLine : T.degenerateCrossingPlanes
+      else if (ratios.every((r) => r.sign < 0)) kind = T.noRealPoints
       else {
-        kind = ratios.every((r) => r.sign > 0) ? (ratios[0].cmp(ratios[1]) === 0 ? 'cilindro circolare' : 'cilindro ellittico') : 'cilindro iperbolico'
+        kind = ratios.every((r) => r.sign > 0) ? (ratios[0].cmp(ratios[1]) === 0 ? T.circularCylinder : T.ellipticCylinder) : T.hyperbolicCylinder
         canonical = joinSigned(used.map((i, j) => ({ sq: square(vars[i], centers[j], ratios[j].abs()), sign: ratios[j].sign })), '1')
       }
-    } else kind = pos === 2 || neg0 === 2 ? 'cilindro ellittico (o degenere)' : 'cilindro iperbolico (o due piani incidenti)'
+    } else kind = pos === 2 || neg0 === 2 ? T.ellipticOrDegenerate : T.hyperbolicOrPlanes
     if (diagonal && det4.sign !== 0) canonical = paraboloidCanonical(M, lin, f, vars)
   } else {
-    kind = det4.sign !== 0 ? 'cilindro parabolico' : 'quadrica degenere: due piani, un piano doppio o nessun punto'
+    kind = det4.sign !== 0 ? T.parabolicCylinder : T.degeneratePlanes
     if (diagonal) {
       const i = [0, 1, 2].find((j) => M[j][j].sign !== 0)!
       const others = [0, 1, 2].filter((j) => j !== i && lin[j].sign !== 0)
-      if (others.length === 1) kind = 'cilindro parabolico'
+      if (others.length === 1) kind = T.parabolicCylinder
     }
   }
   return rows(canonical ? [words(kind), canonical] : [words(kind)])

@@ -4,6 +4,7 @@
  * cos(kπn) = (−1)^{kn}), controllati con gli integrali fatti con i numeri, e la serie. Nei grafici la
  * somma parziale S_N con i coefficienti fatti con i numeri.
  */
+import { texts, usesDecimalComma } from '../i18n'
 import { compile, EMPTY_SCOPE, integrate, MathError, scopeWith, type Scope } from './evaluate'
 import { Rational } from './exact'
 import type { FormattedResult } from './format'
@@ -12,6 +13,17 @@ import type { MathNode } from './parse'
 import { asFraction, polyEx, primitive } from './primitive'
 import { trim } from './polynomial'
 import { add, dependsOn, exOf, expand, fn, mul, neg, num, plainText, pow, sub, subst, sym, symbols, tidy, toNode, type Ex, type SymbolScope } from './symbolic'
+
+const T = texts({
+  variableN: ['Per la serie di Fourier la variabile non può essere n', "For the Fourier series the variable can't be n"],
+  // Pari e dispari, accanto ai coefficienti.
+  theFunction: ['la funzione', 'the function'],
+  theExtension: ['il prolungamento periodico', 'the periodic extension'],
+  isEven: (who: string) => [`${who} è pari`, `${who} is even`],
+  isOdd: (who: string) => [`${who} è dispari`, `${who} is odd`],
+  minusIsOddTex: (who: string, k: string) => [`\\text{(${who} meno }${k}\\text{ è dispari)}`, `\\text{(${who} minus }${k}\\text{ is odd)}`],
+  minusIsOddText: (who: string, k: string) => [` (${who} meno ${k} è dispari)`, ` (${who} minus ${k} is odd)`],
+})
 
 /** Un pezzo della funzione: l'espressione e dove vale. */
 interface Piece {
@@ -409,7 +421,7 @@ function withSpecials(p: FourierProblem, c: Ex | null, which: 'cos' | 'sin', lis
  * serie scritta, con a parte i coefficienti dove la formula generale non vale (x sin x: a₁).
  */
 export function fourierShown(p: FourierProblem): FormattedResult | null {
-  if (p.v === 'n') throw new MathError('Per la serie di Fourier la variabile non può essere n')
+  if (p.v === 'n') throw new MathError(T.variableN)
   const numbers = numericCoefficients(p, 6)
   const attempt = (f: () => Ex | null) => {
     try {
@@ -423,7 +435,9 @@ export function fourierShown(p: FourierProblem): FormattedResult | null {
   const B = withSpecials(p, attempt(() => symbolicCoefficient(p, 'sin', sym('n'))), 'sin', numbers.b)
   if (!a0 || !close(value(a0), numbers.a[0]) || !A || !B) {
     // Con i numeri: i primi coefficienti.
-    const list = (c: number[], from: number) => c.slice(from, 4).map((x) => (Math.abs(x) < 1e-10 ? '0' : x.toFixed(4).replace('.', ',').replace('-', '−')))
+    // Con la virgola in italiano, con il punto in inglese.
+    const digits = (x: number) => (usesDecimalComma() ? x.toFixed(4).replace('.', ',') : x.toFixed(4))
+    const list = (c: number[], from: number) => c.slice(from, 4).map((x) => (Math.abs(x) < 1e-10 ? '0' : digits(x).replace('-', '−')))
     return {
       tex: `a_0 \\approx ${list(numbers.a, 0)[0]},\\ a_1, a_2, a_3 \\approx ${list(numbers.a, 1).join(';\\ ')},\\ b_1, b_2, b_3 \\approx ${list(numbers.b, 1).join(';\\ ')}`,
       text: `a₀ ≈ ${list(numbers.a, 0)[0]}; a₁, a₂, a₃ ≈ ${list(numbers.a, 1).join('; ')}; b₁, b₂, b₃ ≈ ${list(numbers.b, 1).join('; ')}`,
@@ -445,16 +459,16 @@ export function fourierShown(p: FourierProblem): FormattedResult | null {
   const half = tidy(mul(num(new Rational(1n, 2n)), a0))
   // bₙ = 0: il prolungamento periodico è pari; aₙ = 0: è dispari se anche a₀ = 0, se no lo è tolto a₀/2
   // (x + 1 meno 1). Su un intervallo simmetrico, [−L, L], vale per la funzione; su [0, 2π] no.
-  const who = isZero(tidy(add(p.lo, p.hi))) ? 'la funzione' : 'il prolungamento periodico'
-  const parity = (c: Ex, specials: { c: Ex }[], what: 'pari' | 'dispari') => {
+  const who = isZero(tidy(add(p.lo, p.hi))) ? T.theFunction : T.theExtension
+  const parity = (c: Ex, specials: { c: Ex }[], what: 'even' | 'odd') => {
     if (!isZero(c) || !specials.every((s) => isZero(s.c))) return { tex: '', text: '' }
-    const words = `${who} è ${what}`
-    if (what === 'pari' || isZero(half)) return { tex: `\\text{(${words})}`, text: ` (${words})` }
+    const words = what === 'even' ? T.isEven(who) : T.isOdd(who)
+    if (what === 'even' || isZero(half)) return { tex: `\\text{(${words})}`, text: ` (${words})` }
     const k = shown(half)
-    return { tex: `\\text{(${who} meno }${k.tex}\\text{ è dispari)}`, text: ` (${who} meno ${k.text} è dispari)` }
+    return { tex: T.minusIsOddTex(who, k.tex), text: T.minusIsOddText(who, k.text) }
   }
-  const odd = parity(A.c, A.specials, 'dispari')
-  const even = parity(B.c, B.specials, 'pari')
+  const odd = parity(A.c, A.specials, 'odd')
+  const even = parity(B.c, B.specials, 'even')
   const texParts = [
     `a_0 = ${shown(a0).tex}`,
     ...A.specials.map((s) => `a_{${s.k}} = ${shown(s.c).tex}`),

@@ -3,6 +3,7 @@
  * (3/8 = 0,375, 25/72 ≈ 0,347222…), le probabilità con e^{−λ} (9e⁻³/2 ≈ 0,224041…), le mode, i
  * quartili, la retta di regressione, la tabella delle frequenze e il riassunto dei dati.
  */
+import { texts } from '../i18n'
 import { expSumValue, type ExpSum } from './distributions'
 import { Rational } from './exact'
 import { formatNumber, formatRational, type FormatOptions, type FormattedResult } from './format'
@@ -10,6 +11,30 @@ import { nameLatex, toLatex } from './latex'
 import type { Field } from './linear'
 import { count, deviation, mean, median, modes, quantile, sorted, variance, type Data } from './statistics'
 import { add, mul, num, plainText, pow, sym, tidy, toNode } from './symbolic'
+
+const T = texts({
+  noMode: ['nessuna: i valori hanno tutti la stessa frequenza', 'none: the values all have the same frequency'],
+  /** Tra le ultime due mode: «5 e 7». */
+  and: ['e', 'and'],
+  // Le colonne della tabella delle frequenze.
+  value: ['valore', 'value'],
+  frequency: ['freq.', 'freq.'],
+  relative: ['relativa', 'relative'],
+  cumulative: ['cumulata', 'cumulative'],
+  total: ['totale', 'total'],
+  // Le righe del riassunto dei dati.
+  mean: ['Media', 'Mean'],
+  median: ['Mediana', 'Median'],
+  mode: ['Moda', 'Mode'],
+  minMax: ['Minimo e massimo', 'Minimum and maximum'],
+  range: ['Campo di variazione', 'Range'],
+  quartiles: ['Quartili', 'Quartiles'],
+  iqr: ['Scarto interquartile', 'Interquartile range'],
+  variance: ['Varianza', 'Variance'],
+  deviation: ['Scarto quadratico medio', 'Standard deviation'],
+  sampleVariance: ['Varianza campionaria (n − 1)', 'Sample variance (n − 1)'],
+  sampleDeviation: ['Deviazione standard campionaria', 'Sample standard deviation'],
+})
 
 /** Una frazione con il suo valore: 3/8 = 0,375, 25/72 ≈ 0,347222…; con i decimali (o se è intera) solo il numero. */
 export function fractionShown(r: Rational, style: FormatOptions): FormattedResult {
@@ -53,12 +78,12 @@ export function probabilityShown(exact: ExpSum | null, v: number, style: FormatO
 /** Le mode: «5», «5 e 7», o nessuna. */
 export function modesShown<T>(F: Field<T>, d: Data<T>, style: FormatOptions): FormattedResult {
   const m = modes(F, d)
-  if (!m.length) return { tex: '\\text{nessuna: i valori hanno tutti la stessa frequenza}', text: 'nessuna: i valori hanno tutti la stessa frequenza' }
+  if (!m.length) return { tex: `\\text{${T.noMode}}`, text: T.noMode }
   const shown = m.map((v) => plainValue(F, v, style))
   const last = shown.length - 1
   return {
-    tex: shown.map((s, i) => (i === 0 ? s.tex : i === last ? `\\text{ e } ${s.tex}` : `,\\ ${s.tex}`)).join(''),
-    text: shown.map((s, i) => (i === 0 ? s.text : i === last ? ` e ${s.text}` : `, ${s.text}`)).join(''),
+    tex: shown.map((s, i) => (i === 0 ? s.tex : i === last ? `\\text{ ${T.and} } ${s.tex}` : `,\\ ${s.tex}`)).join(''),
+    text: shown.map((s, i) => (i === 0 ? s.text : i === last ? ` ${T.and} ${s.text}` : `, ${s.text}`)).join(''),
   }
 }
 
@@ -135,10 +160,10 @@ export function frequencyTable<T>(F: Field<T>, d: Data<T>, style: FormatOptions)
     const c = short(cumulated / n, comma)
     return { tex: `${value.tex} & ${g.k} & ${f.replace(',', sep)} & ${c.replace(',', sep)}`, text: `${value.text}: ${g.k} (${f}; ${c})` }
   })
-  const head = '\\text{valore} & \\text{freq.} & \\text{relativa} & \\text{cumulata}'
+  const head = [T.value, T.frequency, T.relative, T.cumulative].map((h) => `\\text{${h}}`).join(' & ')
   return {
-    tex: `\\begin{array}{r|r|r|r} ${head} \\\\ \\hline ${rows.map((r) => r.tex).join(' \\\\ ')} \\\\ \\hline \\text{totale} & ${n} & 1 & \\end{array}`,
-    text: `${rows.map((r) => r.text).join('; ')}; totale ${n}`,
+    tex: `\\begin{array}{r|r|r|r} ${head} \\\\ \\hline ${rows.map((r) => r.tex).join(' \\\\ ')} \\\\ \\hline \\text{${T.total}} & ${n} & 1 & \\end{array}`,
+    text: `${rows.map((r) => r.text).join('; ')}; ${T.total} ${n}`,
     rich: true,
   }
 }
@@ -150,20 +175,20 @@ export function summaryRows<T>(F: Field<T>, d: Data<T>, style: FormatOptions): [
   const rows: [string, FormattedResult[]][] = []
   const n = count(F, d)
   rows.push(['n', [v(n)]])
-  rows.push(['Media', [v(mean(F, d))]])
-  rows.push(['Mediana', [v(median(F, d))]])
-  rows.push(['Moda', [modesShown(F, d, style)]])
-  rows.push(['Minimo e massimo', [{ tex: `${v(s[0]).tex},\\ ${v(s[s.length - 1]).tex}`, text: `${v(s[0]).text}, ${v(s[s.length - 1]).text}` }]])
-  rows.push(['Campo di variazione', [v(F.sub(s[s.length - 1], s[0]))]])
-  rows.push(['Quartili', [quartilesShown(F, d, style)]])
+  rows.push([T.mean, [v(mean(F, d))]])
+  rows.push([T.median, [v(median(F, d))]])
+  rows.push([T.mode, [modesShown(F, d, style)]])
+  rows.push([T.minMax, [{ tex: `${v(s[0]).tex},\\ ${v(s[s.length - 1]).tex}`, text: `${v(s[0]).text}, ${v(s[s.length - 1]).text}` }]])
+  rows.push([T.range, [v(F.sub(s[s.length - 1], s[0]))]])
+  rows.push([T.quartiles, [quartilesShown(F, d, style)]])
   const q1 = quantile(F, d, F.div(F.one(), F.int(4)))
   const q3 = quantile(F, d, F.div(F.int(3), F.int(4)))
-  rows.push(['Scarto interquartile', [v(F.sub(q3, q1))]])
-  rows.push(['Varianza', [v(variance(F, d, false))]])
-  rows.push(['Scarto quadratico medio', [deviationShown(F, d, false, style)]])
+  rows.push([T.iqr, [v(F.sub(q3, q1))]])
+  rows.push([T.variance, [v(variance(F, d, false))]])
+  rows.push([T.deviation, [deviationShown(F, d, false, style)]])
   if (F.toNumber(n) > 1) {
-    rows.push(['Varianza campionaria (n − 1)', [v(variance(F, d, true))]])
-    rows.push(['Deviazione standard campionaria', [deviationShown(F, d, true, style)]])
+    rows.push([T.sampleVariance, [v(variance(F, d, true))]])
+    rows.push([T.sampleDeviation, [deviationShown(F, d, true, style)]])
   }
   return rows
 }

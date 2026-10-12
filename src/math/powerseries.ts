@@ -4,6 +4,7 @@
  * (così anche n! e n^n non escono dai numeri), e negli estremi la serie numerica che viene, provata con le
  * somme di limits.ts: l'insieme di convergenza, come [−1, 1).
  */
+import { texts } from '../i18n'
 import { compile, EMPTY_SCOPE, scopeWith } from './evaluate'
 import { Rational } from './exact'
 import { formatNumber, type FormatOptions, type FormattedResult } from './format'
@@ -14,6 +15,33 @@ import { asFraction } from './primitive'
 import { exactNear } from './several'
 import { logGamma } from './special'
 import { add, dependsOn, exOf, mul, neg, num, plainText, symbols, tidy, toNode, type Ex, type SymbolScope } from './symbolic'
+
+const T = texts({
+  everywhereTex: (x: string) => [`R = +\\infty,\\ \\text{converge per ogni } ${x} \\in \\mathbb{R}`, `R = +\\infty,\\ \\text{converges for all } ${x} \\in \\mathbb{R}`],
+  everywhereText: (x: string) => [`R = +∞; converge per ogni ${x} reale`, `R = +∞; converges for every real ${x}`],
+  onlyCenterTex: (x: string, c: string) => [`R = 0,\\ \\text{converge solo in } ${x} = ${c}`, `R = 0,\\ \\text{converges only at } ${x} = ${c}`],
+  onlyCenterText: (x: string, c: string) => [`R = 0; converge solo in ${x} = ${c}`, `R = 0; converges only at ${x} = ${c}`],
+  /** Dentro il raggio: |x − x₀| < R (gli estremi non si sanno). */
+  insideTex: (radius: string, x: string, c: string, r: string) => [
+    `${radius},\\ \\text{converge per } |${x} - ${c}| < ${r}`,
+    `${radius},\\ \\text{converges for } |${x} - ${c}| < ${r}`,
+  ],
+  insideText: (radius: string, x: string, c: string, r: string) => [`${radius}; converge per |${x} − ${c}| < ${r}`, `${radius}; converges for |${x} − ${c}| < ${r}`],
+  /** L'insieme di convergenza, con quello che succede negli estremi (`ends`). */
+  setTex: (radius: string, x: string, set: string, ends: string) => [
+    `${radius},\\ \\text{converge per } ${x} \\in ${set}\\ ${ends}`,
+    `${radius},\\ \\text{converges for } ${x} \\in ${set}\\ ${ends}`,
+  ],
+  setText: (radius: string, x: string, set: string, ends: string) => [`${radius}; converge per ${x} ∈ ${set} ${ends}`, `${radius}; converges for ${x} ∈ ${set} ${ends}`],
+  endsTex: (x: string, a: string, left: boolean, b: string, right: boolean) => [
+    `\\text{(in } ${x} = ${a} \\text{ ${left ? 'converge' : 'non converge'}, in } ${x} = ${b} \\text{ ${right ? 'converge' : 'non converge'})}`,
+    `\\text{(${left ? 'converges' : 'does not converge'} at } ${x} = ${a}\\text{, ${right ? 'converges' : 'does not converge'} at } ${x} = ${b}\\text{)}`,
+  ],
+  endsText: (x: string, a: string, left: boolean, b: string, right: boolean) => [
+    `(in ${x} = ${a} ${left ? 'converge' : 'non converge'}, in ${x} = ${b} ${right ? 'converge' : 'non converge'})`,
+    `(${left ? 'converges' : 'does not converge'} at ${x} = ${a}, ${right ? 'converges' : 'does not converge'} at ${x} = ${b})`,
+  ],
+})
 
 export interface PowerSeries {
   /** La variabile (x) e quella della somma (n). */
@@ -176,8 +204,8 @@ export function powerSeriesShown(s: PowerSeries, style: FormatOptions): Formatte
   if (R === null) return null
   const x = s.x
   const center = shownOf(num(s.center), style)
-  if (R === Infinity) return { tex: `R = +\\infty,\\ \\text{converge per ogni } ${x} \\in \\mathbb{R}`, text: `R = +∞; converge per ogni ${x} reale` }
-  if (R === 0) return { tex: `R = 0,\\ \\text{converge solo in } ${x} = ${center.tex}`, text: `R = 0; converge solo in ${x} = ${center.text}` }
+  if (R === Infinity) return { tex: T.everywhereTex(x), text: T.everywhereText(x) }
+  if (R === 0) return { tex: T.onlyCenterTex(x, center.tex), text: T.onlyCenterText(x, center.text) }
   // Il raggio esatto, se si riconosce (1, 1/2, √2): anche se il limite si è fermato a 1,0000001 (con i logaritmi).
   const near = Number(R.toPrecision(7))
   const known = exactNear(R) ?? (Math.abs(near - R) <= 1e-6 * R ? exactNear(near) : null)
@@ -204,19 +232,12 @@ export function powerSeriesShown(s: PowerSeries, style: FormatOptions): Formatte
   const left = convergesAt(s, -value)
   const right = convergesAt(s, value)
   if (left === null || right === null) {
-    return { tex: `${radiusTex},\\ \\text{converge per } |${x} - ${center.tex}| < ${Rshown.tex}`, text: `${radiusText}; converge per |${x} − ${center.text}| < ${Rshown.text}` }
+    return { tex: T.insideTex(radiusTex, x, center.tex, Rshown.tex), text: T.insideText(radiusText, x, center.text, Rshown.text) }
   }
   const open = left ? '[' : '('
   const close = right ? ']' : ')'
-  const extremes = (tex: boolean) => {
-    const what = (ok: boolean) => (ok ? 'converge' : 'non converge')
-    const at = (i: number) => (tex ? ends[i].tex : ends[i].text)
-    return tex
-      ? `\\text{(in } ${x} = ${at(0)} \\text{ ${what(left)}, in } ${x} = ${at(1)} \\text{ ${what(right)})}`
-      : `(in ${x} = ${at(0)} ${what(left)}, in ${x} = ${at(1)} ${what(right)})`
-  }
   return {
-    tex: `${radiusTex},\\ \\text{converge per } ${x} \\in \\left${open}${ends[0].tex}, ${ends[1].tex}\\right${close}\\ ${extremes(true)}`,
-    text: `${radiusText}; converge per ${x} ∈ ${open}${ends[0].text}, ${ends[1].text}${close} ${extremes(false)}`,
+    tex: T.setTex(radiusTex, x, `\\left${open}${ends[0].tex}, ${ends[1].tex}\\right${close}`, T.endsTex(x, ends[0].tex, left, ends[1].tex, right)),
+    text: T.setText(radiusText, x, `${open}${ends[0].text}, ${ends[1].text}${close}`, T.endsText(x, ends[0].text, left, ends[1].text, right)),
   }
 }

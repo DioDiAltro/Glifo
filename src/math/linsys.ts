@@ -4,6 +4,7 @@
  * un parametro (x + k y = 1, k x + y = 1) la discussione al variare del parametro: i valori dove il rango
  * cambia sono le radici dei minori (i loro determinanti, polinomi nel parametro).
  */
+import { texts } from '../i18n'
 import { MathError } from './evaluate'
 import { Rational } from './exact'
 import { formatNumber, formatRational, type FormatOptions, type FormattedResult } from './format'
@@ -13,6 +14,27 @@ import { namesIn, type MathNode } from './parse'
 import { degree, numericRoots, padd, pdivmod, pgcd, pmul, psub, pvalue, rationalRoots, trim, type Poly } from './polynomial'
 import { add, mapNode, mul, num, plainText, pow, sym, tidy, toNode, type Ex } from './symbolic'
 
+const T = texts({
+  inconsistentTex: ['\\nexists\\ \\text{(impossibile)}', '\\nexists\\ \\text{(inconsistent)}'],
+  inconsistentText: ['nessuna soluzione (impossibile)', 'no solution (inconsistent)'],
+  /** Le incognite libere: (z qualsiasi). */
+  arbitraryTex: (free: string) => [`\\text{(${free} qualsiasi)}`, `\\text{(${free} arbitrary)}`],
+  arbitraryText: (free: string) => [`(${free} qualsiasi: infinite soluzioni)`, `(${free} arbitrary: infinitely many solutions)`],
+  constants: (m: number) => [`A ha ${m} righe: il vettore dei termini noti ha ${m} componenti`, `A has ${m} rows: the vector of constants must have ${m} components`],
+  ranksTex: (a: number, ab: number) => [
+    `\\nexists\\ \\text{(rango } A = ${a}\\text{, rango } (A|b) = ${ab}\\text{)}`,
+    `\\nexists\\ \\text{(rank } A = ${a}\\text{, rank } (A|b) = ${ab}\\text{)}`,
+  ],
+  ranksText: (a: number, ab: number) => [`nessuna soluzione (rango A = ${a}, rango (A|b) = ${ab})`, `no solution (rank A = ${a}, rank (A|b) = ${ab})`],
+  /** ∞² soluzioni (rango 1). */
+  solutionsRankTex: (k: number, rank: number) => [`\\infty^{${k}}\\ \\text{soluzioni (rango ${rank})}`, `\\infty^{${k}}\\ \\text{solutions (rank ${rank})}`],
+  solutionsRankText: (power: string, rank: number) => [`(∞${power} soluzioni, rango ${rank})`, `(∞${power} solutions, rank ${rank})`],
+  /** Dopo ∞¹, ∞²… nella formula. */
+  solutions: ['soluzioni', 'solutions'],
+  solutionsText: (power: string) => [`∞${power} soluzioni`, `∞${power} solutions`],
+  forAll: (k: string) => [`per ogni ${k}`, `for all ${k}`],
+})
+
 const ZERO = Rational.int(0)
 const ONE = Rational.int(1)
 
@@ -21,7 +43,7 @@ export function linearSystem(rows: Rational[][], unknowns: string[], options: Fo
   const { r, pivots } = rref(EXACT, rows)
   const n = unknowns.length
   // Una riga 0 = c (c ≠ 0): impossibile.
-  if (r.some((row) => row.slice(0, n).every((c) => c.sign === 0) && row[n].sign !== 0)) return { tex: '\\nexists\\ \\text{(impossibile)}', text: 'nessuna soluzione (impossibile)' }
+  if (r.some((row) => row.slice(0, n).every((c) => c.sign === 0) && row[n].sign !== 0)) return { tex: T.inconsistentTex, text: T.inconsistentText }
   const parts: FormattedResult[] = []
   const free = unknowns.filter((_, j) => !pivots.includes(j))
   pivots.forEach((col, i) => {
@@ -43,7 +65,7 @@ export function linearSystem(rows: Rational[][], unknowns: string[], options: Fo
   })
   const shown = { tex: parts.map((p) => p.tex).join(',\\ '), text: parts.map((p) => p.text).join(', ') }
   if (!free.length) return shown
-  return { tex: `${shown.tex} \\quad \\text{(${free.join(', ')} qualsiasi)}`, text: `${shown.text} (${free.join(', ')} qualsiasi: infinite soluzioni)` }
+  return { tex: `${shown.tex} \\quad ${T.arbitraryTex(free.join(', '))}`, text: `${shown.text} ${T.arbitraryText(free.join(', '))}` }
 }
 
 // ——— A x = b ———
@@ -65,16 +87,13 @@ export function vectorText(values: Rational[], options: FormatOptions): Formatte
 export function matrixSystem(A: Mat<Rational>, b: Rational[], x: string, options: FormatOptions): FormattedResult {
   const m = A.length
   const n = A[0].length
-  if (b.length !== m) throw new MathError(`A ha ${m} righe: il vettore dei termini noti ha ${m} componenti`)
+  if (b.length !== m) throw new MathError(T.constants(m))
   const { r, pivots } = rref(EXACT, A.map((row, i) => [...row, b[i]]))
   const rankA = pivots.filter((p) => p < n).length
   const rankAb = pivots.length
   const X = nameLatex(x)
   if (rankA < rankAb) {
-    return {
-      tex: `\\nexists\\ \\text{(rango } A = ${rankA}\\text{, rango } (A|b) = ${rankAb}\\text{)}`,
-      text: `nessuna soluzione (rango A = ${rankA}, rango (A|b) = ${rankAb})`,
-    }
+    return { tex: T.ranksTex(rankA, rankAb), text: T.ranksText(rankA, rankAb) }
   }
   const free = Array.from({ length: n }, (_, j) => j).filter((j) => !pivots.includes(j))
   const particular: Rational[] = Array.from({ length: n }, () => ZERO)
@@ -97,8 +116,8 @@ export function matrixSystem(A: Mat<Rational>, b: Rational[], x: string, options
   const k = free.length
   // Su due righe (disegnate): le soluzioni e quante sono, così non escono dalla pagina.
   return {
-    tex: `\\begin{array}{l} ${X} = ${zero ? '' : `${base.tex} + `}${terms.map((t) => t.tex).join(' + ')} \\\\ \\infty^{${k}}\\ \\text{soluzioni (rango ${rankA})} \\end{array}`,
-    text: `${x} = ${zero ? '' : `${base.text} + `}${terms.map((t) => t.text).join(' + ')} (∞${superscript(k)} soluzioni, rango ${rankA})`,
+    tex: `\\begin{array}{l} ${X} = ${zero ? '' : `${base.tex} + `}${terms.map((t) => t.tex).join(' + ')} \\\\ ${T.solutionsRankTex(k, rankA)} \\end{array}`,
+    text: `${x} = ${zero ? '' : `${base.text} + `}${terms.map((t) => t.text).join(' + ')} ${T.solutionsRankText(superscript(k), rankA)}`,
     rich: true,
   }
 }
@@ -228,9 +247,9 @@ export function parametricSystem(rows: Poly[][], unknowns: string[], k: string, 
   const lines: FormattedResult[] = []
   // Il caso generale.
   const except = special.map((s) => ({ tex: `${K} \\ne ${s.shown.tex}`, text: `${k} ≠ ${s.shown.text}` }))
-  const head = except.length ? { tex: except.map((e) => e.tex).join(',\\ '), text: except.map((e) => e.text).join(', ') } : { tex: `\\forall ${K}`, text: `per ogni ${k}` }
+  const head = except.length ? { tex: except.map((e) => e.tex).join(',\\ '), text: except.map((e) => e.text).join(', ') } : { tex: `\\forall ${K}`, text: T.forAll(k) }
   let general: FormattedResult
-  if (generic.a < generic.ab) general = { tex: '\\nexists\\ \\text{(impossibile)}', text: 'nessuna soluzione (impossibile)' }
+  if (generic.a < generic.ab) general = { tex: T.inconsistentTex, text: T.inconsistentText }
   else if (generic.a === n) {
     // Una soluzione sola: con Cramer, su n righe che vanno bene per quasi tutti i k.
     const pick = choices(m, n).find((rs) => polyDeterminant(rs.map((i) => A[i])).length > 0)
@@ -249,7 +268,7 @@ export function parametricSystem(rows: Poly[][], unknowns: string[], k: string, 
     general = { tex: parts.map((p) => p.tex).join(',\\ '), text: parts.map((p) => p.text).join(', ') }
   } else {
     const free = n - generic.a
-    general = { tex: `\\infty^{${free}}\\ \\text{soluzioni}`, text: `∞${superscript(free)} soluzioni` }
+    general = { tex: `\\infty^{${free}}\\ \\text{${T.solutions}}`, text: T.solutionsText(superscript(free)) }
   }
   lines.push({ tex: `${head.tex}:\\ ${general.tex}`, text: `${head.text}: ${general.text}` })
   // I valori speciali, uno per uno.
@@ -262,7 +281,7 @@ export function parametricSystem(rows: Poly[][], unknowns: string[], k: string, 
         rows.map((row) => row.map((p) => p.reduce((sum, c, i) => sum + c.toNumber() * s.v ** i, 0))),
       )
       const a = pivots.filter((p) => p < n).length
-      shown = a < pivots.length ? { tex: '\\nexists\\ \\text{(impossibile)}', text: 'nessuna soluzione (impossibile)' } : { tex: `\\infty^{${n - a}}\\ \\text{soluzioni}`, text: `∞${superscript(n - a)} soluzioni` }
+      shown = a < pivots.length ? { tex: T.inconsistentTex, text: T.inconsistentText } : { tex: `\\infty^{${n - a}}\\ \\text{${T.solutions}}`, text: T.solutionsText(superscript(n - a)) }
     }
     lines.push({ tex: `${K} = ${s.shown.tex}:\\ ${shown.tex}`, text: `${k} = ${s.shown.text}: ${shown.text}` })
   }

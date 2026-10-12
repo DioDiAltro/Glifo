@@ -4,11 +4,31 @@
  * A^2), insieme delle parti (\mathcal{P}(A), 2^A), complementare (A^c, \overline{A}: rispetto a U, o a Ω)
  * e quanti elementi ha un insieme (|A|, \#A); con lo spazio Ω, la probabilità classica P(A) = |A|/|Ω|.
  */
+import { texts } from '../i18n'
 import { Rational } from './exact'
 import type { FormattedResult } from './format'
 import { toLatex } from './latex'
 import type { MathNode } from './parse'
 import { exOf, key, plainText, tidy, type SymbolScope } from './symbolic'
+
+const T = texts({
+  dotsBetween: ['I puntini vanno tra due elementi: \\{1, 2, \\ldots, 10\\}', 'The dots go between two elements: \\{1, 2, \\ldots, 10\\}'],
+  dotsNumbers: ['Con i puntini servono dei numeri: \\{1, 2, \\ldots, 10\\}', 'The dots need numbers: \\{1, 2, \\ldots, 10\\}'],
+  unreachable: (step: string, from: string, to: string) => [
+    `Con il passo ${step} da ${from} non si arriva a ${to}`,
+    `With a step of ${step} you can't get from ${from} to ${to}`,
+  ],
+  tooMany: (n: number) => [`Sono più di ${n} elementi`, `That's more than ${n} elements`],
+  powerset: (n: number) => [`L'insieme delle parti avrebbe 2^${n} elementi: troppi da elencare`, `The power set would have 2^${n} elements: too many to list`],
+  product: (n: number) => [`Il prodotto cartesiano avrebbe ${n} elementi: troppi da elencare`, `The Cartesian product would have ${n} elements: too many to list`],
+  /** `what`: il complementare o la probabilità. */
+  universe: (what: string) => [`Per ${what} serve l'insieme universo: scrivi prima U = \\{…\\} (o Ω)`, `${what} needs the universal set: first write U = \\{…\\} (or Ω)`],
+  complement: ['il complementare', 'The complement'],
+  probability: ['la probabilità', 'The probability'],
+  outsideOmega: ["L'evento ha elementi che non sono in Ω", 'The event has elements that are not in Ω'],
+  emptyCondition: ["La condizione è l'insieme vuoto", 'The condition is the empty set'],
+  emptyOmega: ['Ω è vuoto', 'Ω is empty'],
+})
 
 export interface FiniteContext {
   /** Gli insiemi della nota (A = \{1, 2, 3\}). */
@@ -90,20 +110,20 @@ function ordered(items: Elem[]): Elem[] {
 function expandDots(items: MathNode[], ctx: FiniteContext): MathNode[] {
   const at = items.findIndex(isEllipsis)
   if (at < 0) return items
-  if (at === 0 || at === items.length - 1 || items.filter(isEllipsis).length > 1) throw new FiniteError('I puntini vanno tra due elementi: \\{1, 2, \\ldots, 10\\}')
+  if (at === 0 || at === items.length - 1 || items.filter(isEllipsis).length > 1) throw new FiniteError(T.dotsBetween)
   const value = (n: MathNode) => {
     const e = tidy(exOf(n, ctx.symbols))
-    if (e.t !== 'num') throw new FiniteError('Con i puntini servono dei numeri: \\{1, 2, \\ldots, 10\\}')
+    if (e.t !== 'num') throw new FiniteError(T.dotsNumbers)
     return e.v
   }
   const last = value(items[at - 1])
   const end = value(items[at + 1])
   const step = at >= 2 ? last.sub(value(items[at - 2])) : Rational.int(end.cmp(last) >= 0 ? 1 : -1)
   if (step.sign === 0 || end.sub(last).div(step).sign < 0 || !end.sub(last).div(step).isInteger) {
-    throw new FiniteError(`Con il passo ${plainText(numberNode(step))} da ${plainText(numberNode(last))} non si arriva a ${plainText(numberNode(end))}`)
+    throw new FiniteError(T.unreachable(plainText(numberNode(step)), plainText(numberNode(last)), plainText(numberNode(end))))
   }
   const count = end.sub(last).div(step).toNumber()
-  if (count > MOST) throw new FiniteError(`Sono più di ${MOST} elementi`)
+  if (count > MOST) throw new FiniteError(T.tooMany(MOST))
   const middle: MathNode[] = []
   for (let k = 1; k < count; k++) middle.push(numberNode(last.add(step.mul(Rational.int(k)))))
   return [...items.slice(0, at), ...middle, ...items.slice(at + 1)]
@@ -121,7 +141,7 @@ function literal(node: MathNode, ctx: FiniteContext): Elem[] | null {
 const has = (set: Elem[], e: Elem) => set.some((x) => x.key === e.key)
 
 function powerset(set: Elem[]): Elem[] {
-  if (set.length > 12) throw new FiniteError(`L'insieme delle parti avrebbe 2^${set.length} elementi: troppi da elencare`)
+  if (set.length > 12) throw new FiniteError(T.powerset(set.length))
   // Prima i sottoinsiemi più piccoli, ognuno con gli elementi nell'ordine dell'insieme.
   const out: Elem[] = []
   const pick = (from: number, size: number, chosen: Elem[]) => {
@@ -136,7 +156,7 @@ function powerset(set: Elem[]): Elem[] {
 }
 
 function product(a: Elem[], b: Elem[], flatten: boolean): Elem[] {
-  if (a.length * b.length > MOST) throw new FiniteError(`Il prodotto cartesiano avrebbe ${a.length * b.length} elementi: troppi da elencare`)
+  if (a.length * b.length > MOST) throw new FiniteError(T.product(a.length * b.length))
   return a.flatMap((x) => b.map((y) => tupleElem(flatten && x.tuple ? [...x.tuple, y] : [x, y])))
 }
 
@@ -147,7 +167,7 @@ function universe(ctx: FiniteContext, what: string): Elem[] {
     const set = node && literal(node, ctx)
     if (set) return set
   }
-  throw new FiniteError(`Per ${what} serve l'insieme universo: scrivi prima U = \\{…\\} (o Ω)`)
+  throw new FiniteError(T.universe(what))
 }
 
 const isComplementMark = (n: MathNode) => n.k === 'name' && (n.name === 'c' || n.name === 'C' || n.name === '∁')
@@ -164,7 +184,7 @@ function setValue(node: MathNode, ctx: FiniteContext, depth = 0): Elem[] | null 
       // \overline{A}: il complementare.
       if (node.name.length === 2 && (node.name[1] === '̄' || node.name[1] === '̅')) {
         const set = sub({ k: 'name', name: node.name[0] })
-        return set && universe(ctx, 'il complementare').filter((e) => !has(set, e))
+        return set && universe(ctx, T.complement).filter((e) => !has(set, e))
       }
       const def = ctx.sets.get(node.name)
       return def ? literal(def, ctx) : null
@@ -178,7 +198,7 @@ function setValue(node: MathNode, ctx: FiniteContext, depth = 0): Elem[] | null 
         }
         const set = sub(node.a)
         if (!set) return null
-        if (isComplementMark(node.b)) return universe(ctx, 'il complementare').filter((e) => !has(set, e))
+        if (isComplementMark(node.b)) return universe(ctx, T.complement).filter((e) => !has(set, e))
         if (node.b.k === 'num' && Number.isInteger(node.b.v) && node.b.v >= 1 && node.b.v <= 4) {
           let out = set
           for (let k = 1; k < node.b.v; k++) out = product(out, set, k > 1)
@@ -189,7 +209,7 @@ function setValue(node: MathNode, ctx: FiniteContext, depth = 0): Elem[] | null 
       // \complement A, \complement_U A.
       if (node.op === '*' && node.implicit && node.a.k === 'name' && node.a.name === '∁') {
         const set = sub(node.b)
-        return set && universe(ctx, 'il complementare').filter((e) => !has(set, e))
+        return set && universe(ctx, T.complement).filter((e) => !has(set, e))
       }
       // A \triangle B: la differenza simmetrica (\triangle si legge come il triangolo della geometria).
       if (node.op === '*' && node.implicit && node.b.k === 'fn' && node.b.name === 'triangle' && node.b.args.length === 1) {
@@ -308,15 +328,15 @@ export function finiteValue(node: MathNode, ctx: FiniteContext): FiniteResult | 
     const event = node.k === 'prob' ? node.event : node.args[0]
     const a = setValue(event, ctx)
     if (!a) return null
-    const omega = universe(ctx, 'la probabilità')
-    if (a.some((e) => !has(omega, e))) throw new FiniteError("L'evento ha elementi che non sono in Ω")
+    const omega = universe(ctx, T.probability)
+    if (a.some((e) => !has(omega, e))) throw new FiniteError(T.outsideOmega)
     if (node.k === 'prob' && node.given) {
       const b = setValue(node.given, ctx)
       if (!b) return null
-      if (!b.length) throw new FiniteError("La condizione è l'insieme vuoto")
+      if (!b.length) throw new FiniteError(T.emptyCondition)
       return { count: new Rational(BigInt(a.filter((e) => has(b, e)).length), BigInt(b.length)) }
     }
-    if (!omega.length) throw new FiniteError('Ω è vuoto')
+    if (!omega.length) throw new FiniteError(T.emptyOmega)
     return { count: new Rational(BigInt(a.length), BigInt(omega.length)) }
   }
   const set = setValue(node, ctx)

@@ -8,6 +8,7 @@
  * condizioni più complicate (|X - 5| < 2) si guardano valore per valore (discrete) o cercando dove
  * cambiano (continue).
  */
+import { texts } from '../i18n'
 import { bound, compile, compileCondition, integrate, MathError, scopeWith, type Compiled, type CompileOptions, type RandomScope, type Scope, type Vars } from './evaluate'
 import { evaluateExact, Rational, type ExactScope } from './exact'
 import {
@@ -24,6 +25,22 @@ import {
 } from './distributions'
 import { fractionNear } from './polynomial'
 import { namesIn, type MathNode, type RelOp } from './parse'
+
+const T = texts({
+  tooManyValues: [
+    "Troppi valori da guardare uno per uno: scrivi l'evento con X da sola (X \\le 3)",
+    'Too many values to check one by one: write the event with X alone (X \\le 3)',
+  ],
+  twoVariables: [
+    'Con due variabili aleatorie insieme non so ancora calcolare: scrivine una sola',
+    "I can't calculate with two random variables together yet: write just one",
+  ],
+  missingVariable: [
+    "Nell'evento manca la variabile aleatoria: prima $X \\sim B(10, 0{,}3)$, poi P(X \\le 3)",
+    'The event has no random variable: first $X \\sim B(10, 0.3)$, then P(X \\le 3)',
+  ],
+  notRandom: (name: string) => [`${name} non è una variabile aleatoria: prima ${name} \\sim N(0, 1)`, `${name} is not a random variable: first ${name} \\sim N(0, 1)`],
+})
 
 const NEG_INF: End = { v: -Infinity, exact: null, closed: false }
 const POS_INF: End = { v: Infinity, exact: null, closed: false }
@@ -152,7 +169,7 @@ function endAt(v: number): Omit<End, 'closed'> {
 function scanSet(holds: (x: number) => boolean, d: Distribution): { set: Interval[]; truncated: boolean } {
   if (d.discrete) {
     const last = Number.isFinite(d.hi) ? d.hi : Math.max(d.quantile(1 - 1e-17), d.lo) + 20
-    if (last - d.lo > 1e6) throw new MathError('Troppi valori da guardare uno per uno: scrivi l\'evento con X da sola (X \\le 3)')
+    if (last - d.lo > 1e6) throw new MathError(T.tooManyValues)
     const set: Interval[] = []
     for (let k = d.lo; k <= last; k++) {
       if (!holds(k)) continue
@@ -213,9 +230,9 @@ function randomNames(node: MathNode, vars: ReadonlyMap<string, Distribution>): s
 
 function oneVariable(nodes: (MathNode | null)[], vars: ReadonlyMap<string, Distribution>): string {
   const names = new Set(nodes.flatMap((n) => (n ? randomNames(n, vars) : [])))
-  if (names.size > 1) throw new MathError('Con due variabili aleatorie insieme non so ancora calcolare: scrivine una sola')
+  if (names.size > 1) throw new MathError(T.twoVariables)
   const [X] = names
-  if (!X) throw new MathError('Nell\'evento manca la variabile aleatoria: prima $X \\sim B(10, 0{,}3)$, poi P(X \\le 3)')
+  if (!X) throw new MathError(T.missingVariable)
   return X
 }
 
@@ -424,7 +441,7 @@ export function randomScope(vars: ReadonlyMap<string, Distribution>): RandomScop
     },
     quantile(name, p) {
       const d = vars.get(name)
-      if (!d) throw new MathError(`${name} non è una variabile aleatoria: prima ${name} \\sim N(0, 1)`)
+      if (!d) throw new MathError(T.notRandom(name))
       return (v) => d.quantile(p(v))
     },
   }
