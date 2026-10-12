@@ -8,12 +8,17 @@
  *     <!-- glifo-grafico · per modificare il grafico apri questo file con Glifo
  *     y = x^2
  *     -->
+ *
+ * Un blocco con il nome inglese (```graph) ha il nome dopo il segno, `<!-- glifo-grafico graph · …`,
+ * così riaprendo il file torna ```graph; senza il nome il blocco era ```grafico (anche nei file
+ * salvati prima, quando c'era solo quello).
  */
 import { texts, usesDecimalComma } from '../i18n'
 import { formatNumber } from '../math/format'
 import { nameLatex } from '../math/latex'
 import { renderTexMathml } from '../render/katex'
 import { renderMarkdown } from '../render/markdown'
+import { blockKind } from '../noteWords'
 import { findFencedBlocks } from '../schema/blocks'
 import { base64 } from '../schema/file'
 import { labelPlain, labelSvg, texSvg } from './labels'
@@ -36,7 +41,8 @@ const T = texts({
 const MARKER = 'glifo-grafico'
 /** Una riga che apre o chiude un blocco di codice (come in src/schema/blocks.ts). */
 const FENCE = /^\s*(`{3,}|~{3,})(.*)$/
-const OPEN = new RegExp(`^([ \\t]*)<!-- ${MARKER}\\b`)
+/** Il commento, con il nome del blocco se non era ```grafico (`glifo-grafico graph`). */
+const OPEN = new RegExp(`^([ \\t]*)<!-- ${MARKER}\\b(?:[ \\t]+([A-Za-z]+)\\b)?`)
 const CLOSE = /^[ \t]*-->[ \t]*$/
 const IMAGE = /^[ \t]*!\[[^\]\n]*\]\(data:image\/svg\+xml;base64,[A-Za-z0-9+/=]*\)[ \t]*$/
 
@@ -179,18 +185,21 @@ export const FIGURE_PALETTE: Palette = { ...PALETTES.light, surface: '#ffffff', 
 export function graphsForFile(text: string, images: ReadonlyMap<number, string>): string {
   let out = ''
   let pos = 0
-  for (const block of findFencedBlocks(text, 'grafico')) { // non si traduce: il nome del blocco
+  for (const block of findFencedBlocks(text, 'grafico')) {
     const image = images.get(block.line)
     if (!block.closed || !image) continue
     const indent = /^[ \t]*/.exec(text.slice(block.from))![0]
-    const lines = [`${indent}![${T.image}](data:image/svg+xml;base64,${base64(image)})`, `${indent}<!-- ${MARKER} · ${T.hint}`, hide(block.source), `${indent}-->`]
+    // Il nome scritto nella nota (```graph o ```grafico): quello inglese va nel commento.
+    const name = FENCE.exec(text.slice(block.from).split('\n', 1)[0])![2].trim().split(/\s+/)[0].toLowerCase()
+    const sign = name === 'grafico' ? MARKER : `${MARKER} ${name}`
+    const lines = [`${indent}![${T.image}](data:image/svg+xml;base64,${base64(image)})`, `${indent}<!-- ${sign} · ${T.hint}`, hide(block.source), `${indent}-->`]
     out += text.slice(pos, block.from) + lines.join('\n')
     pos = block.to
   }
   return out + text.slice(pos)
 }
 
-/** Il testo letto da un file: le immagini dei grafici con il loro testo tornano blocchi ```grafico. */
+/** Il testo letto da un file: le immagini dei grafici con il loro testo tornano blocchi ```grafico (o ```graph, com'erano). */
 export function graphsFromFile(text: string): string {
   const lines = text.split('\n')
   const out: string[] = []
@@ -220,7 +229,8 @@ export function graphsFromFile(text: string): string {
     while (image >= 0 && !out[image].trim()) image--
     if (image >= 0 && IMAGE.test(out[image])) out.length = image
     const indent = open[1]
-    out.push(`${indent}\`\`\`grafico`, unhide(lines.slice(i + 1, end).join('\n')), `${indent}\`\`\``) // non si traduce: il nome del blocco
+    const name = open[2] && blockKind(open[2]) === 'grafico' ? open[2].toLowerCase() : 'grafico'
+    out.push(`${indent}\`\`\`${name}`, unhide(lines.slice(i + 1, end).join('\n')), `${indent}\`\`\``)
     i = end
   }
   return out.join('\n')

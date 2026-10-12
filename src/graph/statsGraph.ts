@@ -22,15 +22,23 @@ const T = texts({
   dataVector: ['I dati: i dati vanno in un vettore, $x = (2, 3, 5, 7)$', 'The data go in a vector, $x = (2, 3, 5, 7)$'],
   badDistribution: ['Questa distribuzione non si può fare: controlla i parametri', 'This distribution isn\'t possible: check its parameters'],
   defineFirst: ['Prima va definita la variabile aleatoria, per esempio $X \\sim B(10, 0{,}3)$', 'First define the random variable, for example $X \\sim B(10, 0.3)$'],
-  histogramUsage: [
-    'Si scrive \\operatorname{istogramma}(x), o con il numero di classi: \\operatorname{istogramma}(x, 5)',
-    'Write \\operatorname{istogramma}(x), or with the number of bins: \\operatorname{istogramma}(x, 5)',
+  /** I nomi delle funzioni da scrivere nella nota, nella lingua di Glifo (per i messaggi). */
+  histogram: ['istogramma', 'histogram'],
+  barChart: ['barre', 'barchart'],
+  scatter: ['dispersione', 'scatter'],
+  regression: ['regressione', 'regression'],
+  histogramUsage: (name: string) => [
+    `Si scrive \\operatorname{${name}}(x), o con il numero di classi: \\operatorname{${name}}(x, 5)`,
+    `Write \\operatorname{${name}}(x), or with the number of bins: \\operatorname{${name}}(x, 5)`,
   ],
   classCount: ['Le classi sono da 1 a 200', 'The number of bins goes from 1 to 200'],
   classEdges: ['Gli estremi delle classi sono almeno due', 'There must be at least two bin edges'],
   afterData: ['Dopo i dati va il numero di classi (5) o i loro estremi in un vettore', 'After the data comes the number of bins (5) or their edges in a vector'],
   density: ['densità', 'density'],
-  barsUsage: ['Si scrive \\operatorname{barre}(x), o con le frequenze: \\operatorname{barre}(v, f)', 'Write \\operatorname{barre}(x), or with the frequencies: \\operatorname{barre}(v, f)'],
+  barsUsage: (name: string) => [
+    `Si scrive \\operatorname{${name}}(x), o con le frequenze: \\operatorname{${name}}(v, f)`,
+    `Write \\operatorname{${name}}(x), or with the frequencies: \\operatorname{${name}}(v, f)`,
+  ],
   sameLength: ['I valori e le frequenze vanno in due vettori lunghi uguali', 'The values and the frequencies go in two vectors of the same length'],
   pairUsage: (name: string) => [`Si scrive \\operatorname{${name}}(x, y), con x e y due vettori di dati`, `Write \\operatorname{${name}}(x, y), with x and y two data vectors`],
   sameSeries: ['Le due serie di dati vanno in due vettori lunghi uguali', 'The two data series go in two vectors of the same length'],
@@ -154,7 +162,7 @@ export function statisticsItems(l: Line, slot: number, scope: Scope, linear: Lin
   const written = toLatex(main)
   switch (main.name) {
     case 'histogram': {
-      if (!args.length || args.length > 2) throw new MathError(T.histogramUsage)
+      if (!args.length || args.length > 2) throw new MathError(T.histogramUsage(T.histogram))
       const values = dataOf(args[0], linear, T.histogramVector)
       let edges: number[]
       if (args.length === 2) {
@@ -183,7 +191,7 @@ export function statisticsItems(l: Line, slot: number, scope: Scope, linear: Lin
       return { items: [{ kind: 'bars', line, label: uneven ? `${written}\\ \\text{(${T.density})}` : written, slot, bars, extent }], colors: 1 }
     }
     case 'barchart': {
-      if (!args.length || args.length > 2) throw new MathError(T.barsUsage)
+      if (!args.length || args.length > 2) throw new MathError(T.barsUsage(T.barChart))
       const values = dataOf(args[0], linear, T.barsVector)
       const groups = new Map<number, number>()
       if (args.length === 2) {
@@ -200,8 +208,7 @@ export function statisticsItems(l: Line, slot: number, scope: Scope, linear: Lin
     }
     case 'scatter':
     case 'regression': {
-      // I nomi delle funzioni nella nota: per ora solo in italiano.
-      if (args.length !== 2) throw new MathError(T.pairUsage(main.name === 'scatter' ? 'dispersione' : 'regressione'))
+      if (args.length !== 2) throw new MathError(T.pairUsage(main.name === 'scatter' ? T.scatter : T.regression))
       const xs = dataOf(args[0], linear, T.dataVector)
       const ys = dataOf(args[1], linear, T.dataVector)
       if (xs.length !== ys.length) throw new MathError(T.sameSeries)

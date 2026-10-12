@@ -3,27 +3,29 @@
  * del blocco ```grafico disegna una linea con i pallini per ogni colonna, contro la prima. Con
  * `pareggio: Ricavi, Costi totali` anche le aree tra le due linee, l'utile dove i ricavi stanno sopra
  * e la perdita dove stanno sotto, e il punto di pareggio dove si incontrano (il diagramma di
- * redditività dell'economia aziendale).
+ * redditività dell'economia aziendale). Le parole valgono anche in inglese (`data:`, `break-even:`;
+ * src/noteWords.ts).
  */
 import { texts } from '../i18n'
+import { parseGraphKey } from '../noteWords'
 import { NO_TABLE, parseRange, REVENUE, TOTAL_COST, type ChartData } from '../spreadsheet/chart'
 import { formatNumber, roundTo, type Format } from '../spreadsheet/format'
 import { colName } from '../spreadsheet/refs'
 import type { GraphError, GraphItem } from './spec'
 
 const T = texts({
-  oneRange: ['Un grafico prende i dati da un intervallo solo: scrivi una riga dati: sola', 'A graph takes its data from a single range: write only one dati: line'],
+  oneRange: ['Un grafico prende i dati da un intervallo solo: scrivi una riga dati: sola', 'A graph takes its data from a single range: write only one data: line'],
   dataFirst: [
     'Il punto di pareggio è tra due linee dei dati: scrivi prima la riga dati: con le celle della tabella (dati: A8:D13)',
-    'The break-even point is between two data lines: first write the dati: line with the table cells (dati: A8:D13)',
+    'The break-even point is between two data lines: first write the data: line with the table cells (data: A8:D13)',
   ],
   twoLines: [
     'Scrivi le due linee, prima i ricavi e poi i costi: pareggio: Ricavi, Costi totali',
-    'Write the two lines, revenue first and then costs: pareggio: Revenue, Total costs',
+    'Write the two lines, revenue first and then costs: break-even: Revenue, Total costs',
   ],
   noColumn: (name: string) => [
     `Tra i dati non c'è la colonna «${name}»: scrivi i nomi come nella prima riga dei dati (pareggio: Ricavi, Costi totali)`,
-    `There's no “${name}” column in the data: write the names as in the first row of the data (pareggio: Revenue, Total costs)`,
+    `There's no “${name}” column in the data: write the names as in the first row of the data (break-even: Revenue, Total costs)`,
   ],
   noCommonX: [
     'Le due linee non hanno valori per le stesse x: servono almeno due righe in comune',
@@ -40,24 +42,23 @@ const T = texts({
   ],
 })
 
-// Le parole delle righe del blocco (dati:, pareggio:, gantt:, reticolo:, inizio:): per ora solo in italiano.
-const DATA_LINE = /^(dati|pareggio)\s*:\s*(.*)$/i
-
-/** Una riga `dati: …` o `pareggio: …` (null se la riga è altro). */
+/**
+ * Una riga `dati: …` o `pareggio: …`, anche in inglese (`data: …`, `break-even: …`): la parola com'è
+ * dentro Glifo e il testo (null se la riga è altro).
+ */
 export function dataLine(text: string): { key: 'dati' | 'pareggio'; value: string } | null {
-  const m = DATA_LINE.exec(text.trim())
-  return m ? { key: m[1].toLowerCase() as 'dati' | 'pareggio', value: m[2].trim() } : null
+  const line = parseGraphKey(text)
+  return line && (line.key === 'dati' || line.key === 'pareggio') ? { key: line.key, value: line.value } : null
 }
-
-const PLAN_LINE = /^(gantt|reticolo|inizio)\s*:\s*(.*)$/i
 
 /**
  * Una riga del diagramma di Gantt o del reticolo (`gantt: A1:E9`, `reticolo: A1:E9`, `inizio:
- * 12/10/2026`); null se la riga è altro. Il disegno lo fanno planBlock.ts e gantt.ts.
+ * 12/10/2026`, anche `network:` e `start:`); null se la riga è altro. Il disegno lo fanno planBlock.ts e
+ * gantt.ts.
  */
 export function planLine(text: string): { key: 'gantt' | 'reticolo' | 'inizio'; value: string } | null {
-  const m = PLAN_LINE.exec(text.trim())
-  return m ? { key: m[1].toLowerCase() as 'gantt' | 'reticolo' | 'inizio', value: m[2].trim() } : null
+  const line = parseGraphKey(text)
+  return line && (line.key === 'gantt' || line.key === 'reticolo' || line.key === 'inizio') ? { key: line.key, value: line.value } : null
 }
 
 /** L'intervallo della riga `dati:` del blocco (null se non c'è): i dati li prende chi disegna, dalla tabella sopra. */

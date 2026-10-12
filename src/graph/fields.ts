@@ -35,7 +35,9 @@ const T = texts({
   integral: ['L\'integrale non si riesce a calcolare', 'The integral can\'t be calculated'],
   cantCalculate: (name: string) => [`${name} non si riesce a calcolare`, `${name} can't be calculated`],
   levelsPlane: ['Le curve di livello si disegnano nel piano: per la superficie scrivi solo f', 'Level curves are drawn in the plane: for the surface write just f'],
-  levelsUsage: ['Si scrive \\operatorname{livelli}(f), con f una funzione di x e y', 'Write \\operatorname{livelli}(f), with f a function of x and y'],
+  /** Il nome della funzione da scrivere nella nota, nella lingua di Glifo (per i messaggi). */
+  levels: ['livelli', 'levels'],
+  levelsUsage: (name: string) => [`Si scrive \\operatorname{${name}}(f), con f una funzione di x e y`, `Write \\operatorname{${name}}(f), with f a function of x and y`],
   twoVariables: (name: string) => [`${name} non è una funzione di due variabili`, `${name} isn't a function of two variables`],
   phasePlane: ['Il ritratto di fase si disegna nel piano', 'The phase portrait is drawn in the plane'],
   autonomous: (a: string, b: string, t: string) => [
@@ -255,7 +257,7 @@ export function calculusItems(l: Line, ctx: FieldContext, slot: number, space: b
   }
   if (main.k === 'fn' && main.name === 'levels') {
     if (space) throw new MathError(T.levelsPlane)
-    if (main.args.length !== 1) throw new MathError(T.levelsUsage)
+    if (main.args.length !== 1) throw new MathError(T.levelsUsage(T.levels))
     const arg = main.args[0]
     const user = arg.k === 'name' ? ctx.scope.fns.get(arg.name) : undefined
     let F: (x: number, y: number) => number

@@ -9,6 +9,7 @@
  * I legami si scrivono nella colonna delle precedenti: «A, B» (dopo la fine di A e di B), anche con
  * il tipo e lo scarto come in Project: «AII» (inizio-inizio), «BFF+2», «C+3» (3 dopo la fine di C),
  * «D-1»; i tipi sono FI (fine-inizio, quello di sempre), II, FF e IF, anche all'inglese (FS, SS, SF).
+ * Le parole valgono nelle due lingue: «A e B» e «A and B», «nessuna» e «none».
  */
 import { texts, usesDecimalComma } from '../i18n'
 import type { PlanActivity, PlanTable, PlanTime } from '../spreadsheet/plan'
@@ -97,8 +98,9 @@ export interface Schedule {
 const EPS = 1e-9
 
 const TYPES: Record<string, LinkType> = { FI: 'FI', II: 'II', FF: 'FF', IF: 'IF', FS: 'FI', SS: 'II', SF: 'IF' }
-// Le parole scritte nella colonna delle precedenti (nessuno, niente, nulla; «A e B»): per ora solo in italiano.
-const NONE = /^(-|—|–|\/|nessun[ao]?|niente|nulla)$/i
+// Le parole scritte nella colonna delle precedenti, in italiano e in inglese: nessuna (nessuno, niente,
+// nulla, none, nothing) e «A e B» («A and B», in `parseLinks`).
+const NONE = /^(-|—|–|\/|nessun[ao]?|niente|nulla|none|nothing)$/i
 const LINK = /^(.+?)\s*(?:\(\s*)?(FI|II|FF|IF|FS|SS|SF)?(?:\s*\))?\s*(?:([+-])\s*(\d+(?:[.,]\d+)?)\s*[a-zàèéìòù.]*)?$/i
 
 /** Toglie il rumore delle cifre binarie (0,1 + 0,2 = 0,3). */
@@ -121,7 +123,7 @@ export function parseLinks(text: string, ids: ReadonlyMap<string, number>): { li
   const s = text.trim()
   if (!s || NONE.test(s)) return { links, problems }
   // La virgola di uno scarto con i decimali («+1,5») non divide: «1,2» sì (le attività 1 e 2).
-  for (const raw of s.replace(/([+-]\s*\d+),(\d)/g, '$1.$2').split(/[;,]|\s+e\s+/i)) {
+  for (const raw of s.replace(/([+-]\s*\d+),(\d)/g, '$1.$2').split(/[;,]|\s+(?:e|and)\s+/i)) {
     const item = raw.trim()
     if (!item || NONE.test(item)) continue
     const whole = ids.get(key(item))
