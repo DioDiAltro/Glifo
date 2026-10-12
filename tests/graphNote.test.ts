@@ -553,6 +553,19 @@ describe('i grafici da mostrare: titolo, nomi degli assi e immagini', () => {
     expect(root.querySelector('rect')?.getAttribute('fill')).toBe('#ffffff')
   })
 
+  it('nella figura i valori di più slider restano separati (non «2, quadb = 3»)', () => {
+    const spec = parseGraph('a = 2\nb = 3\ny = a x + b')
+    expect(spec.sliders.map((s) => s.name)).toEqual(['a', 'b'])
+    const plot = graphSvg(spec, { x0: -5, x1: 5, y0: -5, y1: 5, width: 600, height: 380 }, FIGURE_PALETTE, { id: 'figura' })
+    const svg = graphFigure(spec, plot, 600, 380)
+    const doc = new DOMParser().parseFromString(svg, 'image/svg+xml')
+    const texts = [...doc.documentElement.querySelectorAll('text')].map((t) => t.textContent ?? '')
+    const sliders = texts.find((t) => t.includes('a = 2'))
+    expect(sliders).toBeDefined()
+    expect(sliders).not.toContain('quad')
+    expect(sliders).toMatch(/a = 2,\s+b = 3/)
+  })
+
   it('la figura scaricata contiene tutta la parte che si vede, con la stessa forma', () => {
     const w = containing({ x0: 0, x1: 2, y0: 0, y1: 1 }, 200, 100, 640, 400)
     expect(w.x0).toBeCloseTo(0)

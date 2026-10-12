@@ -150,7 +150,7 @@ export function graphFigure(spec: GraphSpec, plot: string, width: number, height
     rows.push(`${swatchSvg(item, colors[i], palette, x, y + 6)}<text x="${(x + 28).toFixed(1)}" y="${y + 18}" ${font}>${text.svg}</text>${extra}`)
   })
   if (spec.sliders.length) {
-    const numbers = spec.sliders.map((s) => `${nameLatex(s.name)} = ${formatNumber(s.value, { comma: usesDecimalComma(), decimal: true, digits: 6 })?.tex ?? s.value}`).join(', \quad ')
+    const numbers = spec.sliders.map((s) => `${nameLatex(s.name)} = ${formatNumber(s.value, { comma: usesDecimalComma(), decimal: true, digits: 6 })?.tex ?? s.value}`).join(', \\quad ')
     const text = texSvg(numbers, size)
     rows.push(`<text x="${width / 2}" y="${rows.length * rowHeight + 18}" text-anchor="middle" ${font}>${text.svg}</text>`)
   }
