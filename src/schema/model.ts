@@ -3,6 +3,12 @@
  * quali forme ci sono, dove, con che testo e che colore, e quali frecce le collegano.
  * I colori hanno un nome: nel tema chiaro e in quello scuro diventano colori diversi.
  */
+import { texts } from '../i18n'
+
+const T = texts({
+  unreadable: ['Lo schema non si riesce a leggere: il testo del blocco è stato cambiato a mano?', 'The diagram can\'t be read: was the block\'s text edited by hand?'],
+  notASchema: ['Questo blocco non contiene uno schema.', 'This block doesn\'t contain a diagram.'],
+})
 
 export const SHAPES = [
   'rect',
@@ -204,41 +210,43 @@ export function tableText(table: { name: string; fields: Pick<TableField, 'pk' |
   return joinTable(table.name, table.fields.map(fieldLine).join('\n'))
 }
 
-export const SHAPE_NAMES: Record<ShapeKind, string> = {
-  rect: 'Rettangolo',
-  rounded: 'Rettangolo arrotondato',
-  ellipse: 'Ellisse',
-  rhombus: 'Rombo',
-  parallelogram: 'Parallelogramma',
-  hexagon: 'Esagono',
-  triangle: 'Triangolo',
-  cloud: 'Nuvola',
-  document: 'Documento',
-  cylinder: 'Cilindro',
-  note: 'Nota',
-  arrow: 'Freccia grande',
-  doubleArrow: 'Freccia doppia',
-  text: 'Testo',
-  lanes: 'Corsie',
-  weakEntity: 'Entità debole',
-  identifyingRelation: 'Relazione identificante',
-  keyAttribute: 'Attributo chiave',
-  multiAttribute: 'Attributo multivalore',
-  derivedAttribute: 'Attributo derivato',
-  attribute: 'Attributo (pallino)',
-  identifier: 'Identificatore (pallino pieno)',
-  table: 'Tabella',
-}
+/** I nomi delle forme, nella lingua di Glifo quando si leggono (li usa anche l'AI, in src/ai/topics.ts). */
+export const SHAPE_NAMES: Readonly<Record<ShapeKind, string>> = texts({
+  rect: ['Rettangolo', 'Rectangle'],
+  rounded: ['Rettangolo arrotondato', 'Rounded rectangle'],
+  ellipse: ['Ellisse', 'Ellipse'],
+  rhombus: ['Rombo', 'Diamond'],
+  parallelogram: ['Parallelogramma', 'Parallelogram'],
+  hexagon: ['Esagono', 'Hexagon'],
+  triangle: ['Triangolo', 'Triangle'],
+  cloud: ['Nuvola', 'Cloud'],
+  document: ['Documento', 'Document'],
+  cylinder: ['Cilindro', 'Cylinder'],
+  note: ['Nota', 'Note'],
+  arrow: ['Freccia grande', 'Block arrow'],
+  doubleArrow: ['Freccia doppia', 'Double arrow'],
+  text: ['Testo', 'Text'],
+  lanes: ['Corsie', 'Swimlanes'],
+  weakEntity: ['Entità debole', 'Weak entity'],
+  identifyingRelation: ['Relazione identificante', 'Identifying relationship'],
+  keyAttribute: ['Attributo chiave', 'Key attribute'],
+  multiAttribute: ['Attributo multivalore', 'Multivalued attribute'],
+  derivedAttribute: ['Attributo derivato', 'Derived attribute'],
+  attribute: ['Attributo (pallino)', 'Attribute (circle)'],
+  identifier: ['Identificatore (pallino pieno)', 'Identifier (filled circle)'],
+  table: ['Tabella', 'Table'],
+})
 
-export const COLOR_NAMES: Record<ColorName, string> = {
-  default: 'Normale',
-  blue: 'Blu',
-  green: 'Verde',
-  yellow: 'Giallo',
-  red: 'Rosso',
-  purple: 'Viola',
-  gray: 'Grigio',
-}
+/** I nomi dei colori, nella lingua di Glifo quando si leggono. */
+export const COLOR_NAMES: Readonly<Record<ColorName, string>> = texts({
+  default: ['Normale', 'Default'],
+  blue: ['Blu', 'Blue'],
+  green: ['Verde', 'Green'],
+  yellow: ['Giallo', 'Yellow'],
+  red: ['Rosso', 'Red'],
+  purple: ['Viola', 'Purple'],
+  gray: ['Grigio', 'Gray'],
+})
 
 export type Theme = 'light' | 'dark'
 
@@ -364,9 +372,9 @@ export function parseSchema(source: string): Schema {
   try {
     data = JSON.parse(source)
   } catch {
-    throw new SchemaError('Lo schema non si riesce a leggere: il testo del blocco è stato cambiato a mano?')
+    throw new SchemaError(T.unreadable)
   }
-  if (!isRecord(data)) throw new SchemaError('Questo blocco non contiene uno schema.')
+  if (!isRecord(data)) throw new SchemaError(T.notASchema)
   const used = new Set<string>()
   const nodes: SchemaNode[] = []
   for (const raw of Array.isArray(data.nodes) ? data.nodes.slice(0, MAX_NODES) : []) {

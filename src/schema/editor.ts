@@ -18,6 +18,7 @@ import {
   type PanningHandler,
   type SelectionHandler,
 } from '@maxgraph/core'
+import { rich, texts } from '../i18n'
 import { confirmDialog, dialogShell } from '../ui/dialogs'
 import { ICONS, h, icon } from '../ui/dom'
 import { openMenu, type MenuEntry } from '../ui/menu'
@@ -84,6 +85,156 @@ import {
   type Theme,
 } from './model'
 
+const T = texts({
+  // La barra in alto
+  title: ['Schema', 'Diagram'],
+  undo: ['Annulla (Ctrl+Z)', 'Undo (Ctrl+Z)'],
+  redo: ['Ripeti (Ctrl+Y)', 'Redo (Ctrl+Y)'],
+  grid: ['Griglia', 'Grid'],
+  zoom100: ['Zoom al 100%', 'Zoom to 100%'],
+  tools: ['Strumenti dello schema', 'Diagram tools'],
+  zoomOut: ['Riduci lo zoom', 'Zoom out'],
+  zoomIn: ['Aumenta lo zoom', 'Zoom in'],
+  fit: ['Adatta alla finestra', 'Fit to window'],
+  deleteSelection: ['Elimina la selezione (Canc)', 'Delete selection (Del)'],
+  templates: ['Modelli', 'Templates'],
+  templatesTitle: ['Modelli pronti da aggiungere allo schema', 'Ready-made templates to add to the diagram'],
+  download: ['Scarica', 'Download'],
+  downloadTitle: ['Lo schema come immagine, da usare fuori da Glifo', 'The diagram as an image, to use outside Glifo'],
+  png: ['Immagine PNG', 'PNG image'],
+  svg: ['Immagine SVG', 'SVG image'],
+  copyImage: ['Copia come immagine', 'Copy as image'],
+  sqlMenu: ['Codice SQL delle tabelle…', 'SQL code for the tables…'],
+  close: ['Chiudi', 'Close'],
+  done: ['Fatto', 'Done'],
+  // Il pannello delle forme, il foglio e il riquadro dove si scrive
+  shapes: ['Forme', 'Shapes'],
+  databases: ['Basi di dati', 'Databases'],
+  dragOrClick: (name: string) => [`${name}: trascinala sul foglio o cliccala`, `${name}: drag it onto the canvas or click it`],
+  canvas: ['Foglio dello schema', 'Diagram canvas'],
+  connectArrow: ['Trascina per collegare; clicca per aggiungere una forma collegata', 'Drag to connect; click to add a connected shape'],
+  textInput: ['Testo (le formule tra $…$)', 'Text (formulas between $…$)'],
+  tableName: ['Nome della tabella', 'Table name'],
+  tableFields: [
+    'Campi della tabella, uno per riga: PK davanti alla chiave primaria, FK davanti a quelle esterne',
+    'Table fields, one per line: PK before the primary key, FK before the foreign keys',
+  ],
+  oneFieldPerLine: ['Un campo per riga', 'One field per line'],
+  emptyDrag: ['Trascina qui una forma dal pannello a sinistra, o cliccala.', 'Drag a shape here from the panel on the left, or click it.'],
+  emptyConnect: ['Poi passa sopra una forma e trascina una freccia blu per collegarla a un\'altra.', 'Then hover over a shape and drag a blue arrow to connect it to another one.'],
+  emptyTemplate: ['Oppure comincia da un modello:', 'Or start from a template:'],
+  appearance: ['Aspetto', 'Appearance'],
+  editor: ['Editor dello schema', 'Diagram editor'],
+  // Il testo delle forme nuove, da sostituire
+  textPreset: ['Testo', 'Text'],
+  /** Le corsie nuove: tre, con i nomi di chi lavora in un processo di vendita (si cambiano). */
+  lanesText: ['Cliente\nVendite\nMagazzino', 'Customer\nSales\nWarehouse'],
+  entity: ['Entità', 'Entity'],
+  relationship: ['Relazione', 'Relationship'],
+  attribute: ['Attributo', 'Attribute'],
+  keyText: ['Codice', 'ID'],
+  tablePreset: ['Tabella\nPK Codice\nNome', 'Table\nPK ID\nName'],
+  // Immagini e codice SQL
+  emptyImage: ['Lo schema è vuoto: non c\'è ancora niente da salvare come immagine.', 'The diagram is empty: there\'s nothing to save as an image yet.'],
+  imageFile: (title: string) => [`${title} schema`, `${title} diagram`],
+  imageFileUntitled: ['schema', 'diagram'],
+  svgDownloaded: ['Immagine SVG scaricata', 'SVG image downloaded'],
+  pngDownloaded: ['Immagine PNG scaricata', 'PNG image downloaded'],
+  cantCopyImages: ['Questo browser non sa copiare le immagini: scaricala come PNG.', 'This browser can\'t copy images: download it as PNG.'],
+  imageCopied: ['Immagine copiata: incollala dove vuoi (Word, Google Docs, le slide…)', 'Image copied: paste it wherever you like (Word, Google Docs, slides…)'],
+  copyFailed: [
+    'L\'immagine non si è riuscita a copiare (il browser l\'ha impedito?): scaricala come PNG.',
+    'The image couldn\'t be copied (did the browser block it?): download it as PNG.',
+  ],
+  imageFailed: ['L\'immagine non si è riuscita a fare su questo browser: prova con l\'altro formato.', 'The image couldn\'t be created in this browser: try the other format.'],
+  noTables: [
+    'Nello schema non ci sono tabelle: le trovi nel gruppo «Basi di dati», a sinistra.',
+    'There are no tables in the diagram: you\'ll find them in the “Databases” group, on the left.',
+  ],
+  sqlFile: (title: string) => [`${title} tabelle`, `${title} tables`],
+  sqlFileUntitled: ['tabelle', 'tables'],
+  sqlCopied: ['Codice SQL copiato', 'SQL code copied'],
+  sqlCopyFailed: ['Il codice non si è riuscito a copiare: scaricalo come file.', 'The code couldn\'t be copied: download it as a file.'],
+  downloaded: (name: string) => [`Scaricato «${name}»`, `Downloaded “${name}”`],
+  sqlTitle: ['Codice SQL delle tabelle', 'SQL code for the tables'],
+  whichDatabase: ['Per quale database?', 'For which database?'],
+  sqlCode: ['Codice SQL', 'SQL code'],
+  sqlHelp: [
+    'Le chiavi esterne trovano la loro tabella con le frecce tra le tabelle, o con i nomi: un campo FK che si chiama come la chiave primaria dell\'altra tabella, o come l\'altra tabella. Le righe che cominciano con «--» sono note.',
+    'Foreign keys find their table from the arrows between the tables, or by name: an FK field with the same name as the other table\'s primary key, or as the other table. Lines starting with “--” are comments.',
+  ],
+  copy: ['Copia', 'Copy'],
+  downloadSql: ['Scarica .sql', 'Download .sql'],
+  // Il pannello dell'aspetto
+  selectHint: ['Seleziona una forma o una freccia per cambiarne colore e aspetto.', 'Select a shape or an arrow to change its color and appearance.'],
+  helpWrite: ['Doppio clic su una forma per scriverci dentro, anche formule tra {code}.', 'Double-click a shape to write in it, including formulas between {code}.'],
+  helpSelect: [
+    'Per sceglierne più di una (e allinearle): trascina un riquadro sul foglio vuoto, oppure {shift} + clic.',
+    'To select more than one (and align them): drag a box on the empty canvas, or {shift} + click.',
+  ],
+  shiftKey: ['Maiusc', 'Shift'],
+  helpConnect: ['Passa sopra una forma: trascina una freccia blu per collegarla, cliccala per aggiungerne una collegata.', 'Hover over a shape: drag a blue arrow to connect it, click it to add a connected one.'],
+  helpMove: ['Rotellina per spostarti, Ctrl + rotellina per lo zoom; tieni premuto spazio per trascinare il foglio.', 'Mouse wheel to move around, Ctrl + wheel to zoom; hold down the space bar to drag the canvas.'],
+  helpKeys: ['{ctrl} {z} annulla, {del} elimina, {ctrl2} {d} duplica.', '{ctrl} {z} undo, {del} delete, {ctrl2} {d} duplicate.'],
+  delKey: ['Canc', 'Del'],
+  color: ['Colore', 'Color'],
+  shape: ['Forma', 'Shape'],
+  direction: ['Verso', 'Direction'],
+  flipDot: ['Il nome dall\'altra parte del pallino', 'Name on the other side of the circle'],
+  rotate: ['Gira di un quarto (in senso orario)', 'Rotate a quarter turn (clockwise)'],
+  align: ['Allinea', 'Align'],
+  distribute: ['Distribuisci', 'Distribute'],
+  distributeX: ['Distribuisci in orizzontale (stesso spazio tra le forme)', 'Distribute horizontally (same space between shapes)'],
+  distributeY: ['Distribuisci in verticale (stesso spazio tra le forme)', 'Distribute vertically (same space between shapes)'],
+  text: ['Testo', 'Text'],
+  line: ['Linea', 'Line'],
+  dashed: ['Tratteggiata', 'Dashed'],
+  arrowheads: ['Punte', 'Arrowheads'],
+  textPosition: ['Posizione del testo', 'Text position'],
+  editText: ['Modifica il testo', 'Edit text'],
+  delete: ['Elimina', 'Delete'],
+  // Le corsie
+  lanes: ['Corsie', 'Swimlanes'],
+  laneList: ['Corsie', 'Lanes'],
+  laneName: (n: number) => [`Nome della corsia ${n}`, `Name of lane ${n}`],
+  removeLane: (name: string) => [`Togli la corsia «${name}»`, `Remove lane “${name}”`],
+  newLane: (n: number) => [`Corsia ${n}`, `Lane ${n}`],
+  addLane: ['Aggiungi corsia', 'Add lane'],
+  columns: ['In colonne: i nomi in alto', 'In columns: names at the top'],
+  rows: ['In righe: i nomi a sinistra', 'In rows: names on the left'],
+  lanesHint: [
+    'Le forme del processo vanno sopra le corsie, nella corsia di chi fa quel passo. Le corsie si prendono dalla fascia dei nomi, e spostandole si spostano anche le forme che ci sono sopra.',
+    'The process shapes go on top of the lanes, in the lane of whoever does that step. Grab the lanes by the band with the names: moving them also moves the shapes on top of them.',
+  ],
+  // Le tabelle
+  table: ['Tabella', 'Table'],
+  fields: ['Campi della tabella', 'Table fields'],
+  missingKey: ['Manca la chiave primaria: premi «PK» sui campi che la formano.', 'The primary key is missing: press “PK” on the fields that make it up.'],
+  addField: ['Aggiungi campo', 'Add field'],
+  /** Il nome di un campo nuovo, da sostituire. */
+  newField: ['Campo', 'Field'],
+  fieldName: ['Nome del campo', 'Field name'],
+  typePlaceholder: ['tipo', 'type'],
+  fieldType: ['Tipo del campo, per l\'SQL (facoltativo)', 'Field type, for SQL (optional)'],
+  unnamedField: (n: number) => [`campo ${n}`, `field ${n}`],
+  primaryKey: (field: string) => [`Chiave primaria: ${field}`, `Primary key: ${field}`],
+  foreignKey: (field: string) => [`Chiave esterna: ${field}`, `Foreign key: ${field}`],
+  removeField: (field: string) => [`Togli il campo «${field}»`, `Remove field “${field}”`],
+  key: ['Chiave', 'Key'],
+  field: ['Campo', 'Field'],
+  type: ['Tipo', 'Type'],
+  tableHint: [
+    'Il tipo serve per l\'SQL (per esempio INTEGER, VARCHAR(50), DATE). Sul foglio, con un doppio clic, si scrive un campo per riga: «PK» e «FK» davanti, il tipo dopo i due punti (Matricola: CHAR(6)).',
+    'The type is for SQL (for example INTEGER, VARCHAR(50), DATE). On the canvas, double-click to write one field per line: “PK” and “FK” in front, the type after the colon (StudentID: CHAR(6)).',
+  ],
+  // Salvare e chiudere
+  saved: ['Salvato nella nota', 'Saved to the note'],
+  closeTitle: ['Chiudere senza salvare?', 'Close without saving?'],
+  closeMessage: ['Le ultime modifiche allo schema non sono ancora nella nota.', 'The latest changes to the diagram aren\'t in the note yet.'],
+  closeConfirm: ['Chiudi senza salvare', 'Close without saving'],
+  backToDiagram: ['Torna allo schema', 'Back to the diagram'],
+})
+
 export interface SchemaEditorOptions {
   schema: Schema
   theme: Theme
@@ -125,13 +276,23 @@ const PATHS = {
   distributeY: '<rect x="7" y="3" width="10" height="4" rx="1"/><rect x="7" y="10" width="10" height="4" rx="1"/><rect x="7" y="17" width="10" height="4" rx="1"/>',
 } as const
 
-const ALIGN: { how: Alignment; label: string; paths: string }[] = [
-  { how: 'left', label: 'Allinea a sinistra', paths: '<path d="M4 3v18"/><rect x="7" y="6" width="10" height="4" rx="1"/><rect x="7" y="14" width="14" height="4" rx="1"/>' },
-  { how: 'center', label: 'Allinea al centro', paths: '<path d="M12 3v3M12 10v4M12 18v3"/><rect x="6" y="6" width="12" height="4" rx="1"/><rect x="4" y="14" width="16" height="4" rx="1"/>' },
-  { how: 'right', label: 'Allinea a destra', paths: '<path d="M20 3v18"/><rect x="7" y="6" width="10" height="4" rx="1"/><rect x="3" y="14" width="14" height="4" rx="1"/>' },
-  { how: 'top', label: 'Allinea in alto', paths: '<path d="M3 4h18"/><rect x="6" y="7" width="4" height="10" rx="1"/><rect x="14" y="7" width="4" height="14" rx="1"/>' },
-  { how: 'middle', label: 'Allinea in mezzo', paths: '<path d="M3 12h3M10 12h4M18 12h3"/><rect x="6" y="6" width="4" height="12" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>' },
-  { how: 'bottom', label: 'Allinea in basso', paths: '<path d="M3 20h18"/><rect x="6" y="7" width="4" height="10" rx="1"/><rect x="14" y="3" width="4" height="14" rx="1"/>' },
+/** I nomi dei sei allineamenti, nella lingua di Glifo quando si leggono. */
+const ALIGN_NAMES: Readonly<Record<Alignment, string>> = texts({
+  left: ['Allinea a sinistra', 'Align left'],
+  center: ['Allinea al centro', 'Align center'],
+  right: ['Allinea a destra', 'Align right'],
+  top: ['Allinea in alto', 'Align top'],
+  middle: ['Allinea in mezzo', 'Align middle'],
+  bottom: ['Allinea in basso', 'Align bottom'],
+})
+
+const ALIGN: { how: Alignment; paths: string }[] = [
+  { how: 'left', paths: '<path d="M4 3v18"/><rect x="7" y="6" width="10" height="4" rx="1"/><rect x="7" y="14" width="14" height="4" rx="1"/>' },
+  { how: 'center', paths: '<path d="M12 3v3M12 10v4M12 18v3"/><rect x="6" y="6" width="12" height="4" rx="1"/><rect x="4" y="14" width="16" height="4" rx="1"/>' },
+  { how: 'right', paths: '<path d="M20 3v18"/><rect x="7" y="6" width="10" height="4" rx="1"/><rect x="3" y="14" width="14" height="4" rx="1"/>' },
+  { how: 'top', paths: '<path d="M3 4h18"/><rect x="6" y="7" width="4" height="10" rx="1"/><rect x="14" y="7" width="4" height="14" rx="1"/>' },
+  { how: 'middle', paths: '<path d="M3 12h3M10 12h4M18 12h3"/><rect x="6" y="6" width="4" height="12" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>' },
+  { how: 'bottom', paths: '<path d="M3 20h18"/><rect x="6" y="7" width="4" height="10" rx="1"/><rect x="14" y="3" width="4" height="14" rx="1"/>' },
 ]
 
 /** Le forme nel pannello e tra le scelte dell'aspetto. */
@@ -161,20 +322,17 @@ const SHAPE_ICONS: Record<ShapeKind, string> = {
   table: '<rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 9h18M7 13h10M7 16.5h7"/>',
 }
 
-/** Una voce del pannello delle forme: che forma nasce, con che nome e che testo. */
+/** Una voce del pannello delle forme: che forma nasce, con che nome e che testo (nella lingua di Glifo, quando si leggono). */
 interface Preset {
   id: string
   shape: ShapeKind
-  name: string
-  text: string
+  readonly name: string
+  readonly text: string
   size?: [number, number]
 }
 
 /** Le corsie in righe, con i nomi a sinistra (nel pannello, per scegliere il verso). */
 const LANE_ROWS_ICON = '<rect x="3" y="4" width="18" height="16" rx="1"/><path d="M7.5 4v16M3 9.3h18M3 14.7h18"/>'
-
-/** Le corsie nuove: tre, con i nomi di chi lavora in un processo di vendita (si cambiano). */
-const LANES_TEXT = 'Cliente\nVendite\nMagazzino'
 
 /** Le corsie: un riquadro diviso in parti, con i nomi in una fascia (vedi laneAt in model.ts). */
 function isLanes(cell: Cell | null | undefined): boolean {
@@ -211,21 +369,26 @@ function withLaneContents(graph: Graph, cells: Cell[]): Cell[] {
 }
 
 /** Le forme di sempre: una voce per forma. Un testo vuoto non si vedrebbe: «Testo» nasce scritto. */
-const BASE_PRESETS: Preset[] = SHAPES.filter((s) => !DB_SHAPES.includes(s)).map((s) => ({ id: s, shape: s, name: SHAPE_NAMES[s], text: s === 'text' ? 'Testo' : s === 'lanes' ? LANES_TEXT : '' }))
+const BASE_PRESETS: Preset[] = SHAPES.filter((s) => !DB_SHAPES.includes(s)).map((s) => ({
+  id: s,
+  shape: s,
+  get name() { return SHAPE_NAMES[s] },
+  get text() { return s === 'text' ? T.textPreset : s === 'lanes' ? T.lanesText : '' },
+}))
 
 /** Basi di dati: diagrammi E-R (Chen, e Atzeni con i pallini) e tabelle, con un testo da sostituire. */
 const DB_PRESETS: Preset[] = [
-  { id: 'entity', shape: 'rect', name: 'Entità', text: 'Entità' },
-  { id: 'weakEntity', shape: 'weakEntity', name: 'Entità debole', text: 'Entità' },
-  { id: 'relation', shape: 'rhombus', name: 'Relazione', text: 'Relazione' },
-  { id: 'identifyingRelation', shape: 'identifyingRelation', name: 'Relazione identificante', text: 'Relazione' },
-  { id: 'attributeEllipse', shape: 'ellipse', name: 'Attributo', text: 'Attributo', size: [110, 50] },
-  { id: 'keyAttribute', shape: 'keyAttribute', name: 'Attributo chiave', text: 'Codice' },
-  { id: 'multiAttribute', shape: 'multiAttribute', name: 'Attributo multivalore', text: 'Attributo' },
-  { id: 'derivedAttribute', shape: 'derivedAttribute', name: 'Attributo derivato', text: 'Attributo' },
-  { id: 'attribute', shape: 'attribute', name: 'Attributo (pallino)', text: 'Attributo' },
-  { id: 'identifier', shape: 'identifier', name: 'Identificatore (pallino pieno)', text: 'Codice' },
-  { id: 'table', shape: 'table', name: 'Tabella', text: 'Tabella\nPK Codice\nNome' },
+  { id: 'entity', shape: 'rect', get name() { return T.entity }, get text() { return T.entity } },
+  { id: 'weakEntity', shape: 'weakEntity', get name() { return SHAPE_NAMES.weakEntity }, get text() { return T.entity } },
+  { id: 'relation', shape: 'rhombus', get name() { return T.relationship }, get text() { return T.relationship } },
+  { id: 'identifyingRelation', shape: 'identifyingRelation', get name() { return SHAPE_NAMES.identifyingRelation }, get text() { return T.relationship } },
+  { id: 'attributeEllipse', shape: 'ellipse', get name() { return T.attribute }, get text() { return T.attribute }, size: [110, 50] },
+  { id: 'keyAttribute', shape: 'keyAttribute', get name() { return SHAPE_NAMES.keyAttribute }, get text() { return T.keyText } },
+  { id: 'multiAttribute', shape: 'multiAttribute', get name() { return SHAPE_NAMES.multiAttribute }, get text() { return T.attribute } },
+  { id: 'derivedAttribute', shape: 'derivedAttribute', get name() { return SHAPE_NAMES.derivedAttribute }, get text() { return T.attribute } },
+  { id: 'attribute', shape: 'attribute', get name() { return SHAPE_NAMES.attribute }, get text() { return T.attribute } },
+  { id: 'identifier', shape: 'identifier', get name() { return SHAPE_NAMES.identifier }, get text() { return T.keyText } },
+  { id: 'table', shape: 'table', get name() { return SHAPE_NAMES.table }, get text() { return T.tablePreset } },
   { id: 'database', shape: 'cylinder', name: 'Database', text: 'Database' },
 ]
 
@@ -246,11 +409,19 @@ function loadGroups(): Record<GroupId, boolean> {
 /** Le linee che toccano queste forme nascono senza punte, come nei libri di basi di dati. */
 const ER_LINE_SHAPES: readonly ShapeKind[] = DB_SHAPES.filter((s) => s !== 'table')
 
-const ROUTE_NAMES: Record<EdgeRoute, string> = { straight: 'Dritta', orthogonal: 'Ad angolo retto', curved: 'Curva' }
-const AT_NAMES: Record<TextAt, string> = { start: 'Testo all\'inizio della freccia', middle: 'Testo a metà della freccia', end: 'Testo alla fine della freccia' }
+const ROUTE_NAMES: Readonly<Record<EdgeRoute, string>> = texts({ straight: ['Dritta', 'Straight'], orthogonal: ['Ad angolo retto', 'Right-angled'], curved: ['Curva', 'Curved'] })
+const AT_NAMES: Readonly<Record<TextAt, string>> = texts({
+  start: ['Testo all\'inizio della freccia', 'Text at the start of the arrow'],
+  middle: ['Testo a metà della freccia', 'Text in the middle of the arrow'],
+  end: ['Testo alla fine della freccia', 'Text at the end of the arrow'],
+})
 const AT_ICONS: Record<TextAt, string> = { start: PATHS.atStart, middle: PATHS.atMiddle, end: PATHS.atEnd }
-const ARROW_NAMES: Record<EdgeArrows, string> = { end: 'Punta alla fine', both: 'Punte alle due estremità', none: 'Senza punte' }
-const SIZE_NAMES: Record<TextSize, string> = { s: 'Testo piccolo', m: 'Testo normale', l: 'Testo grande' }
+const ARROW_NAMES: Readonly<Record<EdgeArrows, string>> = texts({
+  end: ['Punta alla fine', 'Arrowhead at the end'],
+  both: ['Punte alle due estremità', 'Arrowheads at both ends'],
+  none: ['Senza punte', 'No arrowheads'],
+})
+const SIZE_NAMES: Readonly<Record<TextSize, string>> = texts({ s: ['Testo piccolo', 'Small text'], m: ['Testo normale', 'Normal text'], l: ['Testo grande', 'Large text'] })
 
 type Direction = 'up' | 'right' | 'down' | 'left'
 const DIRECTIONS: Direction[] = ['up', 'right', 'down', 'left']
@@ -355,56 +526,56 @@ class SchemaEditor {
         { class: `icon-button ${extra}`.trim(), title: label, attrs: { type: 'button', 'aria-label': label }, on: { click: () => run() } },
         icon(paths, 18),
       )
-    this.undoButton = button('Annulla (Ctrl+Z)', PATHS.undo, () => this.runUndo(false))
-    this.redoButton = button('Ripeti (Ctrl+Y)', PATHS.redo, () => this.runUndo(true))
-    this.gridButton = button('Griglia', PATHS.grid, () => this.setGrid(!this.grid), 'schema-toggle')
+    this.undoButton = button(T.undo, PATHS.undo, () => this.runUndo(false))
+    this.redoButton = button(T.redo, PATHS.redo, () => this.runUndo(true))
+    this.gridButton = button(T.grid, PATHS.grid, () => this.setGrid(!this.grid), 'schema-toggle')
     this.zoomLabel = h(
       'button',
-      { class: 'schema-zoom', title: 'Zoom al 100%', attrs: { type: 'button', 'aria-label': 'Zoom al 100%' }, on: { click: () => this.zoomTo(1) } },
+      { class: 'schema-zoom', title: T.zoom100, attrs: { type: 'button', 'aria-label': T.zoom100 }, on: { click: () => this.zoomTo(1) } },
       '100%',
     )
     this.status = h('span', { class: 'schema-status', attrs: { 'aria-live': 'polite' } })
     const bar = h(
       'header',
       { class: 'schema-bar' },
-      h('h2', { class: 'schema-title' }, 'Schema'),
+      h('h2', { class: 'schema-title' }, T.title),
       h(
         'div',
-        { class: 'schema-tools', attrs: { role: 'toolbar', 'aria-label': 'Strumenti dello schema' } },
+        { class: 'schema-tools', attrs: { role: 'toolbar', 'aria-label': T.tools } },
         this.undoButton,
         this.redoButton,
         h('span', { class: 'toolbar-sep', attrs: { 'aria-hidden': 'true' } }),
-        button('Riduci lo zoom', PATHS.zoomOut, () => this.zoomTo(this.graph.view.scale / 1.25)),
+        button(T.zoomOut, PATHS.zoomOut, () => this.zoomTo(this.graph.view.scale / 1.25)),
         this.zoomLabel,
-        button('Aumenta lo zoom', PATHS.zoomIn, () => this.zoomTo(this.graph.view.scale * 1.25)),
-        button('Adatta alla finestra', PATHS.fit, () => this.fit()),
+        button(T.zoomIn, PATHS.zoomIn, () => this.zoomTo(this.graph.view.scale * 1.25)),
+        button(T.fit, PATHS.fit, () => this.fit()),
         h('span', { class: 'toolbar-sep', attrs: { 'aria-hidden': 'true' } }),
         this.gridButton,
-        button('Elimina la selezione (Canc)', ICONS.trash, () => this.deleteSelection()),
+        button(T.deleteSelection, ICONS.trash, () => this.deleteSelection()),
       ),
       h('div', { class: 'schema-spacer' }),
       this.status,
-      this.menuButton('Modelli', 'Modelli pronti da aggiungere allo schema', PATHS.templates, () =>
+      this.menuButton(T.templates, T.templatesTitle, PATHS.templates, () =>
         TEMPLATES.map((t) => ({ label: t.name, run: () => this.insertTemplate(t) })),
       ),
-      this.menuButton('Scarica', 'Lo schema come immagine, da usare fuori da Glifo', ICONS.download, () => [
-        { label: 'Immagine PNG', run: () => void this.exportImage('png') },
-        { label: 'Immagine SVG', run: () => void this.exportImage('svg') },
-        { label: 'Copia come immagine', run: () => void this.exportImage('copy') },
-        { label: 'Codice SQL delle tabelle…', run: () => this.openSql() },
+      this.menuButton(T.download, T.downloadTitle, ICONS.download, () => [
+        { label: T.png, run: () => void this.exportImage('png') },
+        { label: T.svg, run: () => void this.exportImage('svg') },
+        { label: T.copyImage, run: () => void this.exportImage('copy') },
+        { label: T.sqlMenu, run: () => this.openSql() },
       ]),
-      h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => void this.requestClose() } }, 'Chiudi'),
-      h('button', { class: 'btn btn-primary', attrs: { type: 'button' }, on: { click: () => this.finish() } }, 'Fatto'),
+      h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => void this.requestClose() } }, T.close),
+      h('button', { class: 'btn btn-primary', attrs: { type: 'button' }, on: { click: () => this.finish() } }, T.done),
     )
 
     const palette = h(
       'aside',
-      { class: 'schema-shapes', attrs: { 'aria-label': 'Forme' } },
-      this.paletteGroup('forme', 'Forme', BASE_PRESETS),
-      this.paletteGroup('db', 'Basi di dati', DB_PRESETS),
+      { class: 'schema-shapes', attrs: { 'aria-label': T.shapes } },
+      this.paletteGroup('forme', T.shapes, BASE_PRESETS),
+      this.paletteGroup('db', T.databases, DB_PRESETS),
     )
 
-    this.canvas = h('div', { class: 'schema-canvas', attrs: { tabindex: 0, 'aria-label': 'Foglio dello schema' } })
+    this.canvas = h('div', { class: 'schema-canvas', attrs: { tabindex: 0, 'aria-label': T.canvas } })
     this.arrows = h(
       'div',
       { class: 'schema-arrows', attrs: { hidden: true } },
@@ -413,7 +584,7 @@ class SchemaEditor {
           'button',
           {
             class: `schema-arrow schema-arrow-${dir}`,
-            title: 'Trascina per collegare; clicca per aggiungere una forma collegata',
+            title: T.connectArrow,
             attrs: { type: 'button', tabindex: -1, 'aria-hidden': 'true', 'data-dir': dir },
             on: { pointerdown: (ev) => this.arrowDown(ev, dir) },
           },
@@ -423,11 +594,11 @@ class SchemaEditor {
     )
     this.textInput = h('textarea', {
       class: 'schema-text',
-      attrs: { hidden: true, rows: 1, 'aria-label': 'Testo (le formule tra $…$)', spellcheck: 'false' },
+      attrs: { hidden: true, rows: 1, 'aria-label': T.textInput, spellcheck: 'false' },
     })
     this.tableName = h('input', {
       class: 'schema-table-name',
-      attrs: { type: 'text', 'aria-label': 'Nome della tabella', placeholder: 'Nome della tabella', spellcheck: 'false', autocomplete: 'off' },
+      attrs: { type: 'text', 'aria-label': T.tableName, placeholder: T.tableName, spellcheck: 'false', autocomplete: 'off' },
     })
     // Senza a capo automatici: ogni riga è un campo, come nella tabella disegnata.
     this.tableFields = h('textarea', {
@@ -435,8 +606,8 @@ class SchemaEditor {
       attrs: {
         rows: 1,
         wrap: 'off',
-        'aria-label': 'Campi della tabella, uno per riga: PK davanti alla chiave primaria, FK davanti a quelle esterne',
-        placeholder: 'Un campo per riga',
+        'aria-label': T.tableFields,
+        placeholder: T.oneFieldPerLine,
         spellcheck: 'false',
       },
     })
@@ -444,14 +615,8 @@ class SchemaEditor {
     this.empty = h(
       'div',
       { class: 'schema-empty' },
-      h(
-        'p',
-        {},
-        'Trascina qui una forma dal pannello a sinistra, o cliccala.',
-        h('br'),
-        'Poi passa sopra una forma e trascina una freccia blu per collegarla a un\'altra.',
-      ),
-      h('p', {}, 'Oppure comincia da un modello:'),
+      h('p', {}, T.emptyDrag, h('br'), T.emptyConnect),
+      h('p', {}, T.emptyTemplate),
       h(
         'div',
         { class: 'schema-templates' },
@@ -459,11 +624,11 @@ class SchemaEditor {
       ),
     )
     this.wrap = h('div', { class: 'schema-canvas-wrap' }, this.canvas, this.arrows, this.textInput, this.tableText, this.empty)
-    this.format = h('aside', { class: 'schema-format', attrs: { 'aria-label': 'Aspetto' } })
+    this.format = h('aside', { class: 'schema-format', attrs: { 'aria-label': T.appearance } })
 
     this.dialog = h(
       'dialog',
-      { class: 'schema-editor', attrs: { 'aria-label': 'Editor dello schema' } },
+      { class: 'schema-editor', attrs: { 'aria-label': T.editor } },
       bar,
       h('div', { class: 'schema-main' }, palette, this.wrap, this.format),
     )
@@ -701,7 +866,7 @@ class SchemaEditor {
         'button',
         {
           class: 'schema-shape',
-          title: `${preset.name}: trascinala sul foglio o cliccala`,
+          title: T.dragOrClick(preset.name),
           // data-shape solo sulle forme di sempre: nelle basi di dati entità e relazione sono rettangolo e rombo.
           attrs: { type: 'button', 'data-preset': preset.id, ...(id === 'forme' && { 'data-shape': preset.shape }) },
           on: { click: () => this.addShape(preset) },
@@ -826,34 +991,29 @@ class SchemaEditor {
   private async exportImage(kind: 'png' | 'svg' | 'copy'): Promise<void> {
     const schema = this.current()
     if (!schema.nodes.length) {
-      toast('Lo schema è vuoto: non c\'è ancora niente da salvare come immagine.')
+      toast(T.emptyImage)
       return
     }
     const svg = schemaImage(schema)
-    const name = (ext: string) => fileNameFor(this.options.title ? `${this.options.title} schema` : 'schema', ext)
+    const name = (ext: string) => fileNameFor(this.options.title ? T.imageFile(this.options.title) : T.imageFileUntitled, ext)
     try {
       if (kind === 'svg') {
         await downloadText(name('.svg'), svg, 'image/svg+xml')
-        toast('Immagine SVG scaricata')
+        toast(T.svgDownloaded)
       } else if (kind === 'png') {
         downloadBlob(name('.png'), await svgToPng(svg))
-        toast('Immagine PNG scaricata')
+        toast(T.pngDownloaded)
       } else {
         if (typeof ClipboardItem === 'undefined' || !navigator.clipboard?.write) {
-          toast('Questo browser non sa copiare le immagini: scaricala come PNG.', 'error')
+          toast(T.cantCopyImages, 'error')
           return
         }
         // Safari vuole l'immagine (anche solo promessa) subito, durante il clic.
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': svgToPng(svg) })])
-        toast('Immagine copiata: incollala dove vuoi (Word, Google Docs, le slide…)')
+        toast(T.imageCopied)
       }
     } catch {
-      toast(
-        kind === 'copy'
-          ? 'L\'immagine non si è riuscita a copiare (il browser l\'ha impedito?): scaricala come PNG.'
-          : 'L\'immagine non si è riuscita a fare su questo browser: prova con l\'altro formato.',
-        'error',
-      )
+      toast(kind === 'copy' ? T.copyFailed : T.imageFailed, 'error')
     }
     this.canvas.focus()
   }
@@ -865,7 +1025,7 @@ class SchemaEditor {
   private openSql(): void {
     const schema = this.current()
     if (!schema.nodes.some((n) => n.shape === 'table')) {
-      toast('Nello schema non ci sono tabelle: le trovi nel gruppo «Basi di dati», a sinistra.')
+      toast(T.noTables)
       return
     }
     let dialect = loadDialect()
@@ -882,34 +1042,30 @@ class SchemaEditor {
       }
       code.textContent = sql()
     })
-    const fileName = fileNameFor(this.options.title ? `${this.options.title} tabelle` : 'tabelle', '.sql')
+    const fileName = fileNameFor(this.options.title ? T.sqlFile(this.options.title) : T.sqlFileUntitled, '.sql')
     const copy = async () => {
       try {
         await navigator.clipboard.writeText(sql())
-        toast('Codice SQL copiato')
+        toast(T.sqlCopied)
       } catch {
-        toast('Il codice non si è riuscito a copiare: scaricalo come file.', 'error')
+        toast(T.sqlCopyFailed, 'error')
       }
     }
     const download = async () => {
-      if (await downloadText(fileName, sql(), 'application/sql')) toast(`Scaricato «${fileName}»`)
+      if (await downloadText(fileName, sql(), 'application/sql')) toast(T.downloaded(fileName))
     }
     code.textContent = sql()
     dialogShell(
-      'Codice SQL delle tabelle',
+      T.sqlTitle,
       [
-        h('label', { class: 'sql-dialect' }, h('span', {}, 'Per quale database?'), select),
-        h('pre', { class: 'sql-code', attrs: { tabindex: 0, 'aria-label': 'Codice SQL' } }, code),
-        h(
-          'p',
-          { class: 'field-help' },
-          'Le chiavi esterne trovano la loro tabella con le frecce tra le tabelle, o con i nomi: un campo FK che si chiama come la chiave primaria dell\'altra tabella, o come l\'altra tabella. Le righe che cominciano con «--» sono note.',
-        ),
+        h('label', { class: 'sql-dialect' }, h('span', {}, T.whichDatabase), select),
+        h('pre', { class: 'sql-code', attrs: { tabindex: 0, 'aria-label': T.sqlCode } }, code),
+        h('p', { class: 'field-help' }, T.sqlHelp),
         h(
           'div',
           { class: 'dialog-actions' },
-          h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => void copy() } }, 'Copia'),
-          h('button', { class: 'btn btn-primary', attrs: { type: 'button' }, on: { click: () => void download() } }, 'Scarica .sql'),
+          h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => void copy() } }, T.copy),
+          h('button', { class: 'btn btn-primary', attrs: { type: 'button' }, on: { click: () => void download() } }, T.downloadSql),
         ),
       ],
       'dialog-sql',
@@ -1333,15 +1489,15 @@ class SchemaEditor {
 
     if (!cells.length) {
       this.format.replaceChildren(
-        h('p', { class: 'schema-format-hint' }, 'Seleziona una forma o una freccia per cambiarne colore e aspetto.'),
+        h('p', { class: 'schema-format-hint' }, T.selectHint),
         h(
           'ul',
           { class: 'schema-help' },
-          h('li', {}, 'Doppio clic su una forma per scriverci dentro, anche formule tra ', h('code', {}, '$…$'), '.'),
-          h('li', {}, 'Per sceglierne più di una (e allinearle): trascina un riquadro sul foglio vuoto, oppure ', h('kbd', {}, 'Maiusc'), ' + clic.'),
-          h('li', {}, 'Passa sopra una forma: trascina una freccia blu per collegarla, cliccala per aggiungerne una collegata.'),
-          h('li', {}, 'Rotellina per spostarti, Ctrl + rotellina per lo zoom; tieni premuto spazio per trascinare il foglio.'),
-          h('li', {}, h('kbd', {}, 'Ctrl'), ' ', h('kbd', {}, 'Z'), ' annulla, ', h('kbd', {}, 'Canc'), ' elimina, ', h('kbd', {}, 'Ctrl'), ' ', h('kbd', {}, 'D'), ' duplica.'),
+          h('li', {}, ...rich(T.helpWrite, { code: h('code', {}, '$…$') })),
+          h('li', {}, ...rich(T.helpSelect, { shift: h('kbd', {}, T.shiftKey) })),
+          h('li', {}, T.helpConnect),
+          h('li', {}, T.helpMove),
+          h('li', {}, ...rich(T.helpKeys, { ctrl: h('kbd', {}, 'Ctrl'), z: h('kbd', {}, 'Z'), del: h('kbd', {}, T.delKey), ctrl2: h('kbd', {}, 'Ctrl'), d: h('kbd', {}, 'D') })),
         ),
       )
       return
@@ -1356,7 +1512,7 @@ class SchemaEditor {
     const color = same(looks, 'color')
     sections.push(
       this.section(
-        'Colore',
+        T.color,
         COLORS.map((c) => {
           const swatch = PALETTE[this.look.theme][c]
           return this.choice(COLOR_NAMES[c], color === c, () => this.update(cells, { color: c }), h('span', { class: 'schema-swatch', style: { background: swatch.fill, borderColor: swatch.stroke } }))
@@ -1369,19 +1525,19 @@ class SchemaEditor {
       // Le forme dei database solo a chi le usa: gruppo aperto nel pannello, o una già selezionata.
       const kinds = (this.groups.db || shapes.some((s) => DB_SHAPES.includes(s)) ? SHAPES : SHAPES.filter((s) => !DB_SHAPES.includes(s))).filter((s) => s !== 'lanes')
       // Le corsie non diventano un'altra forma (né un'altra forma diventa corsie).
-      if (!shapes.includes('lanes')) sections.push(this.section('Forma', kinds.map((s) => this.choice(SHAPE_NAMES[s], shape === s, () => this.update(nodes, { shape: s }), icon(SHAPE_ICONS[s], 18)))))
+      if (!shapes.includes('lanes')) sections.push(this.section(T.shape, kinds.map((s) => this.choice(SHAPE_NAMES[s], shape === s, () => this.update(nodes, { shape: s }), icon(SHAPE_ICONS[s], 18)))))
       if (shapes.every((s) => ROTATABLE.includes(s))) {
-        const label = shapes.every((s) => DOT_SHAPES.includes(s)) ? 'Il nome dall\'altra parte del pallino' : 'Gira di un quarto (in senso orario)'
-        sections.push(this.section('Verso', [this.action(label, () => this.rotate(nodes), icon(PATHS.rotate, 18))]))
+        const label = shapes.every((s) => DOT_SHAPES.includes(s)) ? T.flipDot : T.rotate
+        sections.push(this.section(T.direction, [this.action(label, () => this.rotate(nodes), icon(PATHS.rotate, 18))]))
       }
       if (nodes.length >= 2) {
-        sections.push(this.section('Allinea', ALIGN.map((a) => this.action(a.label, () => this.arrange(nodes, (boxes) => alignBoxes(boxes, a.how)), icon(a.paths, 18)))))
+        sections.push(this.section(T.align, ALIGN.map((a) => this.action(ALIGN_NAMES[a.how], () => this.arrange(nodes, (boxes) => alignBoxes(boxes, a.how)), icon(a.paths, 18)))))
       }
       if (nodes.length >= 3) {
         sections.push(
-          this.section('Distribuisci', [
-            this.action('Distribuisci in orizzontale (stesso spazio tra le forme)', () => this.arrange(nodes, (boxes) => distributeBoxes(boxes, 'x')), icon(PATHS.distributeX, 18)),
-            this.action('Distribuisci in verticale (stesso spazio tra le forme)', () => this.arrange(nodes, (boxes) => distributeBoxes(boxes, 'y')), icon(PATHS.distributeY, 18)),
+          this.section(T.distribute, [
+            this.action(T.distributeX, () => this.arrange(nodes, (boxes) => distributeBoxes(boxes, 'x')), icon(PATHS.distributeX, 18)),
+            this.action(T.distributeY, () => this.arrange(nodes, (boxes) => distributeBoxes(boxes, 'y')), icon(PATHS.distributeY, 18)),
           ]),
         )
       }
@@ -1389,7 +1545,7 @@ class SchemaEditor {
     const size = same(looks, 'size')
     sections.push(
       this.section(
-        'Testo',
+        T.text,
         TEXT_SIZES.map((s) => this.choice(SIZE_NAMES[s], size === s, () => this.update(cells, { size: s }), h('span', { class: `schema-size schema-size-${s}` }, 'A'))),
       ),
     )
@@ -1399,24 +1555,24 @@ class SchemaEditor {
       const arrows = same(edgeLooks, 'arrows')
       const dashed = same(edgeLooks, 'dashed')
       sections.push(
-        this.section('Linea', [
+        this.section(T.line, [
           ...ROUTES.map((r) => this.choice(ROUTE_NAMES[r], route === r, () => this.update(edges, { route: r }), icon(PATHS[r], 18))),
-          this.choice('Tratteggiata', dashed === true, () => this.update(edges, { dashed: dashed !== true }), icon(PATHS.dashed, 18)),
+          this.choice(T.dashed, dashed === true, () => this.update(edges, { dashed: dashed !== true }), icon(PATHS.dashed, 18)),
         ]),
-        this.section('Punte', ARROWS.map((a) => this.choice(ARROW_NAMES[a], arrows === a, () => this.update(edges, { arrows: a }), icon(PATHS[a], 18)))),
+        this.section(T.arrowheads, ARROWS.map((a) => this.choice(ARROW_NAMES[a], arrows === a, () => this.update(edges, { arrows: a }), icon(PATHS[a], 18)))),
       )
       const ats = edges.map(edgeTextAt)
       const at = ats.every((a) => a === ats[0]) ? ats[0] : undefined
-      sections.push(this.section('Posizione del testo', TEXT_AT.map((a) => this.choice(AT_NAMES[a], at === a, () => this.setTextAt(edges, a), icon(AT_ICONS[a], 18)))))
+      sections.push(this.section(T.textPosition, TEXT_AT.map((a) => this.choice(AT_NAMES[a], at === a, () => this.setTextAt(edges, a), icon(AT_ICONS[a], 18)))))
     }
     sections.push(
       h(
         'div',
         { class: 'schema-format-actions' },
         cells.length === 1
-          ? h('button', { class: 'btn btn-small', attrs: { type: 'button' }, on: { click: () => this.startEditing(cells[0]) } }, 'Modifica il testo')
+          ? h('button', { class: 'btn btn-small', attrs: { type: 'button' }, on: { click: () => this.startEditing(cells[0]) } }, T.editText)
           : null,
-        h('button', { class: 'btn btn-small btn-danger-quiet', attrs: { type: 'button' }, on: { click: () => this.deleteSelection() } }, 'Elimina'),
+        h('button', { class: 'btn btn-small btn-danger-quiet', attrs: { type: 'button' }, on: { click: () => this.deleteSelection() } }, T.delete),
       ),
     )
     this.format.replaceChildren(...sections)
@@ -1432,10 +1588,10 @@ class SchemaEditor {
    */
   private lanesSection(cell: Cell): { cell: Cell; section: HTMLElement; update(): void } {
     const names = () => laneNames(nodeLook(cell).text)
-    const list = h('div', { class: 'schema-lanes', attrs: { role: 'list', 'aria-label': 'Corsie' } })
+    const list = h('div', { class: 'schema-lanes', attrs: { role: 'list', 'aria-label': T.laneList } })
     const rows: { name: HTMLInputElement; remove: HTMLButtonElement; el: HTMLElement }[] = []
     const makeRow = (i: number) => {
-      const name = fieldInput('', `Nome della corsia ${i + 1}`, 'schema-lane-name')
+      const name = fieldInput('', T.laneName(i + 1), 'schema-lane-name')
       const remove = h('button', { class: 'icon-button schema-field-remove', attrs: { type: 'button' } }, icon(ICONS.x, 14))
       const commit = () => {
         const next = names()
@@ -1477,7 +1633,7 @@ class SchemaEditor {
       }
       current.forEach((n, i) => {
         if (document.activeElement !== rows[i].name) rows[i].name.value = n
-        const label = `Togli la corsia «${n || i + 1}»`
+        const label = T.removeLane(n || String(i + 1))
         rows[i].remove.title = label
         rows[i].remove.setAttribute('aria-label', label)
         rows[i].remove.disabled = current.length < 2
@@ -1485,24 +1641,24 @@ class SchemaEditor {
     }
     const add = h(
       'button',
-      { class: 'btn btn-small schema-field-add', attrs: { type: 'button' }, on: { click: () => this.setLanes(cell, [...names(), `Corsia ${names().length + 1}`], nodeLook(cell).rot === 1) } },
+      { class: 'btn btn-small schema-field-add', attrs: { type: 'button' }, on: { click: () => this.setLanes(cell, [...names(), T.newLane(names().length + 1)], nodeLook(cell).rot === 1) } },
       icon(ICONS.plus, 14),
-      'Aggiungi corsia',
+      T.addLane,
     )
     const rowsMode = nodeLook(cell).rot === 1
     const section = h(
       'section',
       { class: 'schema-format-section schema-lanes-section' },
-      h('h3', {}, 'Corsie'),
+      h('h3', {}, T.lanes),
       list,
       add,
       h(
         'div',
         { class: 'schema-choices' },
-        this.choice('In colonne: i nomi in alto', !rowsMode, () => this.setLanes(cell, names(), false), icon(SHAPE_ICONS.lanes, 18)),
-        this.choice('In righe: i nomi a sinistra', rowsMode, () => this.setLanes(cell, names(), true), icon(LANE_ROWS_ICON, 18)),
+        this.choice(T.columns, !rowsMode, () => this.setLanes(cell, names(), false), icon(SHAPE_ICONS.lanes, 18)),
+        this.choice(T.rows, rowsMode, () => this.setLanes(cell, names(), true), icon(LANE_ROWS_ICON, 18)),
       ),
-      h('p', { class: 'schema-format-hint' }, 'Le forme del processo vanno sopra le corsie, nella corsia di chi fa quel passo. Le corsie si prendono dalla fascia dei nomi, e spostandole si spostano anche le forme che ci sono sopra.'),
+      h('p', { class: 'schema-format-hint' }, T.lanesHint),
     )
     update()
     return { cell, section, update }
@@ -1556,10 +1712,10 @@ class SchemaEditor {
       el: HTMLElement
     }
     const rows: Row[] = []
-    const list = h('div', { class: 'schema-fields', attrs: { role: 'list', 'aria-label': 'Campi della tabella' } })
-    const title = fieldInput('Nome della tabella', 'Nome della tabella', 'schema-table-title')
-    const missing = h('p', { class: 'schema-format-hint schema-fields-missing' }, 'Manca la chiave primaria: premi «PK» sui campi che la formano.')
-    const add = h('button', { class: 'btn btn-small schema-field-add', attrs: { type: 'button' } }, icon(ICONS.plus, 14), 'Aggiungi campo')
+    const list = h('div', { class: 'schema-fields', attrs: { role: 'list', 'aria-label': T.fields } })
+    const title = fieldInput(T.tableName, T.tableName, 'schema-table-title')
+    const missing = h('p', { class: 'schema-format-hint schema-fields-missing' }, T.missingKey)
+    const add = h('button', { class: 'btn btn-small schema-field-add', attrs: { type: 'button' } }, icon(ICONS.plus, 14), T.addField)
 
     const focusRow = (i: number, column: 'name' | 'type' = 'name') => {
       const input = rows[i]?.[column]
@@ -1567,7 +1723,7 @@ class SchemaEditor {
       input?.select()
     }
     const addField = () => {
-      write((t) => t.fields.push(tableField('Campo')))
+      write((t) => t.fields.push(tableField(T.newField)))
       focusRow(rows.length - 1)
     }
     /** Invio va al campo dopo (dopo l'ultimo ne aggiunge uno), le frecce su e giù, Esc lascia com'era. */
@@ -1609,8 +1765,8 @@ class SchemaEditor {
       const row: Row = {
         pk: key('pk'),
         fk: key('fk'),
-        name: fieldInput('', 'Nome del campo', 'schema-field-name'),
-        type: fieldInput('tipo', 'Tipo del campo, per l\'SQL (facoltativo)', 'schema-field-type'),
+        name: fieldInput('', T.fieldName, 'schema-field-name'),
+        type: fieldInput(T.typePlaceholder, T.fieldType, 'schema-field-type'),
         remove: h('button', { class: 'icon-button schema-field-remove', attrs: { type: 'button' } }, icon(ICONS.x, 14)),
         el: h('div', { class: 'schema-field', attrs: { role: 'listitem' } }),
       }
@@ -1645,16 +1801,16 @@ class SchemaEditor {
       }
       table.fields.forEach((field, i) => {
         const row = rows[i]
-        const label = field.name || `campo ${i + 1}`
+        const label = field.name || T.unnamedField(i + 1)
         row.pk.setAttribute('aria-pressed', String(field.pk))
         row.fk.setAttribute('aria-pressed', String(field.fk))
-        row.pk.title = `Chiave primaria: ${label}`
-        row.fk.title = `Chiave esterna: ${label}`
+        row.pk.title = T.primaryKey(label)
+        row.fk.title = T.foreignKey(label)
         row.pk.setAttribute('aria-label', row.pk.title)
         row.fk.setAttribute('aria-label', row.fk.title)
         row.name.value = field.name
         row.type.value = field.type
-        row.remove.title = `Togli il campo «${label}»`
+        row.remove.title = T.removeField(label)
         row.remove.setAttribute('aria-label', row.remove.title)
       })
       missing.hidden = !table.fields.length || table.fields.some((f) => f.pk)
@@ -1680,17 +1836,13 @@ class SchemaEditor {
     const section = h(
       'section',
       { class: 'schema-format-section schema-table-section' },
-      h('h3', {}, 'Tabella'),
+      h('h3', {}, T.table),
       title,
-      h('div', { class: 'schema-fields-head', attrs: { 'aria-hidden': 'true' } }, h('span', {}, 'Chiave'), h('span', {}, 'Campo'), h('span', {}, 'Tipo')),
+      h('div', { class: 'schema-fields-head', attrs: { 'aria-hidden': 'true' } }, h('span', {}, T.key), h('span', {}, T.field), h('span', {}, T.type)),
       list,
       missing,
       add,
-      h(
-        'p',
-        { class: 'schema-format-hint' },
-        'Il tipo serve per l\'SQL (per esempio INTEGER, VARCHAR(50), DATE). Sul foglio, con un doppio clic, si scrive un campo per riga: «PK» e «FK» davanti, il tipo dopo i due punti (Matricola: CHAR(6)).',
-      ),
+      h('p', { class: 'schema-format-hint' }, T.tableHint),
     )
     update()
     return { cell, section, update }
@@ -2086,7 +2238,7 @@ class SchemaEditor {
     const schema = this.current()
     this.options.onSave(schema)
     this.saved = serializeSchema(schema)
-    this.status.textContent = 'Salvato nella nota'
+    this.status.textContent = T.saved
     clearTimeout(this.statusTimer)
     this.statusTimer = window.setTimeout(() => (this.status.textContent = ''), 2500)
   }
@@ -2100,10 +2252,10 @@ class SchemaEditor {
   private async requestClose(): Promise<void> {
     if (serializeSchema(this.current()) !== this.saved) {
       const ok = await confirmDialog({
-        title: 'Chiudere senza salvare?',
-        message: 'Le ultime modifiche allo schema non sono ancora nella nota.',
-        confirmLabel: 'Chiudi senza salvare',
-        cancelLabel: 'Torna allo schema',
+        title: T.closeTitle,
+        message: T.closeMessage,
+        confirmLabel: T.closeConfirm,
+        cancelLabel: T.backToDiagram,
         danger: true,
       })
       if (!ok) {

@@ -3,7 +3,13 @@
  * Si parte dall'SVG di `schemaImage` (chiaro su bianco) e lo si disegna su un canvas, due
  * volte più fitto dello schermo, così resta nitido anche ingrandito.
  */
+import { texts } from '../i18n'
 import { base64 } from './file'
+
+const T = texts({
+  noCanvas: ['Canvas non disponibile', 'Canvas not available'],
+  pngFailed: ['PNG non riuscito', 'Couldn\'t create the PNG'],
+})
 
 /** Oltre tanti pixel i telefoni (Safari) non disegnano il canvas: gli schemi enormi vengono meno fitti. */
 const MAX_PIXELS = 16_000_000
@@ -74,10 +80,10 @@ export async function svgToPng(svg: string, scale = 2): Promise<Blob> {
   canvas.width = Math.max(1, Math.round(width * k))
   canvas.height = Math.max(1, Math.round(height * k))
   const context = canvas.getContext('2d')
-  if (!context) throw new Error('Canvas non disponibile')
+  if (!context) throw new Error(T.noCanvas)
   context.drawImage(image, 0, 0, canvas.width, canvas.height)
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
-  if (!blob) throw new Error('PNG non riuscito')
+  if (!blob) throw new Error(T.pngFailed)
   const png = withDensity(new Uint8Array(await blob.arrayBuffer()), k)
   return new Blob([png], { type: 'image/png' })
 }

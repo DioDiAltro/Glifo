@@ -4,14 +4,42 @@
  * riferiscono). Una chiave esterna (FK) trova la sua tabella con le frecce tra le tabelle o con
  * i nomi: un campo che si chiama come la chiave primaria di un'altra tabella (Matricola →
  * Studente.Matricola) o come l'altra tabella (Corso → Corso.Codice). Quello che non si capisce
- * finisce in una nota, dopo «--».
+ * finisce in una nota, dopo «--». Le note e i nomi che sceglie Glifo (tabella_1, campo_1) sono nella
+ * lingua di Glifo; i nomi scritti nello schema restano quelli.
  */
+import { texts } from '../i18n'
 import { parseTable, type Schema } from './model'
+
+const T = texts({
+  standard: ['SQL standard', 'Standard SQL'],
+  /** Il nome di una tabella senza nome (n da 1). */
+  table: (n: number) => [`tabella_${n}`, `table_${n}`],
+  /** Il nome di un campo senza nome (n da 1). */
+  field: (n: number) => [`campo_${n}`, `field_${n}`],
+  renamed: (name: string, ident: string) => [`«${name}» → ${ident}`, `“${name}” → ${ident}`],
+  unclearKey: (field: string) => [
+    `«${field}» è una chiave esterna, ma non si capisce di quale tabella: collega le tabelle con una freccia, o chiama il campo come la chiave primaria dell'altra tabella.`,
+    `“${field}” is a foreign key, but it isn't clear which table it refers to: connect the tables with an arrow, or give the field the same name as the other table's primary key.`,
+  ],
+  wholeKey: (to: string, keys: string, table: string) => [
+    `La chiave primaria di «${to}» è (${keys}): per riferirsi a lei, in «${table}» servono tutti questi campi come FK.`,
+    `The primary key of “${to}” is (${keys}): to refer to it, “${table}” needs all these fields, marked FK.`,
+  ],
+  noTables: ['Nello schema non ci sono tabelle.', 'There are no tables in the diagram.'],
+  header: (dialect: string) => [`Tabelle per ${dialect}, scritte con Glifo.`, `Tables for ${dialect}, written with Glifo.`],
+  defaultType: (type: string) => [`I campi senza tipo sono ${type}: cambialo dove serve.`, `Fields without a type are ${type}: change it where needed.`],
+  renamedNames: (list: string) => [`Nomi scritti per l'SQL (senza spazi né accenti): ${list}.`, `Names written for SQL (without spaces or accents): ${list}.`],
+  sqliteKeys: ['SQLite controlla le chiavi esterne solo con questa riga, da ripetere a ogni connessione:', 'SQLite only checks foreign keys with this line, to be repeated on every connection:'],
+  noFields: (table: string) => [`«${table}» non ha campi: aggiungili e scarica di nuovo il codice.`, `“${table}” has no fields: add some and download the code again.`],
+  noPrimaryKey: (table: string) => [`«${table}» non ha una chiave primaria: premi «PK» sui campi che la formano.`, `“${table}” has no primary key: press “PK” on the fields that make it up.`],
+  laterKeys: ['Chiavi esterne verso tabelle create dopo:', 'Foreign keys to tables created later:'],
+})
 
 export type SqlDialect = 'standard' | 'postgresql' | 'mysql' | 'sqlite' | 'oracle' | 'sqlserver'
 
-export const SQL_DIALECTS: readonly { id: SqlDialect; name: string }[] = [
-  { id: 'standard', name: 'SQL standard' },
+/** I database, con il nome da mostrare (quello dell'SQL standard nella lingua di Glifo, quando si legge). */
+export const SQL_DIALECTS: readonly { id: SqlDialect; readonly name: string }[] = [
+  { id: 'standard', get name() { return T.standard } },
   { id: 'postgresql', name: 'PostgreSQL' },
   { id: 'mysql', name: 'MySQL / MariaDB' },
   { id: 'sqlite', name: 'SQLite' },
@@ -146,15 +174,15 @@ function readTables(schema: Schema, renamed: string[]): { tables: SqlTable[]; id
     .map((node, i) => {
       const parsed = parseTable(node.text)
       const label = parsed.name.trim()
-      const ident = unique(identFrom(label) || `tabella_${i + 1}`, tableNames)
-      if (label && ident !== label) renamed.push(`«${label}» → ${ident}`)
+      const ident = unique(identFrom(label) || T.table(i + 1), tableNames)
+      if (label && ident !== label) renamed.push(T.renamed(label, ident))
       const columnNames = new Set<string>()
       const columns = parsed.fields
         .filter((f) => f.name.trim() || f.type.trim() || f.pk || f.fk)
         .map((f, j): Column => {
           const name = f.name.trim()
-          const column = unique(identFrom(name) || `campo_${j + 1}`, columnNames)
-          if (name && column !== name) renamed.push(`«${label || ident}.${name}» → ${ident}.${column}`)
+          const column = unique(identFrom(name) || T.field(j + 1), columnNames)
+          if (name && column !== name) renamed.push(T.renamed(`${label || ident}.${name}`, `${ident}.${column}`))
           return { label: name || column, ident: column, type: f.type.trim(), pk: f.pk, fk: f.fk }
         })
       const table: SqlTable = { label: label || ident, ident, columns, notes: [] }
@@ -208,9 +236,7 @@ function findForeignKeys(tables: SqlTable[], schema: Schema, ids: Map<string, Sq
       for (const column of unclear.splice(0)) targets.set(column, { to: free[0], ref: primaryKey(free[0])[0] })
     }
     for (const column of unclear) {
-      table.notes.push(
-        `«${table.label}.${column.label}» è una chiave esterna, ma non si capisce di quale tabella: collega le tabelle con una freccia, o chiama il campo come la chiave primaria dell'altra tabella.`,
-      )
+      table.notes.push(T.unclearKey(`${table.label}.${column.label}`))
     }
     const keys: ForeignKey[] = []
     for (const to of new Set([...targets.values()].map((v) => v.to))) {
@@ -223,9 +249,7 @@ function findForeignKeys(tables: SqlTable[], schema: Schema, ids: Map<string, Sq
         // Una chiave primaria di più campi: la chiave esterna li ha tutti, nello stesso ordine.
         keys.push({ columns: key.map((k) => columns.find((c) => targets.get(c)!.ref === k)!), to, refs: key })
       } else {
-        table.notes.push(
-          `La chiave primaria di «${to.label}» è (${key.map((k) => k.label).join(', ')}): per riferirsi a lei, in «${table.label}» servono tutti questi campi come FK.`,
-        )
+        table.notes.push(T.wholeKey(to.label, key.map((k) => k.label).join(', '), table.label))
       }
     }
     result.set(table, keys)
@@ -238,7 +262,7 @@ export function schemaSql(schema: Schema, dialect: SqlDialect): string {
   const dialectName = SQL_DIALECTS.find((d) => d.id === dialect)!.name
   const renamed: string[] = []
   const { tables, ids } = readTables(schema, renamed)
-  if (!tables.length) return '-- Nello schema non ci sono tabelle.\n'
+  if (!tables.length) return `-- ${T.noTables}\n`
   const foreign = findForeignKeys(tables, schema, ids)
   const q = (ident: string) => quote(ident, dialect)
 
@@ -264,10 +288,10 @@ export function schemaSql(schema: Schema, dialect: SqlDialect): string {
     remaining.splice(remaining.indexOf(ready), 1)
   }
 
-  const out: string[] = [`-- Tabelle per ${dialectName}, scritte con Glifo.`]
-  if (defaulted) out.push(`-- I campi senza tipo sono ${DEFAULT_TYPE[dialect]}: cambialo dove serve.`)
-  if (renamed.length) out.push(`-- Nomi scritti per l'SQL (senza spazi né accenti): ${renamed.join(', ')}.`)
-  if (dialect === 'sqlite') out.push('-- SQLite controlla le chiavi esterne solo con questa riga, da ripetere a ogni connessione:', 'PRAGMA foreign_keys = ON;')
+  const out: string[] = [`-- ${T.header(dialectName)}`]
+  if (defaulted) out.push(`-- ${T.defaultType(DEFAULT_TYPE[dialect])}`)
+  if (renamed.length) out.push(`-- ${T.renamedNames(renamed.join(', '))}`)
+  if (dialect === 'sqlite') out.push(`-- ${T.sqliteKeys}`, 'PRAGMA foreign_keys = ON;')
   out.push('')
   const later: string[] = []
   const created: SqlTable[] = []
@@ -275,11 +299,11 @@ export function schemaSql(schema: Schema, dialect: SqlDialect): string {
   for (const table of order) {
     const notes = [...table.notes]
     if (!table.columns.length) {
-      out.push(`-- «${table.label}» non ha campi: aggiungili e scarica di nuovo il codice.`, '')
+      out.push(`-- ${T.noFields(table.label)}`, '')
       continue
     }
     const key = primaryKey(table)
-    if (!key.length) notes.unshift(`«${table.label}» non ha una chiave primaria: premi «PK» sui campi che la formano.`)
+    if (!key.length) notes.unshift(T.noPrimaryKey(table.label))
     const width = Math.max(...table.columns.map((c) => q(c.ident).length))
     const lines = table.columns.map((c) => `  ${q(c.ident).padEnd(width)} ${types.get(c)}${c.pk ? ' NOT NULL' : ''}`)
     if (key.length) lines.push(`  PRIMARY KEY (${key.map((c) => q(c.ident)).join(', ')})`)
@@ -290,6 +314,6 @@ export function schemaSql(schema: Schema, dialect: SqlDialect): string {
     }
     out.push(...notes.map((n) => `-- ${n}`), `CREATE TABLE ${q(table.ident)} (`, lines.join(',\n'), ');', '')
   }
-  if (later.length) out.push('-- Chiavi esterne verso tabelle create dopo:', ...later, '')
+  if (later.length) out.push(`-- ${T.laterKeys}`, ...later, '')
   return `${out.join('\n').trimEnd()}\n`
 }

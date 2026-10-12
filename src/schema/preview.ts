@@ -3,9 +3,16 @@
  * src/render/markdown.ts) e qui lo si disegna. maxGraph si carica alla prima nota con uno
  * schema; i disegni restano in memoria, così mentre si scrive non si rifanno ogni volta.
  */
+import { texts } from '../i18n'
 import { escapeHtml } from '../render/katex'
 import { moveButtonsHtml } from '../ui/moveButtons'
 import { parseSchema, SchemaError, type Theme } from './model'
+
+const T = texts({
+  cantDraw: ['Lo schema non si riesce a disegnare.', 'The diagram can\'t be drawn.'],
+  edit: ['Modifica', 'Edit'],
+  editTitle: ['Modifica lo schema (anche con un doppio clic)', 'Edit the diagram (or double-click it)'],
+})
 
 export interface PreviewLook {
   theme: Theme
@@ -21,7 +28,7 @@ const pending = new Map<string, Promise<string>>()
 let graphModule: Promise<typeof import('./graph')> | null = null
 
 function errorHtml(err: unknown): string {
-  const message = err instanceof SchemaError ? err.message : 'Lo schema non si riesce a disegnare.'
+  const message = err instanceof SchemaError ? err.message : T.cantDraw
   return `<p class="schema-error">${escapeHtml(message)}</p>`
 }
 
@@ -65,8 +72,8 @@ function fill(block: HTMLElement, html: string, look: PreviewLook): void {
     Object.assign(document.createElement('button'), {
       type: 'button',
       className: 'btn btn-small schema-edit',
-      textContent: 'Modifica',
-      title: 'Modifica lo schema (anche con un doppio clic)',
+      textContent: T.edit,
+      title: T.editTitle,
     }),
   )
   if (look.editable && block.dataset.move !== undefined) {
