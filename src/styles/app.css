@@ -486,35 +486,34 @@ kbd {
   color: var(--accent-text);
 }
 
+/* Aperto, il pannello accende il suo pulsante con un contorno spesso (2 px: il bordo e un'ombra
+   dentro, così il pulsante non cambia misura), come «Spiega con l'AI» qui sotto (GRAFICA.md, punto 8). */
 .app.symbols-open .symbols-toggle {
-  background: var(--accent);
   border-color: var(--accent);
-  color: var(--on-accent);
+  box-shadow: inset 0 0 0 1px var(--accent), 0 2px 8px rgba(20, 24, 40, 0.08);
 }
 
 /* «Spiega con l'AI»: solo l'icona, nella barra dopo $$. Il pannello a destra mostra una vista alla
-   volta: è acceso il pulsante di quella che si vede (`data-panel` su .app). */
+   volta: è acceso il pulsante di quella che si vede (`data-panel` su .app), con il contorno. */
 .ai-toggle {
   color: var(--accent);
 }
 
 .app.symbols-open[data-panel='ai'] .ai-toggle {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
+  box-shadow: inset 0 0 0 2px var(--accent);
+  color: var(--accent);
 }
 
 .app.symbols-open[data-panel='ai'] .symbols-toggle {
-  background: var(--accent-soft);
   border-color: var(--border);
-  color: var(--accent-text);
+  box-shadow: 0 2px 8px rgba(20, 24, 40, 0.08);
 }
 
 /* Mentre l'AI lavora (`.is-working`, da aiActivity.ts) l'icona cambia colore sfumando, dall'azzurro al
    rosa e indietro (in fila sul cerchio dei colori: tra due lontani la sfumatura passerebbe dal grigio),
-   con un alone dello stesso colore, come un neon; con il pannello AI aperto, che lo accende, sfuma il
-   pulsante, con la luce dentro. Gli aloni restano dentro il pulsante: la barra, che scorre quando non
-   c'è posto, taglierebbe quello che esce. Se finisce mentre il pannello AI non si vede, un pallino come
+   con un alone dello stesso colore, come un neon; con il pannello AI aperto sfuma anche il contorno, con
+   la luce verso l'interno. Gli aloni restano dentro il pulsante: la barra, che scorre quando non c'è
+   posto, taglierebbe quello che esce. Se finisce mentre il pannello AI non si vede, un pallino come
    quello dei messaggi (`.has-news`), finché non lo si riapre. */
 .ai-toggle {
   position: relative;
@@ -525,13 +524,7 @@ kbd {
 }
 
 .app.symbols-open[data-panel='ai'] .ai-toggle.is-working {
-  animation: ai-working-on 3s ease-in-out infinite alternate;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35), inset 0 0 8px rgba(255, 255, 255, 0.45);
-}
-
-.app.symbols-open[data-panel='ai'] .ai-toggle.is-working svg {
-  animation: none;
-  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.9));
+  animation: ai-working-ring 3s ease-in-out infinite alternate;
 }
 
 /* Il neon: il colore pieno e due aloni, uno stretto e uno largo (al massimo 5 px, dentro il pulsante),
@@ -555,18 +548,19 @@ kbd {
   }
 }
 
-@keyframes ai-working-on {
+/* Il contorno del pulsante acceso: lo stesso neon, con l'alone che va verso il centro. */
+@keyframes ai-working-ring {
   0% {
-    background-color: var(--ai-1);
+    box-shadow: inset 0 0 0 2px var(--ai-1), inset 0 0 6px var(--ai-1);
   }
   33% {
-    background-color: var(--ai-2);
+    box-shadow: inset 0 0 0 2px var(--ai-2), inset 0 0 9px var(--ai-2);
   }
   67% {
-    background-color: var(--ai-3);
+    box-shadow: inset 0 0 0 2px var(--ai-3), inset 0 0 6px var(--ai-3);
   }
   100% {
-    background-color: var(--ai-4);
+    box-shadow: inset 0 0 0 2px var(--ai-4), inset 0 0 9px var(--ai-4);
   }
 }
 
@@ -605,9 +599,8 @@ kbd {
     filter: drop-shadow(0 0 1px var(--ai-3)) drop-shadow(0 0 4px var(--ai-3));
   }
 
-  .app.symbols-open[data-panel='ai'] .ai-toggle.is-working svg {
-    color: inherit;
-    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.9));
+  .app.symbols-open[data-panel='ai'] .ai-toggle.is-working {
+    box-shadow: inset 0 0 0 2px var(--ai-3), inset 0 0 7px var(--ai-3);
   }
 }
 

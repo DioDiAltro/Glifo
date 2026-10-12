@@ -16,6 +16,7 @@ function dataHelp(accountEmail?: string): string {
   openSettingsDialog({
     settings: { ...DEFAULT_SETTINGS },
     onChange: () => {},
+    onLanguageChange: () => {},
     personalWords: [],
     onPersonalWordsChange: (words) => words,
     onBackup: () => {},

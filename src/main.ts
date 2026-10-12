@@ -42,6 +42,7 @@ import { confirmDialog, openHelpDialog, openSettingsDialog, openTouchLogDialog, 
 import { aiActivity } from './ui/aiActivity'
 import { openCommentsDialog } from './ui/comments'
 import { inClaudeViewer } from './host'
+import { chooseLang, lang, LANG_KEY, rememberLang, texts } from './i18n'
 import { accountOffMessage, type Site } from './site'
 import { SpellClient } from './spell/client'
 import type { SpellLanguage } from './spell/engine'
@@ -114,6 +115,18 @@ touchLog.resume()
 
 // Il progetto si chiamava Matherdown: recupera gli appunti salvati con il vecchio nome.
 migrateKeyPrefix('matherdown.', 'glifo.')
+
+// La lingua (src/i18n.ts): trovata la prima volta, da qui resta quella; la pagina la dice al browser.
+rememberLang()
+document.documentElement.lang = lang
+
+const T = texts({
+  languageElsewhere: [
+    'La lingua di Glifo è cambiata in un\'altra scheda: ricarica per vederla anche qui.',
+    'Glifo\'s language changed in another tab: reload to see it here too.',
+  ],
+  reload: ['Ricarica', 'Reload'],
+})
 
 const settings: Settings = loadSettings()
 // Con l'account le note stanno in uno spazio a parte, e gli appunti di prima restano dove sono.
@@ -409,22 +422,23 @@ const aiToggle = h(
 // Mentre l'AI lavora il pulsante sfuma i colori; se finisce con il pannello AI che non si vede, un pallino.
 const aiWork = aiActivity(aiToggle, () => settings.symbolsOpen && sidePanel.view === 'ai')
 const tools = createToolbar(editor, { onSchema: () => void openSchema(null), onSheet: () => void openSheet(null), onGraph: () => insertGraph(), explain: aiToggle })
+const symbolsToggle = h(
+  'button',
+  {
+    class: 'icon-button float-button symbols-toggle',
+    title: 'Mostra/nascondi i simboli',
+    attrs: { type: 'button', 'aria-label': 'Mostra o nascondi il pannello dei simboli' },
+    on: { click: () => togglePanel('symbols') },
+  },
+  icon(ICONS.panel),
+  h('span', { class: 'symbols-toggle-label' }, 'Simboli'),
+)
 const floatTools = h('div', { class: 'float-tools' }, tools.format)
 const floatRight = h(
   'div',
   { class: 'float-right' },
   tools.insert,
-  h(
-    'button',
-    {
-      class: 'icon-button float-button symbols-toggle',
-      title: 'Mostra/nascondi i simboli',
-      attrs: { type: 'button', 'aria-label': 'Mostra o nascondi il pannello dei simboli' },
-      on: { click: () => togglePanel('symbols') },
-    },
-    icon(ICONS.panel),
-    h('span', { class: 'symbols-toggle-label' }, 'Simboli'),
-  ),
+  symbolsToggle,
 )
 const floatBar = h(
   'div',
@@ -561,6 +575,7 @@ function setPanels(next: Partial<Pick<Settings, 'notesOpen' | 'symbolsOpen'>>): 
   sidePanel.setOpen(settings.symbolsOpen)
   fitBar()
   aiShown()
+  markPanelButtons()
 }
 
 /** Il pannello a destra mostra i simboli o «Spiega con l'AI»: il pulsante della vista che si vede lo chiude, l'altro cambia vista. */
@@ -577,6 +592,13 @@ function showPanelView(view: PanelView): void {
   sidePanel.setView(view)
   app.dataset.panel = view
   aiShown()
+  markPanelButtons()
+}
+
+/** Il pulsante del pannello che si vede ha il contorno (app.css); qui lo sa anche chi usa un lettore di schermo. */
+function markPanelButtons(): void {
+  symbolsToggle.setAttribute('aria-expanded', String(settings.symbolsOpen && sidePanel.view === 'symbols'))
+  aiToggle.setAttribute('aria-expanded', String(settings.symbolsOpen && sidePanel.view === 'ai'))
 }
 
 /** Il pannello AI si vede (aperto, con la vista ✨): il pallino del pulsante se ne va. */
@@ -620,6 +642,10 @@ function openSettings(): void {
   openSettingsDialog({
     settings,
     onChange: (next) => updateSettings(next),
+    onLanguageChange: (next) => {
+      chooseLang(next)
+      reloadForUpdate()
+    },
     personalWords: loadPersonalWords(),
     onPersonalWordsChange: (words) => setPersonalWords(words),
     onBackup: () => void backup(),
@@ -888,6 +914,10 @@ if (storageAvailable()) {
       applySpellcheck()
     }
     if (key === null || key === DICTIONARY_KEY) spell?.setPersonalWords(loadPersonalWords())
+    // Un'altra scheda ha cambiato la lingua: qui la si vede ricaricando.
+    if (key === LANG_KEY && ev.newValue && ev.newValue !== lang) {
+      toast(T.languageElsewhere, 'info', { action: { label: T.reload, run: () => reloadForUpdate() } })
+    }
   })
 }
 

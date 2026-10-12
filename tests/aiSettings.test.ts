@@ -19,6 +19,7 @@ function open(settings: Partial<Settings> = {}): { changes: Partial<Settings>[];
   openSettingsDialog({
     settings: { ...DEFAULT_SETTINGS, ...settings },
     onChange: (next) => changes.push(next),
+    onLanguageChange: () => {},
     personalWords: [],
     onPersonalWordsChange: (words) => words,
     onBackup: () => {},

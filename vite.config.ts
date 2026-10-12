@@ -90,6 +90,8 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
+    // Le prove si aprono in italiano (src/i18n.ts prende la lingua dal browser).
+    setupFiles: ['tests/support/lang.ts'],
     // Di solito nei test i CSS sono vuoti; questo serve ai controlli dei temi (tests/theme.test.ts).
     css: { include: [/src\/styles\/app\.css/] },
   },

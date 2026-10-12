@@ -1,4 +1,5 @@
 import { inClaudeViewer } from '../host'
+import { lang, LANGUAGES, texts, type Lang } from '../i18n'
 import { EXPLAIN_TONES } from '../ai/explain'
 import { localLlm } from '../ai/local'
 import { LOCAL_MODELS, localModel, modelInBrowser } from '../ai/localModels'
@@ -8,9 +9,19 @@ import { ICONS, h, icon } from './dom'
 import { privacyLink } from './links'
 import { touchLogFieldset } from './touchLogPanel'
 
+const T = texts({
+  language: ['Lingua', 'Language'],
+  languageHelp: [
+    'La lingua di menu, finestre e messaggi: cambiandola, Glifo si ricarica. Le lingue in cui scrivi le sceglie il controllo ortografico, più sotto.',
+    'The language of menus, dialogs and messages: changing it reloads Glifo. The languages you write in are set by the spell checker, further down.',
+  ],
+})
+
 export interface SettingsDialogDeps {
   settings: Settings
   onChange(next: Partial<Settings>): void
+  /** La lingua di Glifo (src/i18n.ts): chi la riceve la salva e ricarica la pagina. */
+  onLanguageChange(next: Lang): void
   /** Parole aggiunte al dizionario del controllo ortografico. */
   personalWords: string[]
   /** Salva il nuovo elenco e restituisce la versione ripulita. */
@@ -317,6 +328,28 @@ export function openSettingsDialog(deps: SettingsDialogDeps): void {
   })
   wordsInput.value = deps.personalWords.join('\n')
   const body = [
+    // La lingua per prima: chi l'ha cambiata per sbaglio la ritrova subito, con i nomi nella loro lingua.
+    h(
+      'fieldset',
+      { class: 'language-settings' },
+      h('legend', {}, T.language),
+      h(
+        'div',
+        { class: 'segmented', attrs: { role: 'radiogroup', 'aria-label': T.language } },
+        LANGUAGES.map((l) =>
+          h(
+            'label',
+            { attrs: { lang: l.id } },
+            h('input', {
+              attrs: { type: 'radio', name: 'language', value: l.id, checked: l.id === lang },
+              on: { change: () => deps.onLanguageChange(l.id) },
+            }),
+            h('span', {}, l.name),
+          ),
+        ),
+      ),
+      h('p', { class: 'field-help' }, T.languageHelp),
+    ),
     h(
       'fieldset',
       {},
