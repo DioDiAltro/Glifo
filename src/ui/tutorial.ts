@@ -1,4 +1,4 @@
-import { rich, texts } from '../i18n'
+import { lang, rich, texts } from '../i18n'
 import { h, icon, ICONS } from './dom'
 
 /**
@@ -6,7 +6,7 @@ import { h, icon, ICONS } from './dom'
  * video e poche righe di testo, da sfogliare con Indietro e Avanti; l'ultima ha «Inizia». Si apre la
  * prima volta che si entra in Glifo e da «Come si usa». I video li registra `node scripts/tutorial.mjs`
  * dall'app vera, nel tema chiaro e in quello scuro: stanno in `public/tutorial/<pagina>-chiaro.webm` e
- * `-scuro.webm` (per ora solo con Glifo in italiano: quelli in inglese si rifanno quando tutto è tradotto).
+ * `-scuro.webm`, e quelli con Glifo in inglese (`LINGUA=en`) in `public/tutorial/en/`.
  */
 
 const T = texts({
@@ -135,9 +135,9 @@ export function markTutorialSeen(): void {
   }
 }
 
-/** Il video di una pagina, nel tema dell'app. */
+/** Il video di una pagina, nel tema dell'app e nella lingua di Glifo. */
 export function tutorialVideo(page: TutorialPage, dark: boolean): string {
-  return `./tutorial/${page.id}-${dark ? 'scuro' : 'chiaro'}.webm`
+  return `./tutorial/${lang === 'en' ? 'en/' : ''}${page.id}-${dark ? 'scuro' : 'chiaro'}.webm`
 }
 
 /** Il testo con le parti tra apici inversi come codice. */

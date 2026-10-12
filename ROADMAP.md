@@ -91,10 +91,12 @@ Com'è oggi ogni punto, le proposte di Claude, le domande e le decisioni sono in
 resta solo quello che non è stato fatto. Si fanno sul ramo `prova`, con le foto; fino al trasloco del
 18 ottobre il sito vero cambia il meno possibile. Il punto 1, «Cambia account», è sul sito dal 12
 ottobre 2026: lo studente ha detto «va bene» per provarlo, perché sul sito di prova l'account è spento,
-e poi, lo stesso giorno, «il punto 1 va bene». Sul ramo `prova` dal 12 ottobre 2026, da vedere: il punto
-6 nella prima parte (la scelta della lingua, le schermate in inglese e il tutorial rifatto, con 11
-pagine; la lingua va con l'account, come il tema) e il punto 8 (il pulsante ✨ con il contorno sfumato,
-variante B, scelta dallo studente).
+e poi, lo stesso giorno, «il punto 1 va bene». Il punto 6 è fatto e sul sito dal 12 ottobre 2026, con il
+punto 8: Glifo tutto anche in inglese (le schermate, i conti, i simboli, le tabelle, i grafici, gli
+schemi, l'AI, le parole delle note, i numeri con il punto, l'informativa, il tutorial rifatto con 11
+pagine e i video nelle due lingue; la lingua va con l'account, come il tema; lo studente: «non puoi
+tradurre tutto ora e poi mettiamo tutto online?») e il pulsante ✨ con il contorno sfumato (variante B,
+scelta dallo studente).
 
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
@@ -751,7 +753,7 @@ che si scrive».
   esportazione in PDF e LaTeX.
 - File `SKILL.md`: modello con l'intestazione (`name`, `description`) e controllo della
   descrizione.
-- Interfaccia anche in inglese: ora in «In programma», nella grafica (10 ottobre 2026).
+- Interfaccia anche in inglese: fatta il 12 ottobre 2026 (GRAFICA.md, punto 6).
 
 ### Estensioni create da chi usa Glifo (idea dello studente, 10 ottobre 2026)
 

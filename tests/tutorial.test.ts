@@ -43,16 +43,20 @@ describe('tutorial', () => {
     expect(TUTORIAL_PAGES[0].title).toBe('Welcome to Glifo')
   })
 
-  it('ogni pagina ha i video dei due temi (non troppo grandi)', async () => {
+  it('ogni pagina ha i video dei due temi, nelle due lingue (non troppo grandi)', async () => {
     expect(new Set(TUTORIAL_PAGES.map((p) => p.id)).size).toBe(TUTORIAL_PAGES.length)
-    for (const page of TUTORIAL_PAGES) {
-      for (const dark of [false, true]) {
-        const src = tutorialVideo(page, dark)
-        expect(src).toBe(`./tutorial/${page.id}-${dark ? 'scuro' : 'chiaro'}.webm`)
-        const size = await fileSize(`public/${src.slice(2)}`)
-        expect(size, src).toBeGreaterThan(20_000)
-        expect(size, src).toBeLessThan(1_000_000)
+    for (const language of ['it', 'en'] as const) {
+      setLangForTests(language)
+      for (const page of TUTORIAL_PAGES) {
+        for (const dark of [false, true]) {
+          const src = tutorialVideo(page, dark)
+          expect(src).toBe(`./tutorial/${language === 'en' ? 'en/' : ''}${page.id}-${dark ? 'scuro' : 'chiaro'}.webm`)
+          const size = await fileSize(`public/${src.slice(2)}`)
+          expect(size, src).toBeGreaterThan(20_000)
+          expect(size, src).toBeLessThan(1_000_000)
+        }
       }
     }
+    setLangForTests('it')
   })
 })

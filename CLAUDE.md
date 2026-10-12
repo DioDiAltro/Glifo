@@ -17,7 +17,9 @@ prossimi passi sono in «In programma» nella ROADMAP.
   riepiloghi, domande, avvisi, descrizioni dei comandi e le eventuali righe brevi durante il lavoro.
   Commenti e messaggi di commit sono in italiano. L'interfaccia di Glifo è in italiano e in inglese
   (`src/i18n.ts`): ogni testo nuovo va nella tabella `texts` del suo file con le due versioni (vedi
-  «Scrivere un testo dell'interfaccia» nel README), e la nota di benvenuto ha le due versioni.
+  «Scrivere un testo dell'interfaccia» nel README), ogni parola nuova che si scrive nelle note ha anche
+  l'inglese (`src/noteWords.ts`), e la nota di benvenuto, l'informativa e i video del tutorial hanno le
+  due versioni.
 - Durante i compiti segui la skill lavoro-silenzioso: nessun messaggio mentre lavori (nemmeno «aspetto
   le prove» o «commit fatto»: i comandi lunghi si aspettano nello stesso turno), un solo riepilogo alla
   fine, e gli errori raccontati nel dettaglio.
@@ -44,8 +46,9 @@ prossimi passi sono in «In programma» nella ROADMAP.
   senza service worker e con l'account spento (Accedi e Condividi si vedono, ma la finestra di
   accesso dice che lì non si entra).
 - `node scripts/tutorial.mjs`: registra dall'app vera (esegui prima `npm run build`) i video del
-  tutorial, nel tema chiaro e in quello scuro, con Glifo in italiano, in `public/tutorial/` (serve
-  `CHROMIUM_PATH`; usa l'ffmpeg di Playwright). Va rifatto quando cambia l'interfaccia che i video mostrano; con un
+  tutorial, nel tema chiaro e in quello scuro, con Glifo in italiano, in `public/tutorial/`; con
+  `LINGUA=en` quelli con Glifo in inglese, in `public/tutorial/en/` (serve `CHROMIUM_PATH`; usa l'ffmpeg
+  di Playwright). Va rifatto quando cambia l'interfaccia che i video mostrano; con un
   nome (`formule`) rifà solo quella pagina.
 - `node scripts/spiegami-qwen.mjs`: «Spiegami» con Qwen3 vero sulla build in `dist/` (le prove di
   sempre usano un modello finto). Serve la rete verso Hugging Face (`huggingface.co` e i server dei
@@ -78,7 +81,7 @@ contiene decisioni da rispettare (per esempio che il tema si cambia solo nelle i
 documentazione, non codice: la regola di delegare all'esploratore vale per il codice.
 
 - `src/symbols/`: catalogo dei simboli; per aggiungerne uno vedi «Aggiungere un simbolo» nel README.
-- `src/search/`: ricerca a parole in italiano e suggerimenti mentre si scrive `\…`.
+- `src/search/`: ricerca a parole in italiano e in inglese e suggerimenti mentre si scrive `\…`.
 - `src/editor/`: editor CodeMirror 6 (formule, segnaposto, suggerimenti, ortografia, elenchi).
 - `src/lists/`: i marcatori degli elenchi (`markers.ts`), usati da editor e anteprima.
 - `src/spell/`: controllo ortografico (Hunspell in WebAssembly in un worker).
@@ -127,13 +130,19 @@ documentazione, non codice: la regola di delegare all'esploratore vale per il co
   worker da `src/ai/local.ts`. Nelle prove nel browser il worker è finto (Qwen3 non si scarica).
 - La prima volta Glifo prende la lingua dal browser: gli script con Playwright (prove, video del
   tutorial, foto) aprono il browser con `locale: 'it-IT'`, e le prove unitarie sono in italiano
-  (`tests/support/lang.ts`). Le parole che si scrivono nelle note (```` ```grafico ````, `titolo:`…)
-  non si traducono.
+  (`tests/support/lang.ts`; quelle in inglese nei file `*En*.test.ts`). Le parole che si scrivono nelle
+  note (```` ```grafico ````, `titolo:`, `\operatorname{studio}`…) hanno anche la versione inglese
+  (`src/noteWords.ts`): il lettore le accetta tutte e due in tutte e due le lingue, e chi scrive nella
+  nota usa quella della lingua di Glifo. Le tabelle nella nota restano all'italiana (`SOMMA`, 1,5): in
+  inglese l'editor le traduce (`src/spreadsheet/input.ts`).
 
 ## Promemoria per lo studente
 
 Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui quando sono fatte):
 
+- Con Glifo anche in inglese (dal 12 ottobre 2026), mettere in Supabase l'email per entrare in tutte e due
+  le lingue: Authentication → Emails → Templates, **Magic Link** e **Confirm signup**, con l'oggetto e il
+  testo scritti in supabase/README.md («Con Glifo anche in inglese»). Da qui i modelli non si cambiano.
 - Domenica 18 ottobre 2026, il giorno del trasloco su `glifo.page`: in Supabase (Authentication → URL
   Configuration) cambiare il **Site URL** in `https://glifo.page/` («Trasloco» in ROADMAP.md, passo 4).
   Da lunedì 12 il vecchio sito mostra l'avviso: lo studente può scrivere a chi usa Glifo come portare gli

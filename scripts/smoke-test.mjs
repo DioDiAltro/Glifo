@@ -3577,6 +3577,7 @@ try {
     title: d.querySelector('.tutorial-title').textContent,
     step: d.querySelector('.tutorial-step').textContent,
     next: d.querySelector('.tutorial-next').textContent,
+    video: d.querySelector('video')?.getAttribute('src'),
   }))
   await tutorialEn.locator('.tutorial-close').click()
   const uiEn = await english.evaluate(() => ({
@@ -3587,7 +3588,7 @@ try {
     welcome: document.querySelector('.cm-content')?.textContent?.slice(0, 20),
   }))
   check(
-    firstEn.title === 'Welcome to Glifo' && firstEn.step === `1 of ${pages}` && firstEn.next === 'Next' &&
+    firstEn.title === 'Welcome to Glifo' && firstEn.step === `1 of ${pages}` && firstEn.next === 'Next' && firstEn.video === './tutorial/en/scrivere-chiaro.webm' &&
       uiEn.lang === 'en' && JSON.stringify(uiEn.views) === '["Editor","Split","Preview","Whiteboard"]' &&
       uiEn.symbols === 'Symbols' && uiEn.share === 'Share' && uiEn.welcome.startsWith('# Welcome to Glifo'),
     `con il browser in inglese Glifo si apre in inglese, con il tutorial e la nota di benvenuto (${JSON.stringify({ firstEn, uiEn })})`,
