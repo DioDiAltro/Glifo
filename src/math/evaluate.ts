@@ -3,6 +3,7 @@
  * (`compile`), veloce da chiamare migliaia di volte per disegnare un grafico. Si lavora con i
  * numeri reali: dove una funzione non è definita (√-1, log 0, 1/0) il risultato è NaN o ±∞.
  */
+import { texts } from '../i18n'
 import { compileLineIntegral, compileSurfaceIntegral } from './calculus'
 import { limit, seriesSum, severalLimit, type LimitValue } from './limits'
 import { compileMultiple } from './domain'
@@ -10,6 +11,51 @@ import { MathSyntaxError, productPower, type MathNode } from './parse'
 import { normalCdf, normalQuantile } from './special'
 import type { Distribution, Interval } from './distributions'
 import { dataStatistic, DATA_FUNCTIONS } from './statistics'
+
+const T = texts({
+  noRandom: ['Prima va definita la variabile aleatoria, per esempio $X \\sim B(10, 0{,}3)$', 'First define the random variable, for example $X \\sim B(10, 0.3)$'],
+  notDefined: (name: string) => [`${name} non è definita`, `${name} is not defined`],
+  isFunction: (name: string) => [`${name} è una funzione: scrivi ${name}(x)`, `${name} is a function: write ${name}(x)`],
+  noPrimitive: ['Non so trovare la primitiva di questa funzione', "I can't find an antiderivative of this function"],
+  setNotNumber: ['Un insieme non è un numero: si usa sotto un integrale, \\iint_D', 'A set is not a number: use it under an integral, \\iint_D'],
+  distributionAlone: (v: string) => [
+    `${v} \\sim … definisce la variabile aleatoria: scrivila in una formula da sola`,
+    `${v} \\sim … defines the random variable: write it in a formula of its own`,
+  ],
+  pair: ['Una coppia di valori (a, b) non va qui', "A pair of values (a, b) doesn't belong here"],
+  emptyParens: ['Le parentesi sono vuote', 'The parentheses are empty'],
+  infinity: ['∞ non è un numero: si usa solo negli intervalli', '∞ is not a number: use it only in intervals'],
+  notCondition: ["Qui va un'espressione, non una condizione", 'An expression goes here, not a condition'],
+  invalid: ['Espressione non valida', 'Invalid expression'],
+  // Le operazioni con i campi: si calcolano nella nota.
+  gradient: ['Il gradiente è un vettore: si calcola nella nota, con «=»', 'The gradient is a vector: calculate it in the note, with “=”'],
+  curl: ['Il rotore è un vettore (nel piano un numero): si calcola nella nota, con «=»', 'The curl is a vector (a number in the plane): calculate it in the note, with “=”'],
+  hessian: ["L'hessiana è una matrice: si calcola nella nota, con «=»", 'The Hessian is a matrix: calculate it in the note, with “=”'],
+  jacobian: ['La jacobiana è una matrice: si calcola nella nota, con «=»', 'The Jacobian is a matrix: calculate it in the note, with “=”'],
+  divergence: ['La divergenza: si calcola nella nota, con «=»', 'The divergence: calculate it in the note, with “=”'],
+  laplacian: ['Il laplaciano: si calcola nella nota, con «=»', 'The Laplacian: calculate it in the note, with “=”'],
+  oneValue: (label: string) => [`${label} vuole un solo valore`, `${label} takes a single value`],
+  modUsage: ['Si scrive a \\bmod n', 'Write a \\bmod n'],
+  maxOnSet: (label: string) => [`Il massimo su un insieme si scrive da solo: ${label}_{…} f =`, `The maximum over a set is written on its own: ${label}_{…} f =`],
+  minOnSet: (label: string) => [`Il minimo su un insieme si scrive da solo: ${label}_{…} f =`, `The minimum over a set is written on its own: ${label}_{…} f =`],
+  atLeastOne: (label: string) => [`${label} vuole almeno un valore`, `${label} takes at least one value`],
+  twoNumbers: (letter: string) => [`${letter}_{n,k} vuole due numeri`, `${letter}_{n,k} takes two numbers`],
+  atLeastTwo: (label: string) => [`${label} vuole almeno due numeri`, `${label} takes at least two numbers`],
+  cannotCalculate: (label: string) => [`Non so calcolare ${label}`, `I can't calculate ${label}`],
+  quantileUsage: ['Si scrive \\operatorname{quantile}(X, 0{,}95), con X la variabile aleatoria', 'Write \\operatorname{quantile}(X, 0.95), with X the random variable'],
+  varianceUsage: ['Si scrive \\operatorname{Var}(X), con X la variabile aleatoria', 'Write \\operatorname{Var}(X), with X the random variable'],
+  argumentCount: (name: string, n: number, params: string) => [
+    `${name} vuole ${n === 1 ? 'un valore' : `${n} valori`}: ${name}(${params})`,
+    `${name} takes ${n === 1 ? 'one value' : `${n} values`}: ${name}(${params})`,
+  ],
+  primesOneVariable: (derivative: string) => [
+    `La derivata ${derivative} si sa fare solo per funzioni di una variabile`,
+    `The derivative ${derivative} only works for functions of one variable`,
+  ],
+  notFunction: (name: string) => [`${name} non è una funzione definita`, `${name} is not a defined function`],
+  isNumber: (name: string) => [`${name} è un numero: ${name}(…) vuole un solo valore`, `${name} is a number: ${name}(…) takes a single value`],
+  condition: ['Qui va una condizione, per esempio x > 0', 'A condition goes here, for example x > 0'],
+})
 
 export type Vars = Record<string, number>
 export type Compiled = (v: Vars) => number
@@ -64,8 +110,6 @@ export interface RandomScope {
   event(node: Extract<MathNode, { k: 'prob' }>, scope: Scope): { X: string; set: Interval[] }
 }
 
-const NO_RANDOM = 'Prima va definita la variabile aleatoria, per esempio $X \\sim B(10, 0{,}3)$'
-
 export interface CompileOptions {
   /**
    * Per i risultati dopo «=»: i resti dei conti con la virgola mobile diventano 0 (sin π è 0, non
@@ -80,7 +124,7 @@ export class MathError extends Error {}
 /** Un nome che non è definito da nessuna parte (i grafici propongono uno slider per lui). */
 export class UndefinedName extends MathError {
   constructor(readonly missing: string) {
-    super(`${nameLabel(missing)} non è definita`)
+    super(T.notDefined(nameLabel(missing)))
   }
 }
 
@@ -335,7 +379,7 @@ export function compile(node: MathNode, scope: Scope, options: CompileOptions = 
       if (value !== undefined) return constant(value)
       if (name === 'π') return constant(Math.PI)
       if (name === 'e') return constant(Math.E)
-      if (scope.fns.has(name)) throw new MathError(`${name} è una funzione: scrivi ${name}(x)`)
+      if (scope.fns.has(name)) throw new MathError(T.isFunction(name))
       throw new UndefinedName(name)
     }
     case 'neg': {
@@ -451,7 +495,7 @@ export function compile(node: MathNode, scope: Scope, options: CompileOptions = 
     case 'mint':
       return compileMultiple(node, scope, options)
     case 'prim':
-      throw new MathError('Non so trovare la primitiva di questa funzione')
+      throw new MathError(T.noPrimitive)
     case 'diff':
       return compileDerivative(node, scope, options)
     case 'lim': {
@@ -483,15 +527,15 @@ export function compile(node: MathNode, scope: Scope, options: CompileOptions = 
     case 'sint':
       return compileSurfaceIntegral(node, scope, options)
     case 'set':
-      throw new MathError('Un insieme non è un numero: si usa sotto un integrale, \\iint_D')
+      throw new MathError(T.setNotNumber)
     case 'prob':
-      if (!scope.random) throw new MathError(NO_RANDOM)
+      if (!scope.random) throw new MathError(T.noRandom)
       return scope.random.probability(node, scope, options)
     case 'expect':
-      if (!scope.random) throw new MathError(NO_RANDOM)
+      if (!scope.random) throw new MathError(T.noRandom)
       return scope.random.moment(node.a, 'mean', scope, options)
     case 'dist':
-      throw new MathError(`${node.v} \\sim … definisce la variabile aleatoria: scrivila in una formula da sola`)
+      throw new MathError(T.distributionAlone(node.v))
     case 'cases': {
       const rows = node.rows.map((r) => ({ value: c(r.value), cond: r.cond ? compileCondition(r.cond, scope, options) : null }))
       return (v) => {
@@ -500,16 +544,16 @@ export function compile(node: MathNode, scope: Scope, options: CompileOptions = 
       }
     }
     case 'tuple':
-      throw new MathError(node.items.length ? 'Una coppia di valori (a, b) non va qui' : 'Le parentesi sono vuote')
+      throw new MathError(node.items.length ? T.pair : T.emptyParens)
     case 'infty':
-      throw new MathError('∞ non è un numero: si usa solo negli intervalli')
+      throw new MathError(T.infinity)
     case 'rel':
     case 'in':
     case 'and':
     case 'or':
-      throw new MathError('Qui va un\'espressione, non una condizione')
+      throw new MathError(T.notCondition)
   }
-  throw new MathError('Espressione non valida')
+  throw new MathError(T.invalid)
 }
 
 /** Il valore di un limite come numero: ±∞, o NaN se non c'è. */
@@ -574,18 +618,18 @@ function compileDerivative(node: Extract<MathNode, { k: 'diff' }>, scope: Scope,
   return Object.keys(fixed).length ? (v) => derivative({ ...v, ...fixed }) : derivative
 }
 
-/** Le operazioni con i campi danno vettori o vanno fatte con le lettere: si calcolano nella nota. */
-const FIELD_OPERATIONS: Record<string, string> = {
-  grad: 'Il gradiente è un vettore',
-  curl: 'Il rotore è un vettore (nel piano un numero)',
-  hess: 'L\'hessiana è una matrice',
-  jac: 'La jacobiana è una matrice',
-  div: 'La divergenza',
-  lap: 'Il laplaciano',
+/** Le operazioni con i campi danno vettori o vanno fatte con le lettere: si calcolano nella nota (il messaggio). */
+const FIELD_OPERATIONS: Record<string, () => string> = {
+  grad: () => T.gradient,
+  curl: () => T.curl,
+  hess: () => T.hessian,
+  jac: () => T.jacobian,
+  div: () => T.divergence,
+  lap: () => T.laplacian,
 }
 
 function compileFunction(node: Extract<MathNode, { k: 'fn' }>, scope: Scope, options: CompileOptions): Compiled {
-  if (FIELD_OPERATIONS[node.name]) throw new MathError(`${FIELD_OPERATIONS[node.name]}: si calcola nella nota, con «=»`)
+  if (FIELD_OPERATIONS[node.name]) throw new MathError(FIELD_OPERATIONS[node.name]())
   const random = compileRandomFunction(node, scope, options)
   if (random) return random
   const args = node.args.map((a) => compile(a, scope, options))
@@ -593,7 +637,7 @@ function compileFunction(node: Extract<MathNode, { k: 'fn' }>, scope: Scope, opt
   const name = node.name
   const label = fnLabel(name)
   const one = () => {
-    if (args.length !== 1) throw new MathError(`${label} vuole un solo valore`)
+    if (args.length !== 1) throw new MathError(T.oneValue(label))
     return args[0]
   }
   let f: Compiled
@@ -612,7 +656,7 @@ function compileFunction(node: Extract<MathNode, { k: 'fn' }>, scope: Scope, opt
     }
   } else if (name === 'mod') {
     // Il resto della divisione, sempre tra 0 e il divisore (−7 \bmod 3 = 2).
-    if (args.length !== 2) throw new MathError('Si scrive a \\bmod n')
+    if (args.length !== 2) throw new MathError(T.modUsage)
     const [a, n] = args
     f = (v) => {
       const m = n(v)
@@ -620,13 +664,13 @@ function compileFunction(node: Extract<MathNode, { k: 'fn' }>, scope: Scope, opt
       return x - m * Math.floor(x / m)
     }
   } else if (name === 'max' || name === 'min') {
-    if (node.base) throw new MathError(`Il ${name === 'max' ? 'massimo' : 'minimo'} su un insieme si scrive da solo: ${label}_{…} f =`)
-    if (!args.length) throw new MathError(`${label} vuole almeno un valore`)
+    if (node.base) throw new MathError(name === 'max' ? T.maxOnSet(label) : T.minOnSet(label))
+    if (!args.length) throw new MathError(T.atLeastOne(label))
     const pick = name === 'max' ? Math.max : Math.min
     f = (v) => pick(...args.map((a) => a(v)))
   } else if (name === 'comb' || name === 'combrep' || name === 'disp' || name === 'disprep') {
     // C_{n,k} = \binom{n}{k}, C'_{n,k} = \binom{n + k - 1}{k}, D_{n,k} = n!/(n − k)!, D'_{n,k} = n^k.
-    if (args.length !== 2) throw new MathError(`${name.startsWith('comb') ? 'C' : 'D'}_{n,k} vuole due numeri`)
+    if (args.length !== 2) throw new MathError(T.twoNumbers(name.startsWith('comb') ? 'C' : 'D'))
     const [n, k] = args
     f = (v) => {
       const N = n(v)
@@ -646,7 +690,7 @@ function compileFunction(node: Extract<MathNode, { k: 'fn' }>, scope: Scope, opt
     // La statistica di numeri scritti uno per uno: \operatorname{media}(2, 3, 5).
     f = (v) => dataStatistic(name, args.map((a) => a(v)))
   } else if (name === 'gcd' || name === 'lcm') {
-    if (args.length < 2) throw new MathError(`${label} vuole almeno due numeri`)
+    if (args.length < 2) throw new MathError(T.atLeastTwo(label))
     f = (v) => {
       const xs = args.map((a) => Math.round(a(v)))
       if (name === 'gcd') return xs.reduce(gcd2)
@@ -654,7 +698,7 @@ function compileFunction(node: Extract<MathNode, { k: 'fn' }>, scope: Scope, opt
     }
   } else {
     const fn = UNARY[name]
-    if (!fn) throw new MathError(`Non so calcolare ${label}`)
+    if (!fn) throw new MathError(T.cannotCalculate(label))
     const a = one()
     if (options.calc && TRIG.has(name)) {
       f = (v) => {
@@ -687,7 +731,7 @@ function compileRandomFunction(node: Extract<MathNode, { k: 'fn' }>, scope: Scop
     return random.quantile(node.args[0].name, name === 'percentile' ? (v) => p(v) / 100 : p)
   }
   if (name === 'var' || name === 'sd' || name === 'quantile' || name === 'percentile') {
-    throw new MathError(`Si scrive ${name === 'quantile' ? '\\operatorname{quantile}(X, 0{,}95)' : '\\operatorname{Var}(X)'}, con X la variabile aleatoria`)
+    throw new MathError(name === 'quantile' ? T.quantileUsage : T.varianceUsage)
   }
   return null
 }
@@ -697,11 +741,11 @@ function compileApply(node: Extract<MathNode, { k: 'apply' }>, scope: Scope, opt
   if (user) {
     if (node.args.length !== user.params.length) {
       const n = user.params.length
-      throw new MathError(`${node.name} vuole ${n === 1 ? 'un valore' : `${n} valori`}: ${node.name}(${user.params.join(', ')})`)
+      throw new MathError(T.argumentCount(node.name, n, user.params.join(', ')))
     }
     const args = node.args.map((a) => compile(a, scope, options))
     if (node.primes) {
-      if (args.length !== 1) throw new MathError(`La derivata ${node.name}${"'".repeat(node.primes)} si sa fare solo per funzioni di una variabile`)
+      if (args.length !== 1) throw new MathError(T.primesOneVariable(node.name + "'".repeat(node.primes)))
       const d = derivative((x) => user.call([x]), node.primes)
       const a = args[0]
       return (v) => d(a(v))
@@ -712,7 +756,7 @@ function compileApply(node: Extract<MathNode, { k: 'apply' }>, scope: Scope, opt
     }
     return (v) => user.call(args.map((a) => a(v)))
   }
-  if (node.primes) throw new MathError(`${node.name} non è una funzione definita`)
+  if (node.primes) throw new MathError(T.notFunction(node.name))
   // Φ(z): la funzione di ripartizione della normale standard; E(X): il valore atteso.
   if (node.name === 'Φ' && !scope.consts.has('Φ') && node.args.length === 1) {
     const a = compile(node.args[0], scope, options)
@@ -724,7 +768,7 @@ function compileApply(node: Extract<MathNode, { k: 'apply' }>, scope: Scope, opt
   // a(x + 1): se a è un numero è un prodotto.
   const isNumber = scope.vars.has(node.name) || scope.consts.has(node.name) || node.name === 'π' || node.name === 'e'
   if (!isNumber) throw new UndefinedName(node.name)
-  if (node.args.length !== 1) throw new MathError(`${node.name} è un numero: ${node.name}(…) vuole un solo valore`)
+  if (node.args.length !== 1) throw new MathError(T.isNumber(node.name))
   const a = compile({ k: 'name', name: node.name }, scope, options)
   const b = compile(node.args[0], scope, options)
   return (v) => a(v) * b(v)
@@ -768,7 +812,7 @@ export function compileCondition(node: MathNode, scope: Scope, options: CompileO
       return (v) => items.some((f) => f(v))
     }
     default:
-      throw new MathError('Qui va una condizione, per esempio x > 0')
+      throw new MathError(T.condition)
   }
 }
 
@@ -791,8 +835,8 @@ function compare(a: number, op: string, b: number): boolean {
   return false
 }
 
-/** Il messaggio di un errore di lettura o di calcolo, in italiano. */
+/** Il messaggio di un errore di lettura o di calcolo, nella lingua di Glifo (quella di quando è successo). */
 export function errorMessage(err: unknown): string {
   if (err instanceof MathError || err instanceof MathSyntaxError) return err.message
-  return 'Espressione non valida'
+  return T.invalid
 }

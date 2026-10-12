@@ -4,6 +4,7 @@
  * seconda (concavità e flessi). I punti sono esatti quando si può (le radici dei polinomi, i valori
  * riconosciuti: π/4, e, ln 2, √2), se no con le cifre. Le funzioni periodiche si studiano in un periodo.
  */
+import { texts, usesDecimalComma } from '../i18n'
 import { nearFraction } from './complex'
 import { compile, EMPTY_SCOPE, scopeWith, type Scope } from './evaluate'
 import { Rational } from './exact'
@@ -15,6 +16,57 @@ import { numericRoots, rationalRoots, trim, type Poly } from './polynomial'
 import { asFraction } from './primitive'
 import { breaks, periodOf, scanRoots } from './solve'
 import { add, dependsOn, derive, expand, fn, mul, num, plainText, pow, sub, subst, sym, symbols, tidy, toNode, type Ex } from './symbolic'
+
+const T = texts({
+  // I titoli delle righe.
+  period: ['Periodo', 'Period'],
+  domain: ['Dominio', 'Domain'],
+  symmetry: ['Simmetria', 'Symmetry'],
+  intercepts: ['Intersezioni', 'Intercepts'],
+  sign: ['Segno', 'Sign'],
+  limits: ['Limiti', 'Limits'],
+  asymptotes: ['Asintoti', 'Asymptotes'],
+  derivative: ['Derivata', 'Derivative'],
+  monotonicity: ['Crescenza', 'Monotonicity'],
+  extrema: ['Massimi e minimi', 'Maxima and minima'],
+  secondDerivative: ['Derivata seconda', 'Second derivative'],
+  concavity: ['Concavità', 'Concavity'],
+  flexes: ['Flessi', 'Inflection points'],
+  // Le informazioni.
+  studiedOnTex: (period: string) => [`${period}\\ \\text{(si studia in } [0, ${period}]\\text{)}`, `${period}\\ \\text{(studied on } [0, ${period}]\\text{)}`],
+  studiedOn: (period: string) => [`${period} (si studia in [0, ${period}])`, `${period} (studied on [0, ${period}])`],
+  even: ['pari', 'even'],
+  odd: ['dispari', 'odd'],
+  zerosTex: (zeros: string) => [`\\text{zeri: } ${zeros}`, `\\text{zeros: } ${zeros}`],
+  zeros: (zeros: string) => [`zeri: ${zeros}`, `zeros: ${zeros}`],
+  noZeros: ['nessuno zero', 'no zeros'],
+  for: ['per', 'for'],
+  increasingFor: ['crescente per', 'increasing for'],
+  decreasingFor: ['decrescente per', 'decreasing for'],
+  convexFor: ['convessa per', 'convex for'],
+  concaveFor: ['concava per', 'concave for'],
+  constant: ['costante', 'constant'],
+  straightLine: ['né convessa né concava (è una retta)', 'neither convex nor concave (it is a line)'],
+  none: ['nessuno', 'none'],
+  maximum: ['massimo', 'maximum'],
+  minimum: ['minimo', 'minimum'],
+  vertical: ['verticale', 'vertical'],
+  horizontal: ['orizzontale', 'horizontal'],
+  oblique: ['obliquo', 'oblique'],
+  /** Un asintoto con il suo tipo: «x = 0 verticale», «vertical x = 0». */
+  asymptoteTex: (line: string, kind: string) => [`${line}\\ \\text{${kind}}`, `\\text{${kind} } ${line}`],
+  asymptote: (line: string, kind: string) => [`${line} ${kind}`, `${kind} ${line}`],
+  doesNotExist: ['non esiste', 'does not exist'],
+  noValueTex: (x: string) => [`\\text{nessun } ${x}`, `\\text{no } ${x}`],
+  noValue: (x: string) => [`nessun ${x}`, `no ${x}`],
+  everyTex: (x: string) => [`\\text{ogni } ${x}`, `\\text{all } ${x}`],
+  every: (x: string) => [`ogni ${x}`, `all ${x}`],
+  // Com'è la tangente in un punto notevole.
+  corner: ['punto angoloso', 'corner point'],
+  cusp: ['cuspide', 'cusp'],
+  verticalTangent: ['tangente verticale', 'vertical tangent'],
+  horizontalTangent: ['tangente orizzontale', 'horizontal tangent'],
+})
 
 /** Un numero (un punto dell'asse x, un valore): con l'espressione esatta se c'è, e come si scrive. */
 export interface Value {
@@ -34,7 +86,10 @@ export interface Span {
   hiIn: boolean
 }
 
-/** Un massimo, un minimo o un flesso; `note` se lì la derivata non c'è (punto angoloso, cuspide) o, in un flesso, se è zero. */
+/**
+ * Un massimo, un minimo o un flesso; `note` se lì la derivata non c'è (punto angoloso, cuspide) o, in un
+ * flesso, se è zero (i nomi sono chiavi: nella nota si scrivono con `noteText`).
+ */
 export interface Special {
   kind: 'max' | 'min' | 'flex'
   x: Value
@@ -403,9 +458,9 @@ function spanText(s: Span, x: string): FormattedResult {
 
 /** Gli intervalli uniti con «o»: x < −1 ∨ x > 1; tutto tranne dei punti: x ≠ 0; tutto: «ogni x» con `every`. */
 export function spansText(spans: Span[], x: string, every = false): FormattedResult {
-  if (!spans.length) return { tex: '\\text{nessun } ' + nameLatex(x), text: `nessun ${x}` }
+  if (!spans.length) return { tex: T.noValueTex(nameLatex(x)), text: T.noValue(x) }
   const name = nameLatex(x)
-  if (every && spans.length === 1 && !spans[0].lo && !spans[0].hi) return { tex: `\\text{ogni } ${name}`, text: `ogni ${x}` }
+  if (every && spans.length === 1 && !spans[0].lo && !spans[0].hi) return { tex: T.everyTex(name), text: T.every(x) }
   const gaps: Value[] = []
   const whole =
     !spans[0].lo &&
@@ -432,7 +487,7 @@ function limitText(head: string, headText: string, value: LimitValue, options: F
         : { tex: '-\\infty', text: '−∞' }
       : value.k === 'value'
         ? numeric(value.v, options)
-        : { tex: '\\nexists', text: 'non esiste' }
+        : { tex: '\\nexists', text: T.doesNotExist }
   return { tex: `${head} = ${shown.tex}`, text: `${headText} = ${shown.text}` }
 }
 
@@ -699,11 +754,20 @@ function specials(
 
 // ——— Il risultato nella nota ———
 
+/** Com'è la tangente (`Special['note']`), scritto nella lingua di Glifo. */
+function noteText(note: NonNullable<Special['note']>): string {
+  return { 'punto angoloso': T.corner, cuspide: T.cusp, 'tangente verticale': T.verticalTangent, 'tangente orizzontale': T.horizontalTangent }[note]
+}
+
 function pointText(p: Special): FormattedResult {
-  // Con i decimali con la virgola le coordinate si separano con il punto e virgola.
-  const sep = /[0-9]\{,\}/.test(p.x.tex + p.y.tex) ? ';\\ ' : ', '
-  const note = p.note ? { tex: `\\ \\text{(${p.note})}`, text: ` (${p.note})` } : { tex: '', text: '' }
-  return { tex: `\\left(${p.x.tex}${sep}${p.y.tex}\\right)${note.tex}`, text: `(${p.x.text}; ${p.y.text})${note.text}` }
+  // Con i decimali con la virgola le coordinate si separano con il punto e virgola; nel testo in italiano
+  // sempre, (1; 2), in inglese come nei libri, (1, 2), se i decimali non sono con la virgola.
+  const comma = /[0-9]\{,\}/.test(p.x.tex + p.y.tex)
+  const sep = comma ? ';\\ ' : ', '
+  const textSep = comma || usesDecimalComma() ? '; ' : ', '
+  const name = p.note && noteText(p.note)
+  const note = name ? { tex: `\\ \\text{(${name})}`, text: ` (${name})` } : { tex: '', text: '' }
+  return { tex: `\\left(${p.x.tex}${sep}${p.y.tex}\\right)${note.tex}`, text: `(${p.x.text}${textSep}${p.y.text})${note.text}` }
 }
 
 function list(items: FormattedResult[], none: string): FormattedResult {
@@ -726,26 +790,30 @@ export function studyRows(s: Study, name: string, options: FormatOptions): [stri
   const X = nameLatex(x)
   const fx = `${nameLatex(name)}(${X})`
   const rows: [string, FormattedResult[]][] = []
-  const kindName = (a: Asymptote) => (a.kind === 'vertical' ? 'verticale' : a.kind === 'horizontal' ? 'orizzontale' : 'obliquo')
   // Il dominio (in un periodo, con + kT).
   let domain = spansText(s.domain, x)
   if (s.period) {
-    const T = s.period
+    const P = s.period
     const holes = s.domain.flatMap((d, i) => (i > 0 && d.lo && !d.loIn ? [d.lo] : []))
     const whole = s.domain.length === holes.length + 1
     if (whole) {
       domain = holes.length
-        ? { tex: holes.map((h) => `${X} \\ne ${h.tex} + k${T.tex}`).join(',\\ '), text: holes.map((h) => `${x} ≠ ${h.text} + k${T.text}`).join(', ') }
+        ? { tex: holes.map((h) => `${X} \\ne ${h.tex} + k${P.tex}`).join(',\\ '), text: holes.map((h) => `${x} ≠ ${h.text} + k${P.text}`).join(', ') }
         : { tex: `${X} \\in \\mathbb{R}`, text: `${x} ∈ ℝ` }
     }
-    rows.push(['Periodo', [{ tex: `${T.tex}\\ \\text{(si studia in } [0, ${T.tex}]\\text{)}`, text: `${T.text} (si studia in [0, ${T.text}])` }]])
+    rows.push([T.period, [{ tex: T.studiedOnTex(P.tex), text: T.studiedOn(P.text) }]])
   }
-  rows.push(['Dominio', [domain]])
-  if (s.parity) rows.push(['Simmetria', [{ tex: `\\text{${s.parity}}`, text: s.parity }]])
+  rows.push([T.domain, [domain]])
+  const parity = s.parity === 'pari' ? T.even : s.parity === 'dispari' ? T.odd : null
+  if (parity) rows.push([T.symmetry, [{ tex: `\\text{${parity}}`, text: parity }]])
   const cross: FormattedResult[] = []
   if (s.y0) cross.push({ tex: `${nameLatex(name)}(0) = ${s.y0.tex}`, text: `${name}(0) = ${s.y0.text}` })
-  cross.push(s.zeros.length ? { tex: `\\text{zeri: } ${s.zeros.map((z) => `${X} = ${z.tex}`).join(',\\ ')}`, text: `zeri: ${s.zeros.map((z) => `${x} = ${z.text}`).join(', ')}` } : { tex: '\\text{nessuno zero}', text: 'nessuno zero' })
-  rows.push(['Intersezioni', cross])
+  cross.push(
+    s.zeros.length
+      ? { tex: T.zerosTex(s.zeros.map((z) => `${X} = ${z.tex}`).join(',\\ ')), text: T.zeros(s.zeros.map((z) => `${x} = ${z.text}`).join(', ')) }
+      : { tex: `\\text{${T.noZeros}}`, text: T.noZeros },
+  )
+  rows.push([T.intercepts, cross])
   const sign: FormattedResult[] = []
   for (const [spans, op] of [
     [s.positive, '>'],
@@ -753,43 +821,61 @@ export function studyRows(s: Study, name: string, options: FormatOptions): [stri
   ] as const) {
     if (!spans.length) continue
     const t = spansText(spans, x, true)
-    const lines = phrase('per', t)
+    const lines = phrase(T.for, t)
     sign.push(...lines.map((l, i) => (i ? l : { tex: `${fx} ${op} 0\\ ${l.tex}`, text: `${name}(${x}) ${op} 0 ${l.text}` })))
   }
-  rows.push(['Segno', sign.length ? sign : [{ tex: `${fx} = 0`, text: `${name}(${x}) = 0` }]])
-  if (s.limits.length) rows.push(['Limiti', s.limits])
-  rows.push(['Asintoti', s.asymptotes.length ? s.asymptotes.map((a) => ({ tex: `${a.tex}\\ \\text{${kindName(a)}}`, text: `${a.text} ${kindName(a)}` })) : [{ tex: '\\text{nessuno}', text: 'nessuno' }]])
+  rows.push([T.sign, sign.length ? sign : [{ tex: `${fx} = 0`, text: `${name}(${x}) = 0` }]])
+  if (s.limits.length) rows.push([T.limits, s.limits])
+  rows.push([T.asymptotes, s.asymptotes.length ? s.asymptotes.map(asymptoteText) : [none()]])
   if (s.d1) {
     const node = toNode(s.d1, options.decimal)
-    rows.push(['Derivata', [{ tex: `${nameLatex(name)}'(${X}) = ${toLatex(node)}`, text: `${name}'(${x}) = ${plainText(node)}` }]])
+    rows.push([T.derivative, [{ tex: `${nameLatex(name)}'(${X}) = ${toLatex(node)}`, text: `${name}'(${x}) = ${plainText(node)}` }]])
     const parts: FormattedResult[] = []
-    for (const [spans, word] of [
-      [s.increasing, 'crescente'],
-      [s.decreasing, 'decrescente'],
+    for (const [spans, words] of [
+      [s.increasing, T.increasingFor],
+      [s.decreasing, T.decreasingFor],
     ] as const) {
       if (!spans.length) continue
-      parts.push(...phrase(`${word} per`, spansText(spans, x, true)))
+      parts.push(...phrase(words, spansText(spans, x, true)))
     }
-    if (s.d1.t === 'num' && s.d1.v.sign === 0) parts.push({ tex: '\\text{costante}', text: 'costante' })
-    if (parts.length) rows.push(['Crescenza', parts])
-    rows.push(['Massimi e minimi', s.extrema.length ? s.extrema.map((e) => ({ tex: `\\text{${e.kind === 'max' ? 'massimo' : 'minimo'} } ${pointText(e).tex}`, text: `${e.kind === 'max' ? 'massimo' : 'minimo'} ${pointText(e).text}` })) : [{ tex: '\\text{nessuno}', text: 'nessuno' }]])
+    if (s.d1.t === 'num' && s.d1.v.sign === 0) parts.push({ tex: `\\text{${T.constant}}`, text: T.constant })
+    if (parts.length) rows.push([T.monotonicity, parts])
+    rows.push([T.extrema, s.extrema.length ? s.extrema.map(extremumText) : [none()]])
   }
   if (s.d2) {
     const node = toNode(s.d2, options.decimal)
-    rows.push(['Derivata seconda', [{ tex: `${nameLatex(name)}''(${X}) = ${toLatex(node)}`, text: `${name}''(${x}) = ${plainText(node)}` }]])
+    rows.push([T.secondDerivative, [{ tex: `${nameLatex(name)}''(${X}) = ${toLatex(node)}`, text: `${name}''(${x}) = ${plainText(node)}` }]])
     const parts: FormattedResult[] = []
-    for (const [spans, word] of [
-      [s.convex, 'convessa'],
-      [s.concave, 'concava'],
+    for (const [spans, words] of [
+      [s.convex, T.convexFor],
+      [s.concave, T.concaveFor],
     ] as const) {
       if (!spans.length) continue
-      parts.push(...phrase(`${word} per`, spansText(spans, x, true)))
+      parts.push(...phrase(words, spansText(spans, x, true)))
     }
-    if (s.d2.t === 'num' && s.d2.v.sign === 0) parts.push({ tex: '\\text{né convessa né concava (è una retta)}', text: 'né convessa né concava (è una retta)' })
-    if (parts.length) rows.push(['Concavità', parts])
-    rows.push(['Flessi', s.flexes.length ? s.flexes.map(pointText) : [{ tex: '\\text{nessuno}', text: 'nessuno' }]])
+    if (s.d2.t === 'num' && s.d2.v.sign === 0) parts.push({ tex: `\\text{${T.straightLine}}`, text: T.straightLine })
+    if (parts.length) rows.push([T.concavity, parts])
+    rows.push([T.flexes, s.flexes.length ? s.flexes.map(pointText) : [none()]])
   }
   return rows
+}
+
+/** «nessuno», quando non c'è niente. */
+function none(): FormattedResult {
+  return { tex: `\\text{${T.none}}`, text: T.none }
+}
+
+/** Un asintoto con il suo tipo (verticale, orizzontale, obliquo). */
+function asymptoteText(a: Asymptote): FormattedResult {
+  const kind = a.kind === 'vertical' ? T.vertical : a.kind === 'horizontal' ? T.horizontal : T.oblique
+  return { tex: T.asymptoteTex(a.tex, kind), text: T.asymptote(a.text, kind) }
+}
+
+/** «massimo (1; 2)». */
+function extremumText(e: Special): FormattedResult {
+  const word = e.kind === 'max' ? T.maximum : T.minimum
+  const p = pointText(e)
+  return { tex: `\\text{${word} } ${p.tex}`, text: `${word} ${p.text}` }
 }
 
 /**
@@ -818,13 +904,13 @@ export function studyPart(s: Study, part: string, options: FormatOptions): Forma
     case 'domain':
       return spansText(s.domain, x)
     case 'asymptotes':
-      return list(s.asymptotes.map((a) => ({ tex: `${a.tex}\\ \\text{${a.kind === 'vertical' ? 'verticale' : a.kind === 'horizontal' ? 'orizzontale' : 'obliquo'}}`, text: `${a.text} ${a.kind === 'vertical' ? 'verticale' : a.kind === 'horizontal' ? 'orizzontale' : 'obliquo'}` })), 'nessuno')
+      return list(s.asymptotes.map(asymptoteText), T.none)
     case 'extrema':
-      return list(s.extrema.map((e) => ({ tex: `\\text{${e.kind === 'max' ? 'massimo' : 'minimo'} } ${pointText(e).tex}`, text: `${e.kind === 'max' ? 'massimo' : 'minimo'} ${pointText(e).text}` })), 'nessuno')
+      return list(s.extrema.map(extremumText), T.none)
     case 'flexes':
-      return list(s.flexes.map(pointText), 'nessuno')
+      return list(s.flexes.map(pointText), T.none)
     case 'zeros':
-      return s.zeros.length ? { tex: s.zeros.map((z) => `${nameLatex(x)} = ${z.tex}`).join(' \\lor '), text: s.zeros.map((z) => `${x} = ${z.text}`).join(' ∨ ') } : { tex: '\\text{nessuno}', text: 'nessuno' }
+      return s.zeros.length ? { tex: s.zeros.map((z) => `${nameLatex(x)} = ${z.tex}`).join(' \\lor '), text: s.zeros.map((z) => `${x} = ${z.text}`).join(' ∨ ') } : none()
   }
   void options
   return null

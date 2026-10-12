@@ -5,6 +5,7 @@
  * frazione per un prodotto di potenze (`Ex`); poi torna un'espressione (`MathNode`) da scrivere in
  * LaTeX o da calcolare con i numeri.
  */
+import { texts, usesDecimalComma } from '../i18n'
 import { compile, EMPTY_SCOPE, fnLabel, MathError, scopeWith, UndefinedName } from './evaluate'
 import { ExactUnavailable, Rational } from './exact'
 import { limit } from './limits'
@@ -12,6 +13,55 @@ import { children, namesIn, productPower, type MathNode } from './parse'
 import { asFraction, polyEx, primitive } from './primitive'
 import { squareFree as squareFreeFactors } from './polynomial'
 import { toLatex } from './latex'
+
+/** I messaggi dei conti con le lettere («con le lettere»: in inglese «symbolically»). */
+const T = texts({
+  piecewiseConditions: ['Le condizioni di una funzione a tratti restano con le lettere', "The conditions of a piecewise function can't be handled symbolically"],
+  partSymbolic: ['Questa parte non si sa scrivere con le lettere', "This part can't be written symbolically"],
+  integralDerivative: [
+    'La derivata di un integrale che dipende dalla variabile anche dentro non si sa fare',
+    "I can't differentiate an integral whose integrand also depends on the variable",
+  ],
+  sumDerivative: ['La derivata di una somma con gli estremi che cambiano non si sa fare', "I can't differentiate a sum whose bounds change"],
+  derivativeSymbolic: ['Questa derivata non si sa fare con le lettere', "This derivative can't be done symbolically"],
+  cannotDifferentiate: (label: string) => [`Non so fare la derivata di ${label}`, `I can't differentiate ${label}`],
+  noPrimitive: ['Non so trovare la primitiva di questa funzione', "I can't find an antiderivative of this function"],
+  tooLong: ["L'espressione è troppo lunga", 'The expression is too long'],
+  fieldNotNumber: (name: string) => [`${name} è un campo di vettori: qui va un numero`, `${name} is a vector field: a number goes here`],
+  crossProduct: ['Il prodotto vettoriale dà un vettore: qui va un numero', 'The cross product gives a vector: a number goes here'],
+  notFunction: (name: string) => [`${name} non è una funzione definita`, `${name} is not a defined function`],
+  argumentCount: (name: string, n: number) => [`${name} vuole ${n === 1 ? 'un valore' : `${n} valori`}`, `${name} takes ${n === 1 ? 'one value' : `${n} values`}`],
+  primeOneVariable: (name: string) => [
+    `La derivata ${name}' si sa fare solo per le funzioni di una variabile: per le altre ci sono le derivate parziali`,
+    `The derivative ${name}' only works for functions of one variable: for the others there are partial derivatives`,
+  ],
+  vectorNotNumber: ['È un vettore: qui va un numero', "It's a vector: a number goes here"],
+  expressionSymbolic: ['Questa espressione non si sa scrivere con le lettere', "This expression can't be written symbolically"],
+  invalid: ['Espressione non valida', 'Invalid expression'],
+  usesItself: (name: string) => [`${name} usa sé stessa`, `${name} uses itself`],
+  gradientNotNumber: ['Il gradiente è un vettore: qui va un numero', 'The gradient is a vector: a number goes here'],
+  numberNotVector: ['Qui va un numero, non un vettore', 'A number goes here, not a vector'],
+  usage: (usage: string) => [`Si scrive ${usage}`, `Write ${usage}`],
+  taylorOrder: ["L'ordine del polinomio è un numero intero da 0 a 20", 'The order of the polynomial is a whole number from 0 to 20'],
+  taylorPoint: ['Il punto del polinomio di Taylor è un numero', 'The center of the Taylor polynomial is a number'],
+  whichVariable: (names: string) => [`Di quale variabile? La funzione ne ha più di una (${names})`, `With respect to which variable? The function has more than one (${names})`],
+  taylorCoordinates: ['Il punto del polinomio di Taylor ha due o tre coordinate', 'The center of the Taylor polynomial has two or three coordinates'],
+  taylorNumbers: ['Il punto del polinomio di Taylor è fatto di numeri', 'The center of the Taylor polynomial must be made of numbers'],
+  values: (name: string, n: number) => [`${name} vuole ${n} valori`, `${name} takes ${n} values`],
+  field: ['Qui va un campo di vettori: (P, Q), oppure F definito come F(x, y) = (…)', 'A vector field goes here: (P, Q), or F defined as F(x, y) = (…)'],
+  gradientOneFunction: ['Il gradiente vuole una funzione sola', 'The gradient takes a single function'],
+  divergenceOneFunction: ['La divergenza vuole una funzione sola', 'The divergence takes a single function'],
+  curlOneFunction: ['Il rotore vuole una funzione sola', 'The curl takes a single function'],
+  laplacianOneFunction: ['Il laplaciano vuole una funzione sola', 'The Laplacian takes a single function'],
+  hessianOneFunction: ["L'hessiana vuole una funzione sola", 'The Hessian takes a single function'],
+  jacobianOneFunction: ['La jacobiana vuole una funzione sola', 'The Jacobian takes a single function'],
+  oneFunction: (name: string) => [`${name} vuole una funzione sola`, `${name} takes a single function`],
+  divergenceComponents: ['La divergenza vuole tante componenti quante variabili', 'The divergence needs as many components as variables'],
+  curlDimensions: ['Il rotore si fa per i campi del piano e dello spazio', 'The curl is defined for fields in the plane and in space'],
+  missingFunction: ['Manca la funzione: scrivi le variabili, come \\nabla (x^2 + y^2)', 'Missing the function: write the variables, like \\nabla (x^2 + y^2)'],
+  improperSymbolic: ["L'integrale improprio non si sa fare con le lettere", "The improper integral can't be done symbolically"],
+  limitAtBound: ["Il limite all'estremo non si riconosce", "The limit at the bound can't be recognized"],
+})
 
 export type Ex =
   | { t: 'num'; v: Rational }
@@ -479,13 +529,13 @@ export function subst(x: Ex, name: string, value: Ex): Ex {
     case 'fn':
       return fn(x.name, x.args.map(s), x.base && s(x.base))
     case 'cases':
-      if (x.rows.some((r) => r.cond && namesIn(r.cond).has(name))) throw new MathError('Le condizioni di una funzione a tratti restano con le lettere')
+      if (x.rows.some((r) => r.cond && namesIn(r.cond).has(name))) throw new MathError(T.piecewiseConditions)
       return { t: 'cases', rows: x.rows.map((r) => ({ value: s(r.value), cond: r.cond })) }
     case 'int':
     case 'sum':
       return { ...x, from: s(x.from), to: s(x.to), body: x.v === name ? x.body : s(x.body) }
     case 'node':
-      if (namesIn(x.node).has(name)) throw new MathError('Questa parte non si sa scrivere con le lettere')
+      if (namesIn(x.node).has(name)) throw new MathError(T.partSymbolic)
       return x
   }
 }
@@ -603,19 +653,19 @@ export function derive(x: Ex, v: string): Ex {
       return { t: 'cases', rows: x.rows.map((r) => ({ value: derive(r.value, v), cond: r.cond })) }
     case 'int': {
       // La funzione integrale: d/dx ∫_a^{b(x)} g(t) dt = g(b(x)) b'(x) − g(a(x)) a'(x).
-      if (x.v !== v && dependsOn(x.body, v)) throw new MathError('La derivata di un integrale che dipende dalla variabile anche dentro non si sa fare')
+      if (x.v !== v && dependsOn(x.body, v)) throw new MathError(T.integralDerivative)
       return sub(mul(subst(x.body, x.v, x.to), derive(x.to, v)), mul(subst(x.body, x.v, x.from), derive(x.from, v)))
     }
     case 'sum':
-      if (dependsOn(x.from, v) || dependsOn(x.to, v)) throw new MathError('La derivata di una somma con gli estremi che cambiano non si sa fare')
+      if (dependsOn(x.from, v) || dependsOn(x.to, v)) throw new MathError(T.sumDerivative)
       return { t: 'sum', v: x.v, from: x.from, to: x.to, body: derive(x.body, v) }
     case 'node':
-      throw new MathError('Questa derivata non si sa fare con le lettere')
+      throw new MathError(T.derivativeSymbolic)
   }
 }
 
 function deriveFn(x: Extract<Ex, { t: 'fn' }>, v: string): Ex {
-  if (x.args.length !== 1) throw new MathError(`Non so fare la derivata di ${fnLabel(x.name)}`)
+  if (x.args.length !== 1) throw new MathError(T.cannotDifferentiate(fnLabel(x.name)))
   const u = x.args[0]
   const square = pow(u, num(2))
   const oneMinus = add(num(1), neg(square))
@@ -687,7 +737,7 @@ function deriveFn(x: Extract<Ex, { t: 'fn' }>, v: string): Ex {
     case 'round':
       return num(0)
     default:
-      throw new MathError(`Non so fare la derivata di ${fnLabel(x.name)}`)
+      throw new MathError(T.cannotDifferentiate(fnLabel(x.name)))
   }
   return mul(outer, derive(u, v))
 }
@@ -731,7 +781,7 @@ class Converter {
     const positive = this.definite!
     const body = this.withVariables([node.v], () => this.scalar(node.body, inner))
     const F = primitive(assumePositive(body, positive), node.v, positive)
-    if (!F) throw new MathError('Non so trovare la primitiva di questa funzione')
+    if (!F) throw new MathError(T.noPrimitive)
     const at = (bound: MathNode): Ex => {
       const side = infiniteSide(bound)
       return side ? limitAtInfinity(F, node.v, side) : subst(F, node.v, this.scalar(bound, locals))
@@ -757,7 +807,7 @@ class Converter {
 
   /** Un'espressione con un numero come valore. */
   scalar(node: MathNode, locals: ReadonlyMap<string, Ex> = new Map()): Ex {
-    if (++this.depth > 800) throw new MathError('L\'espressione è troppo lunga')
+    if (++this.depth > 800) throw new MathError(T.tooLong)
     try {
       return this.convert(node, locals)
     } finally {
@@ -781,7 +831,7 @@ class Converter {
         const f = this.scope.fns.get(node.name)
         if (f) {
           // f da sola vuol dire f(x, y): la funzione con le sue variabili.
-          if (isVectorBody(f.body)) throw new MathError(`${node.name} è un campo di vettori: qui va un numero`)
+          if (isVectorBody(f.body)) throw new MathError(T.fieldNotNumber(node.name))
           return this.inline(node.name, f.params.map(sym))
         }
         return sym(node.name)
@@ -789,7 +839,7 @@ class Converter {
       case 'neg':
         return neg(s(node.a))
       case 'bin': {
-        if (node.cross) throw new MathError('Il prodotto vettoriale dà un vettore: qui va un numero')
+        if (node.cross) throw new MathError(T.crossProduct)
         const split = productPower(node, (n) => this.scope.fns.has(n) && !locals.has(n) && !this.variables.has(n))
         if (split) return s(split)
         const a = s(node.a)
@@ -814,16 +864,16 @@ class Converter {
         const f = this.scope.fns.get(node.name)
         if (!f || locals.has(node.name) || this.variables.has(node.name)) {
           // a(x + 1) con a un numero, x(x + 1) con x la variabile, \pi (R^2 - x^2): un prodotto.
-          if (node.primes) throw new MathError(`${node.name} non è una funzione definita`)
+          if (node.primes) throw new MathError(T.notFunction(node.name))
           const number = this.scope.consts.has(node.name) || locals.has(node.name) || this.variables.has(node.name) || node.name === 'π' || node.name === 'e'
           if (number && node.args.length === 1) return mul(s({ k: 'name', name: node.name }), s(node.args[0]))
           throw new UndefinedName(node.name)
         }
-        if (f.params.length !== node.args.length) throw new MathError(`${node.name} vuole ${f.params.length === 1 ? 'un valore' : `${f.params.length} valori`}`)
-        if (isVectorBody(f.body)) throw new MathError(`${node.name} è un campo di vettori: qui va un numero`)
+        if (f.params.length !== node.args.length) throw new MathError(T.argumentCount(node.name, f.params.length))
+        if (isVectorBody(f.body)) throw new MathError(T.fieldNotNumber(node.name))
         const args = node.args.map(s)
         if (!node.primes) return this.inline(node.name, args)
-        if (f.params.length !== 1) throw new MathError(`La derivata ${node.name}' si sa fare solo per le funzioni di una variabile: per le altre ci sono le derivate parziali`)
+        if (f.params.length !== 1) throw new MathError(T.primeOneVariable(node.name))
         let d = this.inline(node.name, f.params.map(sym))
         for (let i = 0; i < node.primes; i++) d = derive(d, f.params[0])
         return subst(d, f.params[0], args[0])
@@ -858,7 +908,7 @@ class Converter {
         inner.delete(node.v)
         const body = this.withVariables([node.v], () => this.scalar(node.body, inner))
         const F = primitive(body, node.v)
-        if (!F) throw new MathError('Non so trovare la primitiva di questa funzione')
+        if (!F) throw new MathError(T.noPrimitive)
         return F
       }
       case 'cases':
@@ -867,7 +917,7 @@ class Converter {
         return this.derivative(node, locals)
       case 'tuple':
       case 'matrix':
-        throw new MathError('È un vettore: qui va un numero')
+        throw new MathError(T.vectorNotNumber)
       case 'binom':
       case 'mint':
       case 'lint':
@@ -875,15 +925,15 @@ class Converter {
       case 'lim':
         return { t: 'node', node }
       default:
-        throw new MathError('Questa espressione non si sa scrivere con le lettere')
+        throw new MathError(T.expressionSymbolic)
     }
-    throw new MathError('Espressione non valida')
+    throw new MathError(T.invalid)
   }
 
   /** f(a, b): il corpo di f con a e b al posto delle sue variabili. */
   private inline(name: string, args: Ex[]): Ex {
     const f = this.scope.fns.get(name)!
-    if (++this.inlined > MAX_DEPTH) throw new MathError(`${name} usa sé stessa`)
+    if (++this.inlined > MAX_DEPTH) throw new MathError(T.usesItself(name))
     try {
       // Dentro f valgono le sue variabili, non quelle di fuori.
       return this.withVariables([], () => this.scalar(f.body, new Map(f.params.map((p, i) => [p, args[i]]))), false)
@@ -896,7 +946,7 @@ class Converter {
     const s = (n: MathNode) => this.scalar(n, locals)
     if (VECTOR_OPS.has(node.name)) {
       const value = this.operator(node, locals)
-      if (Array.isArray(value)) throw new MathError(node.name === 'grad' ? 'Il gradiente è un vettore: qui va un numero' : 'Qui va un numero, non un vettore')
+      if (Array.isArray(value)) throw new MathError(node.name === 'grad' ? T.gradientNotNumber : T.numberNotVector)
       return value
     }
     if (SYMBOLIC_FNS.has(node.name)) return this.taylor(node, locals)
@@ -918,20 +968,20 @@ class Converter {
   private taylor(node: Extract<MathNode, { k: 'fn' }>, locals: ReadonlyMap<string, Ex>): Ex {
     const maclaurin = node.name === 'maclaurin'
     const usage = maclaurin ? '\\operatorname{maclaurin}(f(x), n)' : '\\operatorname{taylor}(f(x), x_0, n)'
-    if (node.args.length !== (maclaurin ? 2 : 3)) throw new MathError(`Si scrive ${usage}`)
+    if (node.args.length !== (maclaurin ? 2 : 3)) throw new MathError(T.usage(usage))
     const [fn, center, order] = maclaurin ? [node.args[0], null, node.args[1]] : node.args
     const nEx = this.scalar(order, locals)
-    if (nEx.t !== 'num' || !nEx.v.isInteger || nEx.v.sign < 0 || nEx.v.n > 20n) throw new MathError('L\'ordine del polinomio è un numero intero da 0 a 20')
+    if (nEx.t !== 'num' || !nEx.v.isInteger || nEx.v.sign < 0 || nEx.v.n > 20n) throw new MathError(T.taylorOrder)
     const n = Number(nEx.v.n)
     // In più variabili: \operatorname{taylor}(f, (0, 0), 2).
     if (center && center.k === 'tuple') return this.taylorSeveral(fn, center.items, n, locals)
     const a = center ? this.scalar(center, locals) : num(0)
-    if (symbols(a).some((s) => s !== 'π' && s !== 'e')) throw new MathError('Il punto del polinomio di Taylor è un numero')
+    if (symbols(a).some((s) => s !== 'π' && s !== 'e')) throw new MathError(T.taylorPoint)
     // La variabile: x, o l'unica lettera della funzione.
     let f = this.withVariables(['x'], () => this.scalar(fn, locals))
     const free = symbols(f).filter((s) => s !== 'π' && s !== 'e')
     const v = free.includes('x') || !free.length ? 'x' : free.length === 1 ? free[0] : null
-    if (!v) throw new MathError(`Di quale variabile? La funzione ne ha più di una (${free.join(', ')})`)
+    if (!v) throw new MathError(T.whichVariable(free.join(', ')))
     const shift = isNum(a, 0) ? sym(v) : sub(sym(v), a)
     const terms: Ex[] = []
     let factorial = ONE
@@ -957,9 +1007,9 @@ class Converter {
    */
   private taylorSeveral(fnNode: MathNode, items: MathNode[], n: number, locals: ReadonlyMap<string, Ex>): Ex {
     const k = items.length
-    if (k < 2 || k > 3) throw new MathError('Il punto del polinomio di Taylor ha due o tre coordinate')
+    if (k < 2 || k > 3) throw new MathError(T.taylorCoordinates)
     const a = items.map((c) => this.scalar(c, locals))
-    if (a.some((c) => symbols(c).some((s) => s !== 'π' && s !== 'e'))) throw new MathError('Il punto del polinomio di Taylor è fatto di numeri')
+    if (a.some((c) => symbols(c).some((s) => s !== 'π' && s !== 'e'))) throw new MathError(T.taylorNumbers)
     const def = fnNode.k === 'name' ? this.scope.fns.get(fnNode.name) : undefined
     const vars = def && def.params.length === k && !locals.has((fnNode as { name: string }).name) ? def.params : coordinates(k)
     const f =
@@ -1039,7 +1089,7 @@ class Converter {
       if (field && isVectorBody(field.body)) {
         const body = vectorItems(field.body)
         if (node.k === 'name') return { value: body.map((n) => this.scalar(n, new Map(field.params.map((p) => [p, sym(p)])))), vars: field.params }
-        if (node.args.length !== field.params.length) throw new MathError(`${node.name} vuole ${field.params.length} valori`)
+        if (node.args.length !== field.params.length) throw new MathError(T.values(node.name, field.params.length))
         const args = node.args.map((a) => this.scalar(a, locals))
         const inner = new Map(field.params.map((p, i) => [p, args[i]]))
         return { value: body.map((n) => this.scalar(n, inner)), vars: field.params }
@@ -1049,7 +1099,7 @@ class Converter {
       const value = this.operator(node, locals)
       if (Array.isArray(value) && !value.some((v) => Array.isArray(v))) return { value: value as Ex[], vars: coordinates(value.length) }
     }
-    throw new MathError('Qui va un campo di vettori: (P, Q), oppure F definito come F(x, y) = (…)')
+    throw new MathError(T.field)
   }
 
   /** Gradiente, divergenza, rotore, laplaciano, hessiana e jacobiana. */
@@ -1058,7 +1108,7 @@ class Converter {
   }
 
   private operatorValue(node: Extract<MathNode, { k: 'fn' }>, locals: ReadonlyMap<string, Ex>): Ex | Ex[] | Ex[][] {
-    if (node.args.length !== 1) throw new MathError(`${operatorName(node.name)} vuole una funzione sola`)
+    if (node.args.length !== 1) throw new MathError(oneFunction(node.name))
     const arg = node.args[0]
     if (node.name === 'grad' || node.name === 'lap' || node.name === 'hess') {
       const { f, vars, at } = this.scalarField(arg, locals)
@@ -1073,7 +1123,7 @@ class Converter {
     const { value: F, vars } = point ? point.field : this.vector(arg, locals)
     let value: Ex | Ex[] | Ex[][]
     if (node.name === 'div') {
-      if (F.length !== vars.length) throw new MathError('La divergenza vuole tante componenti quante variabili')
+      if (F.length !== vars.length) throw new MathError(T.divergenceComponents)
       value = add(...F.map((c, i) => derive(c, vars[i])))
     } else if (node.name === 'jac') value = F.map((c) => vars.map((v) => derive(c, v)))
     else if (F.length === 2) value = sub(derive(F[1], vars[0]), derive(F[0], vars[1]))
@@ -1081,7 +1131,7 @@ class Converter {
       const [P, Q, R3] = F
       const [x, y, z] = vars
       value = [sub(derive(R3, y), derive(Q, z)), sub(derive(P, z), derive(R3, x)), sub(derive(Q, x), derive(P, y))]
-    } else throw new MathError('Il rotore si fa per i campi del piano e dello spazio')
+    } else throw new MathError(T.curlDimensions)
     return point ? atValues(value, vars, point.args) : value
   }
 
@@ -1108,7 +1158,7 @@ class Converter {
     const f = this.scalar(node, locals)
     const free = symbols(f).filter((n) => n !== 'π' && n !== 'e')
     const vars = free.includes('z') ? ['x', 'y', 'z'] : free.some((n) => n === 'x' || n === 'y') ? ['x', 'y'] : free
-    if (!vars.length) throw new MathError('Manca la funzione: scrivi le variabili, come \\nabla (x^2 + y^2)')
+    if (!vars.length) throw new MathError(T.missingFunction)
     return { f, vars, at: null }
   }
 }
@@ -1129,8 +1179,17 @@ function vectorItems(node: MathNode): MathNode[] {
   return node.k === 'tuple' ? node.items : node.k === 'matrix' ? node.rows.map((r) => r[0]) : [node]
 }
 
-function operatorName(name: string): string {
-  return { grad: 'Il gradiente', div: 'La divergenza', curl: 'Il rotore', lap: 'Il laplaciano', hess: 'L\'hessiana', jac: 'La jacobiana' }[name] ?? name
+/** «Il gradiente vuole una funzione sola», per ogni operazione. */
+function oneFunction(name: string): string {
+  const known: Record<string, () => string> = {
+    grad: () => T.gradientOneFunction,
+    div: () => T.divergenceOneFunction,
+    curl: () => T.curlOneFunction,
+    lap: () => T.laplacianOneFunction,
+    hess: () => T.hessianOneFunction,
+    jac: () => T.jacobianOneFunction,
+  }
+  return known[name]?.() ?? T.oneFunction(name)
 }
 
 /** Un valore (numero, vettore o matrice) con i numeri del punto al posto delle variabili. */
@@ -1291,10 +1350,10 @@ function limitAtInfinity(F: Ex, v: string, side: 1 | -1): Ex {
     const vars: Record<string, number> = {}
     letters.forEach((n, i) => (vars[n] = values[i]))
     const value = limit((x) => ((vars[v] = x), f(vars)), side * Infinity, 0)
-    if (value.k !== 'value') throw new MathError('L\'integrale improprio non si sa fare con le lettere')
+    if (value.k !== 'value') throw new MathError(T.improperSymbolic)
     return value.v
   }
-  const unknown = () => new MathError('Il limite all\'estremo non si riconosce')
+  const unknown = () => new MathError(T.limitAtBound)
   const base = letters.map((_, i) => 1.3 + 0.37 * i)
   const L = at(base)
   let result: Ex
@@ -1555,7 +1614,10 @@ const NAME = (name: string): MathNode => ({ k: 'name', name })
 const times = (a: MathNode, b: MathNode): MathNode => ({ k: 'bin', op: '*', a, b, implicit: true })
 const product = (xs: MathNode[]): MathNode => xs.reduce((a, b) => times(a, b))
 
-/** Come si scrivono i numeri: con le frazioni o (`decimal`, se chi scrive usa i decimali) con la virgola. */
+/**
+ * Come si scrivono i numeri: con le frazioni o (`decimal`, se chi scrive usa i decimali) con i decimali,
+ * con la virgola o il punto della lingua di Glifo (`usesDecimalComma`).
+ */
 let decimals = false
 
 /** Il numero con la virgola, se le cifre finiscono (3/5 = 0,6); se no null. */
@@ -1582,7 +1644,7 @@ function rationalNode(r: Rational): MathNode {
   const n = r.n < 0n ? -r.n : r.n
   const text = decimals && r.d !== 1n ? decimalText(r) : null
   const out: MathNode = text
-    ? { k: 'num', v: Number(text), text, comma: true }
+    ? { k: 'num', v: Number(text), text, comma: usesDecimalComma() }
     : r.d === 1n
       ? NUM(n)
       : { k: 'bin', op: '/', a: NUM(n), b: NUM(r.d), frac: true }
@@ -1922,7 +1984,7 @@ function node(x: Ex): MathNode {
       const top: MathNode[] = []
       const bottom: MathNode[] = []
       const decimal = decimals && x.c.d !== 1n ? decimalText(x.c) : null
-      if (decimal) top.push({ k: 'num', v: Number(decimal), text: decimal, comma: true })
+      if (decimal) top.push({ k: 'num', v: Number(decimal), text: decimal, comma: usesDecimalComma() })
       else {
         if (x.c.n !== 1n) top.push(NUM(x.c.n))
         if (x.c.d !== 1n) bottom.push(NUM(x.c.d))
@@ -1974,7 +2036,8 @@ export function plainText(node: MathNode): string {
   }
   switch (node.k) {
     case 'num':
-      return node.text.replace('.', ',')
+      // Con la virgola in italiano; in inglese con il punto, se chi scrive non ha usato la virgola.
+      return node.comma || usesDecimalComma() ? node.text.replace('.', ',') : node.text
     case 'name':
       return node.name
     case 'neg':

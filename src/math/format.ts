@@ -1,6 +1,7 @@
 /**
- * I risultati scritti come in un quaderno italiano: la virgola per i decimali, le frazioni quando
- * il conto è fatto di frazioni, e i puntini quando le cifre continuano (√2 = 1,414213…).
+ * I risultati scritti come in un quaderno: la virgola per i decimali (il punto in inglese o se chi prende
+ * appunti scrive così: `comma`, lo sceglie chi chiama), le frazioni quando il conto è fatto di frazioni, e
+ * i puntini quando le cifre continuano (√2 = 1,414213…).
  * Ogni risultato ha due forme: `tex` da mettere nella formula, `text` da mostrare nell'editor.
  */
 import { Rational } from './exact'

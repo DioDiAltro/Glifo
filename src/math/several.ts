@@ -5,6 +5,7 @@
  * trovano con i numeri (Newton da tanti punti di partenza) e poi si riconoscono esatti (frazioni, radici,
  * multipli di π), controllando con le lettere che lo siano davvero.
  */
+import { texts } from '../i18n'
 import { compile, EMPTY_SCOPE, scopeWith, type Compiled } from './evaluate'
 import { Rational } from './exact'
 import { formatNumber, type FormatOptions, type FormattedResult } from './format'
@@ -13,6 +14,29 @@ import { severalLimit, type LimitValue } from './limits'
 import { namesIn, type MathNode } from './parse'
 import { fractionNear } from './polynomial'
 import { add, derive, exOf, mul, num, plainText, pow, sub, subst, sym, symbols, tidy, toNode, type Ex, type SymbolScope } from './symbolic'
+
+const T = texts({
+  doesNotExist: ['non esiste', 'does not exist'],
+  dependsTex: ['\\nexists \\quad \\text{(dipende da come ci si avvicina)}', '\\nexists \\quad \\text{(it depends on the path)}'],
+  depends: ['non esiste (dipende da come ci si avvicina)', 'does not exist (it depends on the path)'],
+  alongNoneTex: (path: string) => [`\\text{lungo } ${path} \\text{ non esiste}`, `\\text{along } ${path} \\text{ it does not exist}`],
+  alongNone: (path: string) => [`lungo ${path} non esiste`, `along ${path} it does not exist`],
+  alongTex: (path: string, value: string) => [`\\text{lungo } ${path} \\text{ vale } ${value}`, `\\text{along } ${path} \\text{ it is } ${value}`],
+  along: (path: string, value: string) => [`lungo ${path} vale ${value}`, `along ${path} it is ${value}`],
+  doesNotExistBecause: (paths: string) => [`non esiste (${paths})`, `does not exist (${paths})`],
+  localMinimum: ['minimo relativo', 'local minimum'],
+  localMaximum: ['massimo relativo', 'local maximum'],
+  saddle: ['punto di sella', 'saddle point'],
+  degenerate: ["da studiare (l'hessiana ha determinante 0)", 'inconclusive (the Hessian has determinant 0)'],
+  infinitelyMany: ['infiniti punti critici', 'infinitely many critical points'],
+  noCritical: ['nessun punto critico', 'no critical points'],
+  noCandidates: ['nessun punto candidato', 'no candidate points'],
+  unbounded: ["candidati (l'insieme non è limitato):", 'candidates (the set is not bounded):'],
+  /** Il massimo (o il minimo) e dove: «3 in (1, 0) e (0, 1)», «3 at (1, 0) and (0, 1)». */
+  at: ['in', 'at'],
+  andTex: ['\\text{ e }', '\\text{ and }'],
+  and: [' e ', ' and '],
+})
 
 const R = (n: number | bigint, d: number | bigint = 1) => new Rational(BigInt(n), BigInt(d))
 const HALF = R(1, 2)
@@ -274,7 +298,7 @@ function pathLabel(vars: string[], point: number[], v: number[], power: number[]
 
 function limitShown(value: LimitValue, style: FormatOptions): { tex: string; text: string } {
   if (value.k === 'infinity') return value.sign > 0 ? { tex: '+\\infty', text: '+∞' } : { tex: '-\\infty', text: '−∞' }
-  if (value.k === 'none') return { tex: '\\nexists', text: 'non esiste' }
+  if (value.k === 'none') return { tex: '\\nexists', text: T.doesNotExist }
   const exact = exactNear(value.v)
   if (exact) {
     const n = toNode(exact, style.decimal)
@@ -313,16 +337,16 @@ export function severalLimitShown(node: Extract<MathNode, { k: 'lim' }>, scope: 
     }
   }
   if (found.value.k === 'none') {
-    if (!found.paths.length) return { shown: { tex: '\\nexists \\quad \\text{(dipende da come ci si avvicina)}', text: 'non esiste (dipende da come ci si avvicina)' }, value: null }
+    if (!found.paths.length) return { shown: { tex: T.dependsTex, text: T.depends }, value: null }
     const parts = found.paths.map((p) => {
       const v = limitShown(p.value, style)
       return p.value.k === 'none'
-        ? { tex: `\\text{lungo } ${p.label.tex} \\text{ non esiste}`, text: `lungo ${p.label.text} non esiste` }
-        : { tex: `\\text{lungo } ${p.label.tex} \\text{ vale } ${v.tex}`, text: `lungo ${p.label.text} vale ${v.text}` }
+        ? { tex: T.alongNoneTex(p.label.tex), text: T.alongNone(p.label.text) }
+        : { tex: T.alongTex(p.label.tex, v.tex), text: T.along(p.label.text, v.text) }
     })
     const rows = stacked(parts)
     return {
-      shown: { tex: `\\nexists:\\ ${rows.tex}`, text: `non esiste (${parts.map((p) => p.text).join(', ')})`, rich: true },
+      shown: { tex: `\\nexists:\\ ${rows.tex}`, text: T.doesNotExistBecause(parts.map((p) => p.text).join(', ')), rich: true },
       value: null,
     }
   }
@@ -340,11 +364,9 @@ interface Critical {
   kind: Kind
 }
 
-const KIND_TEXT: Record<Kind, string> = {
-  min: 'minimo relativo',
-  max: 'massimo relativo',
-  saddle: 'punto di sella',
-  degenerate: "da studiare (l'hessiana ha determinante 0)",
+/** La natura di un punto critico, a parole. */
+function kindText(kind: Kind): string {
+  return { min: T.localMinimum, max: T.localMaximum, saddle: T.saddle, degenerate: T.degenerate }[kind]
 }
 
 /** Il determinante di una matrice di numeri (2×2 o 3×3). */
@@ -424,15 +446,15 @@ export function criticalShown(s: Several, style: FormatOptions): FormattedResult
   const found = criticalPoints(s)
   if (!found) return null
   const name = s.name ?? 'f'
-  if (found.infinite) return { tex: '\\text{infiniti punti critici}', text: 'infiniti punti critici' }
-  if (!found.points.length) return { tex: '\\text{nessun punto critico}', text: 'nessun punto critico' }
+  if (found.infinite) return { tex: `\\text{${T.infinitelyMany}}`, text: T.infinitelyMany }
+  if (!found.points.length) return { tex: `\\text{${T.noCritical}}`, text: T.noCritical }
   const parts = found.points.map((c) => {
     const p = pointShown(c.at, style)
     const v = coordShown(c.value, style)
     const extreme = c.kind === 'min' || c.kind === 'max'
     return {
-      tex: `${p.tex}\\ \\text{${KIND_TEXT[c.kind]}}${extreme ? `,\\ ${nameLatex(name)} = ${v.tex}` : ''}`,
-      text: `${p.text} ${KIND_TEXT[c.kind]}${extreme ? `, ${name} = ${v.text}` : ''}`,
+      tex: `${p.tex}\\ \\text{${kindText(c.kind)}}${extreme ? `,\\ ${nameLatex(name)} = ${v.tex}` : ''}`,
+      text: `${p.text} ${kindText(c.kind)}${extreme ? `, ${name} = ${v.text}` : ''}`,
     }
   })
   return stacked(parts)
@@ -597,16 +619,16 @@ export function extremaShown(s: Several, constraints: Constraint[], which: 'max'
   const { list } = found
   const name = s.name ?? 'f'
   const fx = s.name ? `${nameLatex(name)}` : 'f'
-  if (!list.length) return { shown: { tex: '\\text{nessun punto candidato}', text: 'nessun punto candidato' }, value: null }
+  if (!list.length) return { shown: { tex: `\\text{${T.noCandidates}}`, text: T.noCandidates }, value: null }
   if (!found.bounded) {
     const parts = list.map((c) => {
       const p = pointShown(c.at, style)
       const v = coordShown(c.value, style)
       return { tex: `${p.tex},\\ ${fx} = ${v.tex}`, text: `${p.text}, ${name} = ${v.text}` }
     })
-    const rows = stacked([{ tex: "\\text{candidati (l'insieme non è limitato):}", text: '' }, ...parts])
+    const rows = stacked([{ tex: `\\text{${T.unbounded}}`, text: '' }, ...parts])
     return {
-      shown: { tex: rows.tex, text: `candidati (l'insieme non è limitato): ${parts.map((p) => p.text).join('; ')}`, rich: true },
+      shown: { tex: rows.tex, text: `${T.unbounded} ${parts.map((p) => p.text).join('; ')}`, rich: true },
       value: null,
     }
   }
@@ -617,8 +639,8 @@ export function extremaShown(s: Several, constraints: Constraint[], which: 'max'
     const ps = where.map((c) => pointShown(c.at, style))
     return {
       v: target,
-      tex: `${v.tex}\\ \\text{in}\\ ${ps.map((p) => p.tex).join('\\text{ e }')}`,
-      text: `${v.text} in ${ps.map((p) => p.text).join(' e ')}`,
+      tex: `${v.tex}\\ \\text{${T.at}}\\ ${ps.map((p) => p.tex).join(T.andTex)}`,
+      text: `${v.text} ${T.at} ${ps.map((p) => p.text).join(T.and)}`,
     }
   }
   if (which !== 'both') {
