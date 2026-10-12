@@ -7,6 +7,7 @@ import { formulaGraph } from '../graph/spec'
 import { graphTitle, PALETTES } from '../graph/svg'
 import type { SuggestionItem } from '../editor/suggestions'
 import { rich, texts } from '../i18n'
+import { localizeTex } from '../noteWords'
 import { cleanKatexError, renderTex } from '../render/katex'
 import { isConfidentAnswer, searchSymbols, type SearchResult } from '../search/search'
 import { CATEGORIES, symbolsInCategory, type CategoryId, type SymbolEntry, type SymbolForm } from '../symbols'
@@ -23,7 +24,7 @@ const T = texts({
   clearSearch: ['Cancella la ricerca', 'Clear search'],
   insertGraphTitle: [
     'Mette nella nota un blocco ```grafico con questa funzione, che l\'anteprima disegna',
-    'Inserts a ```grafico block with this function into the note; the preview draws it',
+    'Inserts a ```graph block with this function into the note; the preview draws it',
   ],
   insertGraph: ['Inserisci il grafico', 'Insert graph'],
   symbolsPanel: ['Pannello dei simboli', 'Symbols panel'],
@@ -93,9 +94,22 @@ type AiState =
 const EMPTY_GROUP_RE = /(?<=[\^_}]|\\[a-zA-Z]+)\{\}/g
 const EMPTY_GROUP_TEX = String.raw`{\htmlClass{mh-ph}{\square}}`
 
-/** Codice mostrato sotto un'anteprima: ciò che verrà inserito. */
+/**
+ * Codice mostrato sotto un'anteprima: ciò che verrà inserito. I simboli sono scritti con le parole italiane
+ * (\operatorname{studio}): nella nota e nelle anteprime vanno quelle della lingua di Glifo (src/noteWords.ts).
+ */
 function displayCode(form: SymbolForm): string {
-  return templateText(form.tex)
+  return templateText(localizeTex(form.tex))
+}
+
+/** L'anteprima di una variante, nella formula sotto il cursore o da sola. */
+function formPreview(form: SymbolForm): string {
+  return localizeTex(formPreviewTex(form))
+}
+
+/** L'anteprima di una variante nelle schede del pannello. */
+function cardPreview(form: SymbolForm): string {
+  return localizeTex(cardPreviewTex(form))
 }
 
 function preventFocusSteal(ev: MouseEvent): void {
@@ -308,11 +322,11 @@ export class SidePanel {
       if (item && token && plain && token.from >= region.contentFrom && token.to <= region.contentTo) {
         const a = token.from - region.contentFrom
         const b = token.to - region.contentFrom
-        tex = tex.slice(0, a) + formPreviewTex(item.form) + tex.slice(b)
+        tex = tex.slice(0, a) + formPreview(item.form) + tex.slice(b)
         meta = T.withCode(displayCode(item.form))
       }
     } else if (item) {
-      tex = formPreviewTex(item.form)
+      tex = formPreview(item.form)
       display = true
       meta = T.previewOf(displayCode(item.form))
     }
@@ -433,7 +447,7 @@ export class SidePanel {
   // ——— Inserimento ———
 
   private insert(entry: SymbolEntry, form: SymbolForm): void {
-    this.deps.editor.insert(form.tex, entry.display)
+    this.deps.editor.insert(localizeTex(form.tex), entry.display)
   }
 
   private async copy(text: string): Promise<void> {
@@ -471,7 +485,7 @@ export class SidePanel {
 
   private card(entry: SymbolEntry, form: SymbolForm, opts: { index?: number; compact?: boolean; onPick: () => void }): HTMLButtonElement {
     const code = displayCode(form)
-    const { html, error } = renderTex(cardPreviewTex(form), !!entry.display, true)
+    const { html, error } = renderTex(cardPreview(form), !!entry.display, true)
     const tooltip = [entry.name + (form.label ? ` – ${form.label}` : ''), code, entry.note].filter(Boolean).join('\n')
     return h(
       'button',
@@ -552,7 +566,7 @@ export class SidePanel {
               attrs: { type: 'button' },
               on: { mousedown: preventFocusSteal, click: () => this.insert(top.entry, form) },
             },
-            h('span', { class: 'answer-render', html: renderTex(cardPreviewTex(form), !!top.entry.display, true).html }),
+            h('span', { class: 'answer-render', html: renderTex(cardPreview(form), !!top.entry.display, true).html }),
             h('span', { class: 'answer-text' }, h('strong', {}, top.entry.name), h('code', {}, code)),
           ),
           h(
@@ -583,7 +597,7 @@ export class SidePanel {
                 attrs: { type: 'button' },
                 on: { mousedown: preventFocusSteal, click: () => this.insert(entry, main) },
               },
-              h('span', { class: 'result-render', html: renderTex(cardPreviewTex(main), !!entry.display, true).html }),
+              h('span', { class: 'result-render', html: renderTex(cardPreview(main), !!entry.display, true).html }),
               h('span', { class: 'result-text' }, h('span', { class: 'result-name' }, entry.name), h('code', {}, displayCode(main))),
             ),
             entry.forms.length > 1

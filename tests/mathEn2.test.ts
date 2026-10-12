@@ -21,7 +21,8 @@ import { dataStatistic, statistic } from '../src/math/statistics'
  * probabilità, coniche, aritmetica, logica e insiemi, polinomi, Fourier, Laplace, serie di potenze): i
  * risultati con le parole, gli errori e i numeri con il punto. I numeri che il foglio scrive come nella
  * formula (la virgola o il punto di chi prende appunti) qui hanno il punto scritto nella formula; senza,
- * la scelta è del foglio (src/math/sheet.ts). I nomi delle funzioni nelle formule restano italiani.
+ * la scelta è del foglio (src/math/sheet.ts). I nomi inglesi delle funzioni nelle formule sono in
+ * tests/noteWordsMath.test.ts.
  */
 
 const r = String.raw
@@ -180,7 +181,7 @@ describe('i conti in inglese (parte B)', () => {
     )
     expect(error(r`\operatorname{piano}((0, 0, 0), (1, 1, 1), (2, 2, 2))`)).toThrow('The three points are collinear: infinitely many planes pass through them')
     expect(() => evaluateLinear(parseMath(r`\operatorname{quartili}((1, 2))`), scope, FLOAT)).toThrow(
-      'Ask for this one on its own, with “=” at the end: \\operatorname{quartili}(x) =',
+      'Ask for this one on its own, with “=” at the end: \\operatorname{quartiles}(x) =',
     )
     expect(text(r`\operatorname{angolo}((1, 0), (1, 2.0)) =`)).toBe('63.434948…°')
     expect(text(r`\operatorname{autovalori}(\begin{pmatrix} 1.5 & 0 \\ 0 & 2 \end{pmatrix}) =`)).toBe('λ₁ = 1.5; λ₂ = 2')
@@ -244,7 +245,7 @@ describe('i conti in inglese (parte B)', () => {
     expect(() => dataStatistic('quantile', [1, 2, 3, 1.5])).toThrow('The order of a quantile goes from 0 to 1 (0.25 is the first quartile)')
     expect(() => statistic(FLOAT, 'mode', { values: [1, 2], weights: null })).toThrow('There is no mode: the values all have the same frequency')
     expect(() => statistic(FLOAT, 'mode', { values: [1, 1, 2, 2, 3], weights: null })).toThrow(
-      'There is more than one mode: ask for them on their own, \\operatorname{moda}(x) =',
+      'There is more than one mode: ask for them on their own, \\operatorname{mode}(x) =',
     )
     expect(() => statistic(FLOAT, 'mean', { values: [], weights: null })).toThrow('There is no data')
     expect(text(r`\operatorname{media}(1.5, 2.5, 4) =`)).toBe('2.666666…')

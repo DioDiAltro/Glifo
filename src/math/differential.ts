@@ -18,7 +18,7 @@ const T = texts({
   conditionsNumbers: ['Le condizioni iniziali sono numeri', 'The initial conditions must be numbers'],
   samePoint: (example: string) => [`Le condizioni iniziali vanno date nello stesso punto: ${example}`, `The initial conditions must be given at the same point: ${example}`],
   conditionsNeeded: (n: number, example: string) => [
-    `Servono ${n} condizioni iniziali, come ${example}`,
+    n === 1 ? `Serve 1 condizione iniziale, come ${example}` : `Servono ${n} condizioni iniziali, come ${example}`,
     n === 1 ? `One initial condition is needed, like ${example}` : `${n} initial conditions are needed, like ${example}`,
   ],
 })

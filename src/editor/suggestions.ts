@@ -1,6 +1,7 @@
 import type { EditorState } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
 import { suggestCommands } from '../search/suggest'
+import { localizeTex } from '../noteWords'
 import { commandNames, type SymbolEntry, type SymbolForm } from '../symbols'
 import { parseTemplate, templateText } from '../symbols/template'
 import { templateInsertion } from './insert'
@@ -135,8 +136,10 @@ export class SuggestionController {
     if (!token || !item) return false
     const view = this.getView()
     const current = view.state.sliceDoc(token.from, token.to)
-    const text = templateText(item.form.tex)
-    const hasSlots = parseTemplate(item.form.tex).slots.length > 0
+    // Nella nota le parole della lingua di Glifo: \operatorname{studio} o \operatorname{study} (src/noteWords.ts).
+    const template = localizeTex(item.form.tex)
+    const text = templateText(template)
+    const hasSlots = parseTemplate(template).slots.length > 0
     if (fromKeyboard && text === current && !hasSlots) {
       // Niente da completare: lascia che Tab faccia il suo lavoro normale.
       this.dismiss()
@@ -146,7 +149,7 @@ export class SuggestionController {
     view.dispatch(
       view.state.update(
         templateInsertion(view.state, {
-          template: item.form.tex,
+          template,
           display: item.entry.display,
           replace: { from: token.from, to: token.to },
           autoWrap: this.autoWrap(),

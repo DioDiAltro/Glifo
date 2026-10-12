@@ -148,7 +148,8 @@ describe('i risultati con le parole', () => {
     expect(text(r`\lim_{x \to 0} \sin \frac{1}{x} =`)).toBe('does not exist')
     expect(text(r`x^2 - 4x + 4 = 0 \Rightarrow`)).toBe('x = 2 (double)')
     expect(text(r`x^2 + 2x + 5 = 0 \Rightarrow`)).toBe('no real solution (in ℂ: x = −1 ± 2i)')
-    expect(text(r`x + 1 = x \Rightarrow`)).toBe('no solution (impossible)')
+    // «inconsistent», come nei sistemi (src/math/linsys.ts).
+    expect(text(r`x + 1 = x \Rightarrow`)).toBe('no solution (inconsistent)')
     expect(text(r`x + 1 = x + 1 \Rightarrow`)).toBe("all x (it's an identity)")
     expect(text(r`x^2 < 0 \Rightarrow`)).toBe('no solution')
   })

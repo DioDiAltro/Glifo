@@ -13,7 +13,7 @@ import type { MathNode } from './parse'
 import { normalQuantile } from './special'
 
 const T = texts({
-  relation: ['Qui va = , >, < o \\ne', 'Use =, >, < or \\ne here'],
+  relation: ['Qui va =, >, < o \\ne', 'Use =, >, < or \\ne here'],
   unknownName: (name: string | null) => [
     `Non so che cosa sia ${name ?? 'questo'}: si scrive \\bar{x} = …, s = …, \\sigma = …, n = …, \\hat{p} = …`,
     `I don't know what ${name ?? 'this'} is: write \\bar{x} = …, s = …, \\sigma = …, n = …, \\hat{p} = …`,
