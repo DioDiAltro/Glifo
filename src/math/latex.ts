@@ -2,7 +2,14 @@
  * Un'espressione letta da `parse.ts` riscritta in LaTeX, per le legende dei grafici. Così si
  * vede come Glifo l'ha capita: `sqrt(x)/2` diventa \frac{\sqrt{x}}{2}.
  */
+import { texts } from '../i18n'
 import type { MathNode, RelOp } from './parse'
+
+/** Le parole dentro le formule riscritte: il parser le legge in tutte e due le lingue (src/math/parse.ts). */
+const T = texts({
+  otherwise: ['altrimenti', 'otherwise'],
+  or: ['o', 'or'],
+})
 
 const GREEK_COMMANDS: Record<string, string> = {
   α: 'alpha', β: 'beta', γ: 'gamma', δ: 'delta', ε: 'varepsilon', ζ: 'zeta', η: 'eta', θ: 'theta', ι: 'iota',
@@ -309,7 +316,7 @@ export function toLatex(node: MathNode): string {
     case 'matrix':
       return `\\begin{pmatrix} ${node.rows.map((r) => r.map(toLatex).join(' & ')).join(' \\\\ ')} \\end{pmatrix}`
     case 'cases':
-      return `\\begin{cases} ${node.rows.map((r) => `${toLatex(r.value)} & ${r.cond ? toLatex(r.cond) : '\\text{altrimenti}'}`).join(' \\\\ ')} \\end{cases}`
+      return `\\begin{cases} ${node.rows.map((r) => `${toLatex(r.value)} & ${r.cond ? toLatex(r.cond) : `\\text{${T.otherwise}}`}`).join(' \\\\ ')} \\end{cases}`
     case 'tuple':
       return paren(node.items.map(toLatex).join(', '))
     case 'rel':
@@ -319,7 +326,7 @@ export function toLatex(node: MathNode): string {
     case 'and':
       return node.items.map(toLatex).join(',\\; ')
     case 'or':
-      return node.items.map(toLatex).join('\\ \\text{o}\\ ')
+      return node.items.map(toLatex).join(`\\ \\text{${T.or}}\\ `)
     case 'prob': {
       // Le parentesi che si allungano solo attorno alle frazioni (come f(x)): P(X \le 3) senza spazio dopo la P.
       const inner = `${toLatex(node.event)}${node.given ? ` \\mid ${toLatex(node.given)}` : ''}`

@@ -3,26 +3,39 @@
  * superficie S(u, v) = (…), u ∈ [a, b], v ∈ [c, d] definite nella nota, di una funzione (ds, dS) o di
  * un campo (il lavoro F · dr e il flusso F · n dS, con il verso dato dai parametri).
  */
+import { texts } from '../i18n'
 import { compile, integrate, MathError, scopeWith, type Compiled, type CompileOptions, type Scope, type VectorFunction } from './evaluate'
 import type { MathNode } from './parse'
+
+const T = texts({
+  notCurve: (name: string, example: string) => [`${name} non è una curva: scrivila prima nella nota, come ${example}`, `${name} is not a curve: write it in the note first, like ${example}`],
+  notSurface: (name: string, example: string) => [`${name} non è una superficie: scrivila prima nella nota, come ${example}`, `${name} is not a surface: write it in the note first, like ${example}`],
+  curveParameter: (name: string, example: string) => [`${name} non è una curva: ha un parametro, come ${example}`, `${name} is not a curve: a curve has one parameter, like ${example}`],
+  surfaceParameters: (name: string, example: string) => [`${name} non è una superficie: ha due parametri, come ${example}`, `${name} is not a surface: a surface has two parameters, like ${example}`],
+  missingRange: (v: string, name: string) => [`Manca dove varia ${v}: scrivilo dopo ${name}, come ${v} \\in [0, 1]`, `Missing the range of ${v}: write it after ${name}, like ${v} \\in [0, 1]`],
+  coordinates: ['I punti hanno due o tre coordinate', 'Points have two or three coordinates'],
+  field: ['Qui va un campo di vettori: F (definito come F(x, y) = (…)) o (P, Q)', 'A vector field goes here: F (defined as F(x, y) = (…)) or (P, Q)'],
+  tooManyParameters: (dims: number, params: number) => [`Qui i punti hanno ${dims} coordinate, ma la funzione ne vuole ${params}`, `Here the points have ${dims} coordinates, but the function takes ${params}`],
+  surfacePoints: ['Una superficie ha punti con tre coordinate', 'A surface has points with three coordinates'],
+})
 
 const COORDS = ['x', 'y', 'z']
 
 /** La curva o la superficie con quel nome (anche \vec{r} per r), con i suoi intervalli. */
 function shape(scope: Scope, name: string, params: number): VectorFunction {
-  const what = params === 1 ? 'curva' : 'superficie'
-  const example = params === 1 ? '\\gamma(t) = (\\cos t, \\sin t), \\; t \\in [0, 2\\pi]' : 'S(u, v) = (u, v, u v), \\; u \\in [0, 1], \\; v \\in [0, 1]'
+  const curve = params === 1
+  const example = curve ? '\\gamma(t) = (\\cos t, \\sin t), \\; t \\in [0, 2\\pi]' : 'S(u, v) = (u, v, u v), \\; u \\in [0, 1], \\; v \\in [0, 1]'
   const f = scope.vfns?.get(name) ?? scope.vfns?.get(name.replace(/⃗/g, ''))
-  if (!f) throw new MathError(`${name} non è una ${what}: scrivila prima nella nota, come ${example}`)
-  if (f.params.length !== params) throw new MathError(`${name} non è una ${what}: ${params === 1 ? 'ha un parametro' : 'ha due parametri'}, come ${example}`)
+  if (!f) throw new MathError(curve ? T.notCurve(name, example) : T.notSurface(name, example))
+  if (f.params.length !== params) throw new MathError(curve ? T.curveParameter(name, example) : T.surfaceParameters(name, example))
   const missing = f.params.find((_, i) => !f.domain[i])
-  if (missing) throw new MathError(`Manca dove varia ${missing}: scrivilo dopo ${name}, come ${missing} \\in [0, 1]`)
+  if (missing) throw new MathError(T.missingRange(missing, name))
   return f
 }
 
 function dimension(f: VectorFunction, args: number[]): number {
   const n = f.call(args).length
-  if (n !== 2 && n !== 3) throw new MathError('I punti hanno due o tre coordinate')
+  if (n !== 2 && n !== 3) throw new MathError(T.coordinates)
   return n
 }
 
@@ -42,7 +55,7 @@ function fieldOn(body: MathNode, scope: Scope, dims: number, options: CompileOpt
       return parts.map((c) => c(v))
     }
   }
-  throw new MathError('Qui va un campo di vettori: F (definito come F(x, y) = (…)) o (P, Q)')
+  throw new MathError(T.field)
 }
 
 /** I valori di una funzione nei punti: f (definita con le sue variabili) o un'espressione in x, y, z. */
@@ -60,7 +73,7 @@ function scalarOn(body: MathNode, scope: Scope, dims: number, options: CompileOp
 
 /** Quale coordinata va a ogni variabile: F(x, y, z) per nome, le altre nell'ordine. */
 function argumentOrder(params: string[], dims: number): number[] {
-  if (params.length > dims) throw new MathError(`Qui i punti hanno ${dims} coordinate, ma la funzione ne vuole ${params.length}`)
+  if (params.length > dims) throw new MathError(T.tooManyParameters(dims, params.length))
   const byName = params.map((p) => COORDS.indexOf(p))
   return byName.every((i) => i >= 0 && i < dims) ? byName : params.map((_, i) => i)
 }
@@ -86,7 +99,7 @@ export function compileSurfaceIntegral(node: Extract<MathNode, { k: 'sint' }>, s
   const surface = shape(scope, node.surface, 2)
   const [[u0, u1], [v0, v1]] = surface.domain as [number, number][]
   const dims = dimension(surface, [(u0 + u1) / 2, (v0 + v1) / 2])
-  if (dims !== 3) throw new MathError('Una superficie ha punti con tre coordinate')
+  if (dims !== 3) throw new MathError(T.surfacePoints)
   const [Su, Sv] = surface.partials
   const normal = (u: number, v: number): number[] => {
     const a = Su([u, v])

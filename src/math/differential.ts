@@ -3,9 +3,25 @@
  * altro modo (y'' + 2y' + 5y = 0, y' + y = x), se la derivata più alta compare al primo grado. Si
  * risolvono con i numeri (Runge–Kutta del quarto ordine) dalle condizioni iniziali y(x₀), y'(x₀), …
  */
+import { texts } from '../i18n'
 import { compile, MathError, scopeWith, type Scope } from './evaluate'
 import { children, namesIn, type MathNode } from './parse'
 import { mapNode } from './symbolic'
+
+const T = texts({
+  bothConditions: (x: string, y: string) => [
+    `Per ogni traiettoria servono tutte e due le condizioni, come ${x}(0) = 1, \\; ${y}(0) = 0`,
+    `Each trajectory needs both conditions, like ${x}(0) = 1, \\; ${y}(0) = 0`,
+  ],
+  firstDegree: (top: string) => [`La derivata più alta deve comparire al primo grado: scrivi ${top} = …`, `The highest derivative must appear to the first power: write ${top} = …`],
+  conditionsAfter: (example: string) => [`Dopo l'equazione vanno le condizioni iniziali, come ${example}`, `After the equation write the initial conditions, like ${example}`],
+  conditionsNumbers: ['Le condizioni iniziali sono numeri', 'The initial conditions must be numbers'],
+  samePoint: (example: string) => [`Le condizioni iniziali vanno date nello stesso punto: ${example}`, `The initial conditions must be given at the same point: ${example}`],
+  conditionsNeeded: (n: number, example: string) => [
+    `Servono ${n} condizioni iniziali, come ${example}`,
+    n === 1 ? `One initial condition is needed, like ${example}` : `${n} initial conditions are needed, like ${example}`,
+  ],
+})
 
 export interface Ode {
   /** La funzione cercata (y) e la variabile (x, o t se c'è solo la t o se la funzione è x). */
@@ -143,7 +159,7 @@ export function systemStarts(system: OdeSystem, value: (n: MathNode) => number):
       current = [undefined, undefined]
     }
   }
-  if (current.some((v) => v !== undefined)) throw new MathError(`Per ogni traiettoria servono tutte e due le condizioni, come ${system.names[0]}(0) = 1, \\; ${system.names[1]}(0) = 0`)
+  if (current.some((v) => v !== undefined)) throw new MathError(T.bothConditions(system.names[0], system.names[1]))
   return out
 }
 
@@ -175,7 +191,7 @@ export function compileOde(ode: Ode, scope: Scope): OdeFunction {
     v[top] = 2
     const two = f(v)
     if ([a, b, two].every(Number.isFinite) && Math.abs(two - (2 * a + b)) > 1e-7 * Math.max(1, Math.abs(two))) {
-      throw new MathError(`La derivata più alta deve comparire al primo grado: scrivi ${top} = …`)
+      throw new MathError(T.firstDegree(top))
     }
   }
   return (x, Y) => {
@@ -235,21 +251,21 @@ export function initialConditions(conds: readonly MathNode[], ode: Ode, value: (
   for (const c of conds) {
     const at = c.k === 'rel' && c.ops.length === 1 && c.ops[0] === '=' ? c.items[0] : null
     if (!at || at.k !== 'apply' || at.name !== ode.y || at.args.length !== 1 || at.primes >= ode.order) {
-      throw new MathError(`Dopo l'equazione vanno le condizioni iniziali, come ${example}`)
+      throw new MathError(T.conditionsAfter(example))
     }
     const x0 = value(at.args[0])
     const y0 = value((c as Extract<MathNode, { k: 'rel' }>).items[1])
-    if (!Number.isFinite(x0) || !Number.isFinite(y0)) throw new MathError('Le condizioni iniziali sono numeri')
+    if (!Number.isFinite(x0) || !Number.isFinite(y0)) throw new MathError(T.conditionsNumbers)
     if (!current || current.Y0[at.primes] !== undefined) {
       current = { x0, Y0: Array(ode.order).fill(undefined), conds: [] }
       groups.push(current as { x0: number; Y0: number[]; conds: MathNode[] })
     }
-    if (current.x0 !== x0) throw new MathError(`Le condizioni iniziali vanno date nello stesso punto: ${example}`)
+    if (current.x0 !== x0) throw new MathError(T.samePoint(example))
     current.Y0[at.primes] = y0
     current.conds.push(c)
   }
   for (const g of groups) {
-    if (g.Y0.some((v) => v === undefined)) throw new MathError(`Servono ${ode.order} condizioni iniziali, come ${example}`)
+    if (g.Y0.some((v) => v === undefined)) throw new MathError(T.conditionsNeeded(ode.order, example))
   }
   return groups
 }

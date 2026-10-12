@@ -5,6 +5,7 @@
  * matrici simmetriche le radici sono tutte reali), la dipendenza lineare tra vettori, il rango di una
  * matrice con un parametro.
  */
+import { texts, usesDecimalComma } from '../i18n'
 import { MathError } from './evaluate'
 import { Rational } from './exact'
 import { formatNumber, formatRational, type FormatOptions, type FormattedResult } from './format'
@@ -12,6 +13,38 @@ import { nameLatex } from './latex'
 import { eigenvalues, eigenvectors, EXACT, FLOAT, kernel, rref, splitRoot, surdText, type Eigenvalue, type LinearScope, type LinearValue, type Mat } from './linear'
 import { minorsGcd } from './linsys'
 import { degree, numericRoots, pvalue, rationalRoots, trim, type Poly } from './polynomial'
+
+const T = texts({
+  allZero: ['Sono tutti vettori nulli', 'They are all zero vectors'],
+  orthonormal: (vectors: string) => [`ortonormali: ${vectors}`, `orthonormal: ${vectors}`],
+  dependent: (n: number) => [
+    n === 1 ? 'un vettore dipende dai precedenti' : `${n} vettori dipendono dai precedenti`,
+    n === 1 ? 'one vector depends on the previous ones' : `${n} vectors depend on the previous ones`,
+  ],
+  squareOnly: ['Si diagonalizzano le matrici quadrate', 'Only square matrices can be diagonalized'],
+  complexEigenvalues: ['non è diagonalizzabile nei reali: ha autovalori complessi', 'not diagonalizable over the reals: it has complex eigenvalues'],
+  multiplicityTex: (value: string, algebraic: number, geometric: number) => [
+    `\\text{non è diagonalizzabile: } \\lambda = ${value} \\text{ ha molteplicità algebrica ${algebraic} e geometrica ${geometric}}`,
+    `\\text{not diagonalizable: } \\lambda = ${value} \\text{ has algebraic multiplicity ${algebraic} and geometric multiplicity ${geometric}}`,
+  ],
+  multiplicity: (value: string, algebraic: number, geometric: number) => [
+    `non è diagonalizzabile: λ = ${value} ha molteplicità algebrica ${algebraic} e geometrica ${geometric}`,
+    `not diagonalizable: λ = ${value} has algebraic multiplicity ${algebraic} and geometric multiplicity ${geometric}`,
+  ],
+  orthogonal: ['ortogonale', 'orthogonal'],
+  positiveDefinite: ['definita positiva', 'positive definite'],
+  negativeDefinite: ['definita negativa', 'negative definite'],
+  positiveSemidefinite: ['semidefinita positiva', 'positive semidefinite'],
+  negativeSemidefinite: ['semidefinita negativa', 'negative semidefinite'],
+  indefinite: ['indefinita', 'indefinite'],
+  components: ['I vettori hanno un numero diverso di componenti', 'The vectors have different numbers of components'],
+  independent: ['sì: sono linearmente indipendenti', 'yes: they are linearly independent'],
+  wholeSpace: ['nessuna: è tutto lo spazio', 'none: it is the whole space'],
+  rankEveryTex: (rank: number, k: string) => [`${rank}\\ \\text{per ogni } ${k}`, `${rank}\\ \\text{for all } ${k}`],
+  rankEvery: (rank: number, k: string) => [`${rank} per ogni ${k}`, `${rank} for all ${k}`],
+  rankForTex: (rank: number, where: string) => [`${rank}\\ \\text{per } ${where}`, `${rank}\\ \\text{for } ${where}`],
+  rankFor: (rank: number, where: string) => [`${rank} per ${where}`, `${rank} for ${where}`],
+})
 
 const ZERO = Rational.int(0)
 
@@ -53,7 +86,7 @@ function normalized(v: Rational[]): Cell[] | null {
   if (!root) return null
   // v_i/(k√m) = (v_i/(k m)) √m.
   return v.map((c) => {
-    if (root.m === 1n) return formatRational(c.div(root.k), { comma: true, decimal: false })
+    if (root.m === 1n) return formatRational(c.div(root.k), { comma: usesDecimalComma(), decimal: false })
     return surdText(ZERO, c.div(root.k.mul(new Rational(root.m))), root.m)
   })
 }
@@ -79,7 +112,7 @@ export function gramSchmidt(vectors: Rational[][]): { orthogonal: Rational[][]; 
 /** Gram–Schmidt per la nota: i vettori ortogonali e, divisi per la lunghezza, quelli ortonormali. */
 export function gramSchmidtShown(vectors: Rational[][], options: FormatOptions): FormattedResult {
   const { orthogonal, dropped } = gramSchmidt(vectors)
-  if (!orthogonal.length) throw new MathError('Sono tutti vettori nulli')
+  if (!orthogonal.length) throw new MathError(T.allZero)
   const sub = (i: number) => ['₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'][i] ?? String(i + 1)
   const u = orthogonal.map((v, i) => {
     const t = tupleCells(v.map((c) => formatRational(c, options)))
@@ -92,8 +125,8 @@ export function gramSchmidtShown(vectors: Rational[][], options: FormatOptions):
     return { tex: `e_{${i + 1}} = ${t.tex}`, text: `e${sub(i)} = ${t.text}` }
   })
   const lines = [{ tex: u.map((x) => x.tex).join(',\\ '), text: u.map((x) => x.text).join(', ') }]
-  if (e.every((x) => x)) lines.push({ tex: `${e.map((x) => x!.tex).join(',\\ ')}`, text: `ortonormali: ${e.map((x) => x!.text).join(', ')}` })
-  if (dropped) lines.push({ tex: `\\text{(${dropped === 1 ? 'un vettore dipende' : `${dropped} vettori dipendono`} dai precedenti)}`, text: `(${dropped === 1 ? 'un vettore dipende' : `${dropped} vettori dipendono`} dai precedenti)` })
+  if (e.every((x) => x)) lines.push({ tex: `${e.map((x) => x!.tex).join(',\\ ')}`, text: T.orthonormal(e.map((x) => x!.text).join(', ')) })
+  if (dropped) lines.push({ tex: `\\text{(${T.dependent(dropped)})}`, text: `(${T.dependent(dropped)})` })
   return { tex: `\\begin{array}{l} ${lines.map((l) => l.tex).join(' \\\\ ')} \\end{array}`, text: lines.map((l) => l.text).join('; '), rich: true }
 }
 
@@ -108,19 +141,19 @@ function symmetric(m: Mat<Rational>): boolean {
  * autovalore con meno autovettori della sua molteplicità.
  */
 export function diagonalize(scope: LinearScope, A: LinearValue, options: FormatOptions): FormattedResult {
-  if (A.float.k !== 'matrix' || A.float.m.length !== A.float.m[0].length) throw new MathError('Si diagonalizzano le matrici quadrate')
+  if (A.float.k !== 'matrix' || A.float.m.length !== A.float.m[0].length) throw new MathError(T.squareOnly)
   const values = eigenvalues(scope, A)
   const complex = values.filter((e) => Math.abs(e.im) > 1e-9)
   if (complex.length) {
-    return { tex: '\\text{non è diagonalizzabile nei reali: ha autovalori complessi}', text: 'non è diagonalizzabile nei reali: ha autovalori complessi' }
+    return { tex: `\\text{${T.complexEigenvalues}}`, text: T.complexEigenvalues }
   }
   const valueText = (e: Eigenvalue): Cell => (e.exact ? formatRational(e.exact, options) : number(e.re, options))
   const columns: { e: Eigenvalue; vectors: Mat<number>[] | Mat<Rational>[] }[] = values.map((e) => ({ e, vectors: eigenvectors(A, e) }))
   const short = columns.find((c) => c.vectors.length < c.e.multiplicity)
   if (short) {
     const v = valueText(short.e)
-    const text = `non è diagonalizzabile: λ = ${v.text} ha molteplicità algebrica ${short.e.multiplicity} e geometrica ${short.vectors.length}`
-    return { tex: `\\text{non è diagonalizzabile: } \\lambda = ${v.tex} \\text{ ha molteplicità algebrica ${short.e.multiplicity} e geometrica ${short.vectors.length}}`, text }
+    const text = T.multiplicity(v.text, short.e.multiplicity, short.vectors.length)
+    return { tex: T.multiplicityTex(v.tex, short.e.multiplicity, short.vectors.length), text }
   }
   const n = A.float.m.length
   const exact = columns.every((c) => c.e.exact) && !!A.exact
@@ -153,7 +186,7 @@ export function diagonalize(scope: LinearScope, A: LinearValue, options: FormatO
     if (orthonormal.every((c) => c)) {
       const Q: Cell[][] = Array.from({ length: n }, (_, i) => orthonormal.map((col) => col![i]))
       const q = matrixCells(Q)
-      lines.push({ tex: `\\text{ortogonale: } P = ${q.tex}`, text: `ortogonale: P = ${q.text}` })
+      lines.push({ tex: `\\text{${T.orthogonal}: } P = ${q.tex}`, text: `${T.orthogonal}: P = ${q.text}` })
     }
   }
   const tex = lines.length > 1 ? `\\begin{array}{l} ${lines.map((l) => l.tex).join(' \\\\ ')} \\end{array}` : lines[0].tex
@@ -187,14 +220,14 @@ export function signature(charPoly: Rational[], options?: FormatOptions): Format
   const negative = signChanges(rest.map((c, i) => (i % 2 ? c.neg() : c)))
   const kind =
     zero === 0 && negative === 0
-      ? 'definita positiva'
+      ? T.positiveDefinite
       : zero === 0 && positive === 0
-        ? 'definita negativa'
+        ? T.negativeDefinite
         : negative === 0
-          ? 'semidefinita positiva'
+          ? T.positiveSemidefinite
           : positive === 0
-            ? 'semidefinita negativa'
-            : 'indefinita'
+            ? T.negativeSemidefinite
+            : T.indefinite
   return {
     tex: `\\text{${kind}: } (n_+, n_-, n_0) = (${positive}, ${negative}, ${zero})`,
     text: `${kind}: (n₊, n₋, n₀) = (${positive}, ${negative}, ${zero})`,
@@ -207,10 +240,10 @@ export function signature(charPoly: Rational[], options?: FormatOptions): Format
  */
 export function independence(vectors: Rational[][], names: string[], options: FormatOptions): FormattedResult {
   const n = vectors[0].length
-  if (vectors.some((v) => v.length !== n)) throw new MathError('I vettori hanno un numero diverso di componenti')
+  if (vectors.some((v) => v.length !== n)) throw new MathError(T.components)
   const m: Mat<Rational> = Array.from({ length: n }, (_, i) => vectors.map((v) => v[i]))
   const relations = kernel(EXACT, m)
-  if (!relations.length) return { tex: '\\text{sì: sono linearmente indipendenti}', text: 'sì: sono linearmente indipendenti' }
+  if (!relations.length) return { tex: `\\text{${T.independent}}`, text: T.independent }
   let c = integral(relations[0].map((r) => r[0]))
   if (c.find((x) => x.sign !== 0)!.sign < 0) c = c.map((x) => x.neg())
   const terms = c
@@ -238,7 +271,7 @@ export function cartesianEquations(basis: Rational[][], n: number, options: Form
   const names = coordinateNames(n)
   // I coefficienti delle equazioni: i vettori ortogonali a tutta la base.
   const rows = basis.length ? kernel(EXACT, basis) : Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => [Rational.int(i === j ? 1 : 0)]))
-  if (!rows.length) return { tex: '\text{nessuna: è tutto lo spazio}', text: 'nessuna: è tutto lo spazio' }
+  if (!rows.length) return { tex: `\\text{${T.wholeSpace}}`, text: T.wholeSpace }
   const equations = rows.map((r) => {
     const c = integral(r.map((x) => x[0]))
     const first = c.find((x) => x.sign !== 0)
@@ -275,9 +308,9 @@ export function parametricRank(M: Poly[][], k: string, options: FormatOptions): 
   }
   roots.sort((p, q) => p.v - q.v)
   const K = nameLatex(k)
-  if (!roots.length) return { tex: `${generic}\\ \\text{per ogni } ${K}`, text: `${generic} per ogni ${k}` }
+  if (!roots.length) return { tex: T.rankEveryTex(generic, K), text: T.rankEvery(generic, k) }
   const lines = [
-    { tex: `${generic}\\ \\text{per } ${roots.map((r) => `${K} \\ne ${r.shown.tex}`).join(',\\ ')}`, text: `${generic} per ${roots.map((r) => `${k} ≠ ${r.shown.text}`).join(', ')}` },
+    { tex: T.rankForTex(generic, roots.map((r) => `${K} \\ne ${r.shown.tex}`).join(',\\ ')), text: T.rankFor(generic, roots.map((r) => `${k} ≠ ${r.shown.text}`).join(', ')) },
   ]
   for (const r of roots) {
     const rank = r.exact
@@ -286,7 +319,7 @@ export function parametricRank(M: Poly[][], k: string, options: FormatOptions): 
           FLOAT,
           M.map((row) => row.map((p) => p.reduce((s, c, i) => s + c.toNumber() * r.v ** i, 0))),
         ).pivots.length
-    lines.push({ tex: `${rank}\\ \\text{per } ${K} = ${r.shown.tex}`, text: `${rank} per ${k} = ${r.shown.text}` })
+    lines.push({ tex: T.rankForTex(rank, `${K} = ${r.shown.tex}`), text: T.rankFor(rank, `${k} = ${r.shown.text}`) })
   }
   return { tex: lines.map((l) => l.tex).join(';\\quad '), text: lines.map((l) => l.text).join('; ') }
 }

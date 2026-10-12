@@ -13,6 +13,138 @@
  * `0,5` senza spazi. Dentro parentesi tonde e quadre però la virgola separa (`(1,2)` è un punto,
  * `[0,5]` un intervallo). Le migliaia si possono separare con i punti (`2.500.000`).
  */
+import { texts, usesDecimalComma } from '../i18n'
+
+/**
+ * I messaggi di quando un'espressione non si legge. Quello che manca (`Manca …`) è un pezzo da solo, con
+ * l'articolo: «la graffa }», «the closing brace }».
+ */
+const T = texts({
+  /** Un segno o un comando tra le virgolette della lingua: «)», “)”. */
+  quoted: (s: string) => [`«${s}»`, `“${s}”`],
+  theEnd: ['la fine', 'the end'],
+  endsTooSoon: ["L'espressione finisce troppo presto", 'The expression ends too soon'],
+  empty: ["L'espressione è vuota", 'The expression is empty'],
+  missing: (what: string) => [`Manca ${what}`, `Missing ${what}`],
+  missingEmptyBraces: (what: string) => [`Manca ${what}: le graffe sono vuote`, `Missing ${what}: the braces are empty`],
+  extraParen: (paren: string) => [`C'è una parentesi ${paren} di troppo`, `There's an extra ${paren}`],
+  extraBrace: ["C'è una graffa } di troppo", "There's an extra brace }"],
+  unexpected: (what: string) => [`Non mi aspettavo ${what} qui`, `Unexpected ${what} here`],
+  unexpectedMissingParen: (what: string, close: string) => [
+    `Non mi aspettavo ${what} qui: manca la parentesi ${close}?`,
+    `Unexpected ${what} here: is the closing ${close} missing?`,
+  ],
+  closesWith: (open: string, close: string, found: string) => [
+    `La parentesi ${open} si chiude con ${close}, non con ${found}`,
+    `The bracket ${open} closes with ${close}, not with ${found}`,
+  ],
+  missingParen: (close: string) => [`Manca la parentesi ${close}`, `Missing the closing ${close}`],
+  plusMinus: ['Con ± ci sono due valori: scrivili separati', 'With ± there are two values: write them separately'],
+  dots: ['I puntini … non si possono calcolare', "The dots … can't be calculated"],
+  cannotCalculate: (what: string) => [`Non so calcolare ${what}`, `I can't calculate ${what}`],
+  loneDot: ['Un punto da solo: per i decimali scrivi 0.5', 'A dot on its own: for decimals write 0.5'],
+  notExpression: (word: string) => [`«${word}» non è un'espressione`, `“${word}” is not an expression`],
+  badSign: (sign: string) => [`Il segno «${sign}» non si può calcolare`, `The sign “${sign}” can't be calculated`],
+  somethingAfter: (what: string) => [`Manca qualcosa dopo ${what}`, `Something is missing after ${what}`],
+  somethingBefore: (what: string) => [`Manca qualcosa prima di ${what}`, `Something is missing before ${what}`],
+  somethingAtEnd: ['Manca qualcosa alla fine', 'Something is missing at the end'],
+  conditionBrace: ['la graffa \\} della condizione', 'the brace \\} closing the condition'],
+  congruenceExample: ['es. x \\equiv 3 \\pmod{5}', 'e.g. x \\equiv 3 \\pmod{5}'],
+  modulus: ['il modulo', 'the modulus'],
+  closingParen: ['la parentesi )', 'the closing parenthesis )'],
+  closingBrace: ['la graffa }', 'the closing brace }'],
+  missingModulus: (example: string) => [`Manca il modulo della congruenza, ${example}`, `The congruence is missing its modulus, ${example}`],
+  onlyReals: (set: string) => [`Si sa usare solo ℝ (non ${set})`, `Only ℝ can be used here (not ${set})`],
+  realsSign: ['Dopo ℝ^ va + o -', 'After ℝ^ write + or -'],
+  intervalAfterIn: ['Dopo ∈ va un intervallo, per esempio [0, 5]', 'After ∈ write an interval, for example [0, 5]'],
+  intervalComma: ["Nell'intervallo i due estremi vanno separati da una virgola: [0, 5]", 'Separate the two endpoints of the interval with a comma: [0, 5]'],
+  intervalClose: ["Manca la parentesi che chiude l'intervallo", 'Missing the bracket that closes the interval'],
+  randomName: ['Prima di ∼ va il nome della variabile aleatoria: X \\sim B(10, 0{,}3)', 'Before ∼ write the name of the random variable: X \\sim B(10, 0.3)'],
+  distributionAfter: ['Dopo ∼ va la distribuzione, per esempio B(10, 0{,}3) o N(0, 1)', 'After ∼ write the distribution, for example B(10, 0.3) or N(0, 1)'],
+  unknownDistribution: (word: string) => [
+    `Non conosco la distribuzione «${word}»: per esempio B(n, p), N(μ, σ²), \\operatorname{Po}(λ), \\operatorname{Exp}(λ), U(a, b), t(n), \\chi^2(n)`,
+    `I don't know the distribution “${word}”: for example B(n, p), N(μ, σ²), \\operatorname{Po}(λ), \\operatorname{Exp}(λ), U(a, b), t(n), \\chi^2(n)`,
+  ],
+  chiSquare: ['Si scrive \\chi^2', 'Write \\chi^2'],
+  degreesOfFreedom: ['i gradi di libertà', 'the degrees of freedom'],
+  missingParameters: (example: string) => [`Mancano i parametri della distribuzione: X \\sim ${example}`, `The distribution is missing its parameters: X \\sim ${example}`],
+  eventAfterP: ["Dopo P va l'evento tra parentesi: P(X \\le 3)", 'After P write the event in parentheses: P(X \\le 3)'],
+  probabilityParen: ['la parentesi ) della probabilità', 'the parenthesis ) closing the probability'],
+  expectationParen: (close: string) => [`la parentesi ${close} del valore atteso`, `the ${close} closing the expected value`],
+  subscriptBrace: ['la graffa } del pedice', 'the brace } closing the subscript'],
+  divisorAfterMod: ['Manca il divisore dopo mod', 'Missing the divisor after mod'],
+  twoNumbers: ["Due numeri di seguito: manca un'operazione?", 'Two numbers in a row: is an operation missing?'],
+  twoExponents: ['Due esponenti di seguito: usa le graffe, es. x^{a^b}', 'Two exponents in a row: use braces, e.g. x^{a^b}'],
+  exponent: ["l'esponente dopo ^", 'the exponent after ^'],
+  numerator: ['il numeratore di \\frac', 'the numerator of \\frac'],
+  denominator: ['il denominatore di \\frac', 'the denominator of \\frac'],
+  indexBracket: ["la parentesi ] dell'indice", 'the bracket ] closing the index'],
+  radicand: ['il numero sotto la radice', 'the number under the root'],
+  binomTop: ['il primo numero di \\binom', 'the first number of \\binom'],
+  binomBottom: ['il secondo numero di \\binom', 'the second number of \\binom'],
+  absClose: ['Manca la | che chiude il valore assoluto', 'Missing the | that closes the absolute value'],
+  subscriptAfter: ['Manca il pedice dopo _', 'Missing the subscript after _'],
+  emptySubscript: ['Il pedice è vuoto', 'The subscript is empty'],
+  noBase: (name: string) => [`${name} non ha una base: solo \\log_b`, `${name} has no base: only \\log_b does`],
+  logBase: ['la base del logaritmo', 'the base of the logarithm'],
+  missingArgument: (name: string) => [`Manca l'argomento di ${name}`, `Missing the argument of ${name}`],
+  whereMaximum: ['dove cercare il massimo', 'where to look for the maximum'],
+  whereEmpty: ['Manca dove cercare: le graffe sono vuote', 'Missing where to look: the braces are empty'],
+  sumIndex: (symbol: string) => [`Sotto ${symbol} va l'indice con il primo valore, es. ${symbol}_{k=1}`, `Under ${symbol} write the index with its first value, e.g. ${symbol}_{k=1}`],
+  firstValueBrace: ['la graffa } dopo il primo valore', 'the brace } after the first value'],
+  sumBounds: (symbol: string) => [`${symbol} vuole l'indice e i due estremi, es. ${symbol}_{k=1}^{n}`, `${symbol} needs the index and both bounds, e.g. ${symbol}_{k=1}^{n}`],
+  sumBody: (symbol: string) => [`Manca cosa sommare dopo ${symbol}`, `Missing the terms after ${symbol}`],
+  integralBounds: ['Un integrale vuole tutti e due gli estremi, es. \\int_0^1, o nessuno: \\int x \\, dx', 'An integral needs both bounds, e.g. \\int_0^1, or none: \\int x \\, dx'],
+  missingDx: ["Manca il dx alla fine dell'integrale", 'Missing the dx at the end of the integral'],
+  domainBelow: (symbol: string) => [`${symbol} vuole sotto il dominio, non gli estremi sopra: ${symbol}_D`, `${symbol} needs the domain below, not bounds above: ${symbol}_D`],
+  domainUnder: (symbol: string, example: string) => [`Sotto ${symbol} va il dominio, es. ${example}`, `Under ${symbol} write the domain, e.g. ${example}`],
+  surfaceUnder: (symbol: string) => [`Sotto ${symbol} va il nome della superficie, es. ${symbol}_S`, `Under ${symbol} write the name of the surface, e.g. ${symbol}_S`],
+  surfaceEnd: (symbol: string) => [`Alla fine di ${symbol} va dS (o F \\cdot d\\mathbf{S})`, `At the end of ${symbol} write dS (or F \\cdot d\\mathbf{S})`],
+  curveUnder: ['Sotto \\oint va la curva, es. \\oint_\\gamma', 'Under \\oint write the curve, e.g. \\oint_\\gamma'],
+  formParen: ['la parentesi ) della forma', 'the parenthesis ) closing the form'],
+  lineDifferential: ['Manca il differenziale alla fine: ds (per una funzione), dr (per un campo) o dx, dy', 'Missing the differential at the end: ds (for a function), dr (for a field) or dx, dy'],
+  lineEnd: (v: string) => [`Alla fine va ds, dr oppure dx, dy, dz (non d${v})`, `At the end write ds, dr or dx, dy, dz (not d${v})`],
+  formDifferentials: (v: string) => [`In una forma vanno dx, dy e dz (non d${v})`, `A form uses dx, dy and dz (not d${v})`],
+  formDifferential: ['Manca il differenziale: dx, dy o dz', 'Missing the differential: dx, dy or dz'],
+  derivativeAfterFraction: ['Manca la funzione da derivare dopo la frazione', 'Missing the function to differentiate after the fraction'],
+  partialVariable: ['Dopo \\partial va la variabile: \\partial_x f', 'After \\partial write the variable: \\partial_x f'],
+  variableBrace: ['la graffa } della variabile', 'the brace } closing the variable'],
+  derivativeAfterPartial: ['Manca la funzione da derivare dopo \\partial', 'Missing the function to differentiate after \\partial'],
+  limitExample: ['es. \\lim_{x \\to 0}', 'e.g. \\lim_{x \\to 0}'],
+  limitWhere: (example: string) => [`Sotto \\lim va dove tende la variabile, ${example}`, `Under \\lim write where the variable tends, ${example}`],
+  limitVariables: ['Sotto \\lim vanno le variabili, es. \\lim_{(x, y) \\to (0, 0)}', 'Under \\lim write the variables, e.g. \\lim_{(x, y) \\to (0, 0)}'],
+  variablesComma: ['la virgola tra le variabili', 'the comma between the variables'],
+  limitDimensions: ['Il limite si fa in una, due o tre variabili', 'A limit can be in one, two or three variables'],
+  limitVariable: (example: string) => [`Sotto \\lim va la variabile, ${example}`, `Under \\lim write the variable, ${example}`],
+  missingTo: (example: string) => [`Manca \\to: ${example}`, `Missing \\to: ${example}`],
+  limitBrace: ['la graffa } sotto \\lim', 'the brace } under \\lim'],
+  functionAfterLimit: ['Manca la funzione dopo \\lim', 'Missing the function after \\lim'],
+  limitPoint: (n: number) => [
+    `Il punto ha ${n} coordinate, come le variabili: es. \\lim_{(x, y) \\to (0, 0)}`,
+    `The point needs ${n} coordinates, one for each variable: e.g. \\lim_{(x, y) \\to (0, 0)}`,
+  ],
+  laplacian: ['\\nabla^2 f è il laplaciano: dopo \\nabla^ va 2', '\\nabla^2 f is the Laplacian: after \\nabla^ write 2'],
+  functionAfterNabla: ['Manca la funzione dopo \\nabla', 'Missing the function after \\nabla'],
+  integralDomain: ["il dominio dell'integrale", 'the domain of the integral'],
+  emptyDomain: ['Il dominio è vuoto', 'The domain is empty'],
+  domainBrace: ['la graffa } del dominio', 'the brace } closing the domain'],
+  differentialVariables: ['In d(x, y) vanno le variabili', 'Put the variables inside d(x, y)'],
+  doubleEnd: ["Alla fine dell'integrale doppio va dx \\, dy (o dA)", 'At the end of a double integral write dx \\, dy (or dA)'],
+  tripleEnd: ["Alla fine dell'integrale triplo va dx \\, dy \\, dz (o dV)", 'At the end of a triple integral write dx \\, dy \\, dz (or dV)'],
+  emptySet: ["L'insieme è vuoto", 'The set is empty'],
+  setBrace: ["la graffa \\} che chiude l'insieme", 'the brace \\} closing the set'],
+  dimension: ['la dimensione', 'the dimension'],
+  missingEnd: (env: string) => [`Manca \\end{${env}}`, `Missing \\end{${env}}`],
+  casesRows: ['Nei casi ogni riga finisce con \\\\ e la condizione va dopo &', 'In cases every row ends with \\\\ and the condition goes after &'],
+  emptyCases: ['I casi sono vuoti', 'The cases are empty'],
+  bracesForConditions: ['Le graffe \\{ \\} si usano solo per le condizioni', 'Braces \\{ \\} are only used for conditions'],
+  emptyParens: ['Le parentesi sono vuote', 'The parentheses are empty'],
+  integerPart: ['Nella parte intera va un solo valore', 'The integer part takes a single value'],
+  dotProduct: ['Il prodotto scalare ha due vettori: \\langle u, v \\rangle', 'The dot product takes two vectors: \\langle u, v \\rangle'],
+  matrixSeparators: ['In una matrice gli elementi si separano con & e le righe con \\\\', 'In a matrix, separate the entries with & and the rows with \\\\'],
+  emptyMatrix: ['La matrice è vuota', 'The matrix is empty'],
+  matrixRows: ['Le righe della matrice hanno lunghezze diverse', 'The rows of the matrix have different lengths'],
+})
 
 export type RelOp = '=' | '<' | '<=' | '>' | '>=' | '!=' | '≈'
 
@@ -196,11 +328,17 @@ const DISTRIBUTIONS: Record<string, string> = {
   γ: 'gamma', gamma: 'gamma',
 }
 
-/** Un esempio di come si scrive ogni distribuzione, per i messaggi. */
+/** Un esempio di come si scrive ogni distribuzione, per i messaggi (con i decimali dell'italiano: vedi `distributionExample`). */
 const DISTRIBUTION_EXAMPLES: Record<string, string> = {
   binomial: 'B(10, 0{,}3)', bernoulli: '\\operatorname{Be}(0{,}5)', poisson: '\\operatorname{Po}(3)', geometric: '\\operatorname{Geom}(0{,}2)',
   hypergeometric: '\\operatorname{H}(50, 10, 5)', normal: 'N(0, 1)', exponential: '\\operatorname{Exp}(2)', uniform: 'U(0, 1)',
   student: 't(10)', chi2: '\\chi^2(3)', fisher: 'F(3, 10)', gamma: '\\Gamma(2, 1)',
+}
+
+/** L'esempio della distribuzione, con i decimali scritti come nella lingua di Glifo: 0{,}3 o 0.3. */
+function distributionExample(family: string): string {
+  const example = DISTRIBUTION_EXAMPLES[family]
+  return usesDecimalComma() ? example : example.replace('{,}', '.')
 }
 
 /** Le parole riconosciute anche senza barra (`sin x`, `sqrt(x)`, `pi`), come in una calcolatrice. */
@@ -213,7 +351,7 @@ const BARE_WORDS = [
 const CONNECTIVES = new Set(['se', 'per', 'con', 'quando', 'dove', 'if', 'for', 'when', 'where', 'with'])
 const AND_WORDS = new Set(['e', 'and', 'ed'])
 const OR_WORDS = new Set(['o', 'or', 'oppure'])
-const ELSE_WORDS = new Set(['altrimenti', 'otherwise', 'else', 'negli altri casi', 'altrove'])
+const ELSE_WORDS = new Set(['altrimenti', 'otherwise', 'else', 'negli altri casi', 'altrove']) // non si traduce: le parole che si scrivono nelle formule
 
 /** Accenti sulle lettere (\bar{x}, \hat{p}…): nomi di variabili diversi. */
 const ACCENTS: Record<string, string> = {
@@ -709,9 +847,9 @@ const INVERSE: Record<string, string> = {
 }
 
 function describe(t: Tok | undefined): string {
-  if (!t) return 'la fine'
+  if (!t) return T.theEnd
   if (t.k === 'num') return t.v
-  return `«${SHOW[t.v] ?? t.v}»`
+  return T.quoted(SHOW[t.v] ?? t.v)
 }
 
 class Parser {
@@ -736,7 +874,7 @@ class Parser {
 
   private next(): Tok {
     const t = this.toks[this.i++]
-    if (!t) throw this.error('L\'espressione finisce troppo presto')
+    if (!t) throw this.error(T.endsTooSoon)
     return t
   }
 
@@ -754,7 +892,7 @@ class Parser {
   }
 
   private expect(k: Kind, v: string, what: string): Tok {
-    if (!this.is(k, v)) throw this.error(`Manca ${what}`)
+    if (!this.is(k, v)) throw this.error(T.missing(what))
     return this.next()
   }
 
@@ -765,20 +903,20 @@ class Parser {
   finish(): void {
     const t = this.peek()
     if (!t) return
-    if (t.k === 'close') throw this.error(`C'è una parentesi ${describe(t)} di troppo`)
+    if (t.k === 'close') throw this.error(T.extraParen(describe(t)))
     if (t.k === 'bad') throw this.badToken(t)
-    throw this.error(`Non mi aspettavo ${describe(t)} qui`)
+    throw this.error(T.unexpected(describe(t)))
   }
 
   private badToken(t: Tok): MathSyntaxError {
     if (t.v.startsWith('\\')) {
-      if (t.v === '\\pm' || t.v === '\\mp') return this.error('Con ± ci sono due valori: scrivili separati', t.pos)
-      if (/\\(l|c)?dots/.test(t.v)) return this.error('I puntini … non si possono calcolare', t.pos)
-      return this.error(`Non so calcolare ${t.v}`, t.pos)
+      if (t.v === '\\pm' || t.v === '\\mp') return this.error(T.plusMinus, t.pos)
+      if (/\\(l|c)?dots/.test(t.v)) return this.error(T.dots, t.pos)
+      return this.error(T.cannotCalculate(t.v), t.pos)
     }
-    if (t.v === '.') return this.error('Un punto da solo: per i decimali scrivi 0.5', t.pos)
-    if (t.v.length > 1) return this.error(`«${t.v}» non è un'espressione`, t.pos)
-    return this.error(`Il segno «${t.v}» non si può calcolare`, t.pos)
+    if (t.v === '.') return this.error(T.loneDot, t.pos)
+    if (t.v.length > 1) return this.error(T.notExpression(t.v), t.pos)
+    return this.error(T.badSign(t.v), t.pos)
   }
 
   // ——— Frasi: relazioni e condizioni ———
@@ -790,7 +928,7 @@ class Parser {
       if (this.is('open', '\\{')) {
         this.next()
         cond = joinAnd(cond, this.condition())
-        this.expect('close', '\\}', 'la graffa \\} della condizione')
+        this.expect('close', '\\}', T.conditionBrace)
       } else if (this.is('comma') || this.is('semi') || this.is('sep') || this.is('and')) {
         this.next()
         if (!this.peek()) break
@@ -811,7 +949,7 @@ class Parser {
     const items = [first]
     while (this.is('rel')) {
       const op = this.next()
-      if (!this.peek() || this.is('comma') || this.is('semi') || this.is('sep')) throw this.error(`Manca qualcosa dopo ${op.v === '!=' ? '≠' : op.v}`)
+      if (!this.peek() || this.is('comma') || this.is('semi') || this.is('sep')) throw this.error(T.somethingAfter(op.v === '!=' ? '≠' : op.v))
       ops.push(op.v as RelOp)
       items.push(this.expr())
     }
@@ -824,7 +962,7 @@ class Parser {
   /** a \equiv b \pmod{m}, anche (\bmod m), \mod m, (\mod m). */
   private congruenceOf(a: MathNode): MathNode {
     const start = this.next()
-    const example = 'es. x \\equiv 3 \\pmod{5}'
+    const example = T.congruenceExample
     this.congruence = true
     let b: MathNode
     try {
@@ -835,14 +973,14 @@ class Parser {
     let m: MathNode | null = null
     if (this.is('pmod')) {
       this.next()
-      m = this.is('open', '{') ? this.latexArg('il modulo') : this.unary()
+      m = this.is('open', '{') ? this.latexArg(T.modulus) : this.unary()
     } else if (this.is('open', '(') && (this.is('pmod', undefined, 1) || this.is('op', 'mod', 1))) {
       this.next()
       this.next()
       m = this.expr()
-      this.expect('close', ')', 'la parentesi )')
+      this.expect('close', ')', T.closingParen)
     }
-    if (!m) throw this.error(`Manca il modulo della congruenza, ${example}`, start.pos)
+    if (!m) throw this.error(T.missingModulus(example), start.pos)
     return { k: 'congr', a, b, m }
   }
 
@@ -879,7 +1017,7 @@ class Parser {
     this.next()
     if (this.is('set')) {
       const set = this.next()
-      if (set.v !== 'R') throw this.error(`Si sa usare solo ℝ (non ${set.v})`, set.pos)
+      if (set.v !== 'R') throw this.error(T.onlyReals(set.v), set.pos)
       let lo: MathNode = { k: 'neg', a: { k: 'infty' } }
       let hi: MathNode = { k: 'infty' }
       // ℝ^+ e ℝ^-
@@ -888,22 +1026,22 @@ class Parser {
         let sign = this.next()
         if (sign.k === 'open' && sign.v === '{') {
           sign = this.next()
-          this.expect('close', '}', 'la graffa }')
+          this.expect('close', '}', T.closingBrace)
         }
         if (sign.v === '+') lo = { k: 'num', v: 0, text: '0', comma: false }
         else if (sign.v === '-') hi = { k: 'num', v: 0, text: '0', comma: false }
-        else throw this.error('Dopo ℝ^ va + o -', sign.pos)
+        else throw this.error(T.realsSign, sign.pos)
       }
       return { k: 'in', a, lo, hi, loOpen: true, hiOpen: true }
     }
     const open = this.peek()
     if (!open || !((open.k === 'open' && (open.v === '[' || open.v === '(')) || (open.k === 'close' && open.v === ']'))) {
-      throw this.error('Dopo ∈ va un intervallo, per esempio [0, 5]')
+      throw this.error(T.intervalAfterIn)
     }
     this.next()
     const loOpen = open.v !== '['
     const lo = this.expr()
-    if (!this.is('comma') && !this.is('semi')) throw this.error('Nell\'intervallo i due estremi vanno separati da una virgola: [0, 5]')
+    if (!this.is('comma') && !this.is('semi')) throw this.error(T.intervalComma)
     this.next()
     this.reversedInterval = true
     let hi: MathNode
@@ -914,7 +1052,7 @@ class Parser {
     }
     const close = this.peek()
     if (!close || !((close.k === 'close' && (close.v === ']' || close.v === ')')) || (close.k === 'open' && close.v === '['))) {
-      throw this.error('Manca la parentesi che chiude l\'intervallo')
+      throw this.error(T.intervalClose)
     }
     this.next()
     return { k: 'in', a, lo, hi, loOpen, hiOpen: close.v !== ']' }
@@ -923,9 +1061,9 @@ class Parser {
   /** `X \sim B(10, 0{,}3)`, `Y \sim \mathcal{N}(0, 1)`, `T \sim t_{10}`: la variabile aleatoria con la sua distribuzione. */
   private distribution(first: MathNode): MathNode {
     const sim = this.next()
-    if (first.k !== 'name') throw this.error('Prima di ∼ va il nome della variabile aleatoria: X \\sim B(10, 0{,}3)', sim.pos)
+    if (first.k !== 'name') throw this.error(T.randomName, sim.pos)
     const t = this.peek()
-    if (!t) throw this.error('Dopo ∼ va la distribuzione, per esempio B(10, 0{,}3) o N(0, 1)')
+    if (!t) throw this.error(T.distributionAfter)
     this.next()
     let word = t.v
     // Bin, Exp, Unif scritti senza barra: le lettere attaccate.
@@ -939,7 +1077,7 @@ class Parser {
     }
     const family = t.k === 'name' || t.k === 'fn' || t.k === 'bad' ? DISTRIBUTIONS[word.toLowerCase()] : undefined
     if (!family) {
-      throw this.error(`Non conosco la distribuzione «${word}»: per esempio B(n, p), N(μ, σ²), \\operatorname{Po}(λ), \\operatorname{Exp}(λ), U(a, b), t(n), \\chi^2(n)`, t.pos)
+      throw this.error(T.unknownDistribution(word), t.pos)
     }
     const params: MathNode[] = []
     // \chi^2, e i gradi di libertà come pedice (\chi^2_3, t_{10}) o tra parentesi.
@@ -947,19 +1085,19 @@ class Parser {
       if (!this.is('op', '^')) return
       const hat = this.next()
       const e = this.supArg(hat)
-      if (e.k !== 'num' || e.v !== 2) throw this.error('Si scrive \\chi^2', hat.pos)
+      if (e.k !== 'num' || e.v !== 2) throw this.error(T.chiSquare, hat.pos)
     }
     if (family === 'chi2') square()
     if (this.is('op', '_')) {
       this.next()
-      params.push(this.latexArg('i gradi di libertà'))
+      params.push(this.latexArg(T.degreesOfFreedom))
     }
     if (family === 'chi2') square()
     if (this.is('open', '(') || this.is('open', '[')) {
       const group = this.group(true)
       params.push(...(group.k === 'tuple' ? group.items : [group]))
     }
-    if (!params.length) throw this.error(`Mancano i parametri della distribuzione: X \\sim ${DISTRIBUTION_EXAMPLES[family]}`)
+    if (!params.length) throw this.error(T.missingParameters(distributionExample(family)))
     return { k: 'dist', v: first.name, family, params }
   }
 
@@ -979,7 +1117,7 @@ class Parser {
   /** `P(X \le 3)`, `P(2 < X \le 5)`, `P(X > 3 \mid X > 1)`: la probabilità di un evento. */
   private probability(): MathNode {
     const open = this.next()
-    if (open.k !== 'open' || open.v !== '(') throw this.error('Dopo P va l\'evento tra parentesi: P(X \\le 3)', open.pos)
+    if (open.k !== 'open' || open.v !== '(') throw this.error(T.eventAfterP, open.pos)
     const saved = this.condBar
     this.condBar = true
     try {
@@ -989,7 +1127,7 @@ class Parser {
         this.next()
         given = this.condition()
       }
-      this.expect('close', ')', 'la parentesi ) della probabilità')
+      this.expect('close', ')', T.probabilityParen)
       return { k: 'prob', event, given }
     } finally {
       this.condBar = saved
@@ -1004,7 +1142,7 @@ class Parser {
     this.condBar = false
     try {
       const a = this.expr()
-      this.expect('close', close, `la parentesi ${SHOW[close] ?? close} del valore atteso`)
+      this.expect('close', close, T.expectationParen(SHOW[close] ?? close))
       return { k: 'expect', a }
     } finally {
       this.condBar = saved
@@ -1059,7 +1197,7 @@ class Parser {
     const n = this.expr()
     this.next()
     const k = this.expr()
-    this.expect('close', '}', 'la graffa } del pedice')
+    this.expect('close', '}', T.subscriptBrace)
     const name = letter === 'C' ? (repeated ? 'combrep' : 'comb') : repeated ? 'disprep' : 'disp'
     return { k: 'fn', name, args: [n, k] }
   }
@@ -1071,7 +1209,7 @@ class Parser {
     while (this.is('op', '+') || this.is('op', '-')) {
       const sign = this.next()
       const op = sign.v as '+' | '-'
-      if (!this.peek()) throw this.error(`Manca qualcosa dopo ${op}`)
+      if (!this.peek()) throw this.error(T.somethingAfter(op))
       left = { k: 'bin', op, a: left, b: this.term(), ...(sign.cup && { cup: true }), ...(sign.setminus && { setminus: true }) }
     }
     return left
@@ -1083,7 +1221,7 @@ class Parser {
       // 17 \bmod 5 (e 17 \mod 5 fuori da una congruenza): il resto.
       if (this.is('op', 'mod') || (!this.congruence && this.is('pmod', 'mod'))) {
         this.next()
-        if (!this.peek()) throw this.error('Manca il divisore dopo mod')
+        if (!this.peek()) throw this.error(T.divisorAfterMod)
         left = { k: 'fn', name: 'mod', args: [left, this.unary()] }
         continue
       }
@@ -1092,10 +1230,10 @@ class Parser {
         if (this.integrals > 0 && this.is('op', '*') && this.atDifferential(1)) break
         const sign = this.next()
         const op = sign.v as '*' | '/'
-        if (!this.peek()) throw this.error(`Manca qualcosa dopo ${op === '*' ? '·' : '/'}`)
+        if (!this.peek()) throw this.error(T.somethingAfter(op === '*' ? '·' : '/'))
         left = { k: 'bin', op, a: left, b: this.unary(), ...(sign.cross && { cross: true }), ...(sign.cap && { cap: true }) }
       } else if (this.startsFactor()) {
-        if (left.k === 'num' && this.is('num')) throw this.error('Due numeri di seguito: manca un\'operazione?')
+        if (left.k === 'num' && this.is('num')) throw this.error(T.twoNumbers)
         left = { k: 'bin', op: '*', a: left, b: this.power(), implicit: true }
       } else break
     }
@@ -1159,7 +1297,7 @@ class Parser {
         const exp = this.supArg(hat)
         base = this.postfix({ k: 'bin', op: '^', a: base, b: exp })
       }
-      if (this.is('op', '^')) throw this.error('Due esponenti di seguito: usa le graffe, es. x^{a^b}')
+      if (this.is('op', '^')) throw this.error(T.twoExponents)
     }
     return base
   }
@@ -1187,20 +1325,20 @@ class Parser {
       return sign === '-' ? { k: 'neg', a: arg } : arg
     }
     if (this.is('open', '(')) return this.primary()
-    if (!this.peek()) throw this.error('Manca l\'esponente dopo ^', hat.pos)
-    return this.latexArg('l\'esponente dopo ^')
+    if (!this.peek()) throw this.error(T.missing(T.exponent), hat.pos)
+    return this.latexArg(T.exponent)
   }
 
   /** Un argomento come lo legge il LaTeX: un gruppo `{…}`, una cifra, una lettera o un comando. */
   private latexArg(what: string): MathNode {
     const t = this.peek()
-    if (!t) throw this.error(`Manca ${what}`)
+    if (!t) throw this.error(T.missing(what))
     if (t.k === 'open' && t.v === '{') {
       this.next()
-      if (!this.peek()) throw this.error(`Manca ${what}`)
-      if (this.is('close', '}')) throw this.error(`Manca ${what}: le graffe sono vuote`)
+      if (!this.peek()) throw this.error(T.missing(what))
+      if (this.is('close', '}')) throw this.error(T.missingEmptyBraces(what))
       const inner = this.expr()
-      this.expect('close', '}', 'la graffa }')
+      this.expect('close', '}', T.closingBrace)
       return inner
     }
     if (t.k === 'num') {
@@ -1219,12 +1357,12 @@ class Parser {
     if (t.k === 'fn' || t.k === 'frac' || t.k === 'sqrt' || t.k === 'binom' || t.k === 'infty' || t.k === 'bar' || t.k === 'open') {
       return this.primary()
     }
-    throw this.error(`Manca ${what}`)
+    throw this.error(T.missing(what))
   }
 
   private primary(): MathNode {
     const t = this.peek()
-    if (!t) throw this.error('Manca qualcosa alla fine')
+    if (!t) throw this.error(T.somethingAtEnd)
     switch (t.k) {
       case 'num':
         this.next()
@@ -1241,8 +1379,8 @@ class Parser {
         const integrals = this.integrals
         this.integrals = 0
         try {
-          const a = this.latexArg('il numeratore di \\frac')
-          const b = this.latexArg('il denominatore di \\frac')
+          const a = this.latexArg(T.numerator)
+          const b = this.latexArg(T.denominator)
           return { k: 'bin', op: '/', a, b, frac: true }
         } finally {
           this.integrals = integrals
@@ -1254,15 +1392,15 @@ class Parser {
         if (this.is('open', '[')) {
           this.next()
           index = this.expr()
-          this.expect('close', ']', 'la parentesi ] dell\'indice')
+          this.expect('close', ']', T.indexBracket)
         }
-        const arg = this.is('open', '(') ? this.primary() : this.latexArg('il numero sotto la radice')
+        const arg = this.is('open', '(') ? this.primary() : this.latexArg(T.radicand)
         return index ? { k: 'fn', name: 'root', args: [arg], base: index } : { k: 'fn', name: 'sqrt', args: [arg] }
       }
       case 'binom': {
         this.next()
-        const n = this.latexArg('il primo numero di \\binom')
-        const r = this.latexArg('il secondo numero di \\binom')
+        const n = this.latexArg(T.binomTop)
+        const r = this.latexArg(T.binomBottom)
         return { k: 'binom', n, r }
       }
       case 'big':
@@ -1286,7 +1424,7 @@ class Parser {
         this.absDepth++
         const inner = this.expr()
         this.absDepth--
-        if (!this.is('bar') || this.is('bar', 'l|')) throw this.error('Manca la | che chiude il valore assoluto')
+        if (!this.is('bar') || this.is('bar', 'l|')) throw this.error(T.absClose)
         this.next()
         return { k: 'abs', a: inner }
       }
@@ -1303,17 +1441,17 @@ class Parser {
           this.next()
           return this.probability()
         }
-        throw this.error(`Non mi aspettavo ${describe(t)} qui`)
+        throw this.error(T.unexpected(describe(t)))
       case 'close':
-        throw this.error(t.v === '}' ? 'C\'è una graffa } di troppo' : `Manca qualcosa prima di ${describe(t)}`)
+        throw this.error(t.v === '}' ? T.extraBrace : T.somethingBefore(describe(t)))
       case 'bad':
         throw this.badToken(t)
       case 'op':
-        throw this.error(t.v === '^' || t.v === '_' ? `Manca qualcosa prima di ${t.v}` : `Manca qualcosa prima di ${describe(t)}`)
+        throw this.error(t.v === '^' || t.v === '_' ? T.somethingBefore(t.v) : T.somethingBefore(describe(t)))
       case 'rel':
-        throw this.error(`Manca qualcosa prima di ${describe(t)}`)
+        throw this.error(T.somethingBefore(describe(t)))
       default:
-        throw this.error(`Non mi aspettavo ${describe(t)} qui`)
+        throw this.error(T.unexpected(describe(t)))
     }
   }
 
@@ -1321,7 +1459,7 @@ class Parser {
   private subscriptText(): string {
     this.next()
     const t = this.peek()
-    if (!t) throw this.error('Manca il pedice dopo _')
+    if (!t) throw this.error(T.subscriptAfter)
     if (t.k === 'open' && t.v === '{') {
       this.next()
       let text = ''
@@ -1332,8 +1470,8 @@ class Parser {
         if (u.k === 'close') depth--
         text += u.v
       }
-      this.expect('close', '}', 'la graffa } del pedice')
-      if (!text) throw this.error('Il pedice è vuoto')
+      this.expect('close', '}', T.subscriptBrace)
+      if (!text) throw this.error(T.emptySubscript)
       return text
     }
     if (t.k === 'num') {
@@ -1344,7 +1482,7 @@ class Parser {
       return this.next().v
     }
     if (t.k === 'name') return this.next().v
-    throw this.error('Manca il pedice dopo _')
+    throw this.error(T.subscriptAfter)
   }
 
   private name(): MathNode {
@@ -1388,9 +1526,9 @@ class Parser {
           base = this.optimumDomain()
           continue
         }
-        if (name !== 'log') throw this.error(`${name} non ha una base: solo \\log_b`)
+        if (name !== 'log') throw this.error(T.noBase(name))
         this.next()
-        base = this.latexArg('la base del logaritmo')
+        base = this.latexArg(T.logBase)
       } else if (this.is('op', '^') && !pow) {
         const hat = this.next()
         pow = this.supArg(hat)
@@ -1409,7 +1547,7 @@ class Parser {
         this.next()
         args.push(this.relation())
       }
-      this.expect('close', ')', 'la parentesi )')
+      this.expect('close', ')', T.closingParen)
       return { k: 'fn', name, args, ...(pow && { pow }) }
     }
     // \operatorname{lagrange}(f, x^2 + y^2 = 1), \operatorname{estremi}(f, x^2 + y^2 \le 1): una condizione tra gli argomenti.
@@ -1420,7 +1558,7 @@ class Parser {
         this.next()
         args.push(this.relation())
       }
-      this.expect('close', ')', 'la parentesi )')
+      this.expect('close', ')', T.closingParen)
       if (args.length > 2) args = [args[0], { k: 'and', items: args.slice(1) }]
       return { k: 'fn', name, args, ...(pow && { pow }) }
     }
@@ -1435,7 +1573,7 @@ class Parser {
         this.next()
       }
     } else {
-      if (!this.peek() || !this.startsArgument()) throw this.error(`Manca l'argomento di ${name}`)
+      if (!this.peek() || !this.startsArgument()) throw this.error(T.missingArgument(name))
       args = [this.implicitArgument(true)]
     }
     return { k: 'fn', name, args, ...(pow && { pow }), ...(base && { base }) }
@@ -1443,15 +1581,15 @@ class Parser {
 
   /** Sotto \max e \min: dove (x^2 + y^2 \le 1, x + y = 1, anche più condizioni con le virgole, o il nome di un insieme). */
   private optimumDomain(): MathNode {
-    if (!this.is('open', '{')) return this.latexArg('dove cercare il massimo')
+    if (!this.is('open', '{')) return this.latexArg(T.whereMaximum)
     this.next()
-    if (this.is('close', '}')) throw this.error('Manca dove cercare: le graffe sono vuote')
+    if (this.is('close', '}')) throw this.error(T.whereEmpty)
     const items = [this.relation()]
     while (this.is('comma') || this.is('and')) {
       this.next()
       items.push(this.relation())
     }
-    this.expect('close', '}', 'la graffa }')
+    this.expect('close', '}', T.closingBrace)
     return items.length === 1 ? items[0] : { k: 'and', items }
   }
 
@@ -1466,7 +1604,7 @@ class Parser {
   private implicitArgument(spaced = false): MathNode {
     let left = this.unary()
     while (this.startsFactor(true) && !(spaced && this.peek()!.spaced)) {
-      if (left.k === 'num' && this.is('num')) throw this.error('Due numeri di seguito: manca un\'operazione?')
+      if (left.k === 'num' && this.is('num')) throw this.error(T.twoNumbers)
       left = { k: 'bin', op: '*', a: left, b: this.power(), implicit: true }
     }
     return left
@@ -1485,18 +1623,18 @@ class Parser {
         const braced = this.is('open', '{')
         if (braced) this.next()
         const index = this.peek()
-        if (!index || index.k !== 'name' || !this.is('rel', '=', 1)) throw this.error(`Sotto ${symbol} va l'indice con il primo valore, es. ${symbol}_{k=1}`)
+        if (!index || index.k !== 'name' || !this.is('rel', '=', 1)) throw this.error(T.sumIndex(symbol))
         this.i += 2
         v = index.v
         from = this.expr()
-        if (braced) this.expect('close', '}', 'la graffa } dopo il primo valore')
+        if (braced) this.expect('close', '}', T.firstValueBrace)
       } else if (this.is('op', '^') && !to) {
         const hat = this.next()
         to = this.supArg(hat)
       }
     }
-    if (!v || !from || !to) throw this.error(`${symbol} vuole l'indice e i due estremi, es. ${symbol}_{k=1}^{n}`)
-    if (!this.peek() || !this.startsArgument()) throw this.error(`Manca cosa sommare dopo ${symbol}`)
+    if (!v || !from || !to) throw this.error(T.sumBounds(symbol))
+    if (!this.peek() || !this.startsArgument()) throw this.error(T.sumBody(symbol))
     return { k: 'big', op, v, from, to, body: this.implicitArgument() }
   }
 
@@ -1523,7 +1661,7 @@ class Parser {
     }
     // \int_\gamma f \, ds, \oint_C F \cdot dr: sulla curva.
     if (kind === 'oint' || (from && !to && from.k === 'name')) return this.lineIntegral(from, kind === 'oint', start)
-    if (!from !== !to) throw this.error('Un integrale vuole tutti e due gli estremi, es. \\int_0^1, o nessuno: \\int x \\, dx', start.pos)
+    if (!from !== !to) throw this.error(T.integralBounds, start.pos)
     this.integrals++
     let body: MathNode
     try {
@@ -1539,7 +1677,7 @@ class Parser {
     } else {
       // \int \frac{dx}{1 + x^2}: il dx nel numeratore.
       const inside = differentialInFraction(body)
-      if (!inside) throw this.error('Manca il dx alla fine dell\'integrale')
+      if (!inside) throw this.error(T.missingDx)
       body = inside.body
       v = inside.v
     }
@@ -1557,8 +1695,8 @@ class Parser {
       this.next()
       domain = this.domainArg()
     }
-    if (this.is('op', '^')) throw this.error(`${symbol} vuole sotto il dominio, non gli estremi sopra: ${symbol}_D`)
-    if (!domain) throw this.error(`Sotto ${symbol} va il dominio, es. ${n === 2 ? '\\iint_D' : '\\iiint_E'}`, start.pos)
+    if (this.is('op', '^')) throw this.error(T.domainBelow(symbol))
+    if (!domain) throw this.error(T.domainUnder(symbol, n === 2 ? '\\iint_D' : '\\iiint_E'), start.pos)
     this.integrals++
     let body: MathNode
     try {
@@ -1571,35 +1709,35 @@ class Parser {
     if (dot) this.next()
     if (this.atDifferential() && SURFACE.has(this.peek(1)!.v)) {
       this.i += 2
-      if (domain.k !== 'name') throw this.error(`Sotto ${symbol} va il nome della superficie, es. ${symbol}_S`, start.pos)
+      if (domain.k !== 'name') throw this.error(T.surfaceUnder(symbol), start.pos)
       const normal = dot ? null : withoutNormal(body)
       return { k: 'sint', surface: domain.name, closed: start.v === 'oiint', dS: !dot && !normal, body: normal ?? body }
     }
-    if (dot || start.v === 'oiint') throw this.error(`Alla fine di ${symbol} va dS (o F \\cdot d\\mathbf{S})`)
+    if (dot || start.v === 'oiint') throw this.error(T.surfaceEnd(symbol))
     return { k: 'mint', vars: this.differentials(n), domain, body }
   }
 
   /** `\int_\gamma f \, ds`, `\oint_\gamma F \cdot dr`, `\int_\gamma y \, dx - x \, dy`: l'integrale sulla curva. */
   private lineIntegral(curve: MathNode | null, closed: boolean, start: Tok): MathNode {
-    if (!curve || curve.k !== 'name') throw this.error('Sotto \\oint va la curva, es. \\oint_\\gamma', start.pos)
+    if (!curve || curve.k !== 'name') throw this.error(T.curveUnder, start.pos)
     this.integrals++
     try {
       // (P \, dx + Q \, dy): la forma tra parentesi.
       if (this.is('open', '(') && this.formAhead()) {
         this.next()
         const body = this.form()
-        this.expect('close', ')', 'la parentesi ) della forma')
+        this.expect('close', ')', T.formParen)
         return { k: 'lint', curve: curve.name, closed, ds: false, body, form: true }
       }
       const first = this.atDifferential() ? ONE : this.expr()
       if (this.is('op', '*') && this.atDifferential(1)) this.next()
-      if (!this.atDifferential()) throw this.error('Manca il differenziale alla fine: ds (per una funzione), dr (per un campo) o dx, dy')
+      if (!this.atDifferential()) throw this.error(T.lineDifferential)
       this.next()
       const v = this.next().v
       if (v === 's') return { k: 'lint', curve: curve.name, closed, ds: true, body: first }
       if (v === 'r' || v === 'r⃗' || v === 'l' || v === 'ℓ') return { k: 'lint', curve: curve.name, closed, ds: false, body: first }
       if (v === 'x' || v === 'y' || v === 'z') return { k: 'lint', curve: curve.name, closed, ds: false, body: this.form({ v, coef: first }), form: true }
-      throw this.error(`Alla fine va ds, dr oppure dx, dy, dz (non d${v})`)
+      throw this.error(T.lineEnd(v))
     } finally {
       this.integrals--
     }
@@ -1621,13 +1759,13 @@ class Parser {
   private form(first?: { v: string; coef: MathNode }): MathNode {
     const parts = new Map<string, MathNode>()
     const put = (v: string, coef: MathNode) => {
-      if (!/^[xyz]$/.test(v)) throw this.error(`In una forma vanno dx, dy e dz (non d${v})`)
+      if (!/^[xyz]$/.test(v)) throw this.error(T.formDifferentials(v))
       const before = parts.get(v)
       parts.set(v, before ? { k: 'bin', op: '+', a: before, b: coef } : coef)
     }
     const piece = (minus: boolean) => {
       const coef = this.atDifferential() ? ONE : this.term()
-      if (!this.atDifferential()) throw this.error('Manca il differenziale: dx, dy o dz')
+      if (!this.atDifferential()) throw this.error(T.formDifferential)
       this.next()
       put(this.next().v, minus ? { k: 'neg', a: coef } : coef)
     }
@@ -1679,7 +1817,7 @@ class Parser {
         body = { k: 'apply', name: fn, args: group.k === 'tuple' ? group.items : [group], primes: 0 }
       } else body = { k: 'name', name: fn }
     } else {
-      if (!this.peek() || !this.startsArgument()) throw this.error('Manca la funzione da derivare dopo la frazione')
+      if (!this.peek() || !this.startsArgument()) throw this.error(T.derivativeAfterFraction)
       body = this.term()
     }
     return { k: 'diff', body, vars, partial: top.partial }
@@ -1718,26 +1856,26 @@ class Parser {
     const start = this.next()
     const vars: string[] = []
     for (;;) {
-      if (!this.is('op', '_')) throw this.error('Dopo \\partial va la variabile: \\partial_x f', start.pos)
+      if (!this.is('op', '_')) throw this.error(T.partialVariable, start.pos)
       this.next()
       if (this.is('open', '{')) {
         this.next()
         while (this.is('name')) vars.push(this.next().v)
-        this.expect('close', '}', 'la graffa } della variabile')
+        this.expect('close', '}', T.variableBrace)
       } else if (this.is('name')) vars.push(this.next().v)
-      if (!vars.length) throw this.error('Dopo \\partial va la variabile: \\partial_x f', start.pos)
+      if (!vars.length) throw this.error(T.partialVariable, start.pos)
       if (!this.is('partial')) break
       this.next()
     }
-    if (!this.peek() || !this.startsArgument()) throw this.error('Manca la funzione da derivare dopo \\partial', start.pos)
+    if (!this.peek() || !this.startsArgument()) throw this.error(T.derivativeAfterPartial, start.pos)
     return { k: 'diff', body: this.term(), vars, partial: true }
   }
 
   /** `\lim_{x \to 0} \frac{\sin x}{x}`, `\lim_{x \to 0^+}`, `\lim_{n \to \infty}`. */
   private limit(): MathNode {
     const start = this.next()
-    const example = 'es. \\lim_{x \\to 0}'
-    if (!this.is('op', '_')) throw this.error(`Sotto \\lim va dove tende la variabile, ${example}`, start.pos)
+    const example = T.limitExample
+    if (!this.is('op', '_')) throw this.error(T.limitWhere(example), start.pos)
     this.next()
     const braced = this.is('open', '{')
     if (braced) this.next()
@@ -1748,18 +1886,18 @@ class Parser {
       vars = []
       for (;;) {
         const t = this.peek()
-        if (!t || t.k !== 'name') throw this.error(`Sotto \\lim vanno le variabili, es. \\lim_{(x, y) \\to (0, 0)}`, start.pos)
+        if (!t || t.k !== 'name') throw this.error(T.limitVariables, start.pos)
         vars.push(this.next().v)
         if (this.is('close', ')')) break
-        this.expect('comma', ',', 'la virgola tra le variabili')
+        this.expect('comma', ',', T.variablesComma)
       }
       this.next()
-      if (vars.length < 2 || vars.length > 3) throw this.error('Il limite si fa in una, due o tre variabili', start.pos)
+      if (vars.length < 2 || vars.length > 3) throw this.error(T.limitDimensions, start.pos)
     }
     const v = vars ? { k: 'name', v: vars[0] } : this.peek()
-    if (!v || v.k !== 'name') throw this.error(`Sotto \\lim va la variabile, ${example}`, start.pos)
+    if (!v || v.k !== 'name') throw this.error(T.limitVariable(example), start.pos)
     if (!vars) this.next()
-    if (!this.is('to')) throw this.error(`Manca \\to: ${example}`, start.pos)
+    if (!this.is('to')) throw this.error(T.missingTo(example), start.pos)
     this.next()
     // 0^+ e 0^-: da destra o da sinistra (tolti prima di leggere il punto).
     let side: -1 | 0 | 1 = 0
@@ -1782,8 +1920,8 @@ class Parser {
       }
     }
     const to = this.is('op', '+') && this.is('infty', undefined, 1) ? (this.next(), this.expr()) : this.expr()
-    if (braced) this.expect('close', '}', 'la graffa } sotto \\lim')
-    if (!this.peek() || !this.startsArgument()) throw this.error('Manca la funzione dopo \\lim', start.pos)
+    if (braced) this.expect('close', '}', T.limitBrace)
+    if (!this.peek() || !this.startsArgument()) throw this.error(T.functionAfterLimit, start.pos)
     let body = this.term()
     // \lim_{x \to \infty} \sqrt{x^2 + x} - x: anche i termini dopo, se usano la variabile.
     while (this.is('op', '+') || this.is('op', '-')) {
@@ -1801,7 +1939,7 @@ class Parser {
       }
       body = { k: 'bin', op, a: body, b: next }
     }
-    if (vars && (to.k !== 'tuple' || to.items.length !== vars.length)) throw this.error(`Il punto ha ${vars.length} coordinate, come le variabili: es. \\lim_{(x, y) \\to (0, 0)}`, start.pos)
+    if (vars && (to.k !== 'tuple' || to.items.length !== vars.length)) throw this.error(T.limitPoint(vars.length), start.pos)
     return { k: 'lim', v: v.v, to, side, body, ...(vars && { vars }) }
   }
 
@@ -1813,20 +1951,20 @@ class Parser {
     else if (this.is('op', '^')) {
       const hat = this.next()
       const p = this.supArg(hat)
-      if (!(p.k === 'num' && p.v === 2)) throw this.error('\\nabla^2 f è il laplaciano: dopo \\nabla^ va 2', start.pos)
+      if (!(p.k === 'num' && p.v === 2)) throw this.error(T.laplacian, start.pos)
       name = 'lap'
     }
-    if (!this.peek() || !this.startsArgument()) throw this.error('Manca la funzione dopo \\nabla', start.pos)
+    if (!this.peek() || !this.startsArgument()) throw this.error(T.functionAfterNabla, start.pos)
     return { k: 'fn', name, args: [this.implicitArgument()], nabla: true }
   }
 
   /** Il dominio sotto \iint: un nome (D) o, tra graffe, un insieme, una condizione o un rettangolo. */
   private domainArg(): MathNode {
-    if (!this.is('open', '{')) return this.latexArg('il dominio dell\'integrale')
+    if (!this.is('open', '{')) return this.latexArg(T.integralDomain)
     this.next()
-    if (this.is('close', '}')) throw this.error('Il dominio è vuoto')
+    if (this.is('close', '}')) throw this.error(T.emptyDomain)
     const inner = this.condition()
-    this.expect('close', '}', 'la graffa } del dominio')
+    this.expect('close', '}', T.domainBrace)
     return inner
   }
 
@@ -1838,7 +1976,7 @@ class Parser {
       if (this.is('open', '(')) {
         const group = this.group(true)
         for (const item of group.k === 'tuple' ? group.items : [group]) {
-          if (item.k !== 'name') throw this.error('In d(x, y) vanno le variabili')
+          if (item.k !== 'name') throw this.error(T.differentialVariables)
           vars.push(item.name)
         }
       } else vars.push(this.next().v)
@@ -1846,7 +1984,7 @@ class Parser {
     if (vars.length === 1 && n === 2 && vars[0] === 'A') return ['x', 'y']
     if (vars.length === 1 && n === 3 && vars[0] === 'V') return ['x', 'y', 'z']
     if (vars.length !== n || new Set(vars).size !== n) {
-      throw this.error(n === 2 ? 'Alla fine dell\'integrale doppio va dx \\, dy (o dA)' : 'Alla fine dell\'integrale triplo va dx \\, dy \\, dz (o dV)')
+      throw this.error(n === 2 ? T.doubleEnd : T.tripleEnd)
     }
     return vars
   }
@@ -1865,9 +2003,9 @@ class Parser {
       vars = null
     }
     if (!vars) this.i = start
-    if (this.is('close', '\\}')) throw this.error('L\'insieme è vuoto')
+    if (this.is('close', '\\}')) throw this.error(T.emptySet)
     const cond = this.condition()
-    this.expect('close', '\\}', 'la graffa \\} che chiude l\'insieme')
+    this.expect('close', '\\}', T.setBrace)
     return { k: 'set', vars, cond }
   }
 
@@ -1897,7 +2035,7 @@ class Parser {
       this.next()
       if (this.is('op', '^')) {
         this.next()
-        this.latexArg('la dimensione')
+        this.latexArg(T.dimension)
       }
     }
     const t = this.peek()
@@ -1912,7 +2050,7 @@ class Parser {
     const rows: { value: MathNode; cond: MathNode | null }[] = []
     for (;;) {
       if (this.is('endcases')) break
-      if (!this.peek()) throw this.error('Manca \\end{cases}')
+      if (!this.peek()) throw this.error(T.missingEnd('cases'))
       // Una riga può essere anche un'equazione: \begin{cases} x + y = 3 \\ x - y = 1 \end{cases} è un sistema.
       const value = this.relation()
       let cond: MathNode | null = null
@@ -1928,10 +2066,10 @@ class Parser {
         this.next()
         continue
       }
-      if (!this.is('endcases')) throw this.error('Nei casi ogni riga finisce con \\\\ e la condizione va dopo &')
+      if (!this.is('endcases')) throw this.error(T.casesRows)
     }
     this.next()
-    if (!rows.length) throw this.error('I casi sono vuoti')
+    if (!rows.length) throw this.error(T.emptyCases)
     return { k: 'cases', rows }
   }
 
@@ -1942,13 +2080,13 @@ class Parser {
   private group(args = false): MathNode {
     const open = this.next()
     const close = CLOSING[open.v]
-    if (open.v === '\\{' && !args) throw this.error('Le graffe \\{ \\} si usano solo per le condizioni')
+    if (open.v === '\\{' && !args) throw this.error(T.bracesForConditions)
     if (this.is('close', close)) {
       if (args) {
         this.next()
         return { k: 'tuple', items: [] }
       }
-      throw this.error('Le parentesi sono vuote')
+      throw this.error(T.emptyParens)
     }
     let items = [this.expr()]
     const seps: { semi: boolean; tight: boolean }[] = []
@@ -1976,18 +2114,18 @@ class Parser {
     }
     if (!this.is('close', close)) {
       const t = this.peek()
-      if (t?.k === 'close') throw this.error(`La parentesi ${describe(open)} si chiude con ${SHOW[close] ?? close}, non con ${describe(t)}`)
-      if (!t) throw this.error(`Manca la parentesi ${SHOW[close] ?? close}`)
+      if (t?.k === 'close') throw this.error(T.closesWith(describe(open), SHOW[close] ?? close, describe(t)))
+      if (!t) throw this.error(T.missingParen(SHOW[close] ?? close))
       if (t.k === 'bad') throw this.badToken(t)
-      throw this.error(`Non mi aspettavo ${describe(t)} qui: manca la parentesi ${SHOW[close] ?? close}?`)
+      throw this.error(T.unexpectedMissingParen(describe(t), SHOW[close] ?? close))
     }
     this.next()
     if (open.v === 'floor' || open.v === 'ceil') {
-      if (items.length > 1) throw this.error('Nella parte intera va un solo valore', open.pos)
+      if (items.length > 1) throw this.error(T.integerPart, open.pos)
       return { k: open.v, a: items[0] }
     }
     if (open.v === '⟨') {
-      if (items.length !== 2) throw this.error('Il prodotto scalare ha due vettori: \\langle u, v \\rangle', open.pos)
+      if (items.length !== 2) throw this.error(T.dotProduct, open.pos)
       return { k: 'fn', name: 'dot', args: items }
     }
     return items.length === 1 ? items[0] : { k: 'tuple', items }
@@ -2000,7 +2138,7 @@ class Parser {
     let row: MathNode[] = []
     for (;;) {
       if (this.is('endmatrix')) break
-      if (!this.peek()) throw this.error(`Manca \\end{${begin.v}}`)
+      if (!this.peek()) throw this.error(T.missingEnd(begin.v))
       row.push(this.expr())
       if (this.is('amp')) {
         this.next()
@@ -2012,12 +2150,12 @@ class Parser {
         row = []
         continue
       }
-      if (!this.is('endmatrix')) throw this.error('In una matrice gli elementi si separano con & e le righe con \\\\')
+      if (!this.is('endmatrix')) throw this.error(T.matrixSeparators)
     }
     this.next()
     if (row.length) rows.push(row)
-    if (!rows.length) throw this.error('La matrice è vuota', begin.pos)
-    if (rows.some((r) => r.length !== rows[0].length)) throw this.error('Le righe della matrice hanno lunghezze diverse', begin.pos)
+    if (!rows.length) throw this.error(T.emptyMatrix, begin.pos)
+    if (rows.some((r) => r.length !== rows[0].length)) throw this.error(T.matrixRows, begin.pos)
     const matrix: MathNode = { k: 'matrix', rows }
     return begin.v === 'vmatrix' ? { k: 'fn', name: 'det', args: [matrix] } : matrix
   }
@@ -2070,7 +2208,7 @@ function joinAnd(a: MathNode | null, b: MathNode): MathNode {
 /** Legge un'espressione (o una relazione, `a = b`, `x < 2`). */
 export function parseMath(src: string): MathNode {
   const parser = new Parser(tokenize(src), src.length)
-  if (parser.done) throw new MathSyntaxError('L\'espressione è vuota', 0)
+  if (parser.done) throw new MathSyntaxError(T.empty, 0)
   const node = parser.relation()
   parser.finish()
   return node
@@ -2079,7 +2217,7 @@ export function parseMath(src: string): MathNode {
 /** Legge un'espressione con la sua eventuale condizione: `y = x^2, x > 0`. */
 export function parseStatement(src: string): Statement {
   const parser = new Parser(tokenize(src), src.length)
-  if (parser.done) throw new MathSyntaxError('L\'espressione è vuota', 0)
+  if (parser.done) throw new MathSyntaxError(T.empty, 0)
   const statement = parser.statement()
   parser.finish()
   return statement

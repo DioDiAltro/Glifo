@@ -8,6 +8,7 @@
  * di Cauchy; con le condizioni in due punti il problema ai limiti. Ogni soluzione si controlla con i
  * numeri prima di mostrarla.
  */
+import { texts } from '../i18n'
 import { compile, EMPTY_SCOPE, scopeWith, type Compiled } from './evaluate'
 import { Rational } from './exact'
 import { GaussRational } from './complex'
@@ -18,6 +19,14 @@ import { factorQ, padd, pmul, pscale, type Poly } from './polynomial'
 import { asFraction, linear, polyEx, primitive } from './primitive'
 import { add, dependsOn, derive, exOf, expand, fn, mapNode, mul, neg, num, plainText, pow, sub, subst, sym, symbols, tidy, toNode, type Ex, type SymbolScope } from './symbolic'
 import { primed, withPrimes } from './differential'
+
+const T = texts({
+  /** Le soluzioni costanti in più: «(e y = 0)». */
+  alsoTex: (solutions: string) => [`\\left(\\text{e } ${solutions}\\right)`, `\\left(\\text{and } ${solutions}\\right)`],
+  also: (solutions: string) => [`(e ${solutions})`, `(and ${solutions})`],
+  none: ['nessuna soluzione', 'no solution'],
+  infinitelyMany: ['infinite soluzioni', 'infinitely many solutions'],
+})
 
 const R = (n: number | bigint, d: number | bigint = 1) => new Rational(BigInt(n), BigInt(d))
 const ZERO = R(0)
@@ -1211,8 +1220,8 @@ function withSingular(shown: FormattedResult, y: string, singular: Ex[], decimal
   const nodes = singular.map((s) => nodeOf(s, decimal))
   return {
     ...shown,
-    tex: `${shown.tex} \\quad \\left(\\text{e } ${nodes.map((n) => `${nameLatex(y)} = ${toLatex(n)}`).join(',\\ ')}\\right)`,
-    text: `${shown.text} (e ${nodes.map((n) => `${y} = ${textOf(n)}`).join(', ')})`,
+    tex: `${shown.tex} \\quad ${T.alsoTex(nodes.map((n) => `${nameLatex(y)} = ${toLatex(n)}`).join(',\\ '))}`,
+    text: `${shown.text} ${T.also(nodes.map((n) => `${y} = ${textOf(n)}`).join(', '))}`,
   }
 }
 
@@ -1232,7 +1241,7 @@ function generalShown(family: Family, decimal: boolean): FormattedResult {
 
 /** Con le condizioni: la soluzione, quelle con le costanti rimaste (problema ai limiti), o nessuna. */
 function solvedShown(family: Family, solved: Solved, decimal: boolean): FormattedResult {
-  if (solved === 'none') return { tex: '\\text{nessuna soluzione}', text: 'nessuna soluzione' }
+  if (solved === 'none') return { tex: `\\text{${T.none}}`, text: T.none }
   if ('implicit' in solved) return implicitShown(solved.implicit.G, solved.implicit.F, decimal)
   if (!solved.free.length) return equalities(family.names, solved.values.map((v) => nodeOf(v, decimal)))
   // Le costanti libere con i nomi di nuovo in ordine: c se è una, c₁, c₂ se sono più.
@@ -1244,7 +1253,7 @@ function solvedShown(family: Family, solved: Solved, decimal: boolean): Formatte
     return { groups: terms.map((t) => ({ outer: null, terms: [t] })), particular: tidy(rest) }
   })
   const shown = equalities(family.names, shapes.map((s) => shapeNode(s, decimal)))
-  return { ...shown, tex: `${shown.tex} \\quad \\left(\\text{infinite soluzioni}\\right)`, text: `${shown.text} (infinite soluzioni)` }
+  return { ...shown, tex: `${shown.tex} \\quad \\left(\\text{${T.infinitelyMany}}\\right)`, text: `${shown.text} (${T.infinitelyMany})` }
 }
 
 /**

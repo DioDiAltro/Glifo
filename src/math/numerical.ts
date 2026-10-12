@@ -5,6 +5,7 @@
  * Cholesky, le norme e il numero di condizionamento, i metodi di Jacobi e Gauss–Seidel (con il raggio
  * spettrale), le equazioni differenziali con Eulero, Heun e Runge–Kutta.
  */
+import { texts, usesDecimalComma } from '../i18n'
 import { MathError, integrate } from './evaluate'
 import { Rational } from './exact'
 import type { FormatOptions, FormattedResult } from './format'
@@ -15,6 +16,63 @@ import { plainText, toNode } from './symbolic'
 import type { MathNode } from './parse'
 import { numericRoots } from './polynomial'
 import { odeSolution } from './differential'
+
+const T = texts({
+  steps: (table: string) => [`passi: ${table}`, `steps: ${table}`],
+  /** Quanti passi: in italiano scritto come prima («1 passi»), in inglese con il singolare. */
+  stepCount: (n: number) => [`${n} passi`, n === 1 ? '1 step' : `${n} steps`],
+  tolerance: ['La tolleranza è un numero piccolo, come 10^{-6}', 'The tolerance is a small number, like 10^{-6}'],
+  interval: ["Qui va l'intervallo, come [1, 2]", 'The interval goes here, like [1, 2]'],
+  oneVariable: ['Qui va una funzione di una variabile', 'A function of one variable goes here'],
+  bisectionSigns: ['Per la bisezione f(a) e f(b) devono avere segno opposto', 'For bisection, f(a) and f(b) must have opposite signs'],
+  newtonUsage: ['Si scrive \\operatorname{newton}(f, x_0)', 'Write \\operatorname{newton}(f, x_0)'],
+  zeroDerivative: (x: string) => [
+    `In x = ${x} la derivata è zero: Newton si ferma (prova un altro punto di partenza)`,
+    `At x = ${x} the derivative is zero: Newton's method stops (try another starting point)`,
+  ],
+  newtonDiverges: ['Newton non converge da questo punto di partenza', "Newton's method doesn't converge from this starting point"],
+  secantUsage: ['Si scrive \\operatorname{secanti}(f, x_0, x_1)', 'Write \\operatorname{secanti}(f, x_0, x_1)'],
+  secantDiverges: ['Il metodo delle secanti non converge da questi punti', "The secant method doesn't converge from these points"],
+  fixedPointUsage: ['Si scrive \\operatorname{puntofisso}(g, x_0): x_{k+1} = g(x_k)', 'Write \\operatorname{puntofisso}(g, x_0): x_{k+1} = g(x_k)'],
+  iteratesDiverge: ['non converge: le iterate non si fermano', "doesn't converge: the iterates don't settle"],
+  points: ['I punti si scrivono (x, y): (0, 1), (1, 3), (2, 2)', 'Write the points as (x, y): (0, 1), (1, 3), (2, 2)'],
+  sameX: ["Due punti hanno la stessa x: non c'è un polinomio che passa per tutti", 'Two points have the same x: no polynomial passes through all of them'],
+  degreeAtMost: (degree: number) => [`grado ≤ ${degree}`, `degree ≤ ${degree}`],
+  degreeRange: ['Il grado va da 0 al numero dei punti meno 1', 'The degree goes from 0 to the number of points minus 1'],
+  notEnoughPoints: ['I punti non bastano per questo grado', 'Not enough points for this degree'],
+  subintervals: ['Il numero dei sottointervalli è un intero positivo', 'The number of subintervals is a positive integer'],
+  simpsonEven: ['Per Simpson i sottointervalli devono essere in numero pari', "For Simpson's rule the number of subintervals must be even"],
+  midpoint: ['punto medio', 'midpoint'],
+  trapezoid: ['trapezi', 'trapezoidal'],
+  /** «(trapezi, n = 4; errore ≈ …)», con la formula (`tex`) o il testo. */
+  quadratureTex: (rule: string, n: number, error: string) => [
+    `\\text{(${rule}, n = ${n}; errore } \\approx ${error}\\text{)}`,
+    `\\text{(${rule}, n = ${n}; error } \\approx ${error}\\text{)}`,
+  ],
+  quadrature: (rule: string, n: number, error: string) => [`(${rule}, n = ${n}; errore ≈ ${error})`, `(${rule}, n = ${n}; error ≈ ${error})`],
+  squareMatrix: ['Qui va una matrice quadrata', 'A square matrix goes here'],
+  singularLU: ['La matrice è singolare: non ha la fattorizzazione LU', 'The matrix is singular: it has no LU factorization'],
+  choleskySymmetric: ['Per Cholesky la matrice deve essere simmetrica', 'For Cholesky the matrix must be symmetric'],
+  choleskyPositive: ['La matrice non è definita positiva: Cholesky non si fa', "The matrix is not positive definite: Cholesky can't be done"],
+  singularCondition: ['La matrice è singolare: il condizionamento è infinito', 'The matrix is singular: the condition number is infinite'],
+  norms: ['La norma è 1, 2, \\infty o F (Frobenius)', 'The norm is 1, 2, \\infty or F (Frobenius)'],
+  vectorOrMatrix: ['Qui va un vettore o una matrice', 'A vector or a matrix goes here'],
+  iterativeUsage: (method: string) => [
+    `Si scrive \\operatorname{${method}}(A, b), anche con x_0 e il numero dei passi`,
+    `Write \\operatorname{${method}}(A, b), optionally with x_0 and the number of steps`,
+  ],
+  bVector: (n: number) => [`b è un vettore di ${n} numeri`, `b is a vector of ${n} numbers`],
+  zeroDiagonal: ["Sulla diagonale c'è uno zero: il metodo non si può usare", "There's a zero on the diagonal: the method can't be used"],
+  diagonallyDominant: ['a diagonale dominante', 'diagonally dominant'],
+  converges: (why: string) => [`converge (${why})`, `converges (${why})`],
+  diverges: ['non converge (ρ(B) ≥ 1)', "doesn't converge (ρ(B) ≥ 1)"],
+  eulerUsage: ["Si scrive \\operatorname{eulero}(y' = x + y, y(0) = 1, h, n)", "Write \\operatorname{eulero}(y' = x + y, y(0) = 1, h, n)"],
+  firstOrder: ["Qui va un'equazione del primo ordine, come y' = x + y, e la condizione y(0) = 1", "A first-order equation goes here, like y' = x + y, with the condition y(0) = 1"],
+  stepSize: ['Il passo h è positivo e i passi n sono un intero', 'The step h must be positive and the number of steps n an integer'],
+  euler: ['Eulero', 'Euler'],
+  errorTex: (method: string, error: string) => [`\\text{(${method}; errore } \\approx ${error}\\text{)}`, `\\text{(${method}; error } \\approx ${error}\\text{)}`],
+  error: (method: string, error: string) => [`(${method}; errore ≈ ${error})`, `(${method}; error ≈ ${error})`],
+})
 
 export interface OneVariable {
   f: (x: number) => number
@@ -51,8 +109,12 @@ export interface Plot {
 
 const SUPER: Record<string, string> = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' }
 
-/** Un numero con `sig` cifre significative (senza gli zeri in fondo); i piccolissimi con la potenza di 10. */
+/**
+ * Un numero con `sig` cifre significative (senza gli zeri in fondo); i piccolissimi con la potenza di 10.
+ * I decimali con la virgola o con il punto, come nella lingua di Glifo.
+ */
 function numberShown(v: number, sig = 10): { tex: string; text: string } {
+  const comma = usesDecimalComma()
   if (!Number.isFinite(v)) return { tex: '\\text{?}', text: '?' }
   if (v === 0) return { tex: '0', text: '0' }
   const a = Math.abs(v)
@@ -64,13 +126,13 @@ function numberShown(v: number, sig = 10): { tex: string; text: string } {
     // 1·10⁻⁶ si scrive 10⁻⁶.
     if (mantissa === '1' || mantissa === '-1') return { tex: `${mantissa === '-1' ? '-' : ''}${power.tex}`, text: `${mantissa === '-1' ? '−' : ''}${power.text}` }
     return {
-      tex: `${mantissa.replace('.', '{,}')} \\cdot ${power.tex}`,
-      text: `${mantissa.replace('.', ',').replace('-', '−')}·${power.text}`,
+      tex: `${comma ? mantissa.replace('.', '{,}') : mantissa} \\cdot ${power.tex}`,
+      text: `${(comma ? mantissa.replace('.', ',') : mantissa).replace('-', '−')}·${power.text}`,
     }
   }
   let s = v.toPrecision(sig)
   if (s.includes('.')) s = s.replace(/0+$/, '').replace(/\.$/, '')
-  return { tex: s.replace('.', '{,}'), text: s.replace('.', ',').replace('-', '−') }
+  return { tex: comma ? s.replace('.', '{,}') : s, text: (comma ? s.replace('.', ',') : s).replace('-', '−') }
 }
 
 /** Una tabella: le intestazioni e le righe (troppe righe: le prime, i puntini e le ultime). */
@@ -94,7 +156,7 @@ const k = (i: number) => ({ tex: String(i), text: String(i) })
 
 /** Il risultato: la tabella e sotto la conclusione. */
 function withTable(t: { tex: string; text: string }, end: { tex: string; text: string }): FormattedResult {
-  return { tex: `\\begin{array}{l} ${t.tex} \\\\[0.4em] ${end.tex} \\end{array}`, text: `${end.text} (passi: ${t.text})`, rich: true }
+  return { tex: `\\begin{array}{l} ${t.tex} \\\\[0.4em] ${end.tex} \\end{array}`, text: `${end.text} (${T.steps(t.text)})`, rich: true }
 }
 
 // ——— Gli zeri ———
@@ -103,7 +165,7 @@ function withTable(t: { tex: string; text: string }, end: { tex: string; text: s
 function toleranceOf(ctx: NumericContext, node: MathNode | undefined, fallback: number): number {
   if (!node) return fallback
   const t = ctx.number(node)
-  if (!(t > 0 && t < 1)) throw new MathError('La tolleranza è un numero piccolo, come 10^{-6}')
+  if (!(t > 0 && t < 1)) throw new MathError(T.tolerance)
   return t
 }
 
@@ -111,18 +173,18 @@ function intervalOf(ctx: NumericContext, args: MathNode[]): { a: number; b: numb
   const [where, ...rest] = args
   if (where?.k === 'tuple' && where.items.length === 2) return { a: ctx.number(where.items[0]), b: ctx.number(where.items[1]), rest }
   if (args.length >= 2) return { a: ctx.number(args[0]), b: ctx.number(args[1]), rest: args.slice(2) }
-  throw new MathError('Qui va l\'intervallo, come [1, 2]')
+  throw new MathError(T.interval)
 }
 
 function bisection(ctx: NumericContext, args: MathNode[], plot?: Plot): FormattedResult {
   const g = ctx.fn(args[0])
-  if (!g) throw new MathError('Qui va una funzione di una variabile')
+  if (!g) throw new MathError(T.oneVariable)
   const { a: a0, b: b0, rest } = intervalOf(ctx, args.slice(1))
   const tol = toleranceOf(ctx, rest[0], 1e-6)
   let [a, b] = [Math.min(a0, b0), Math.max(a0, b0)]
   let fa = g.f(a)
   const fb = g.f(b)
-  if (!(fa * fb < 0)) throw new MathError('Per la bisezione f(a) e f(b) devono avere segno opposto')
+  if (!(fa * fb < 0)) throw new MathError(T.bisectionSigns)
   const rows: { tex: string; text: string }[][] = []
   let c = (a + b) / 2
   for (let i = 1; i <= 200; i++) {
@@ -141,7 +203,7 @@ function bisection(ctx: NumericContext, args: MathNode[], plot?: Plot): Formatte
   const t = table(['k', 'a_k', 'b_k', 'c_k', 'f(c_k)'], rows)
   const x = numberShown(c)
   const tolShown = numberShown(tol)
-  return withTable(t, { tex: `${g.v} \\approx ${x.tex}\\quad \\text{(${rows.length} passi, } \\tfrac{b - a}{2} < ${tolShown.tex}\\text{)}`, text: `${g.v} ≈ ${x.text} (${rows.length} passi, (b − a)/2 < ${tolShown.text})` })
+  return withTable(t, { tex: `${g.v} \\approx ${x.tex}\\quad \\text{(${T.stepCount(rows.length)}, } \\tfrac{b - a}{2} < ${tolShown.tex}\\text{)}`, text: `${g.v} ≈ ${x.text} (${T.stepCount(rows.length)}, (b − a)/2 < ${tolShown.text})` })
 }
 
 /** La derivata: con le lettere, o con le differenze finite. */
@@ -149,7 +211,7 @@ const derivative = (g: OneVariable) => g.df ?? ((x: number) => (g.f(x + 1e-6) - 
 
 function newton(ctx: NumericContext, args: MathNode[], plot?: Plot): FormattedResult {
   const g = ctx.fn(args[0])
-  if (!g || args.length < 2) throw new MathError('Si scrive \\operatorname{newton}(f, x_0)')
+  if (!g || args.length < 2) throw new MathError(T.newtonUsage)
   const tol = toleranceOf(ctx, args[2], 1e-10)
   const df = derivative(g)
   let x = ctx.number(args[1])
@@ -163,7 +225,7 @@ function newton(ctx: NumericContext, args: MathNode[], plot?: Plot): FormattedRe
       converged = true
       break
     }
-    if (!Number.isFinite(fx) || !Number.isFinite(d) || d === 0) throw new MathError(`In x = ${numberShown(x).text} la derivata è zero: Newton si ferma (prova un altro punto di partenza)`)
+    if (!Number.isFinite(fx) || !Number.isFinite(d) || d === 0) throw new MathError(T.zeroDerivative(numberShown(x).text))
     const next = x - fx / d
     if (Math.abs(next - x) <= tol * Math.max(1, Math.abs(next))) {
       rows.push([k(i + 1), numberShown(next, 12), numberShown(g.f(next), 4), numberShown(df(next), 6)])
@@ -174,17 +236,17 @@ function newton(ctx: NumericContext, args: MathNode[], plot?: Plot): FormattedRe
     x = next
     if (Math.abs(x) > 1e12) break
   }
-  if (!converged) throw new MathError('Newton non converge da questo punto di partenza')
+  if (!converged) throw new MathError(T.newtonDiverges)
   plot?.curves.push({ label: toLatex(args[0]), f: g.f, extent: padded(Math.min(x, ctx.number(args[1])), Math.max(x, ctx.number(args[1]))) })
   plot?.points.push({ x, y: 0, name: `${g.v}^*` })
   const t = table(['k', 'x_k', 'f(x_k)', "f'(x_k)"], rows)
   const xs = numberShown(x, 12)
-  return withTable(t, { tex: `${g.v} \\approx ${xs.tex}\\quad \\text{(${rows.length - 1} passi)}`, text: `${g.v} ≈ ${xs.text} (${rows.length - 1} passi)` })
+  return withTable(t, { tex: `${g.v} \\approx ${xs.tex}\\quad \\text{(${T.stepCount(rows.length - 1)})}`, text: `${g.v} ≈ ${xs.text} (${T.stepCount(rows.length - 1)})` })
 }
 
 function secant(ctx: NumericContext, args: MathNode[], plot?: Plot): FormattedResult {
   const g = ctx.fn(args[0])
-  if (!g || args.length < 3) throw new MathError('Si scrive \\operatorname{secanti}(f, x_0, x_1)')
+  if (!g || args.length < 3) throw new MathError(T.secantUsage)
   const tol = toleranceOf(ctx, args[3], 1e-10)
   let [x0, x1] = [ctx.number(args[1]), ctx.number(args[2])]
   const rows: { tex: string; text: string }[][] = [
@@ -204,7 +266,7 @@ function secant(ctx: NumericContext, args: MathNode[], plot?: Plot): FormattedRe
     }
     ;[x0, x1] = [x1, x2]
   }
-  if (!converged) throw new MathError('Il metodo delle secanti non converge da questi punti')
+  if (!converged) throw new MathError(T.secantDiverges)
   plot?.curves.push({ label: toLatex(args[0]), f: g.f, extent: padded(Math.min(x1, ctx.number(args[1])), Math.max(x1, ctx.number(args[1]))) })
   plot?.points.push({ x: x1, y: 0, name: `${g.v}^*` })
   const t = table(['k', 'x_k', 'f(x_k)'], rows)
@@ -214,7 +276,7 @@ function secant(ctx: NumericContext, args: MathNode[], plot?: Plot): FormattedRe
 
 function fixedPoint(ctx: NumericContext, args: MathNode[], plot?: Plot): FormattedResult {
   const g = ctx.fn(args[0])
-  if (!g || args.length < 2) throw new MathError('Si scrive \\operatorname{puntofisso}(g, x_0): x_{k+1} = g(x_k)')
+  if (!g || args.length < 2) throw new MathError(T.fixedPointUsage)
   const tol = toleranceOf(ctx, args[2], 1e-10)
   let x = ctx.number(args[1])
   const rows: { tex: string; text: string }[][] = [[k(0), numberShown(x, 12)]]
@@ -232,7 +294,7 @@ function fixedPoint(ctx: NumericContext, args: MathNode[], plot?: Plot): Formatt
   }
   const t = table(['k', 'x_k'], rows)
   if (!converged) {
-    return withTable(t, { tex: '\\text{non converge: le iterate non si fermano}', text: 'non converge: le iterate non si fermano' })
+    return withTable(t, { tex: `\\text{${T.iteratesDiverge}}`, text: T.iteratesDiverge })
   }
   plot?.curves.push({ label: toLatex(args[0]), f: g.f, extent: padded(x - 1, x + 1) }, { label: 'y = x', f: (t) => t, dashed: true })
   plot?.points.push({ x, y: x, name: `${g.v}^*` })
@@ -262,7 +324,7 @@ function pointsOf(ctx: NumericContext, args: MathNode[]): { exact: [Rational, Ra
   }
   const pairs = args.map((a) => {
     const m = ctx.matrix(a)
-    if (!m || m.float.length !== 2 || m.float[0].length !== 1) throw new MathError('I punti si scrivono (x, y): (0, 1), (1, 3), (2, 2)')
+    if (!m || m.float.length !== 2 || m.float[0].length !== 1) throw new MathError(T.points)
     return m
   })
   return {
@@ -341,18 +403,18 @@ function plotData(plot: Plot | undefined, pts: [number, number][], p: number[], 
 function interpolation(ctx: NumericContext, args: MathNode[], plot?: Plot): FormattedResult {
   const pts = pointsOf(ctx, args)
   const xs = pts.float.map((p) => p[0])
-  if (new Set(xs).size !== xs.length) throw new MathError('Due punti hanno la stessa x: non c\'è un polinomio che passa per tutti')
+  if (new Set(xs).size !== xs.length) throw new MathError(T.sameX)
   const degree = pts.float.length - 1
   if (pts.exact) {
     const p = interpolating(pts.exact.map((q) => q[0]), pts.exact.map((q) => q[1]), RATIONAL_OPS)
     plotData(plot, pts.float, p.map((c) => c.toNumber()), 'p(x)')
     const shown = exactPolynomial(p)
-    return { tex: `p(x) = ${shown.tex}`, text: `p(x) = ${shown.text} (grado ≤ ${degree})`, rich: true }
+    return { tex: `p(x) = ${shown.tex}`, text: `p(x) = ${shown.text} (${T.degreeAtMost(degree)})`, rich: true }
   }
   const p = interpolating(xs, pts.float.map((q) => q[1]), NUMBER_OPS)
   plotData(plot, pts.float, p, 'p(x)')
   const shown = floatPolynomial(p, 'x')
-  return { tex: `p(x) = ${shown.tex}`, text: `p(x) = ${shown.text} (grado ≤ ${degree})`, rich: true }
+  return { tex: `p(x) = ${shown.tex}`, text: `p(x) = ${shown.text} (${T.degreeAtMost(degree)})`, rich: true }
 }
 
 /** Il sistema A c = b risolto con Gauss (con il pivot); null se è singolare. */
@@ -380,7 +442,7 @@ function leastSquares(ctx: NumericContext, args: MathNode[], plot?: Plot): Forma
   const lastIsDegree = args.length >= 2 && last.k === 'num'
   const degree = lastIsDegree ? ctx.number(last) : 1
   const pts = pointsOf(ctx, lastIsDegree ? args.slice(0, -1) : args)
-  if (!(Number.isInteger(degree) && degree >= 0 && degree < pts.float.length)) throw new MathError('Il grado va da 0 al numero dei punti meno 1')
+  if (!(Number.isInteger(degree) && degree >= 0 && degree < pts.float.length)) throw new MathError(T.degreeRange)
   const m = degree + 1
   const normal = <T>(points: [T, T][], ops: typeof RATIONAL_OPS | typeof NUMBER_OPS, size: (x: T) => number) => {
     const o = ops as unknown as { add(a: T, b: T): T; mul(a: T, b: T): T; zero: T; one: T }
@@ -396,14 +458,14 @@ function leastSquares(ctx: NumericContext, args: MathNode[], plot?: Plot): Forma
   const residual = (p: number[]) => pts.float.reduce((s, [x, y]) => s + (y - p.reduce((acc, c, i) => acc + c * x ** i, 0)) ** 2, 0)
   if (pts.exact) {
     const p = normal(pts.exact, RATIONAL_OPS, (x) => Math.abs(x.toNumber()))
-    if (!p) throw new MathError('I punti non bastano per questo grado')
+    if (!p) throw new MathError(T.notEnoughPoints)
     plotData(plot, pts.float, p.map((c) => c.toNumber()), 'p(x)')
     const shown = exactPolynomial(p)
     const r = numberShown(residual(p.map((c) => c.toNumber())), 6)
     return { tex: `p(x) = ${shown.tex}\\quad (\\textstyle\\sum r_i^2 = ${r.tex})`, text: `p(x) = ${shown.text} (Σ r² = ${r.text})`, rich: true }
   }
   const p = normal(pts.float, NUMBER_OPS, Math.abs)
-  if (!p) throw new MathError('I punti non bastano per questo grado')
+  if (!p) throw new MathError(T.notEnoughPoints)
   plotData(plot, pts.float, p, 'p(x)')
   const shown = floatPolynomial(p, 'x')
   const r = numberShown(residual(p), 6)
@@ -414,12 +476,12 @@ function leastSquares(ctx: NumericContext, args: MathNode[], plot?: Plot): Forma
 
 function quadrature(ctx: NumericContext, args: MathNode[], rule: 'midpoint' | 'trapezoid' | 'simpson', plot?: Plot): FormattedResult {
   const g = ctx.fn(args[0])
-  if (!g) throw new MathError('Qui va una funzione di una variabile')
+  if (!g) throw new MathError(T.oneVariable)
   const { a, b, rest } = intervalOf(ctx, args.slice(1))
   plot?.curves.push({ label: toLatex(args[0]), f: g.f, extent: padded(Math.min(a, b), Math.max(a, b)) })
   const n = rest[0] ? ctx.number(rest[0]) : rule === 'simpson' ? 4 : 4
-  if (!(Number.isInteger(n) && n >= 1 && n <= 100000)) throw new MathError('Il numero dei sottointervalli è un intero positivo')
-  if (rule === 'simpson' && n % 2) throw new MathError('Per Simpson i sottointervalli devono essere in numero pari')
+  if (!(Number.isInteger(n) && n >= 1 && n <= 100000)) throw new MathError(T.subintervals)
+  if (rule === 'simpson' && n % 2) throw new MathError(T.simpsonEven)
   const h = (b - a) / n
   let s = 0
   if (rule === 'midpoint') for (let i = 0; i < n; i++) s += g.f(a + (i + 0.5) * h)
@@ -435,10 +497,10 @@ function quadrature(ctx: NumericContext, args: MathNode[], rule: 'midpoint' | 't
   const exact = integrate(g.f, a, b)
   const v = numberShown(value, 10)
   const e = numberShown(Math.abs(value - exact), 3)
-  const name = { midpoint: 'punto medio', trapezoid: 'trapezi', simpson: 'Simpson' }[rule]
+  const name = { midpoint: T.midpoint, trapezoid: T.trapezoid, simpson: 'Simpson' }[rule]
   return {
-    tex: `\\approx ${v.tex}\\quad \\text{(${name}, n = ${n}; errore } \\approx ${e.tex}\\text{)}`,
-    text: `≈ ${v.text} (${name}, n = ${n}; errore ≈ ${e.text})`,
+    tex: `\\approx ${v.tex}\\quad ${T.quadratureTex(name, n, e.tex)}`,
+    text: `≈ ${v.text} ${T.quadrature(name, n, e.text)}`,
     rich: true,
   }
 }
@@ -456,7 +518,7 @@ function matrixShown(m: (Rational | number)[][], style: FormatOptions): { tex: s
 
 function squareOf(ctx: NumericContext, node: MathNode): { exact: Rational[][] | null; float: number[][] } {
   const A = ctx.matrix(node)
-  if (!A || !A.float.length || A.float.some((r) => r.length !== A.float.length)) throw new MathError('Qui va una matrice quadrata')
+  if (!A || !A.float.length || A.float.some((r) => r.length !== A.float.length)) throw new MathError(T.squareMatrix)
   return A
 }
 
@@ -479,7 +541,7 @@ function lu(ctx: NumericContext, args: MathNode[]): FormattedResult {
   for (let c = 0; c < n; c++) {
     if (zero(M[c][c])) {
       const r = M.findIndex((row, i) => i > c && !zero(row[c]))
-      if (r < 0) throw new MathError('La matrice è singolare: non ha la fattorizzazione LU')
+      if (r < 0) throw new MathError(T.singularLU)
       ;[M[c], M[r]] = [M[r], M[c]]
       ;[perm[c], perm[r]] = [perm[r], perm[c]]
       for (let j = 0; j < c; j++) [L[c][j], L[r][j]] = [L[r][j], L[c][j]]
@@ -505,12 +567,12 @@ function lu(ctx: NumericContext, args: MathNode[]): FormattedResult {
 function cholesky(ctx: NumericContext, args: MathNode[]): FormattedResult {
   const A = squareOf(ctx, args[0]).float
   const n = A.length
-  for (let i = 0; i < n; i++) for (let j = 0; j < i; j++) if (Math.abs(A[i][j] - A[j][i]) > 1e-12) throw new MathError('Per Cholesky la matrice deve essere simmetrica')
+  for (let i = 0; i < n; i++) for (let j = 0; j < i; j++) if (Math.abs(A[i][j] - A[j][i]) > 1e-12) throw new MathError(T.choleskySymmetric)
   const L = Array.from({ length: n }, () => Array(n).fill(0) as number[])
   for (let j = 0; j < n; j++) {
     let d = A[j][j]
     for (let k2 = 0; k2 < j; k2++) d -= L[j][k2] ** 2
-    if (d <= 1e-14) throw new MathError('La matrice non è definita positiva: Cholesky non si fa')
+    if (d <= 1e-14) throw new MathError(T.choleskyPositive)
     L[j][j] = Math.sqrt(d)
     for (let i = j + 1; i < n; i++) {
       let s = A[i][j]
@@ -559,7 +621,7 @@ const product = (a: number[][], b: number[][]) => a.map((r) => b[0].map((_, j) =
 function inverseOf(m: number[][]): number[][] {
   const n = m.length
   const cols = Array.from({ length: n }, (_, j) => solveLinear(m, m.map((_, i) => (i === j ? 1 : 0)), NUMBER_OPS, Math.abs))
-  if (cols.some((c) => !c)) throw new MathError('La matrice è singolare: il condizionamento è infinito')
+  if (cols.some((c) => !c)) throw new MathError(T.singularCondition)
   return m.map((_, i) => cols.map((c) => c![i]))
 }
 
@@ -571,7 +633,7 @@ function normKind(ctx: NumericContext, node: MathNode | undefined): NormKind {
   if (node.k === 'name' && (node.name === 'F' || node.name === 'f')) return 'F'
   const p = ctx.number(node)
   if (p === 1 || p === 2) return p
-  throw new MathError('La norma è 1, 2, \\infty o F (Frobenius)')
+  throw new MathError(T.norms)
 }
 
 function normOf(m: number[][], p: NormKind): number {
@@ -593,7 +655,7 @@ const NORM_TEXT: Record<string, string> = { 1: '₁', 2: '₂', inf: '∞', F: '
 
 function norm(ctx: NumericContext, args: MathNode[]): FormattedResult {
   const A = ctx.matrix(args[0])
-  if (!A) throw new MathError('Qui va un vettore o una matrice')
+  if (!A) throw new MathError(T.vectorOrMatrix)
   const p = normKind(ctx, args[1])
   const v = normOf(A.float, p)
   // Le norme 1 e ∞ con le frazioni restano esatte.
@@ -641,11 +703,11 @@ function spectralRadius(B: number[][]): number {
 }
 
 function iterative(ctx: NumericContext, args: MathNode[], method: 'jacobi' | 'gaussseidel'): FormattedResult {
-  if (args.length < 2) throw new MathError(`Si scrive \\operatorname{${method === 'jacobi' ? 'jacobi' : 'gaussseidel'}}(A, b), anche con x_0 e il numero dei passi`)
+  if (args.length < 2) throw new MathError(T.iterativeUsage(method === 'jacobi' ? 'jacobi' : 'gaussseidel'))
   const A = squareOf(ctx, args[0]).float
   const n = A.length
   const bm = ctx.matrix(args[1])
-  if (!bm || bm.float.length !== n || bm.float[0].length !== 1) throw new MathError(`b è un vettore di ${n} numeri`)
+  if (!bm || bm.float.length !== n || bm.float[0].length !== 1) throw new MathError(T.bVector(n))
   const b = bm.float.map((r) => r[0])
   let x: number[] = Array(n).fill(0)
   let steps = 0
@@ -655,7 +717,7 @@ function iterative(ctx: NumericContext, args: MathNode[], method: 'jacobi' | 'ga
     else steps = ctx.number(args[2])
   }
   if (args[3]) steps = ctx.number(args[3])
-  if (A.some((r, i) => r[i] === 0)) throw new MathError('Sulla diagonale c\'è uno zero: il metodo non si può usare')
+  if (A.some((r, i) => r[i] === 0)) throw new MathError(T.zeroDiagonal)
   // La matrice d'iterazione: Jacobi B = −D⁻¹(L + U), Gauss–Seidel B = −(D + L)⁻¹U.
   const lower = A.map((r, i) => r.map((v, j) => (j < i || (method === 'gaussseidel' && j === i) ? v : 0)))
   const upper = A.map((r, i) => r.map((v, j) => (j > i ? v : 0)))
@@ -683,24 +745,26 @@ function iterative(ctx: NumericContext, args: MathNode[], method: 'jacobi' | 'ga
   const head = ['k', ...x.map((_, i) => `x_{${i + 1}}`)]
   const t = table(head, rows, 12)
   const r = numberShown(rho, 4)
-  const why = dominant ? 'a diagonale dominante' : rho < 1 ? 'ρ(B) < 1' : 'ρ(B) ≥ 1'
-  const verdict = rho < 1 ? `converge (${why})` : 'non converge (ρ(B) ≥ 1)'
+  const why = dominant ? T.diagonallyDominant : rho < 1 ? 'ρ(B) < 1' : 'ρ(B) ≥ 1'
+  const verdict = rho < 1 ? T.converges(why) : T.diverges
   const last = x.map((v) => numberShown(v, 8))
+  // Con i decimali con la virgola le componenti si separano con il punto e virgola.
+  const [sepTex, sep] = usesDecimalComma() ? [';\\ ', '; '] : [',\\ ', ', ']
   return withTable(t, {
-    tex: `\\rho(B) \\approx ${r.tex}:\\ \\text{${verdict}}${rho < 1 ? `,\\ x \\approx \\left(${last.map((v) => v.tex).join(';\\ ')}\\right)` : ''}`,
-    text: `ρ(B) ≈ ${r.text}: ${verdict}${rho < 1 ? `, x ≈ (${last.map((v) => v.text).join('; ')})` : ''}`,
+    tex: `\\rho(B) \\approx ${r.tex}:\\ \\text{${verdict}}${rho < 1 ? `,\\ x \\approx \\left(${last.map((v) => v.tex).join(sepTex)}\\right)` : ''}`,
+    text: `ρ(B) ≈ ${r.text}: ${verdict}${rho < 1 ? `, x ≈ (${last.map((v) => v.text).join(sep)})` : ''}`,
   })
 }
 
 // ——— Le equazioni differenziali ———
 
 function odeMethod(ctx: NumericContext, args: MathNode[], method: 'euler' | 'heun' | 'rk4', plot?: Plot): FormattedResult {
-  if (args.length < 3) throw new MathError('Si scrive \\operatorname{eulero}(y\' = x + y, y(0) = 1, h, n)')
+  if (args.length < 3) throw new MathError(T.eulerUsage)
   const problem = ctx.ode(args[0], args[1])
-  if (!problem) throw new MathError('Qui va un\'equazione del primo ordine, come y\' = x + y, e la condizione y(0) = 1')
+  if (!problem) throw new MathError(T.firstOrder)
   const h = ctx.number(args[2])
   const n = args[3] ? ctx.number(args[3]) : 10
-  if (!(h > 0) || !(Number.isInteger(n) && n >= 1 && n <= 10000)) throw new MathError('Il passo h è positivo e i passi n sono un intero')
+  if (!(h > 0) || !(Number.isInteger(n) && n >= 1 && n <= 10000)) throw new MathError(T.stepSize)
   const { f, x0, y0 } = problem
   const rows: { tex: string; text: string }[][] = []
   let [x, y] = [x0, y0]
@@ -738,13 +802,13 @@ function odeMethod(ctx: NumericContext, args: MathNode[], method: 'euler' | 'heu
   // Nel disegno la soluzione «vera» (Runge–Kutta con il passo piccolo) e i punti del metodo.
   plot?.curves.push({ label: `${problem.y}(${problem.x})`, f: odeSolution((xx, Y) => f(xx, Y[0]), x0, [y0], Math.min(0.01, h / 10)), extent: padded(x0, x) })
   const t = table(['k', `${problem.x}_k`, `${problem.y}_k`], rows)
-  const name = { euler: 'Eulero', heun: 'Heun', rk4: 'Runge–Kutta 4' }[method]
+  const name = { euler: T.euler, heun: 'Heun', rk4: 'Runge–Kutta 4' }[method]
   const yv = numberShown(y, 10)
   const err = numberShown(Math.abs(y - yt), 3)
   const xe = numberShown(x, 8)
   return withTable(t, {
-    tex: `${problem.y}(${xe.tex}) \\approx ${yv.tex}\\quad \\text{(${name}; errore } \\approx ${err.tex}\\text{)}`,
-    text: `${problem.y}(${xe.text}) ≈ ${yv.text} (${name}; errore ≈ ${err.text})`,
+    tex: `${problem.y}(${xe.tex}) \\approx ${yv.tex}\\quad ${T.errorTex(name, err.tex)}`,
+    text: `${problem.y}(${xe.text}) ≈ ${yv.text} ${T.error(name, err.text)}`,
   })
 }
 

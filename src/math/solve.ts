@@ -5,6 +5,7 @@
  * numeri, cercando dove la funzione cambia segno (e, se è periodica, con + 2kπ); le disequazioni
  * guardando il segno tra un punto critico e l'altro; i sistemi lineari con la riduzione a scala.
  */
+import { texts } from '../i18n'
 import { compile, MathError, scopeWith, type Scope } from './evaluate'
 import { Rational } from './exact'
 import { formatNumber, formatRational, type FormatOptions, type FormattedResult } from './format'
@@ -16,6 +17,25 @@ import { recognize } from './limits'
 import { namesIn, type MathNode, type RelOp } from './parse'
 import { piMultiple } from './complex'
 import { linearCoefficients, type SymbolScope } from './symbolic'
+
+const T = texts({
+  identity: (x: string) => [`ogni ${x} (è un'identità)`, `all ${x} (it's an identity)`],
+  impossible: ['nessuna soluzione (impossibile)', 'no solution (impossible)'],
+  /** Quante volte una radice si ripete: «(doppia)». */
+  multiplicity: (times: number) => [
+    times === 2 ? 'doppia' : times === 3 ? 'tripla' : `${times} volte`,
+    times === 2 ? 'double' : times === 3 ? 'triple' : `multiplicity ${times}`,
+  ],
+  noRealComplex: (x: string, value: string) => [`nessuna soluzione reale (in ℂ: ${x} = ${value})`, `no real solution (in ℂ: ${x} = ${value})`],
+  noReal: ['nessuna soluzione reale', 'no real solution'],
+  none: ['nessuna soluzione', 'no solution'],
+  noneBetweenTex: ['\\nexists\\ \\text{tra } -100 \\text{ e } 100', '\\nexists\\ \\text{between } -100 \\text{ and } 100'],
+  noneBetween: ['nessuna soluzione tra −100 e 100', 'no solution between −100 and 100'],
+  tooMany: ['Troppe soluzioni da elencare', 'Too many solutions to list'],
+  every: (x: string) => [`ogni ${x}`, `all ${x}`],
+  notFoundTex: ['\\nexists\\ \\text{(non ne ho trovate)}', '\\nexists\\ \\text{(none found)}'],
+  notFound: ['nessuna soluzione trovata', 'no solution found'],
+})
 
 export interface SolveScope {
   real: Scope
@@ -262,7 +282,7 @@ function equation(F: MathNode, x: string, scope: SolveScope, options: FormatOpti
   const poly = polynomialIn(F, x, scope.linear, 12)
   if (poly) {
     const degree = poly.length - 1
-    if (degree === 0) return poly[0].sign === 0 ? { tex: `\\forall ${name} \\in \\mathbb{R}`, text: `ogni ${x} (è un'identità)` } : { tex: '\\nexists', text: 'nessuna soluzione (impossibile)' }
+    if (degree === 0) return poly[0].sign === 0 ? { tex: `\\forall ${name} \\in \\mathbb{R}`, text: T.identity(x) } : { tex: '\\nexists', text: T.impossible }
     const { roots: rational, rest } = rationalRoots(poly)
     const roots: Root[] = rational.map((r) => ({ exact: r, v: r.toNumber() }))
     let pm: FormattedResult | undefined
@@ -287,12 +307,12 @@ function equation(F: MathNode, x: string, scope: SolveScope, options: FormatOpti
     }
     const parts = distinct.map(({ root, times }) => {
       const shown = eq(rootText(root, options))
-      return times > 1 ? { tex: `${shown.tex}\\ \\text{(${times === 2 ? 'doppia' : times === 3 ? 'tripla' : `${times} volte`})}`, text: `${shown.text} (${times === 2 ? 'doppia' : times === 3 ? 'tripla' : `${times} volte`})` } : shown
+      return times > 1 ? { tex: `${shown.tex}\\ \\text{(${T.multiplicity(times)})}`, text: `${shown.text} (${T.multiplicity(times)})` } : shown
     })
     if (pm) parts.push(eq(pm))
     if (!parts.length) {
-      if (complex) return { tex: `\\nexists\\ \\text{in } \\mathbb{R} \\quad \\left(\\text{in } \\mathbb{C}\\text{: } ${name} = ${complex.tex}\\right)`, text: `nessuna soluzione reale (in ℂ: ${x} = ${complex.text})` }
-      return { tex: '\\nexists\\ \\text{in } \\mathbb{R}', text: 'nessuna soluzione reale' }
+      if (complex) return { tex: `\\nexists\\ \\text{in } \\mathbb{R} \\quad \\left(\\text{in } \\mathbb{C}\\text{: } ${name} = ${complex.tex}\\right)`, text: T.noRealComplex(x, complex.text) }
+      return { tex: '\\nexists\\ \\text{in } \\mathbb{R}', text: T.noReal }
     }
     return OR(parts)
   }
@@ -312,7 +332,7 @@ function equation(F: MathNode, x: string, scope: SolveScope, options: FormatOpti
         P = half
       } else break
     }
-    if (!base.length) return { tex: '\\nexists', text: 'nessuna soluzione' }
+    if (!base.length) return { tex: '\\nexists', text: T.none }
     const k = piMultiple(P)
     const step = k ? (k.tex === '\\pi' ? 'k\\pi' : k.tex === '2\\pi' ? '2k\\pi' : `k \\cdot ${k.tex}`) : `k \\cdot ${formatNumber(P, options)?.tex}`
     const stepText = k ? (k.text === 'π' ? 'kπ' : k.text === '2π' ? '2kπ' : `k·${k.text}`) : `k·${formatNumber(P, options)?.text}`
@@ -324,8 +344,8 @@ function equation(F: MathNode, x: string, scope: SolveScope, options: FormatOpti
     return OR(parts)
   }
   const roots = scanRoots(f, -100, 100, 20000)
-  if (!roots.length) return { tex: '\\nexists\\ \\text{tra } -100 \\text{ e } 100', text: 'nessuna soluzione tra −100 e 100' }
-  if (roots.length > 8) throw new MathError('Troppe soluzioni da elencare')
+  if (!roots.length) return { tex: T.noneBetweenTex, text: T.noneBetween }
+  if (roots.length > 8) throw new MathError(T.tooMany)
   return OR(roots.map((r) => eq(rootText(numericRoot(r, options), options))))
 }
 
@@ -411,8 +431,8 @@ function inequality(relations: Relation[], x: string, scope: SolveScope, options
   }
   const inside = Array.from({ length: pts.length + 1 }, (_, i) => ok(sample(i)))
   const at = pts.map((p) => ok(p))
-  if (inside.every((v) => v) && at.every((v) => v)) return { tex: `\\forall ${nameLatex(x)} \\in \\mathbb{R}`, text: `ogni ${x}` }
-  if (inside.every((v) => !v) && at.every((v) => !v)) return { tex: '\\nexists', text: 'nessuna soluzione' }
+  if (inside.every((v) => v) && at.every((v) => v)) return { tex: `\\forall ${nameLatex(x)} \\in \\mathbb{R}`, text: T.every(x) }
+  if (inside.every((v) => !v) && at.every((v) => !v)) return { tex: '\\nexists', text: T.none }
   // Tutti tranne alcuni punti: x ≠ 1.
   if (inside.every((v) => v)) {
     const out = critical.filter((_, i) => !at[i]).map((c) => rootText(c, options))
@@ -506,7 +526,7 @@ function newtonSystem(relations: Relation[], unknowns: string[], scope: SolveSco
       if (!found.some((q) => q.every((v, i) => Math.abs(v - p[i]) < 1e-6 * Math.max(1, Math.abs(v))))) found.push(p)
     }
   }
-  if (!found.length) return { tex: '\\nexists\\ \\text{(non ne ho trovate)}', text: 'nessuna soluzione trovata' }
+  if (!found.length) return { tex: T.notFoundTex, text: T.notFound }
   found.sort((p, q) => p[0] - q[0] || (p[1] ?? 0) - (q[1] ?? 0))
   const parts = found.map((p) => {
     const values = p.map((v) => rootText(numericRoot(v, options), options))

@@ -9,8 +9,20 @@
  * cercano gli intervalli dove si è dentro (dove il margine cambia segno, dimezzando) e lì si
  * integra la funzione, che così non ha salti.
  */
+import { texts } from '../i18n'
 import { bound, compile, integrate, MathError, scopeWith, spend, type Compiled, type CompileOptions, type Scope, type Vars } from './evaluate'
 import { namesIn, type MathNode } from './parse'
+
+const T = texts({
+  curve: ['Con «=» il dominio è una curva, senza area: usa ≤ o ≥', 'With “=” the domain is a curve, with no area: use ≤ or ≥'],
+  domain: ['Qui va un dominio: un insieme o delle disuguaglianze, es. x^2 + y^2 \\le 1', 'A domain goes here: a set or some inequalities, e.g. x^2 + y^2 \\le 1'],
+  rectangleBounds: ['Gli estremi del rettangolo non sono numeri', "The rectangle's bounds are not numbers"],
+  selfDefined: ["L'insieme è definito con sé stesso", 'The set is defined in terms of itself'],
+  rectangleSides: (sides: number, vars: number) => [`Il rettangolo ha ${sides} lati, l'integrale ${vars} variabili`, `The rectangle has ${sides} sides, the integral ${vars} variables`],
+  setVariables: (own: number, vars: number) => [`L'insieme ha ${own} variabili, l'integrale ${vars}`, `The set has ${own} variables, the integral ${vars}`],
+  missingVariables: ['Nel dominio mancano le variabili, es. x^2 + y^2 \\le 1', 'The domain is missing its variables, e.g. x^2 + y^2 \\le 1'],
+  domainVariables: (own: number, vars: number) => [`Il dominio ha ${own} variabili, l'integrale ${vars}`, `The domain has ${own} variables, the integral ${vars}`],
+})
 
 export interface Domain {
   /** Le variabili del dominio, nell'ordine: x e y (o x, y e z, o quelle scritte nell'insieme). */
@@ -89,7 +101,7 @@ function marginOf(node: MathNode, scope: Scope, options: CompileOptions, side?: 
   const sideOf = (n: MathNode, s: Scope) => (side ? side(n) : bound(n, s, options))
   switch (node.k) {
     case 'rel': {
-      if (node.ops.some((op) => op === '=' || op === '≈')) throw new MathError('Con «=» il dominio è una curva, senza area: usa ≤ o ≥')
+      if (node.ops.some((op) => op === '=' || op === '≈')) throw new MathError(T.curve)
       const items = node.items.map((n) => sideOf(n, scope))
       const parts: Margin[] = node.ops.map((op, i) => {
         const a = items[i]
@@ -128,13 +140,13 @@ function marginOf(node: MathNode, scope: Scope, options: CompileOptions, side?: 
       break
     }
   }
-  throw new MathError('Qui va un dominio: un insieme o delle disuguaglianze, es. x^2 + y^2 \\le 1')
+  throw new MathError(T.domain)
 }
 
 /** Il valore di un estremo di un rettangolo (2, \pi, a). */
 function constantOf(node: MathNode, scope: Scope): number {
   const v = bound(node, scope)({})
-  if (Number.isNaN(v)) throw new MathError('Gli estremi del rettangolo non sono numeri')
+  if (Number.isNaN(v)) throw new MathError(T.rectangleBounds)
   return v
 }
 
@@ -162,7 +174,7 @@ function resolve(node: MathNode, scope: Scope): MathNode {
     if (!set) return n
     n = set
   }
-  throw new MathError('L\'insieme è definito con sé stesso')
+  throw new MathError(T.selfDefined)
 }
 
 /** Le condizioni del dominio una per una (con gli «e», gli insiemi e i loro nomi aperti), o null se c'è altro (un «o»). */
@@ -266,7 +278,7 @@ export function compileDomain(node: MathNode, scope: Scope, vars: string[] | nul
   const rectangle = rectangleOf(target, scope)
   if (rectangle) {
     const names = vars ?? ['x', 'y', 'z'].slice(0, rectangle.length)
-    if (names.length !== rectangle.length) throw new MathError(`Il rettangolo ha ${rectangle.length} lati, l'integrale ${names.length} variabili`)
+    if (names.length !== rectangle.length) throw new MathError(T.rectangleSides(rectangle.length, names.length))
     const at = names.map((n) => n)
     const parts: Compiled[] = rectangle.flatMap(([lo, hi], i) => [(v: Vars) => v[at[i]] - lo, (v: Vars) => hi - v[at[i]]])
     return {
@@ -285,8 +297,8 @@ export function compileDomain(node: MathNode, scope: Scope, vars: string[] | nul
   }
   const own = target.k === 'set' ? target.vars : null
   const names = own ?? vars ?? axesIn(target, scope)
-  if (vars && own && own.length !== vars.length) throw new MathError(`L'insieme ha ${own.length} variabili, l'integrale ${vars.length}`)
-  if (names.length < 1) throw new MathError('Nel dominio mancano le variabili, es. x^2 + y^2 \\le 1')
+  if (vars && own && own.length !== vars.length) throw new MathError(T.setVariables(own.length, vars.length))
+  if (names.length < 1) throw new MathError(T.missingVariables)
   const { margin, strict, parts, strictParts } = marginOf(target, scopeWith(scope, names), options)
   return { vars: names, margin, box: null, strict, parts, strictParts, layers: layersOf(target, scope, names, options) }
 }
@@ -502,7 +514,7 @@ export function integrateDomain(domain: Domain, f: Compiled, v: Vars): number {
 /** \iint_D f \, dx \, dy e \iiint_E f \, dV: il dominio e la funzione, calcolati con le altre variabili. */
 export function compileMultiple(node: Extract<MathNode, { k: 'mint' }>, scope: Scope, options: CompileOptions): Compiled {
   const domain = compileDomain(node.domain, scope, node.vars, options)
-  if (domain.vars.length !== node.vars.length) throw new MathError(`Il dominio ha ${domain.vars.length} variabili, l'integrale ${node.vars.length}`)
+  if (domain.vars.length !== node.vars.length) throw new MathError(T.domainVariables(domain.vars.length, node.vars.length))
   // Le variabili dell'integrale sono quelle del dominio, anche se si chiamano diversamente (dA in un insieme di u e v).
   const rename = new Map(node.vars.map((name, i) => [name, domain.vars[i]]))
   const body = compile(renameVars(node.body, rename), scopeWith(scope, domain.vars), options)

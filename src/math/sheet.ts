@@ -3,6 +3,7 @@
  * in basso; `$a = 2$` definisce a, `$f(x) = x^2$` definisce f, e una formula che finisce con «=»
  * (`$f(3) + a =$`) ha il suo risultato. I grafici usano le stesse definizioni.
  */
+import { lang, texts, usesDecimalComma } from '../i18n'
 import {
   allRoots,
   compileComplex,
@@ -68,6 +69,23 @@ import { children, namesIn, parseMath, type MathNode } from './parse'
 import { definiteIntegral } from './definite'
 import { study, studyPart, studyRows, studyTable } from './study'
 import { cancelLinear, definiteParts, definiteValue, derive, exOf, expandCalculus, functionOf, isVectorBody, needsSymbols, partialDerivative, plainText, symbolicValue, symbols, tidy, toNode, zeroOverZero, type Ex, type SymbolScope } from './symbolic'
+
+const T = texts({
+  doesNotExist: ['non esiste', 'does not exist'],
+  sidesTex: (left: string, right: string) => [
+    `\\nexists \\quad \\text{(da sinistra } ${left}\\text{, da destra } ${right}\\text{)}`,
+    `\\nexists \\quad \\text{(from the left } ${left}\\text{, from the right } ${right}\\text{)}`,
+  ],
+  sides: (left: string, right: string) => [`non esiste (da sinistra ${left}, da destra ${right})`, `does not exist (from the left ${left}, from the right ${right})`],
+  parameterNotNumber: ['Un parametro della distribuzione non è un numero', 'A parameter of the distribution is not a number'],
+  number: ['Qui va un numero', 'A number goes here'],
+  signatureSymmetric: ['La segnatura è delle matrici simmetriche', 'The signature is defined for symmetric matrices'],
+  equationsOfSubspace: ['Le equazioni sono di un sottospazio: \\operatorname{equazioni}(U)', 'Equations are found for a subspace: \\operatorname{equazioni}(U)'],
+  notLinearAtZero: (name: string) => [`${name} non è lineare: ${name}(0) non è 0`, `${name} is not linear: ${name}(0) is not 0`],
+  notLinear: (name: string) => [`${name} non è lineare`, `${name} is not linear`],
+  notQuadraticForm: (name: string) => [`${name} non è una forma quadratica`, `${name} is not a quadratic form`],
+  regressionUsage: ['Si scrive \\operatorname{regressione}(x, y), con x e y due vettori di dati', 'Write \\operatorname{regressione}(x, y), with x and y two data vectors'],
+})
 
 export interface Definition {
   name: string
@@ -221,7 +239,10 @@ function walk(node: MathNode, visit: (n: MathNode) => void): void {
   for (const child of children(node)) walk(child, visit)
 }
 
-/** Le cifre da mostrare: come le ha scritte chi prende appunti (virgola o punto), frazioni o decimali. */
+/**
+ * Le cifre da mostrare: come le ha scritte chi prende appunti (virgola o punto), frazioni o decimali. Se
+ * non ci sono numeri con la virgola o con il punto, quella della lingua di Glifo (`usesDecimalComma`).
+ */
 function styleOf(node: MathNode): { comma: boolean; decimal: boolean; digits: number } {
   let comma: boolean | null = null
   let decimal = false
@@ -238,7 +259,7 @@ function styleOf(node: MathNode): { comma: boolean; decimal: boolean; digits: nu
   // Una frazione da sola (\frac{1}{3} =) si vuole in decimali.
   const bare = node.k === 'neg' ? node.a : node
   const single = bare.k === 'bin' && bare.op === '/' && bare.a.k === 'num' && bare.b.k === 'num'
-  return { comma: comma ?? true, decimal: decimal || single, digits }
+  return { comma: comma ?? usesDecimalComma(), decimal: decimal || single, digits }
 }
 
 /** Come si scrive il risultato di un limite o di una serie. */
@@ -249,9 +270,9 @@ function limitText(value: LimitValue, style: ReturnType<typeof styleOf>, exact: 
     const left = side(value.left)
     const right = side(value.right)
     if (left && right && value.left!.k !== 'none' && value.right!.k !== 'none') {
-      return { tex: `\\nexists \\quad \\text{(da sinistra } ${left.tex}\\text{, da destra } ${right.tex}\\text{)}`, text: `non esiste (da sinistra ${left.text}, da destra ${right.text})` }
+      return { tex: T.sidesTex(left.tex, right.tex), text: T.sides(left.text, right.text) }
     }
-    return { tex: '\\nexists', text: 'non esiste' }
+    return { tex: '\\nexists', text: T.doesNotExist }
   }
   if (exact) return formatRational(exact, style)
   return recognize(value.v, style) ?? formatNumber(value.v, { ...style, decimal: true, digits: 9 })
@@ -443,8 +464,8 @@ function fingerprint(text: string): string {
 
 /**
  * I controlli già fatti, per non rifarli a ogni tasto (l'editor rilegge la nota a ogni modifica, e un
- * integrale triplo può chiedere un decimo di secondo): dipendono dalla formula e da quello che la
- * nota ha definito prima (`Sheet.state`).
+ * integrale triplo può chiedere un decimo di secondo): dipendono dalla formula, da quello che la
+ * nota ha definito prima (`Sheet.state`) e dalla lingua, che decide come si scrive il valore giusto.
  */
 const checks = new Map<string, EqualityCheck | null>()
 
@@ -697,7 +718,7 @@ export class Sheet {
     const defined = !!node && this.defineNode(node, src)
     if (defined && !(node.k === 'rel' && node.items.length > 2)) return null
     if (!defined && IMPLICATION.test(src)) return null
-    const key = `${this.state}\u0001${src}`
+    const key = `${this.state}\u0001${src}\u0001${lang}`
     const known = checks.get(key)
     if (known !== undefined) return known
     let check: EqualityCheck | null
@@ -1086,7 +1107,7 @@ export class Sheet {
     try {
       const d = distributionOf(node, (n) => {
         const r = this.evaluate(this.prepare(n))
-        if (!r || !Number.isFinite(r.float)) throw new MathError('Un parametro della distribuzione non è un numero')
+        if (!r || !Number.isFinite(r.float)) throw new MathError(T.parameterNotNumber)
         return { v: r.float, exact: r.exact }
       })
       this.randomVars.set(node.v, d)
@@ -1548,7 +1569,7 @@ export class Sheet {
       style,
       number: (node) => {
         const v = bound(this.prepare(node), scope)({})
-        if (!Number.isFinite(v)) throw new MathError('Qui va un numero')
+        if (!Number.isFinite(v)) throw new MathError(T.number)
         return v
       },
       fn: (node) => {
@@ -1601,7 +1622,7 @@ export class Sheet {
     return {
       number: (node) => {
         const v = bound(this.prepare(node), scope)({})
-        if (!Number.isFinite(v)) throw new MathError('Qui va un numero')
+        if (!Number.isFinite(v)) throw new MathError(T.number)
         return v
       },
       data: (node) => {
@@ -1766,7 +1787,7 @@ export class Sheet {
             const value = A ? { exact: { k: 'matrix' as const, m: A, tuple: false }, float: { k: 'matrix' as const, m: A.map((r) => r.map((c) => c.toNumber())), tuple: false } } : this.evaluateLinear(arg)
             if (!value || value.exact?.k !== 'matrix') return null
             const m = value.exact.m
-            if (!m.every((row, i) => row.every((x, j) => x.cmp(m[j][i]) === 0))) throw new MathError('La segnatura è delle matrici simmetriche')
+            if (!m.every((row, i) => row.every((x, j) => x.cmp(m[j][i]) === 0))) throw new MathError(T.signatureSymmetric)
             const poly = characteristicPolynomial(this.linearScope(), value)
             return poly ? signature(poly) : null
           }
@@ -1775,7 +1796,7 @@ export class Sheet {
             const value = this.evaluateLinear(arg)?.exact
             if (!value) return null
             const basis = value.k === 'span' ? value.basis : value.k === 'matrix' && value.m[0].length === 1 ? [value.m] : null
-            if (!basis) throw new MathError('Le equazioni sono di un sottospazio: \\operatorname{equazioni}(U)')
+            if (!basis) throw new MathError(T.equationsOfSubspace)
             const n = basis[0]?.length ?? 0
             if (!n) return null
             return cartesianEquations(basis.map((b) => b.map((r) => r[0])), n, style)
@@ -1820,11 +1841,11 @@ export class Sheet {
     const n = this.bodies.get(name)!.params.length
     const unit = (j: number, c = 1) => Array.from({ length: n }, (_, i) => Rational.int(i === j ? c : 0))
     const zero = this.functionAt(name, Array.from({ length: n }, () => Rational.int(0)))
-    if (zero.some((c) => c.sign !== 0)) throw new MathError(`${name} non è lineare: ${name}(0) non è 0`)
+    if (zero.some((c) => c.sign !== 0)) throw new MathError(T.notLinearAtZero(name))
     const columns = Array.from({ length: n }, (_, j) => this.functionAt(name, unit(j)))
     columns.forEach((col, j) => {
       const twice = this.functionAt(name, unit(j, 2))
-      if (twice.some((c, i) => c.cmp(col[i].mul(Rational.int(2))) !== 0)) throw new MathError(`${name} non è lineare`)
+      if (twice.some((c, i) => c.cmp(col[i].mul(Rational.int(2))) !== 0)) throw new MathError(T.notLinear(name))
     })
     return columns[0].map((_, i) => columns.map((col) => col[i]))
   }
@@ -1835,7 +1856,7 @@ export class Sheet {
     const q = (point: number[]) => this.functionAt(name, point.map((c) => Rational.int(c)))[0]
     const e = (i: number, c = 1) => Array.from({ length: n }, (_, k) => (k === i ? c : 0))
     const half = new Rational(1n, 2n)
-    for (let i = 0; i < n; i++) if (q(e(i, 2)).cmp(q(e(i)).mul(Rational.int(4))) !== 0) throw new MathError(`${name} non è una forma quadratica`)
+    for (let i = 0; i < n; i++) if (q(e(i, 2)).cmp(q(e(i)).mul(Rational.int(4))) !== 0) throw new MathError(T.notQuadraticForm(name))
     return Array.from({ length: n }, (_, i) =>
       Array.from({ length: n }, (_, j) => (i === j ? q(e(i)) : q(e(i).map((c, k) => (k === j ? 1 : c))).sub(q(e(i))).sub(q(e(j))).mul(half))),
     )
@@ -1886,7 +1907,7 @@ export class Sheet {
         if (kind !== 'quantile') {
           const exact = random.exactMoment(arg!, kind, this.exactScope())
           if (exact) return { shown: fractionShown(exact, style), value: { float: exact.toNumber(), exact } }
-          if (Number.isNaN(v)) return { shown: { tex: '\\nexists', text: 'non esiste' }, value: null }
+          if (Number.isNaN(v)) return { shown: { tex: '\\nexists', text: T.doesNotExist }, value: null }
           if (v === Infinity) return { shown: { tex: '+\\infty', text: '+∞' }, value: null }
         }
         const shown = decimalShown(v, style)
@@ -1943,7 +1964,7 @@ export class Sheet {
         return { shown: studyTable(summaryRows(F, dataOf(args), style)), value: null }
       case 'regression': {
         const [x, y] = args
-        if (args.length !== 2 || x.k !== 'matrix' || y.k !== 'matrix') throw new MathError('Si scrive \\operatorname{regressione}(x, y), con x e y due vettori di dati')
+        if (args.length !== 2 || x.k !== 'matrix' || y.k !== 'matrix') throw new MathError(T.regressionUsage)
         const xs = x.m.map((r) => r[0])
         const ys = y.m.map((r) => r[0])
         const r = correlation(FLOAT, xs.map((v) => F.toNumber(v)), ys.map((v) => F.toNumber(v)))
