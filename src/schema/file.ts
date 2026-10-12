@@ -9,11 +9,18 @@
  *     {"v":1,"nodes":[…],"edges":[…]}
  *     -->
  */
+import { texts } from '../i18n'
 import { findSchemaBlocks } from './blocks'
 import { parseSchema, type Schema } from './model'
 
+/** Il testo dell'immagine e il suggerimento nel commento: per chi legge il file, nella lingua di Glifo. */
+const T = texts({
+  image: ['Schema', 'Diagram'],
+  hint: ['per modificare lo schema apri questo file con Glifo', 'to edit the diagram, open this file with Glifo'],
+})
+
+/** Il segno che Glifo cerca aprendo il file: non si traduce, così il file si apre in tutte e due le lingue. */
 const MARKER = 'glifo-schema'
-const HINT = 'per modificare lo schema apri questo file con Glifo'
 /** Una riga che apre o chiude un blocco di codice (come in blocks.ts). */
 const FENCE = /^\s*(`{3,}|~{3,})(.*)$/
 const OPEN = new RegExp(`^([ \\t]*)<!-- ${MARKER}\\b`)
@@ -62,8 +69,8 @@ export function schemasForFile(text: string, draw: (schema: Schema) => string): 
       continue
     }
     const indent = /^[ \t]*/.exec(text.slice(block.from))![0]
-    const lines = image ? [`${indent}![Schema](${image})`] : []
-    lines.push(`${indent}<!-- ${MARKER} · ${HINT}`, hide(block.source), `${indent}-->`)
+    const lines = image ? [`${indent}![${T.image}](${image})`] : []
+    lines.push(`${indent}<!-- ${MARKER} · ${T.hint}`, hide(block.source), `${indent}-->`)
     out += text.slice(pos, block.from) + lines.join('\n')
     pos = block.to
   }
