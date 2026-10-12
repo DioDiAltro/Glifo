@@ -14,6 +14,7 @@
  * `[0,5]` un intervallo). Le migliaia si possono separare con i punti (`2.500.000`).
  */
 import { texts, usesDecimalComma } from '../i18n'
+import { functionWordPairs, TEXT_WORDS } from '../noteWords'
 
 /**
  * I messaggi di quando un'espressione non si legge. Quello che manca (`Manca …`) è un pezzo da solo, con
@@ -253,9 +254,10 @@ const FUNCTION_NAMES: Record<string, string> = {
   ker: 'ker', Ker: 'ker', dim: 'dim', rref: 'rref', scala: 'rref', gauss: 'rref', autovalori: 'eig', eig: 'eig',
   autovettori: 'eigvec', eigvec: 'eigvec', span: 'span', Span: 'span',
   // La geometria: triangoli e poligoni, angoli, rette, circonferenze, piani, punti medi, distanze.
-  triangle: 'triangle', poligono: 'polygon', angle: 'angle', measuredangle: 'angle', angolo: 'angle', retta: 'line',
-  circonferenza: 'circle', cerchio: 'circle', medio: 'mid', puntomedio: 'mid', baricentro: 'centroid', area: 'area',
-  perimetro: 'perimeter', piano: 'plane', intersezione: 'intersect', distanza: 'dist', segmento: 'segment',
+  // \operatorname{triangolo}(…) è come lo scrive latex.ts (un triangolo con i vertici che non sono lettere).
+  triangle: 'triangle', triangolo: 'triangle', poligono: 'polygon', angle: 'angle', measuredangle: 'angle', angolo: 'angle',
+  retta: 'line', circonferenza: 'circle', cerchio: 'circle', medio: 'mid', puntomedio: 'mid', baricentro: 'centroid',
+  area: 'area', perimetro: 'perimeter', piano: 'plane', intersezione: 'intersect', distanza: 'dist', segmento: 'segment',
   // Le operazioni con i campi: gradiente, divergenza, rotore, laplaciano, hessiana e jacobiana.
   grad: 'grad', gradiente: 'grad', div: 'div', divergenza: 'div', rot: 'curl', rotore: 'curl', curl: 'curl',
   lap: 'lap', laplaciano: 'lap', hess: 'hess', hessiana: 'hess', jac: 'jac', jacobiana: 'jac',
@@ -308,6 +310,10 @@ const FUNCTION_NAMES: Record<string, string> = {
   independent: 'independent', matrice: 'matrixof', equazioni: 'equations', equations: 'equations',
   proiezione: 'projection', projection: 'projection', proj: 'projection',
 }
+// I nomi inglesi (src/noteWords.ts): valgono come quelli italiani, con Glifo in tutte e due le lingue.
+for (const [it, en] of functionWordPairs()) {
+  if (Object.hasOwn(FUNCTION_NAMES, it) && !Object.hasOwn(FUNCTION_NAMES, en)) FUNCTION_NAMES[en] = FUNCTION_NAMES[it]
+}
 
 /**
  * Le distribuzioni dopo \sim, come si scrivono (in minuscolo): B(10, 0{,}3), \operatorname{Bin}(10, 0{,}3),
@@ -347,11 +353,14 @@ const BARE_WORDS = [
   'cotg', 'ln', 'log', 'exp', 'abs', 'sgn', 'floor', 'ceil', 'max', 'min', 'pi',
 ].sort((a, b) => b.length - a.length)
 
+/** Le parole di una coppia italiano → inglese di src/noteWords.ts, tutte e due, e quelle in più. */
+const bothLanguages = (words: Readonly<Record<string, string>>, ...more: string[]) => new Set([...Object.entries(words).flat(), ...more])
+
 /** Le parole di `\text{…}` che legano un'espressione alla sua condizione: «y = x^2 per x > 0». */
-const CONNECTIVES = new Set(['se', 'per', 'con', 'quando', 'dove', 'if', 'for', 'when', 'where', 'with'])
-const AND_WORDS = new Set(['e', 'and', 'ed'])
-const OR_WORDS = new Set(['o', 'or', 'oppure'])
-const ELSE_WORDS = new Set(['altrimenti', 'otherwise', 'else', 'negli altri casi', 'altrove']) // non si traduce: le parole che si scrivono nelle formule
+const CONNECTIVES = bothLanguages(TEXT_WORDS.condition)
+const AND_WORDS = bothLanguages(TEXT_WORDS.and)
+const OR_WORDS = bothLanguages(TEXT_WORDS.or)
+const ELSE_WORDS = bothLanguages(TEXT_WORDS.otherwise, 'else')
 
 /** Accenti sulle lettere (\bar{x}, \hat{p}…): nomi di variabili diversi. */
 const ACCENTS: Record<string, string> = {

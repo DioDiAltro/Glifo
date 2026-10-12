@@ -9,6 +9,7 @@
  * (esatti) o con la virgola, come i conti con vettori e matrici (`Field`).
  */
 import { texts } from '../i18n'
+import { functionWord } from '../noteWords'
 import { MathError } from './evaluate'
 import type { Field } from './linear'
 
@@ -24,8 +25,11 @@ const T = texts({
   twoPairs: ['Servono almeno due coppie di dati', 'At least two pairs of values are needed'],
   noCorrelation: ["Con dati tutti uguali la correlazione non c'è", 'With all values equal there is no correlation'],
   noRegression: ["Con le x tutte uguali la retta di regressione non c'è", 'With all x values equal there is no regression line'],
-  // \operatorname{moda}: il nome che si scrive nella nota (per ora italiano).
-  severalModes: ['Ci sono più mode: chiedile da sole, \\operatorname{moda}(x) =', 'There is more than one mode: ask for them on their own, \\operatorname{moda}(x) ='],
+  /** `mode`: il nome che si scrive nella nota, nella lingua di Glifo (`functionWord` di src/noteWords.ts). */
+  severalModes: (mode: string) => [
+    `Ci sono più mode: chiedile da sole, \\operatorname{${mode}}(x) =`,
+    `There is more than one mode: ask for them on their own, \\operatorname{${mode}}(x) =`,
+  ],
   noMode: ["Non c'è una moda: i valori hanno tutti la stessa frequenza", 'There is no mode: the values all have the same frequency'],
   missingOrder: (name: string) => [
     `Manca l'ordine: \\operatorname{${name}}(x, ${name === 'quantile' ? '0{,}9' : '90'})`,
@@ -185,7 +189,7 @@ export function statistic<T>(F: Field<T>, name: string, d: Data<T>, p?: T): T {
       return median(F, d)
     case 'mode': {
       const m = modes(F, d)
-      if (m.length !== 1) fail(m.length ? T.severalModes : T.noMode)
+      if (m.length !== 1) fail(m.length ? T.severalModes(functionWord('moda')) : T.noMode)
       return m[0]
     }
     case 'var':

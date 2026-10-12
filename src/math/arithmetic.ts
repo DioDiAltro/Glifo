@@ -41,8 +41,8 @@ const T = texts({
   irreducibleTex: ['\\quad (\\text{irriducibile in } \\mathbb{Q})', '\\quad (\\text{irreducible over } \\mathbb{Q})'],
   irreducibleText: [' (irriducibile in ℚ)', ' (irreducible over ℚ)'],
   quotientRemainder: (q: string, r: bigint) => [`(quoziente ${q}, resto ${r})`, `(quotient ${q}, remainder ${r})`],
-  /** Dopo il numero dei divisori: «(6 divisori)». */
-  divisors: (n: number) => ['divisori', n === 1 ? 'divisor' : 'divisors'],
+  /** Dopo il numero dei divisori: «(6 divisori)», «(1 divisore)». */
+  divisors: (n: number) => [n === 1 ? 'divisore' : 'divisori', n === 1 ? 'divisor' : 'divisors'],
   primeTex: (n: bigint) => [`\\text{sì, } ${n} \\text{ è primo}`, `\\text{yes, } ${n} \\text{ is prime}`],
   primeText: (n: bigint) => [`sì, ${n} è primo`, `yes, ${n} is prime`],
   noInverse: (x: bigint, m: bigint, g: bigint) => [`non esiste (mcd(${x}, ${m}) = ${g})`, `does not exist (gcd(${x}, ${m}) = ${g})`],

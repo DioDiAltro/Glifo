@@ -6,6 +6,7 @@
  * spettrale), le equazioni differenziali con Eulero, Heun e Runge–Kutta.
  */
 import { texts, usesDecimalComma } from '../i18n'
+import { functionWord } from '../noteWords'
 import { MathError, integrate } from './evaluate'
 import { Rational } from './exact'
 import type { FormatOptions, FormattedResult } from './format'
@@ -19,8 +20,8 @@ import { odeSolution } from './differential'
 
 const T = texts({
   steps: (table: string) => [`passi: ${table}`, `steps: ${table}`],
-  /** Quanti passi: in italiano scritto come prima («1 passi»), in inglese con il singolare. */
-  stepCount: (n: number) => [`${n} passi`, n === 1 ? '1 step' : `${n} steps`],
+  /** Quanti passi, con il singolare. */
+  stepCount: (n: number) => [n === 1 ? '1 passo' : `${n} passi`, n === 1 ? '1 step' : `${n} steps`],
   tolerance: ['La tolleranza è un numero piccolo, come 10^{-6}', 'The tolerance is a small number, like 10^{-6}'],
   interval: ["Qui va l'intervallo, come [1, 2]", 'The interval goes here, like [1, 2]'],
   oneVariable: ['Qui va una funzione di una variabile', 'A function of one variable goes here'],
@@ -31,9 +32,13 @@ const T = texts({
     `At x = ${x} the derivative is zero: Newton's method stops (try another starting point)`,
   ],
   newtonDiverges: ['Newton non converge da questo punto di partenza', "Newton's method doesn't converge from this starting point"],
-  secantUsage: ['Si scrive \\operatorname{secanti}(f, x_0, x_1)', 'Write \\operatorname{secanti}(f, x_0, x_1)'],
+  /** I nomi da scrivere (`secant`, `fixedPoint`, `euler`) arrivano nella lingua di Glifo, da `functionWord`. */
+  secantUsage: (secant: string) => [`Si scrive \\operatorname{${secant}}(f, x_0, x_1)`, `Write \\operatorname{${secant}}(f, x_0, x_1)`],
   secantDiverges: ['Il metodo delle secanti non converge da questi punti', "The secant method doesn't converge from these points"],
-  fixedPointUsage: ['Si scrive \\operatorname{puntofisso}(g, x_0): x_{k+1} = g(x_k)', 'Write \\operatorname{puntofisso}(g, x_0): x_{k+1} = g(x_k)'],
+  fixedPointUsage: (fixedPoint: string) => [
+    `Si scrive \\operatorname{${fixedPoint}}(g, x_0): x_{k+1} = g(x_k)`,
+    `Write \\operatorname{${fixedPoint}}(g, x_0): x_{k+1} = g(x_k)`,
+  ],
   iteratesDiverge: ['non converge: le iterate non si fermano', "doesn't converge: the iterates don't settle"],
   points: ['I punti si scrivono (x, y): (0, 1), (1, 3), (2, 2)', 'Write the points as (x, y): (0, 1), (1, 3), (2, 2)'],
   sameX: ["Due punti hanno la stessa x: non c'è un polinomio che passa per tutti", 'Two points have the same x: no polynomial passes through all of them'],
@@ -66,7 +71,7 @@ const T = texts({
   diagonallyDominant: ['a diagonale dominante', 'diagonally dominant'],
   converges: (why: string) => [`converge (${why})`, `converges (${why})`],
   diverges: ['non converge (ρ(B) ≥ 1)', "doesn't converge (ρ(B) ≥ 1)"],
-  eulerUsage: ["Si scrive \\operatorname{eulero}(y' = x + y, y(0) = 1, h, n)", "Write \\operatorname{eulero}(y' = x + y, y(0) = 1, h, n)"],
+  eulerUsage: (euler: string) => [`Si scrive \\operatorname{${euler}}(y' = x + y, y(0) = 1, h, n)`, `Write \\operatorname{${euler}}(y' = x + y, y(0) = 1, h, n)`],
   firstOrder: ["Qui va un'equazione del primo ordine, come y' = x + y, e la condizione y(0) = 1", "A first-order equation goes here, like y' = x + y, with the condition y(0) = 1"],
   stepSize: ['Il passo h è positivo e i passi n sono un intero', 'The step h must be positive and the number of steps n an integer'],
   euler: ['Eulero', 'Euler'],
@@ -246,7 +251,7 @@ function newton(ctx: NumericContext, args: MathNode[], plot?: Plot): FormattedRe
 
 function secant(ctx: NumericContext, args: MathNode[], plot?: Plot): FormattedResult {
   const g = ctx.fn(args[0])
-  if (!g || args.length < 3) throw new MathError(T.secantUsage)
+  if (!g || args.length < 3) throw new MathError(T.secantUsage(functionWord('secanti')))
   const tol = toleranceOf(ctx, args[3], 1e-10)
   let [x0, x1] = [ctx.number(args[1]), ctx.number(args[2])]
   const rows: { tex: string; text: string }[][] = [
@@ -276,7 +281,7 @@ function secant(ctx: NumericContext, args: MathNode[], plot?: Plot): FormattedRe
 
 function fixedPoint(ctx: NumericContext, args: MathNode[], plot?: Plot): FormattedResult {
   const g = ctx.fn(args[0])
-  if (!g || args.length < 2) throw new MathError(T.fixedPointUsage)
+  if (!g || args.length < 2) throw new MathError(T.fixedPointUsage(functionWord('puntofisso')))
   const tol = toleranceOf(ctx, args[2], 1e-10)
   let x = ctx.number(args[1])
   const rows: { tex: string; text: string }[][] = [[k(0), numberShown(x, 12)]]
@@ -759,7 +764,7 @@ function iterative(ctx: NumericContext, args: MathNode[], method: 'jacobi' | 'ga
 // ——— Le equazioni differenziali ———
 
 function odeMethod(ctx: NumericContext, args: MathNode[], method: 'euler' | 'heun' | 'rk4', plot?: Plot): FormattedResult {
-  if (args.length < 3) throw new MathError(T.eulerUsage)
+  if (args.length < 3) throw new MathError(T.eulerUsage(functionWord('eulero')))
   const problem = ctx.ode(args[0], args[1])
   if (!problem) throw new MathError(T.firstOrder)
   const h = ctx.number(args[2])

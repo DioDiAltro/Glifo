@@ -3,12 +3,17 @@
  * vede come Glifo l'ha capita: `sqrt(x)/2` diventa \frac{\sqrt{x}}{2}.
  */
 import { texts } from '../i18n'
+import { functionWord, textWord } from '../noteWords'
 import type { MathNode, RelOp } from './parse'
 
-/** Le parole dentro le formule riscritte: il parser le legge in tutte e due le lingue (src/math/parse.ts). */
+/**
+ * Le parole dentro le formule riscritte sono quelle della lingua di Glifo, che il lettore (src/math/parse.ts)
+ * conosce in tutte e due le lingue: i nomi delle funzioni (`functionWord`) e le parole di \text{…}
+ * (`textWord`) sono in src/noteWords.ts.
+ */
 const T = texts({
-  otherwise: ['altrimenti', 'otherwise'],
-  or: ['o', 'or'],
+  /** Il pedice delle statistiche campionarie (\operatorname{Var}_{c}): c come campionaria, s come sample. */
+  sample: ['c', 's'],
 })
 
 const GREEK_COMMANDS: Record<string, string> = {
@@ -95,93 +100,96 @@ function numberLatex(n: Extract<MathNode, { k: 'num' }>): string {
   return n.comma ? n.text.replace('.', '{,}') : n.text
 }
 
-/** Come si scrivono le funzioni dei numeri complessi. */
-const COMPLEX_FUNCTIONS: Record<string, string> = {
-  re: '\\operatorname{Re}',
-  im: '\\operatorname{Im}',
+/**
+ * Le funzioni che si scrivono con un simbolo: l'argomento (\arg), l'insieme delle parti, la funzione di Eulero,
+ * la trasformata di Laplace e l'antitrasformata.
+ */
+const SYMBOL_FUNCTIONS: Record<string, string> = {
   arg: '\\arg',
-  eig: '\\operatorname{autovalori}',
-  eigvec: '\\operatorname{autovettori}',
-  study: '\\operatorname{studio}',
-  domain: '\\operatorname{dominio}',
-  asymptotes: '\\operatorname{asintoti}',
-  extrema: '\\operatorname{estremi}',
-  flexes: '\\operatorname{flessi}',
-  zeros: '\\operatorname{zeri}',
-  line: '\\operatorname{retta}',
-  circle: '\\operatorname{circonferenza}',
-  mid: '\\operatorname{medio}',
-  centroid: '\\operatorname{baricentro}',
-  perimeter: '\\operatorname{perimetro}',
-  plane: '\\operatorname{piano}',
-  intersect: '\\operatorname{intersezione}',
-  polygon: '\\operatorname{poligono}',
-  dist: '\\operatorname{distanza}',
-  segment: '\\operatorname{segmento}',
-  angle: '\\operatorname{angolo}',
-  levels: '\\operatorname{livelli}',
-  taylor: '\\operatorname{taylor}',
-  maclaurin: '\\operatorname{maclaurin}',
-  mean: '\\operatorname{media}',
-  median: '\\operatorname{mediana}',
-  mode: '\\operatorname{moda}',
-  var: '\\operatorname{Var}',
-  svar: '\\operatorname{Var}_{c}',
-  sd: '\\operatorname{sqm}',
-  ssd: '\\operatorname{sqm}_{c}',
-  quartiles: '\\operatorname{quartili}',
-  quantile: '\\operatorname{quantile}',
-  percentile: '\\operatorname{percentile}',
-  cov: '\\operatorname{Cov}',
-  corr: '\\operatorname{corr}',
-  regression: '\\operatorname{regressione}',
-  summary: '\\operatorname{statistiche}',
-  frequencies: '\\operatorname{frequenze}',
-  range: '\\operatorname{campo}',
-  histogram: '\\operatorname{istogramma}',
-  barchart: '\\operatorname{barre}',
-  scatter: '\\operatorname{dispersione}',
-  diagonalize: '\\operatorname{diagonalizza}',
-  gramschmidt: '\\operatorname{gramschmidt}',
-  signature: '\\operatorname{segnatura}',
-  independent: '\\operatorname{indipendenti}',
-  matrixof: '\\operatorname{matrice}',
-  equations: '\\operatorname{equazioni}',
-  projection: '\\operatorname{proiezione}',
-  factor: '\\operatorname{scomponi}',
-  divisors: '\\operatorname{divisori}',
-  isprime: '\\operatorname{primo}',
-  division: '\\operatorname{divisione}',
-  ruffini: '\\operatorname{ruffini}',
-  expandpoly: '\\operatorname{sviluppa}',
-  modinv: '\\operatorname{inverso}',
-  base: '\\operatorname{base}',
-  binary: '\\operatorname{binario}',
-  hex: '\\operatorname{esadecimale}',
   powerset: '\\mathcal{P}',
-  card: '\\operatorname{card}',
   totient: '\\varphi',
-  diophantine: '\\operatorname{diofantea}',
-  bezout: '\\operatorname{bezout}',
-  euclid: '\\operatorname{euclide}',
-  lcm: '\\operatorname{mcm}',
-  fourier: '\\operatorname{fourier}',
   laplace: '\\mathcal{L}',
   ilaplace: '\\mathcal{L}^{-1}',
-  bisection: '\\operatorname{bisezione}',
-  secant: '\\operatorname{secanti}',
-  fixedpoint: '\\operatorname{puntofisso}',
-  interpolate: '\\operatorname{interpola}',
-  leastsquares: '\\operatorname{minimiquadrati}',
-  midpoint: '\\operatorname{rettangoli}',
-  trapezoid: '\\operatorname{trapezi}',
-  norm: '\\operatorname{norma}',
-  euler: '\\operatorname{eulero}',
-  ci: '\\operatorname{ic}',
-  civar: '\\operatorname{icvarianza}',
-  htest: '\\operatorname{test}',
-  chisq: '\\operatorname{chiquadro}',
 }
+
+/**
+ * Le funzioni che si scrivono con \operatorname e un nome diverso da quello di dentro Glifo: il nome italiano,
+ * che `functionWord` cambia in quello inglese con Glifo in inglese. Le altre hanno il nome di dentro Glifo
+ * (\operatorname{critical}, \operatorname{rank}).
+ */
+const OPERATOR_NAMES: Record<string, string> = {
+  re: 'Re',
+  im: 'Im',
+  eig: 'autovalori',
+  eigvec: 'autovettori',
+  study: 'studio',
+  domain: 'dominio',
+  asymptotes: 'asintoti',
+  extrema: 'estremi',
+  flexes: 'flessi',
+  zeros: 'zeri',
+  line: 'retta',
+  circle: 'circonferenza',
+  mid: 'medio',
+  centroid: 'baricentro',
+  perimeter: 'perimetro',
+  plane: 'piano',
+  intersect: 'intersezione',
+  polygon: 'poligono',
+  dist: 'distanza',
+  segment: 'segmento',
+  angle: 'angolo',
+  triangle: 'triangolo',
+  curl: 'rot',
+  levels: 'livelli',
+  mean: 'media',
+  median: 'mediana',
+  mode: 'moda',
+  var: 'Var',
+  sd: 'sqm',
+  quartiles: 'quartili',
+  cov: 'Cov',
+  regression: 'regressione',
+  summary: 'statistiche',
+  frequencies: 'frequenze',
+  range: 'campo',
+  histogram: 'istogramma',
+  barchart: 'barre',
+  scatter: 'dispersione',
+  diagonalize: 'diagonalizza',
+  signature: 'segnatura',
+  independent: 'indipendenti',
+  matrixof: 'matrice',
+  equations: 'equazioni',
+  projection: 'proiezione',
+  factor: 'scomponi',
+  divisors: 'divisori',
+  isprime: 'primo',
+  division: 'divisione',
+  expandpoly: 'sviluppa',
+  modinv: 'inverso',
+  binary: 'binario',
+  hex: 'esadecimale',
+  diophantine: 'diofantea',
+  euclid: 'euclide',
+  lcm: 'mcm',
+  bisection: 'bisezione',
+  secant: 'secanti',
+  fixedpoint: 'puntofisso',
+  interpolate: 'interpola',
+  leastsquares: 'minimiquadrati',
+  midpoint: 'rettangoli',
+  trapezoid: 'trapezi',
+  norm: 'norma',
+  euler: 'eulero',
+  ci: 'ic',
+  civar: 'icvarianza',
+  htest: 'test',
+  chisq: 'chiquadro',
+}
+
+/** Le statistiche campionarie: come la varianza e lo scarto quadratico medio, con il pedice. */
+const SAMPLE_FUNCTIONS: Record<string, string> = { svar: 'var', ssd: 'sd' }
 
 /** Le funzioni della statistica: sempre con le parentesi. */
 const STATISTICS_NAMES = new Set([
@@ -207,9 +215,16 @@ function lettersOnly(n: MathNode): boolean {
   return n.k === 'bin' && n.op === '*' && !!n.implicit && lettersOnly(n.a) && lettersOnly(n.b)
 }
 
+/** \operatorname con il nome della funzione nella lingua di Glifo. */
+function operatorName(name: string): string {
+  return `\\operatorname{${functionWord(Object.hasOwn(OPERATOR_NAMES, name) ? OPERATOR_NAMES[name] : name)}}`
+}
+
 function fnName(name: string): string {
   if (KATEX_FUNCTIONS.has(name)) return `\\${name}`
-  return COMPLEX_FUNCTIONS[name] ?? `\\operatorname{${name}}`
+  if (Object.hasOwn(SYMBOL_FUNCTIONS, name)) return SYMBOL_FUNCTIONS[name]
+  if (Object.hasOwn(SAMPLE_FUNCTIONS, name)) return `${operatorName(SAMPLE_FUNCTIONS[name])}_{${T.sample}}`
+  return operatorName(name)
 }
 
 /** Il primo carattere che si vedrebbe: per decidere se tra due fattori serve il puntino. */
@@ -316,7 +331,7 @@ export function toLatex(node: MathNode): string {
     case 'matrix':
       return `\\begin{pmatrix} ${node.rows.map((r) => r.map(toLatex).join(' & ')).join(' \\\\ ')} \\end{pmatrix}`
     case 'cases':
-      return `\\begin{cases} ${node.rows.map((r) => `${toLatex(r.value)} & ${r.cond ? toLatex(r.cond) : `\\text{${T.otherwise}}`}`).join(' \\\\ ')} \\end{cases}`
+      return `\\begin{cases} ${node.rows.map((r) => `${toLatex(r.value)} & ${r.cond ? toLatex(r.cond) : `\\text{${textWord('altrimenti')}}`}`).join(' \\\\ ')} \\end{cases}`
     case 'tuple':
       return paren(node.items.map(toLatex).join(', '))
     case 'rel':
@@ -326,7 +341,7 @@ export function toLatex(node: MathNode): string {
     case 'and':
       return node.items.map(toLatex).join(',\\; ')
     case 'or':
-      return node.items.map(toLatex).join(`\\ \\text{${T.or}}\\ `)
+      return node.items.map(toLatex).join(`\\ \\text{${textWord('o')}}\\ `)
     case 'prob': {
       // Le parentesi che si allungano solo attorno alle frazioni (come f(x)): P(X \le 3) senza spazio dopo la P.
       const inner = `${toLatex(node.event)}${node.given ? ` \\mid ${toLatex(node.given)}` : ''}`
@@ -407,7 +422,7 @@ function fnLatex(node: Extract<MathNode, { k: 'fn' }>, pow?: MathNode): string {
       break
     case 'triangle':
       if (arg && lettersOnly(arg)) return `\\triangle ${inner}`
-      out = `\\operatorname{triangolo}${paren(inner)}`
+      out = `${operatorName('triangle')}${paren(inner)}`
       break
     case 'arrow':
       out = arg && lettersOnly(arg) ? `\\overrightarrow{${inner}}` : `\\overrightarrow{${inner}}`
@@ -417,14 +432,14 @@ function fnLatex(node: Extract<MathNode, { k: 'fn' }>, pow?: MathNode): string {
         out = `\\widehat{${inner}}`
         break
       }
-      out = `\\operatorname{angolo}${paren(inner)}`
+      out = `${operatorName('angle')}${paren(inner)}`
       break
     case 'line':
       if (arg && lettersOnly(arg)) {
         out = `\\overleftrightarrow{${inner}}`
         break
       }
-      out = `\\operatorname{retta}${paren(inner)}`
+      out = `${operatorName('line')}${paren(inner)}`
       break
     case 'dot':
       out = `\\langle ${args.map(toLatex).join(', ')} \\rangle`
@@ -435,7 +450,7 @@ function fnLatex(node: Extract<MathNode, { k: 'fn' }>, pow?: MathNode): string {
     case 'lap': {
       const a = arg ? wrap(arg, 3) : paren(inner)
       if (node.nabla) out = { grad: '\\nabla', div: '\\nabla \\cdot', curl: '\\nabla \\times', lap: '\\nabla^{2}' }[node.name] + ` ${a}`
-      else out = { grad: '\\operatorname{grad}', div: '\\operatorname{div}', curl: '\\operatorname{rot}', lap: '\\Delta' }[node.name] + ` ${a}`
+      else out = { grad: '\\operatorname{grad}', div: '\\operatorname{div}', curl: operatorName('curl'), lap: '\\Delta' }[node.name] + ` ${a}`
       break
     }
     case 'hess':

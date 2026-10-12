@@ -4,6 +4,7 @@
  * (`$f(3) + a =$`) ha il suo risultato. I grafici usano le stesse definizioni.
  */
 import { lang, texts, usesDecimalComma } from '../i18n'
+import { functionWord } from '../noteWords'
 import {
   allRoots,
   compileComplex,
@@ -80,11 +81,18 @@ const T = texts({
   parameterNotNumber: ['Un parametro della distribuzione non è un numero', 'A parameter of the distribution is not a number'],
   number: ['Qui va un numero', 'A number goes here'],
   signatureSymmetric: ['La segnatura è delle matrici simmetriche', 'The signature is defined for symmetric matrices'],
-  equationsOfSubspace: ['Le equazioni sono di un sottospazio: \\operatorname{equazioni}(U)', 'Equations are found for a subspace: \\operatorname{equazioni}(U)'],
+  /** I nomi da scrivere (`equations`, `regression`) arrivano nella lingua di Glifo, da `functionWord`. */
+  equationsOfSubspace: (equations: string) => [
+    `Le equazioni sono di un sottospazio: \\operatorname{${equations}}(U)`,
+    `Equations are found for a subspace: \\operatorname{${equations}}(U)`,
+  ],
   notLinearAtZero: (name: string) => [`${name} non è lineare: ${name}(0) non è 0`, `${name} is not linear: ${name}(0) is not 0`],
   notLinear: (name: string) => [`${name} non è lineare`, `${name} is not linear`],
   notQuadraticForm: (name: string) => [`${name} non è una forma quadratica`, `${name} is not a quadratic form`],
-  regressionUsage: ['Si scrive \\operatorname{regressione}(x, y), con x e y due vettori di dati', 'Write \\operatorname{regressione}(x, y), with x and y two data vectors'],
+  regressionUsage: (regression: string) => [
+    `Si scrive \\operatorname{${regression}}(x, y), con x e y due vettori di dati`,
+    `Write \\operatorname{${regression}}(x, y), with x and y two data vectors`,
+  ],
 })
 
 export interface Definition {
@@ -1796,7 +1804,7 @@ export class Sheet {
             const value = this.evaluateLinear(arg)?.exact
             if (!value) return null
             const basis = value.k === 'span' ? value.basis : value.k === 'matrix' && value.m[0].length === 1 ? [value.m] : null
-            if (!basis) throw new MathError(T.equationsOfSubspace)
+            if (!basis) throw new MathError(T.equationsOfSubspace(functionWord('equazioni')))
             const n = basis[0]?.length ?? 0
             if (!n) return null
             return cartesianEquations(basis.map((b) => b.map((r) => r[0])), n, style)
@@ -1964,7 +1972,7 @@ export class Sheet {
         return { shown: studyTable(summaryRows(F, dataOf(args), style)), value: null }
       case 'regression': {
         const [x, y] = args
-        if (args.length !== 2 || x.k !== 'matrix' || y.k !== 'matrix') throw new MathError(T.regressionUsage)
+        if (args.length !== 2 || x.k !== 'matrix' || y.k !== 'matrix') throw new MathError(T.regressionUsage(functionWord('regressione')))
         const xs = x.m.map((r) => r[0])
         const ys = y.m.map((r) => r[0])
         const r = correlation(FLOAT, xs.map((v) => F.toNumber(v)), ys.map((v) => F.toNumber(v)))

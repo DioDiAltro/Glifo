@@ -17,7 +17,11 @@ const T = texts({
   positiveInteger: (what: string) => [`${what} è un numero intero positivo`, `${what} must be a positive whole number`],
   wholeNumber: (what: string) => [`${what} è un numero intero (0 o più)`, `${what} must be a whole number (0 or more)`],
   probability: ['La probabilità p va da 0 a 1', 'The probability p goes from 0 to 1'],
-  positive: (what: string) => [`${what} è un numero positivo`, `${what} must be a positive number`],
+  /** `plural`: il nome è al plurale (i gradi di libertà). */
+  positive: (what: string, plural: boolean) => [
+    plural ? `${what} sono un numero positivo` : `${what} è un numero positivo`,
+    `${what} must be a positive number`,
+  ],
   oneParameter: (example: string) => [`Questa distribuzione vuole un parametro: X \\sim ${example}`, `This distribution takes one parameter: X \\sim ${example}`],
   parameters: (n: number, example: string) => [`Questa distribuzione vuole ${n} parametri: X \\sim ${example}`, `This distribution takes ${n} parameters: X \\sim ${example}`],
   // I parametri, nei messaggi.
@@ -158,8 +162,8 @@ function probabilityParam(v: number): number {
   return v
 }
 
-function positiveParam(v: number, what: string): number {
-  if (!(v > 0) || !Number.isFinite(v)) invalid(T.positive(what))
+function positiveParam(v: number, what: string, plural = false): number {
+  if (!(v > 0) || !Number.isFinite(v)) invalid(T.positive(what, plural))
   return v
 }
 
@@ -478,7 +482,7 @@ export function makeDistribution(family: Family, params: number[], exact: (Ratio
       }
     }
     case 'student': {
-      const nu = positiveParam(params[0], T.degrees)
+      const nu = positiveParam(params[0], T.degrees, true)
       const c = Math.exp(logGamma((nu + 1) / 2) - logGamma(nu / 2)) / Math.sqrt(nu * Math.PI)
       const tail = (t: number) => 0.5 * betaI(nu / 2, 0.5, nu / (nu + t * t))
       const d = {
@@ -498,7 +502,7 @@ export function makeDistribution(family: Family, params: number[], exact: (Ratio
       return { ...d, quantile: (p) => continuousQuantile(d, p) }
     }
     case 'chi2': {
-      const k = positiveParam(params[0], T.degrees)
+      const k = positiveParam(params[0], T.degrees, true)
       const logC = -(k / 2) * Math.LN2 - logGamma(k / 2)
       const d = {
         ...base,
@@ -517,8 +521,8 @@ export function makeDistribution(family: Family, params: number[], exact: (Ratio
       return { ...d, quantile: (p) => continuousQuantile(d, p) }
     }
     case 'fisher': {
-      const d1 = positiveParam(params[0], T.degrees)
-      const d2 = positiveParam(params[1], T.degrees)
+      const d1 = positiveParam(params[0], T.degrees, true)
+      const d2 = positiveParam(params[1], T.degrees, true)
       const logB = logGamma(d1 / 2) + logGamma(d2 / 2) - logGamma((d1 + d2) / 2)
       const d = {
         ...base,

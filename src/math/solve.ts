@@ -20,7 +20,8 @@ import { linearCoefficients, type SymbolScope } from './symbolic'
 
 const T = texts({
   identity: (x: string) => [`ogni ${x} (è un'identità)`, `all ${x} (it's an identity)`],
-  impossible: ['nessuna soluzione (impossibile)', 'no solution (impossible)'],
+  /** In inglese come nei sistemi (src/math/linsys.ts): «inconsistent». */
+  impossible: ['nessuna soluzione (impossibile)', 'no solution (inconsistent)'],
   /** Quante volte una radice si ripete: «(doppia)». */
   multiplicity: (times: number) => [
     times === 2 ? 'doppia' : times === 3 ? 'tripla' : `${times} volte`,

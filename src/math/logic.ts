@@ -470,7 +470,8 @@ function parenthesized(src: string, i: number): { text: string; end: number } | 
   return null
 }
 
-const REQUEST = /^\s*\\operatorname\*?\{\s*(verit(?:a|à|\\`a|\\`\{a\})|tavola|fnd|fnc|dnf|cnf)\s*\}/
+/** La richiesta, con i nomi italiani e quelli inglesi (src/noteWords.ts): verità o truth, fnd o dnf, fnc o cnf. */
+const REQUEST = /^\s*\\operatorname\*?\{\s*(verit(?:a|à|\\`a|\\`\{a\})|tavola|truthtable|truth|fnd|fnc|dnf|cnf)\s*\}/
 
 /** I connettivi che dicono che una formula è di logica: senza, «x \to 0» non è una tavola di verità. */
 const CONNECTIVE = /\\(neg|lnot|land|lor|wedge|vee|oplus|veebar|Leftrightarrow|iff|Rightarrow|implies|uparrow|downarrow|top|bot)(?![A-Za-z])|[¬∧∨⊕⊻⇔⇒↔]/

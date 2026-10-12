@@ -287,7 +287,7 @@ export function cartesianEquations(basis: Rational[][], n: number, options: Form
       })
     return { tex: `${terms.map((t) => t.tex).join('')} = 0`, text: `${terms.map((t) => t.text).join('')} = 0` }
   })
-  return { tex: equations.map((e) => e.tex).join(',\quad '), text: equations.map((e) => e.text).join(', ') }
+  return { tex: equations.map((e) => e.tex).join(',\\quad '), text: equations.map((e) => e.text).join(', ') }
 }
 
 /** Il rango di una matrice con un parametro: «2 per k ≠ 2; 1 per k = 2». */

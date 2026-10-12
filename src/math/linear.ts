@@ -12,6 +12,7 @@
  * numero, `Rational` o `number`.
  */
 import { texts, usesDecimalComma } from '../i18n'
+import { functionWord } from '../noteWords'
 import { compile, MathError, UndefinedName, type Scope } from './evaluate'
 import { ExactUnavailable, Rational } from './exact'
 import { formatNumber, formatRational, type FormatOptions, type FormattedResult } from './format'
@@ -50,13 +51,12 @@ const T = texts({
   addNumber: ['Non si somma un numero e una matrice: forse manca la I (A - \\lambda I)?', "You can't add a number and a matrix: is the I missing (A - \\lambda I)?"],
   subtractNumber: ['Non si sottrae un numero e una matrice: forse manca la I (A - \\lambda I)?', "You can't subtract a number and a matrix: is the I missing (A - \\lambda I)?"],
   identitySize: ['Di che misura è la I? Scrivi I_2, I_3…', 'What size is I? Write I_2, I_3…'],
-  // «Si sottraeno» è com'era scritto prima delle due lingue (il messaggio italiano non cambia).
   addSizes: (ar: number, ac: number, br: number, bc: number) => [
     `Si sommano matrici della stessa misura (${ar} × ${ac} e ${br} × ${bc})`,
     `Only matrices of the same size can be added (${ar} × ${ac} and ${br} × ${bc})`,
   ],
   subtractSizes: (ar: number, ac: number, br: number, bc: number) => [
-    `Si sottraeno matrici della stessa misura (${ar} × ${ac} e ${br} × ${bc})`,
+    `Si sottraggono matrici della stessa misura (${ar} × ${ac} e ${br} × ${bc})`,
     `Only matrices of the same size can be subtracted (${ar} × ${ac} and ${br} × ${bc})`,
   ],
   dotSizes: (a: number, b: number) => [
@@ -77,17 +77,21 @@ const T = texts({
   transpose: ['La trasposta è di una matrice o di un vettore', 'The transpose is for a matrix or a vector'],
   exponentNumber: ["L'esponente è un numero", 'The exponent must be a number'],
   integerPower: ["Le potenze di una matrice hanno l'esponente intero (A^{-1} è l'inversa)", 'Powers of a matrix have an integer exponent (A^{-1} is the inverse)'],
-  // \operatorname{media}, \operatorname{quartili}…: i nomi che si scrivono nella nota (per ora italiani).
-  dataForm: [
-    'I dati si scrivono in un vettore, $x = (2, 3, 5, 7)$, o uno per uno: \\operatorname{media}(2, 3, 5, 7)',
-    'Write the data in a vector, $x = (2, 3, 5, 7)$, or one by one: \\operatorname{media}(2, 3, 5, 7)',
+  // \operatorname{media}, \operatorname{quartili}…: i nomi che si scrivono nella nota arrivano nella lingua di
+  // Glifo (`functionWord` di src/noteWords.ts).
+  dataForm: (mean: string) => [
+    `I dati si scrivono in un vettore, $x = (2, 3, 5, 7)$, o uno per uno: \\operatorname{${mean}}(2, 3, 5, 7)`,
+    `Write the data in a vector, $x = (2, 3, 5, 7)$, or one by one: \\operatorname{${mean}}(2, 3, 5, 7)`,
   ],
   quantileForm: (name: string) => [
     `Si scrive \\operatorname{${name}}(x, ${name === 'quantile' ? '0{,}9' : '90'}), con x i dati`,
     `Write \\operatorname{${name}}(x, ${name === 'quantile' ? '0.9' : '90'}), with x the data`,
   ],
   pairForm: (name: string) => [`Si scrive \\operatorname{${name}}(x, y), con x e y due vettori di dati`, `Write \\operatorname{${name}}(x, y), with x and y two data vectors`],
-  askAlone: ['Questa si chiede da sola, con «=» in fondo: \\operatorname{quartili}(x) =', 'Ask for this one on its own, with “=” at the end: \\operatorname{quartili}(x) ='],
+  askAlone: (quartiles: string) => [
+    `Questa si chiede da sola, con «=» in fondo: \\operatorname{${quartiles}}(x) =`,
+    `Ask for this one on its own, with “=” at the end: \\operatorname{${quartiles}}(x) =`,
+  ],
   oneValue: (name: string) => [`\\${name} vuole un valore solo`, `\\${name} takes a single value`],
   traceSquare: ['La traccia è delle matrici quadrate', 'The trace is only for square matrices'],
   imaginaryPart: [
@@ -96,12 +100,15 @@ const T = texts({
   ],
   dimension: ['\\dim è la dimensione di un sottospazio: \\dim \\ker A', '\\dim is the dimension of a subspace: \\dim \\ker A'],
   dotTwo: ['Il prodotto scalare si fa tra due vettori', 'The dot product is between two vectors'],
-  projectionForm: [
-    'Si scrive \\operatorname{proiezione}(v, U), con U un sottospazio (o un vettore)',
-    'Write \\operatorname{proiezione}(v, U), with U a subspace (or a vector)',
+  projectionForm: (projection: string) => [
+    `Si scrive \\operatorname{${projection}}(v, U), con U un sottospazio (o un vettore)`,
+    `Write \\operatorname{${projection}}(v, U), with U a subspace (or a vector)`,
   ],
   projectionOnto: ['Si proietta su un sottospazio (\\operatorname{span}(…)) o su un vettore', 'You project onto a subspace (\\operatorname{span}(…)) or onto a vector'],
-  eigenvaluesAlone: ['Gli autovalori si chiedono da soli: \\operatorname{autovalori}(A) =', 'Ask for the eigenvalues on their own: \\operatorname{autovalori}(A) ='],
+  eigenvaluesAlone: (eigenvalues: string) => [
+    `Gli autovalori si chiedono da soli: \\operatorname{${eigenvalues}}(A) =`,
+    `Ask for the eigenvalues on their own: \\operatorname{${eigenvalues}}(A) =`,
+  ],
   // La geometria.
   coordinates: ['I punti hanno un numero diverso di coordinate', 'The points have different numbers of coordinates'],
   angleSides: ['Un angolo vuole due lati non nulli', 'An angle needs two nonzero sides'],
@@ -704,7 +711,7 @@ export function dataOf<T>(args: Lin<T>[]): Data<T> {
   if (args.length === 1 && isVector(args[0])) return { values: column(args[0]), weights: null }
   if (args.length === 2 && isVector(args[0]) && isVector(args[1])) return { values: column(args[0]), weights: column(args[1]) }
   if (args.length && args.every((a) => a.k === 'scalar')) return { values: args.map((a) => (a as { v: T }).v), weights: null }
-  throw new MathError(T.dataForm)
+  throw new MathError(T.dataForm(functionWord('media')))
 }
 
 /** La statistica dei dati (\operatorname{media}(x), \operatorname{Var}(x, f), \operatorname{corr}(x, y)); null se è altro. */
@@ -728,7 +735,7 @@ function statisticOf<T>(F: Field<T>, name: string, args: Lin<T>[]): Lin<T> | nul
     const values = args.flatMap((a) => (isVector(a) ? a.m.map((r) => r[0]) : [scalarOf(a, `\\${name}`)]))
     return { k: 'scalar', v: values.reduce((p, q) => ((name === 'max' ? F.cmp(q, p) > 0 : F.cmp(q, p) < 0) ? q : p)) }
   }
-  if (STATISTICS_SHOWN.has(name)) throw new MathError(T.askAlone)
+  if (STATISTICS_SHOWN.has(name)) throw new MathError(T.askAlone(functionWord('quartili')))
   return null
 }
 
@@ -797,7 +804,7 @@ function functionOf<T>(ctx: Ctx<T>, node: Extract<MathNode, { k: 'fn' }>): Lin<T
     case 'projection': {
       // La proiezione ortogonale di v su U: Σ (v·uᵢ)/(uᵢ·uᵢ) uᵢ, con una base ortogonale di U (Gram–Schmidt).
       const [v, U] = args
-      if (args.length !== 2 || !isVector(v)) throw new MathError(T.projectionForm)
+      if (args.length !== 2 || !isVector(v)) throw new MathError(T.projectionForm(functionWord('proiezione')))
       const basis = U.k === 'span' ? U.basis : isVector(U) ? [U.m] : null
       if (!basis) throw new MathError(T.projectionOnto)
       const orthogonal: Mat<T>[] = []
@@ -813,7 +820,7 @@ function functionOf<T>(ctx: Ctx<T>, node: Extract<MathNode, { k: 'fn' }>): Lin<T
     }
     case 'eig':
     case 'eigvec':
-      throw new MathError(T.eigenvaluesAlone)
+      throw new MathError(T.eigenvaluesAlone(functionWord('autovalori')))
     default: {
       // Le altre funzioni (sin, ln…) dei numeri, con la virgola.
       if (F.exact) unavailable()
