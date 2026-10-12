@@ -44,7 +44,7 @@ const TRANSLATED = [
 
 /** Dentro le parti tradotte, i file che restano in italiano (e perché). */
 const NOT_TRANSLATED: Record<string, string> = {
-  'src/ui/touchLogPanel.ts': 'il registro dei tocchi si toglie (GRAFICA.md, punto 7)',
+  'src/ui/touchLogPanel.ts': 'si vede tradotto, ma le righe del registro restano in italiano per Claude (e il registro si toglie: GRAFICA.md, punto 7)',
   'src/board/touchlog.ts': 'il registro dei tocchi si toglie (GRAFICA.md, punto 7)',
 }
 

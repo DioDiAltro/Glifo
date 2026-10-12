@@ -3622,7 +3622,7 @@ try {
     en.on('pageerror', (e) => errors.push(e.message))
     await en.goto(url)
     await en.waitForSelector('.cm-editor')
-    const enTable = ['| Item | Price | Quantity | Total |', '| --- | --- | --- | --- |', '| Pens | 2 | 3 | =B2*C2 |', '| Notebooks | 4.5 | 5 | =B3*C3 |', '| Sum | | | =SUM(D2:D3) |'].join('\n')
+    const enTable = ['| Item | Price | Quantity | Total |', '| --- | --- | --- | --- |', '| Pens | 2 | 3 | =B2*C2 |', '| Notebooks | 4 | 5 | =B3*C3 |', '| Sum | | | =SUM(D2:D3) |'].join('\n')
     const enSchema = '{"v":1,"nodes":[{"id":"a","shape":"ellipse","x":40,"y":40,"w":120,"h":60,"text":"Start"},{"id":"b","shape":"rect","x":40,"y":160,"w":120,"h":60,"text":"Order"},{"id":"c","shape":"ellipse","x":40,"y":280,"w":120,"h":60,"text":"End"}],"edges":[{"id":"e1","from":"a","to":"b"},{"id":"e2","from":"b","to":"c"}]}'
     const enNote = [
       '# Calculus notes',

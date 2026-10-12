@@ -1,4 +1,5 @@
 import { touchLog } from '../board/touchlog'
+import { texts } from '../i18n'
 import { downloadText } from '../store/files'
 import { ICONS, h, icon } from './dom'
 import { toast } from './toast'
@@ -8,6 +9,37 @@ import { toast } from './toast'
  * quante righe ha, e i modi per mandarlo a Claude (Copia, Scarica, Condividi). Sta nelle impostazioni
  * e nella finestra che apre il pallino rosso sulla lavagna.
  */
+
+/**
+ * Quello che si vede è nella lingua di Glifo; le righe del registro (qui sotto in `touchLogHeader` e in
+ * src/board/touchlog.ts) restano in italiano: le legge Claude, per capire cosa è successo.
+ */
+const T = texts({
+  whatHappened: ['Cosa è successo', 'What happened'],
+  whatHappenedHint: [
+    'Cosa è successo? Per esempio: «scrivendo in basso a destra la lavagna si è spostata». Facoltativo.',
+    'What happened? For example: “writing at the bottom right, the whiteboard moved”. Optional.',
+  ],
+  copy: ['Copia', 'Copy'],
+  copied: (size: string) => [`Registro copiato (${size}): incollalo nella chat con Claude`, `Log copied (${size}): paste it into the chat with Claude`],
+  cantCopy: ['Non riesco a copiarlo: usa «Scarica» e allega il file nella chat con Claude', 'I can\'t copy it: use “Download” and attach the file in the chat with Claude'],
+  download: ['Scarica', 'Download'],
+  downloaded: ['Registro scaricato: allegalo nella chat con Claude', 'Log downloaded: attach it in the chat with Claude'],
+  share: ['Condividi', 'Share'],
+  shareTitle: ['Registro dei tocchi di Glifo', 'Glifo touch log'],
+  cantShare: ['Non riesco a condividerlo: usa «Copia» o «Scarica»', 'I can\'t share it: use “Copy” or “Download”'],
+  clear: ['Svuota', 'Clear'],
+  cleared: ['Registro svuotato', 'Log cleared'],
+  legend: ['Registro dei tocchi (lavagna)', 'Touch log (whiteboard)'],
+  record: ['Registra i tocchi sulla lavagna: penna, dita e quello che fa il browser', 'Record touches on the whiteboard: pen, fingers and what the browser does'],
+  help: [
+    'Serve a capire i problemi su un dispositivo che Claude non ha, come l\'iPad con la penna. Accendilo, usa la lavagna finché succede il problema, poi premi il pallino rosso sulla lavagna (o torna qui), scrivi cosa è successo e mandalo nella chat con Claude: «Copia» per incollarlo, «Scarica» o «Condividi» per allegarlo. Resta in questo browser finché non lo mandi tu, e non contiene il testo delle note.',
+    'It helps understand problems on a device Claude doesn\'t have, like an iPad with a pen. Turn it on, use the whiteboard until the problem happens, then press the red dot on the whiteboard (or come back here), write what happened and send it in the chat with Claude: “Copy” to paste it, “Download” or “Share” to attach it. It stays in this browser until you send it, and it doesn\'t contain the text of your notes.',
+  ],
+  recording: (n: number) => [`Sta registrando: ${n} ${n === 1 ? 'riga' : 'righe'}.`, `Recording: ${n} ${n === 1 ? 'line' : 'lines'}.`],
+  offWith: (n: number) => [`Spento, con ${n} ${n === 1 ? 'riga' : 'righe'} registrate.`, `Off, with ${n} ${n === 1 ? 'line' : 'lines'} recorded.`],
+  off: ['Spento.', 'Off.'],
+})
 
 /** La versione di Glifo (il commit pubblicato, vedi vite.config.ts). */
 declare const __GLIFO_VERSION__: string
@@ -57,53 +89,49 @@ export function touchLogFieldset(): HTMLElement {
     class: 'touch-log-note',
     attrs: {
       rows: 2,
-      'aria-label': 'Cosa è successo',
-      placeholder: 'Cosa è successo? Per esempio: «scrivendo in basso a destra la lavagna si è spostata». Facoltativo.',
+      'aria-label': T.whatHappened,
+      placeholder: T.whatHappenedHint,
     },
   })
   const text = () => touchLog.text(touchLogHeader(), note.value)
   const button = (label: string, paths: string, onClick: () => void) =>
     h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: onClick } }, icon(paths, 15), label)
 
-  const copy = button('Copia', ICONS.copy, async () => {
+  const copy = button(T.copy, ICONS.copy, async () => {
     const value = text()
     try {
       await navigator.clipboard.writeText(value)
-      toast(`Registro copiato (${kb(value)}): incollalo nella chat con Claude`)
+      toast(T.copied(kb(value)))
     } catch {
-      toast('Non riesco a copiarlo: usa «Scarica» e allega il file nella chat con Claude', 'error')
+      toast(T.cantCopy, 'error')
     }
   })
-  const save = button('Scarica', ICONS.download, async () => {
-    if (await downloadText(touchLogFileName(), text())) toast('Registro scaricato: allegalo nella chat con Claude')
+  const save = button(T.download, ICONS.download, async () => {
+    if (await downloadText(touchLogFileName(), text())) toast(T.downloaded)
   })
   // Sull'iPad «Condividi» apre il menu del sistema: di lì si manda all'app di Claude, alla posta…
   const fileOf = () => new File([text()], touchLogFileName(), { type: 'text/plain' })
   const canShare = typeof navigator.canShare === 'function' && navigator.canShare({ files: [new File(['prova'], 'prova.txt', { type: 'text/plain' })] })
-  const share = button('Condividi', ICONS.share, async () => {
+  const share = button(T.share, ICONS.share, async () => {
     try {
-      await navigator.share({ files: [fileOf()], title: 'Registro dei tocchi di Glifo' })
+      await navigator.share({ files: [fileOf()], title: T.shareTitle })
     } catch (err) {
-      if ((err as Error).name !== 'AbortError') toast('Non riesco a condividerlo: usa «Copia» o «Scarica»', 'error')
+      if ((err as Error).name !== 'AbortError') toast(T.cantShare, 'error')
     }
   })
   share.hidden = !canShare
-  const clear = button('Svuota', ICONS.trash, () => {
+  const clear = button(T.clear, ICONS.trash, () => {
     touchLog.clear()
     note.value = ''
-    toast('Registro svuotato')
+    toast(T.cleared)
   })
 
   const fieldset = h(
     'fieldset',
     { class: 'touch-log' },
-    h('legend', {}, 'Registro dei tocchi (lavagna)'),
-    h('label', { class: 'check' }, toggle, h('span', {}, 'Registra i tocchi sulla lavagna: penna, dita e quello che fa il browser')),
-    h(
-      'p',
-      { class: 'field-help' },
-      'Serve a capire i problemi su un dispositivo che Claude non ha, come l\'iPad con la penna. Accendilo, usa la lavagna finché succede il problema, poi premi il pallino rosso sulla lavagna (o torna qui), scrivi cosa è successo e mandalo nella chat con Claude: «Copia» per incollarlo, «Scarica» o «Condividi» per allegarlo. Resta in questo browser finché non lo mandi tu, e non contiene il testo delle note.',
-    ),
+    h('legend', {}, T.legend),
+    h('label', { class: 'check' }, toggle, h('span', {}, T.record)),
+    h('p', { class: 'field-help' }, T.help),
     status,
     note,
     h('div', { class: 'button-row' }, copy, save, share, clear),
@@ -111,7 +139,7 @@ export function touchLogFieldset(): HTMLElement {
   const render = () => {
     toggle.checked = touchLog.on
     const n = touchLog.lines.length
-    status.textContent = touchLog.on ? `Sta registrando: ${n} ${n === 1 ? 'riga' : 'righe'}.` : n ? `Spento, con ${n} ${n === 1 ? 'riga' : 'righe'} registrate.` : 'Spento.'
+    status.textContent = touchLog.on ? T.recording(n) : n ? T.offWith(n) : T.off
     for (const b of [copy, save, share, clear]) b.disabled = n === 0
   }
   const stop = touchLog.onChange(() => (fieldset.isConnected ? render() : stop()))
