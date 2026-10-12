@@ -4,6 +4,7 @@ import { setLangForTests } from '../src/i18n'
 import { blockKind, blockWord } from '../src/noteWords'
 import { renderMarkdown } from '../src/render/markdown'
 import { findFencedBlocks, schemaBlockText } from '../src/schema/blocks'
+import { sheetBlockText } from '../src/spreadsheet/model'
 
 afterEach(() => setLangForTests('it'))
 
@@ -24,11 +25,13 @@ describe('i nomi dei blocchi nelle due lingue', () => {
   it('i pulsanti scrivono il nome della lingua di Glifo', () => {
     expect(blockWord('grafico')).toBe('grafico')
     expect(schemaBlockText('{}')).toBe('```schema\n{}\n```')
+    expect(sheetBlockText('| a |')).toBe('```tabella\n| a |\n```')
     setLangForTests('en')
     expect(blockWord('grafico')).toBe('graph')
     expect(blockWord('tabella')).toBe('table')
     expect(blockWord('schema')).toBe('diagram')
     expect(schemaBlockText('{}')).toBe('```diagram\n{}\n```')
+    expect(sheetBlockText('| a |')).toBe('```table\n| a |\n```')
   })
 
   it('un blocco scritto in inglese si trova come quello italiano', () => {

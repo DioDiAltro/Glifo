@@ -18,7 +18,7 @@ quando i punti sono tutti fatti si cancella, insieme alla voce «La grafica» di
 | 3 | Le impostazioni divise in sezioni | da decidere |
 | 4 | Più modelli per «Spiegami» | da decidere |
 | 5 | A cosa serve la chiave dell'AI | da decidere |
-| 6 | Glifo anche in inglese | la base e le schermate fatte sul ramo `prova`, con il tutorial nuovo e la lingua che va con l'account: da decidere quando va sul sito vero |
+| 6 | Glifo anche in inglese | fatto: tutto tradotto, anche le parole delle note, i numeri, l'AI e l'informativa; sul sito vero dal 12 ottobre 2026 |
 | 7 | Via il registro dei tocchi | deciso: si toglie (manca una risposta) |
 | 8 | Il pulsante ✨ con il contorno | deciso: variante B, fatta sul ramo `prova` |
 
@@ -390,24 +390,39 @@ il 12 ottobre 2026:
   inglese (tutorial, barre e nota di benvenuto in inglese) e torna all'italiano dalle impostazioni.
   Corretto anche «1 simboli trovati» (ora «1 simbolo trovato»).
 
-Restano in italiano, per le prossime volte (tappa 2, seconda parte, e tappe 3-6): i risultati e gli
-errori dei conti (`src/math`), i nomi dei simboli e delle categorie (la ricerca trova già le parole
-inglesi: «infinity», «for all», «square root»), le tabelle (editor e funzioni), i grafici, gli schemi
-(editor e modelli), i messaggi e le spiegazioni dell'AI, le parole delle note in inglese, i numeri con il
-punto, l'informativa, l'email per entrare e i video in inglese. I teoremi scritti in inglese
-(«Theorem», «Definition») il pannello AI ancora non li riconosce.
-
 Lo studente, 12 ottobre 2026, sulla lingua: «le impostazioni devono seguire l'account». Fatto sul ramo
 `prova`: la lingua è un'impostazione come il tema (`language`, tra quelle che vanno con l'account) ed è
 nell'informativa tra le impostazioni salvate nell'account. Scelta su un dispositivo, arriva sugli altri:
 una pagina appena aperta (per esempio subito dopo essere entrati) si ricarica da sola nella lingua
 dell'account; dove si sta già lavorando, Glifo lo dice con «Ricarica». Lo stesso vale per le altre schede.
 
-Da decidere: quando portarlo sul sito vero. Tutto questo lavoro è solo sul sito di prova. Portandolo sul
-sito vero adesso, chi ha il browser in inglese vedrebbe Glifo a metà in inglese (menu e finestre sì;
-conti, nomi dei simboli, tabelle, grafici e spiegazioni dell'AI ancora in italiano), mentre per chi lo usa
-in italiano cambierebbero solo il tutorial nuovo, il pulsante ✨ e la scelta della lingua nelle
-impostazioni. L'altra strada è aspettare di aver tradotto anche il resto e portare tutto insieme.
+Lo studente, 12 ottobre 2026, sulla domanda di quando portarlo sul sito vero: «non puoi tradurre tutto ora e
+poi mettiamo tutto online?». Fatto lo stesso giorno, con le tappe 2-6:
+
+- **le schermate** (tappa 2, la seconda parte): i conti (risultati, controlli, errori, lo studio di funzione,
+  le formule riscritte con `\text{if}` e `\text{otherwise}`), i simboli (521 nomi, le etichette, le
+  categorie e le parole inglesi per la ricerca, che trova con le due lingue e fa pesare quella di Glifo), le
+  tabelle (editor, aiuto delle 68 funzioni con i nomi dell'Excel inglese, errori, modelli), i grafici
+  (scritte, legende, Gantt e reticolo), gli schemi (editor, forme, modelli, SQL), il trasloco e il
+  riquadro del registro dei tocchi (le sue righe restano in italiano: le legge Claude);
+- **le parole delle note** (tappa 3): le italiane valgono sempre e ci sono anche le inglesi, in tutte e due le
+  lingue, e i pulsanti scrivono quelle della lingua di Glifo: ```` ```graph ````, ```` ```table ```` e
+  ```` ```diagram ````; `title:`, `x axis:`, `data:`, `break-even:`, `network:`, `start:`; i nomi delle
+  funzioni nelle formule (`\operatorname{study}`, `domain`, `ci`, `euler`…); i mesi e «none» nei Gantt.
+  Le tabelle invece nella nota restano all'italiana (1,5 e `SOMMA`), e con Glifo in inglese l'editor le
+  mostra e le riceve all'inglese (1.5 e `SUM`);
+- **i numeri** (tappa 4): in inglese con il punto (√2 = 1.414213…), nelle tabelle 1,234.50, le date all'inglese;
+  quando chi prende appunti scrive 0{,}5, Glifo tiene la virgola;
+- **l'AI** (tappa 5): con Glifo in inglese «Spiegami» e l'assistente ricevono tutto in inglese e rispondono in
+  inglese; i teoremi si riconoscono anche scritti in inglese (Theorem, Definition…);
+- **alla fine** (tappa 6): l'informativa in inglese nella stessa pagina (si apre nella lingua di Glifo), i
+  video del tutorial in inglese, la nota di benvenuto con ```` ```graph ````, il testo dell'email per
+  entrare in tutte e due le lingue (da mettere in Supabase: vedi supabase/README.md), la descrizione
+  dell'app installata in tutte e due le lingue.
+
+Una prova nel browser apre Glifo in inglese con una nota scritta con le parole inglesi e controlla che
+nell'anteprima, nel pannello dei simboli, negli editor, nel pannello ✨ e nelle impostazioni non si veda
+italiano.
 
 ## 7. Via il registro dei tocchi
 

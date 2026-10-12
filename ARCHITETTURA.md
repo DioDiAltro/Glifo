@@ -18,22 +18,39 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   no un browser inglese aprirebbe glifo.page in inglese prima degli appunti. I testi:
   `texts({...})` in cima a ogni file (`T`), ogni voce `[italiano, inglese]` o una funzione che compone le
   due frasi intere; `rich` per gli elementi dentro una frase (`{nome}`), `byLang` per i pezzi lunghi (la
-  guida di `openHelpDialog`, le parole della ricerca di CodeMirror), `dateLocale` per le date. Leggere i
-  testi all'import va bene (la lingua non cambia con la pagina aperta); le etichette esportate sono getter,
-  così nelle prove `setLangForTests` cambia lingua. Nelle prove Glifo è in italiano (`tests/support/lang.ts`;
-  nelle prove nel browser `locale: 'it-IT'`, e una apre Glifo con il browser in inglese e torna
-  all'italiano dalle impostazioni). `tests/translations.test.ts` legge i sorgenti con il parser di Vite:
-  ogni tabella ha le due versioni con gli stessi `{nomi}`, e nelle parti tradotte (`TRANSLATED`) non resta
-  italiano scritto nel codice (una stima: frasi con le parole e le lettere dell'italiano, etichette come
-  «Chiudi»; classi CSS e nomi di file no); quello che deve restare italiano (le parole delle note come
-  ```` ```grafico ````, il registro dei tocchi) ha sulla riga il commento «non si traduce». Tradotti:
-  main.ts, src/ui (tranne il registro dei tocchi e il trasloco), lavagna, editor, store, render, account e
-  condivisione; restano src/math, i simboli, le tabelle, i grafici, gli schemi, l'AI e la ricerca. La
-  nota di benvenuto è in `welcome.md` e `welcome.en.md` (`isWelcome` riconosce tutte e due, mai toccate);
-  con Glifo in inglese il controllo ortografico parte con l'inglese solo (`DEFAULT_SETTINGS`).
+  guida di `openHelpDialog`, i modelli delle tabelle, le parole della ricerca di CodeMirror), `dateLocale`
+  per le date, `numberLocale` e `usesDecimalComma` per i numeri (la virgola dei decimali in italiano, il
+  punto in inglese: vale quando Glifo sceglie da sé; se chi prende appunti scrive 0{,}5 o 0.5 si tiene
+  il suo modo). Leggere i testi all'import va bene (la lingua non cambia con la pagina aperta); le
+  etichette esportate e i cataloghi (simboli, forme degli schemi, modelli) sono getter, così nelle prove
+  `setLangForTests` cambia lingua. Nelle prove Glifo è in italiano (`tests/support/lang.ts`; nelle prove nel
+  browser `locale: 'it-IT'`); le prove in inglese sono nei file `*En*.test.ts`, e nel browser una apre
+  Glifo in inglese, torna all'italiano dalle impostazioni, e un'altra scrive una nota con le parole inglesi
+  e controlla che anteprima, simboli, editor, pannello ✨ e impostazioni non mostrino italiano.
+  `tests/translations.test.ts` legge i sorgenti con il parser di Vite: ogni tabella ha le due versioni con
+  gli stessi `{nomi}`, e in `src/` (`TRANSLATED`: dal 12 ottobre 2026 tutto, tranne i dati dei simboli,
+  che controlla `tests/symbolsEn.test.ts`) non resta italiano scritto nel codice (una stima: frasi con le
+  parole e le lettere dell'italiano, etichette come «Chiudi»; classi CSS e nomi di file no); quello che
+  deve restare italiano (le parole del correttore italiano, le parole vuote della ricerca, le righe del
+  registro dei tocchi, le chiavi interne) ha sulla riga il commento «non si traduce». **Le parole delle
+  note** (`src/noteWords.ts`): le italiane valgono per sempre e ci sono le inglesi, lette in tutte e due
+  le lingue, così una nota si legge uguale per tutti; chi scrive nella nota (pulsanti, modelli, risultati,
+  la guida) usa quelle della lingua di Glifo, e una riga che c'è già resta nella sua lingua. I nomi dei
+  blocchi (`blockKind`/`blockWord`: ```grafico/```graph, ```tabella/```table, ```schema/```diagram;
+  dentro il codice si chiamano sempre con il nome italiano), le righe dei grafici (`parseGraphKey`,
+  `graphKeyLine`: titolo/title, asse x/x axis, dati/data, pareggio/break-even, gantt, reticolo/network,
+  inizio/start) e i nomi delle funzioni nelle formule (la tabella italiano → inglese, letta da
+  `FUNCTION_NAMES` di parse.ts; `localizeTex` per il TeX dei simboli inseriti). Le tabelle invece nella
+  nota restano all'italiana (1,5; `SOMMA`; `;`): con Glifo in inglese l'editor le mostra e le riceve
+  all'inglese (`src/spreadsheet/input.ts`). La nota di benvenuto è in `welcome.md` e `welcome.en.md`
+  (`isWelcome` riconosce tutte e due, mai toccate); con Glifo in inglese il controllo ortografico parte con
+  l'inglese solo (`DEFAULT_SETTINGS`). L'informativa (`privacy.html`) ha le due versioni nella stessa
+  pagina e si apre nella lingua di Glifo (`#it`/`#en` la scelgono); i video del tutorial inglesi sono in
+  `public/tutorial/en/`.
 - `src/symbols/`: catalogo dei simboli; per aggiungerne uno vedi «Aggiungere un
   simbolo» nel README.
-- `src/search/`: ricerca a parole in italiano e suggerimenti mentre si scrive `\…`.
+- `src/search/`: ricerca a parole in italiano e in inglese (con tutte e due le lingue, e quella di Glifo
+  pesa di più) e suggerimenti mentre si scrive `\…`.
 - `src/editor/`: editor CodeMirror 6 (formule, segnaposto, suggerimenti, `spellcheck.ts`,
   `lists.ts` per Invio/Tab/Maiusc+Tab negli elenchi).
 - `src/lists/markers.ts`: i marcatori degli elenchi (1), a), i), es), •…), usati da editor e
@@ -176,15 +193,17 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   ritorno (`fromExcelFormula`: le virgole inglesi sono sempre separatori; quelle che Glifo non sa fare
   restano valori, `valuesOnly`), con le formule condivise spostate (`shiftFormula`) e i formati che le
   formule hanno già da soli tolti (`dropInferredFormats`); le date diventano testo. I .csv si leggono
-  con il separatore capito da solo (`csvDelimiter`) e si scrivono per l'Excel italiano (punto e
-  virgola, i valori come si vedono, BOM). Un testo che sembrerebbe un numero o una formula prende
+  con il separatore e il modo dei numeri capiti da soli (`csvDelimiter`) e si scrivono per l'Excel della
+  lingua di Glifo (in italiano punto e virgola e 1.234,50; in inglese virgola e 1,234.50; i valori come si
+  vedono, BOM). Un testo che sembrerebbe un numero o una formula prende
   l'apostrofo (`textCell`). «Apri .md» apre anche .xlsx e .csv (`OpenedFile.bytes` in
   `src/store/files.ts`, `tablesNote` in `main.ts`: una nota con una tabella per foglio); di questi file
   non si tiene l'handle, se no «Salva .md» ci scriverebbe sopra. Nella barra il pulsante della tabella è un menu (`tableMenu` in
   `src/ui/toolbar.ts`): con le formule o di testo, perché la barra deve stare in una riga. Per le
   prove nel browser le celle della griglia hanno l'id `sheet-<riga>-<colonna>` (da 0).
 - `src/math/`: le espressioni delle formule (LaTeX o da calcolatrice): `parse.ts` le legge, `evaluate.ts`
-  le calcola (`exact.ts` con le frazioni, `format.ts` scrive i risultati all'italiana; `domain.ts` i
+  le calcola (`exact.ts` con le frazioni, `format.ts` scrive i risultati con la virgola o il punto, come
+  dice chi chiama; `domain.ts` i
   domini degli integrali doppi e tripli `\iint_D`: un «margine» positivo dentro, le condizioni una per
   una, gli strati quando ogni variabile sta tra due estremi; `complex.ts` i numeri complessi: si usano
   quando una formula ha la i o non ha un valore reale, con le frazioni esatte `GaussRational`, le radici
@@ -400,7 +419,7 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   caricarlo) e i messaggi con il worker; `llmWorker.ts` il worker con WebLLM (6 MB, solo lì: la pagina
   non lo importa mai), senza il ragionamento (`enable_thinking: false`); `local.ts` il lato pagina
   (`LocalLlm`, uno per pagina con `localLlm()`: carica una volta, risposte a pezzi, `stop` con Annulla,
-  `localErrorMessage` in italiano). `tools.ts` il motore come strumenti nel formato dei Qwen3
+  `localErrorMessage` nella lingua di Glifo: il worker manda solo un codice). `tools.ts` il motore come strumenti nel formato dei Qwen3
   (`<tools>` nel messaggio di sistema, `<tool_call>` letti dal testo con le barre del LaTeX aggiustate,
   `<tool_response>` in un messaggio dell'utente): calcola, controlla, deriva, primitiva, risolvi, ognuno
   su un foglio nuovo con le definizioni della nota (`sheetFactory`); `checkFormula` controlla un
@@ -433,7 +452,7 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   foglio solo dall'alto in basso come i risultati, i blocchi ```grafico chiusi con le definizioni scritte
   prima, le formule senza un conto che dicono qualcosa, una volta sola (`worthExplaining`: una relazione o
   delle operazioni, non $x$, $\alpha$ o $\mathbb{R}$), e i teoremi del testo (`theoremsIn`: un titolo o un
-  paragrafo, anche in un elenco, che comincia con Teorema, Definizione, Lemma, Proprietà…, fuori dai
+  paragrafo, anche in un elenco, che comincia con Teorema, Definizione, Lemma, Proprietà… o con Theorem, Definition, Property…, fuori dai
   blocchi di codice; le formule dentro le spiega lui), e i blocchi ```schema e ```tabella chiusi che si
   leggono, con il nome da mostrare (`schemaTitle`, `tableTitle`); dall'albero completo di `ensureSyntaxTree`, che lo
   stato non restituisce: `formulasUntil` lo prende come `tree`) e, scelto uno, la spiegazione in un `ExplainPanel` suo (`explainSubject` con un

@@ -723,13 +723,17 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
   con le formule (nel file in inglese, come le vuole Excel: SOMMA diventa SUM), i risultati, i
   formati in euro e in percentuale, il grassetto e l'intestazione bloccata; si apre in Excel, in
   LibreOffice e in Fogli Google. **Scarica come .csv** dà i valori come si vedono, con il punto e
-  virgola dell'Excel italiano. **Apri un file Excel o .csv…** mette al posto della tabella un foglio
+  virgola dell'Excel italiano (con Glifo in inglese con la virgola e i numeri all'inglese). **Apri un file Excel o .csv…** mette al posto della tabella un foglio
   di un file .xlsx (con più fogli si sceglie quale) o un .csv (con il punto e virgola, la virgola o il
   tabulatore, i numeri all'italiana o all'inglese): le formule tornano in italiano; quelle con
   funzioni che Glifo non ha, o con altri fogli, restano con il loro valore (lo dice), le date
   diventano testo. Prima si chiede, e Annulla riporta la tabella com'era. Anche **Apri .md**, nella
   barra laterale, apre un file .xlsx o .csv: diventa una nota con una tabella per foglio.
-- Nella nota la tabella è un blocco ` ```tabella `, una riga di testo per ogni riga della tabella
+- **Con Glifo in inglese** l'editor è quello dell'Excel inglese: i numeri 1,234.50, le funzioni SUM, IF…
+  con la virgola tra gli argomenti, TRUE, #N/A, l'aiuto e i modelli in inglese. Nella nota però la
+  tabella resta scritta all'italiana (1,5; `SOMMA`; il punto e virgola), così si legge uguale in tutte e
+  due le lingue: l'editor la traduce mentre la mostra e mentre si scrive (`src/spreadsheet/input.ts`).
+- Nella nota la tabella è un blocco ` ```tabella ` (` ```table ` con Glifo in inglese), una riga di testo per ogni riga della tabella
   (`| Penne | 10 | 1,50 € | =B2*C2 |`): nell'**anteprima** si vede con i risultati, i numeri
   allineati a destra, l'intestazione e il grassetto; passando sopra una cella si legge la formula.
   Nel testo è una riga «Tabella · 4 righe, 4 colonne · …» con «Modifica» (anche il doppio clic
@@ -826,11 +830,13 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
   qualche secondo), e da lì si arriva a tutte le scorciatoie.
 - **Italiano e inglese**: in *Impostazioni → Lingua*; la prima volta Glifo
   prende la lingua del browser (chi aveva già gli appunti resta in italiano). Con l'account la lingua
-  è la stessa su tutti i dispositivi, come il tema. Per ora in inglese sono
-  tradotte le schermate (barre, finestre, pannelli, lavagna, account, condivisione, commenti, guida e
-  tutorial) e la nota di benvenuto; i conti, i nomi dei simboli, le tabelle, i grafici, gli schemi e
-  l'AI restano in italiano, e si traducono dopo (GRAFICA.md, punto 6). La lingua in cui si scrive è
-  un'altra cosa: la sceglie il controllo ortografico.
+  è la stessa su tutti i dispositivi, come il tema. In inglese c'è tutto: le schermate, i conti (con i
+  numeri con il punto), i simboli (si cercano anche a parole inglesi), le tabelle (con i nomi dell'Excel
+  inglese), i grafici, gli schemi, l'AI (che risponde in inglese), il tutorial con i suoi video,
+  l'informativa e la nota di benvenuto. Anche le parole delle note hanno la versione inglese
+  (```` ```graph ````, `title:`, `\operatorname{study}`…): valgono tutte e due in tutte e due le lingue,
+  così una nota si legge uguale per tutti, e i pulsanti scrivono quelle della lingua di Glifo. La lingua
+  in cui si scrive è un'altra cosa: la sceglie il controllo ortografico.
 - Sezioni in tonalità diverse (la cornice è più scura del foglio su cui si scrive) e **da
   allargare o stringere**: trascina il bordo dell'elenco degli appunti, del pannello dei
   simboli o quello tra testo e anteprima (o usa le frecce, quando il bordo ha il fuoco); con un
@@ -1162,15 +1168,17 @@ supabase/                 il database degli account: tabelle, regole di accesso 
 I simboli stanno in `src/symbols/data/`. Ogni voce è una riga:
 
 ```ts
-c(r`\iint`, 'integrale doppio', 'integrale doppio, doppio integrale, double integral', {
-  u: '∬',                                       // carattere Unicode (per la ricerca)
-  w: 5,                                         // popolarità da 0 a 10
-  f: [r`\iint`, [r`\iint_{#}`, 'su un dominio']], // varianti: # = segnaposto
+c(r`\iint`, ['integrale doppio', 'double integral'], ['integrale doppio, doppio integrale', 'double integral, surface integral'], {
+  u: '∬',                                                      // carattere Unicode (per la ricerca)
+  w: 5,                                                        // popolarità da 0 a 10
+  f: [r`\iint`, [r`\iint_{#}`, ['su un dominio', 'over a region']]], // varianti: # = segnaposto
 })
 ```
 
-`npm test` controlla automaticamente che ogni simbolo e ogni variante siano formule valide
-per KaTeX e che la ricerca continui a trovare le risposte giuste.
+Nome, parole per la ricerca, etichette e note hanno le due versioni, `[italiano, inglese]` (una stringa
+sola se sono uguali). `npm test` controlla automaticamente che ogni simbolo e ogni variante siano formule
+valide per KaTeX, che ci sia l'inglese (`tests/symbolsEn.test.ts`) e che la ricerca continui a trovare
+le risposte giuste, nelle due lingue.
 
 ### Scrivere un testo dell'interfaccia
 
@@ -1191,8 +1199,10 @@ h('p', {}, ...rich(T.help, { key: h('kbd', {}, 'Ctrl+K') }))
 Le frasi con dei valori si compongono intere in ogni lingua (con una funzione), mai a pezzi; i pezzi
 lunghi, come le pagine della guida, si scrivono interi con `byLang({ it: () => …, en: () => … })`.
 `npm test` controlla che ogni testo abbia l'inglese, con gli stessi nomi tra graffe, e che nelle parti
-già tradotte (`TRANSLATED` in `tests/translations.test.ts`) non resti italiano scritto direttamente nel
-codice. Le parole che si scrivono nelle note (```` ```grafico ````, `titolo:`…) non si traducono.
+già tradotte (`TRANSLATED` in `tests/translations.test.ts`, cioè tutto `src/`) non resti italiano scritto
+direttamente nel codice. Le parole che si scrivono nelle note (```` ```grafico ````, `titolo:`,
+`\operatorname{studio}`…) hanno anche la versione inglese, in `src/noteWords.ts`: il lettore le accetta
+tutte e due in tutte e due le lingue, e chi scrive nella nota usa quella della lingua di Glifo.
 
 ## Licenze
 

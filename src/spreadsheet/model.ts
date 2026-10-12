@@ -18,6 +18,7 @@
  * scritto: =D3/D5 {0,0%} (vedi `formatCode`). Il carattere | dentro una cella si scrive \|.
  */
 import { formatCode, parseFormatCode, type Format } from './format'
+import { blockWord } from '../noteWords'
 
 export interface SheetCell {
   /** Quello che si scrive nella cella: un numero, un testo o una formula che comincia con =. */
@@ -173,7 +174,7 @@ export function serializeSheet(model: SheetModel): string {
   return lines.join('\n')
 }
 
-/** Il blocco da mettere nella nota. */
+/** Il blocco da mettere nella nota, con il nome nella lingua di Glifo (```tabella o ```table). */
 export function sheetBlockText(source: string): string {
-  return '```tabella\n' + source + (source ? '\n' : '') + '```'
+  return '```' + blockWord('tabella') + '\n' + source + (source ? '\n' : '') + '```'
 }
