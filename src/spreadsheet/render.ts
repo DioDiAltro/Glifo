@@ -1,14 +1,21 @@
 /**
  * La tabella nell'anteprima della nota: i risultati delle formule nel formato delle celle, i numeri
  * a destra, i testi con il loro Markdown (grassetto, formule $…$). Passando sopra una cella con una
- * formula si vede la formula, sopra un errore cosa è successo.
+ * formula si vede la formula, sopra un errore cosa è successo. Numeri, VERO/FALSO, errori e formule
+ * nella lingua di Glifo (1.234,50 € e =SOMMA(B2:B5) in italiano, €1,234.50 e =SUM(B2:B5) in inglese).
  */
+import { texts } from '../i18n'
 import { escapeHtml } from '../render/katex'
 import { SheetEvaluator, type CellResult } from './evaluate'
-import { formatNumber } from './format'
+import { booleanText, errorText, formatNumber } from './format'
+import { shownInput } from './input'
 import { parseSheet, sheetSize, type SheetModel } from './model'
 import { cellName } from './refs'
 import { isError } from './values'
+
+const T = texts({
+  empty: ['Tabella vuota', 'Empty table'],
+})
 
 /** Il testo di una cella come si scrive nella nota (`inline` lo passa dal Markdown in linea). */
 export type InlineRenderer = (text: string) => string
@@ -28,7 +35,7 @@ function numericColumns(model: SheetModel, results: CellResult[][], cols: number
 export function sheetHtml(source: string, inline: InlineRenderer): string {
   const model = parseSheet(source)
   const { rows, cols } = sheetSize(model)
-  if (!rows) return '<p class="sheet-empty">Tabella vuota</p>'
+  if (!rows) return `<p class="sheet-empty">${T.empty}</p>`
   const evaluator = new SheetEvaluator(model)
   const results = Array.from({ length: rows }, (_, r) => Array.from({ length: cols }, (_, c) => evaluator.result(r, c)))
   const numeric = numericColumns(model, results, cols)
@@ -38,18 +45,18 @@ export function sheetHtml(source: string, inline: InlineRenderer): string {
     const res = results[r][c]
     const classes: string[] = []
     let content = ''
-    let title = res.formula && cell ? `${cellName(r, c)}: ${cell.input}` : ''
+    let title = res.formula && cell ? `${cellName(r, c)}: ${shownInput(cell.input)}` : ''
     const v = res.value
     if (isError(v)) {
       classes.push('sheet-error')
-      content = escapeHtml(v.error)
+      content = escapeHtml(errorText(v.error))
       title = title ? `${title}\n${v.message}` : v.message
     } else if (typeof v === 'number') {
       classes.push('sheet-num')
       content = escapeHtml(formatNumber(v, res.format))
     } else if (typeof v === 'boolean') {
       classes.push('sheet-bool')
-      content = v ? 'VERO' : 'FALSO'
+      content = booleanText(v)
     } else if (typeof v === 'string') {
       // Il testo scritto ha il suo Markdown; quello che esce da una formula si mostra com'è.
       content = res.formula ? escapeHtml(v) : inline(v)
@@ -78,8 +85,9 @@ export function sheetHtml(source: string, inline: InlineRenderer): string {
 
 /**
  * La tabella come tabella di Markdown, con i risultati al posto delle formule: per i file .md, che
- * così si leggono anche fuori da Glifo. Markdown vuole sempre l'intestazione: senza, fa da
- * intestazione la prima riga.
+ * così si leggono anche fuori da Glifo (i valori come si vedono, nella lingua di Glifo: aprendo il
+ * file con Glifo questa tabella si butta e torna il blocco). Markdown vuole sempre l'intestazione:
+ * senza, fa da intestazione la prima riga.
  */
 export function sheetMarkdown(source: string): string {
   const model = parseSheet(source)
@@ -91,7 +99,7 @@ export function sheetMarkdown(source: string): string {
   const text = (r: number, c: number) => {
     const res = results[r][c]
     const v = res.value
-    let s = isError(v) ? v.error : typeof v === 'number' ? formatNumber(v, res.format) : typeof v === 'boolean' ? (v ? 'VERO' : 'FALSO') : (v ?? '')
+    let s = isError(v) ? errorText(v.error) : typeof v === 'number' ? formatNumber(v, res.format) : typeof v === 'boolean' ? booleanText(v) : (v ?? '')
     s = s.replace(/\|/g, '\\|')
     return s && model.cells[r]?.[c]?.bold ? `**${s}**` : s
   }

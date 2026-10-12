@@ -194,7 +194,7 @@ export function autoSum(results: CellResult[][], row: number, col: number): stri
 
 // ——— Gli appunti, con Excel e Fogli Google ———
 
-/** Le celle come le copia Excel: i valori come si vedono, separati da tabulazioni e a capo. */
+/** Le celle come le copia Excel: i valori come si vedono (nella lingua di Glifo), separati da tabulazioni e a capo. */
 export function rangeToTsv(model: SheetModel, results: CellResult[][], r: CellRange): string {
   const lines: string[] = []
   for (let row = r.top; row <= r.bottom; row++) {
@@ -247,14 +247,19 @@ export function parseTsv(text: string): string[][] {
   return rows.map((r) => r.map((c) => c.replace(/\n/g, ' ').trim()))
 }
 
-/** Le celle da incollare dal testo: senza tabulazioni e con le | è una tabella di Markdown (anche con grassetto e formati). */
-export function clipFromText(text: string): Clip {
+/**
+ * Le celle da incollare dal testo: senza tabulazioni e con le | è una tabella di Markdown (anche con
+ * grassetto e formati, scritta come nella nota). Le celle copiate da Excel o da Fogli Google sono
+ * quello che si scriverebbe: `typed` le riscrive come vanno nella nota (con Glifo in inglese, vedi
+ * `storedInput` in input.ts).
+ */
+export function clipFromText(text: string, typed?: (input: string) => string): Clip {
   const lines = text.trim().split(/\r?\n/)
   let cells: (SheetCell | undefined)[][]
   if (!text.includes('\t') && lines.every((l) => l.trim().startsWith('|'))) {
     cells = lines.filter((l, i) => !(i === 1 && isDelimiterRow(l))).map((l) => splitRow(l).map(parseCell))
   } else {
-    cells = parseTsv(text).map((r) => r.map((c) => (c ? { input: c } : undefined)))
+    cells = parseTsv(text).map((r) => r.map((c) => (c ? { input: typed ? typed(c) : c } : undefined)))
   }
   const cols = Math.max(1, ...cells.map((r) => r.length))
   return { rows: cells.length, cols, cells: cells.map((r) => Array.from({ length: cols }, (_, c) => r[c])), from: { row: 0, col: 0 } }

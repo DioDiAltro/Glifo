@@ -9,13 +9,18 @@
  * Mentre si scrive una formula, un clic su una cella (o le frecce, subito dopo un operatore) ne
  * scrive il nome, come in Excel; le celle usate dalla formula si colorano. Menu e messaggi stanno
  * dentro la finestra dell'editor, che è modale.
+ *
+ * Con Glifo in inglese numeri, formule e funzioni si vedono e si scrivono come nell'Excel inglese
+ * (€1.50, =SUM(B2, C2)); nella nota le celle vanno sempre all'italiana (vedi input.ts).
  */
+import { texts } from '../i18n'
 import { confirmDialog } from '../ui/dialogs'
 import { h, icon, ICONS } from '../ui/dom'
 import { SheetEvaluator, type CellResult } from './evaluate'
-import { decimalsOf, formatValue, generalNumber, GENERAL, MAX_DECIMALS, readInput, sameFormat, type Format } from './format'
-import { formulaRefs, isFormula, normalizeFormula, tokenize } from './formula'
-import { allFunctions, lookupFunction, type FunctionSpec } from './functions'
+import { decimalsOf, errorText, formatValue, generalNumber, GENERAL, ITALIAN, MAX_DECIMALS, readInput, sameFormat, type Format } from './format'
+import { formulaRefs, isFormula, tokenize } from './formula'
+import { allFunctions, englishName, lookupFunction, shownName, type FunctionSpec } from './functions'
+import { englishTyping, shownInput, storedInput } from './input'
 import { MAX_COLS, MAX_ROWS, parseSheet, serializeSheet, sheetSize, type SheetCell, type SheetModel } from './model'
 import {
   autoSum,
@@ -43,6 +48,132 @@ import { isPlanRange } from './plan'
 import { csvToSheet, sheetToCsv } from './csv'
 import { sheetToXlsx, xlsxSheets, XlsxError, type XlsxSheet } from './xlsx'
 import { downloadBlob, downloadText, fileNameFor } from '../store/files'
+
+const T = texts({
+  table: ['Tabella', 'Table'],
+  tools: ['Strumenti della tabella', 'Table tools'],
+  undo: ['Annulla (Ctrl+Z)', 'Undo (Ctrl+Z)'],
+  redo: ['Ripeti (Ctrl+Y)', 'Redo (Ctrl+Y)'],
+  bold: ['Grassetto (Ctrl+B)', 'Bold (Ctrl+B)'],
+  header: ['Intestazione', 'Header'],
+  headerTitle: ['La prima riga è l\'intestazione della tabella', 'The first row is the header of the table'],
+  autoSum: ['Somma automatica: la somma dei numeri sopra (o a sinistra)', 'AutoSum: the sum of the numbers above (or to the left)'],
+  euro: ['Euro: 1.234,50 €', 'Euro: €1,234.50'],
+  percent: ['Percentuale: 22%', 'Percentage: 22%'],
+  thousands: ['Numero con i punti delle migliaia: 1.234,50', 'Number with thousands separators: 1,234.50'],
+  fewerDecimalsIcon: ['←,0', '←.0'],
+  fewerDecimals: ['Meno decimali', 'Fewer decimals'],
+  moreDecimalsIcon: [',00→', '.00→'],
+  moreDecimals: ['Più decimali', 'More decimals'],
+  rows: ['Righe', 'Rows'],
+  rowsTitle: ['Aggiungi o togli righe', 'Add or remove rows'],
+  cols: ['Colonne', 'Columns'],
+  colsTitle: ['Aggiungi o togli colonne', 'Add or remove columns'],
+  chartTitle: [
+    'Il grafico delle celle scelte, sotto la tabella nella nota: la prima colonna sull\'asse x, le altre come linee (con le attività di un progetto, il diagramma di Gantt o il reticolo)',
+    'A graph of the selected cells, below the table in the note: the first column on the x-axis, the others as lines (with a project\'s activities, the Gantt chart or the network diagram)',
+  ],
+  chart: ['Grafico', 'Graph'],
+  file: ['File', 'File'],
+  fileTitle: ['Apri un file di Excel (.xlsx) o .csv, o scarica la tabella', 'Open an Excel (.xlsx) or .csv file, or download the table'],
+  templates: ['Modelli', 'Templates'],
+  templatesTitle: ['Tabelle pronte da cui partire', 'Ready-made tables to start from'],
+  close: ['Chiudi', 'Close'],
+  done: ['Fatto', 'Done'],
+  address: ['Cella scelta (scrivi un nome come D10 per andarci)', 'Selected cell (type a name like D10 to go there)'],
+  formulaBar: ['Contenuto della cella: un numero, un testo o una formula che comincia con =', 'Cell contents: a number, text or a formula starting with ='],
+  cells: ['Celle della tabella', 'Table cells'],
+  cellInput: ['Contenuto della cella', 'Cell contents'],
+  fillHandle: ['Trascina per riempire le celle vicine', 'Drag to fill the nearby cells'],
+  grid: ['Tabella: le frecce scelgono la cella, scrivi per riempirla', 'Table: the arrow keys select a cell, type to fill it'],
+  functions: ['Funzioni', 'Functions'],
+  editor: ['Editor della tabella', 'Table editor'],
+  selectAll: ['Scegli tutta la tabella', 'Select the whole table'],
+  formulaHint: [
+    'Clicca una cella (o usa le frecce dopo un operatore) per scriverne il nome; F4 mette il $. Invio conferma, Esc annulla.',
+    'Click a cell (or use the arrow keys after an operator) to write its name; F4 adds the $. Enter confirms, Esc cancels.',
+  ],
+  typingHint: [
+    'Invio conferma e va sotto, Tab va a destra, Esc annulla. Una formula comincia con =.',
+    'Enter confirms and moves down, Tab moves right, Esc cancels. A formula starts with =.',
+  ],
+  cellHint: [
+    'Scrivi un numero (anche 1,50 € o 22%), un testo o una formula che comincia con =, come =B2*C2 o =SOMMA(B2:B5).',
+    'Type a number (also €1.50 or 22%), text or a formula starting with =, like =B2*C2 or =SUM(B2:B5).',
+  ],
+  noAutoSum: [
+    'Sopra e a sinistra non ci sono numeri da sommare: scrivi tu =SOMMA(…)',
+    'There are no numbers to add above or to the left: type =SUM(…) yourself',
+  ],
+  replaceTitle: ['Sostituire la tabella?', 'Replace the table?'],
+  replaceTemplate: ['Al posto di quello che c\'è adesso arriva il modello.', 'The template will replace what\'s there now.'],
+  replaceSheet: (sheet: string, file: string) => [
+    `Al posto di quello che c'è adesso arriva il foglio «${sheet}» di «${file}».`,
+    `Sheet “${sheet}” of “${file}” will replace what's there now.`,
+  ],
+  replaceFile: (file: string) => [`Al posto di quello che c'è adesso arriva la tabella di «${file}».`, `The table in “${file}” will replace what's there now.`],
+  replaceNote: ['Se cambi idea, Annulla (Ctrl+Z) la riporta com\'era.', 'If you change your mind, Undo (Ctrl+Z) brings it back.'],
+  replace: ['Sostituisci', 'Replace'],
+  openFile: ['Apri un file Excel o .csv…', 'Open an Excel or .csv file…'],
+  downloadXlsx: ['Scarica come Excel (.xlsx)', 'Download as Excel (.xlsx)'],
+  downloadCsv: ['Scarica come .csv', 'Download as .csv'],
+  fileName: ['tabella', 'table'],
+  noCells: (file: string) => [`«${file}» non ha celle da aprire.`, `“${file}” has no cells to open.`],
+  valuesOnly: (n: number) => [
+    n === 1 ? 'una formula usa funzioni o fogli che Glifo non ha: resta il suo valore' : `${n} formule usano funzioni o fogli che Glifo non ha: restano i loro valori`,
+    n === 1 ? 'one formula uses functions or sheets that Glifo doesn\'t have: its value is kept' : `${n} formulas use functions or sheets that Glifo doesn't have: their values are kept`,
+  ],
+  cut: (rows: number, cols: number) => [
+    `le tabelle di Glifo hanno al massimo ${rows} righe e ${cols} colonne: il resto è rimasto fuori`,
+    `Glifo tables have at most ${rows} rows and ${cols} columns: the rest was left out`,
+  ],
+  openedSheet: (sheet: string, extra: string) => [`Aperto il foglio «${sheet}»${extra ? `; ${extra}` : ''}.`, `Opened sheet “${sheet}”${extra ? `; ${extra}` : ''}.`],
+  sheetRows: (sheet: string, rows: number) => [`${sheet} · ${rows} ${rows === 1 ? 'riga' : 'righe'}`, `${sheet} · ${rows} ${rows === 1 ? 'row' : 'rows'}`],
+  chooseSheet: (file: string, n: number) => [`«${file}» ha ${n} fogli: scegli quale aprire.`, `“${file}” has ${n} sheets: choose which one to open.`],
+  openedFile: (file: string, extra: string) => [`Aperto «${file}»${extra ? `; ${extra}` : ''}.`, `Opened “${file}”${extra ? `; ${extra}` : ''}.`],
+  cantOpen: (file: string) => [`«${file}» non si riesce ad aprire.`, `“${file}” can't be opened.`],
+  excelDownloaded: ['File di Excel scaricato', 'Excel file downloaded'],
+  csvDownloaded: ['File .csv scaricato', '.csv file downloaded'],
+  insertRowsAbove: (n: number) => [`Aggiungi ${n === 1 ? 'una riga' : `${n} righe`} sopra`, `Insert ${n === 1 ? 'a row' : `${n} rows`} above`],
+  insertRowsBelow: (n: number) => [`Aggiungi ${n === 1 ? 'una riga' : `${n} righe`} sotto`, `Insert ${n === 1 ? 'a row' : `${n} rows`} below`],
+  deleteRows: (n: number, from: number, to: number) => [
+    n === 1 ? `Elimina la riga (riga ${from})` : `Elimina le ${n} righe (righe ${from}–${to})`,
+    n === 1 ? `Delete row ${from}` : `Delete rows ${from}–${to}`,
+  ],
+  insertColsLeft: (n: number) => [
+    `Aggiungi ${n === 1 ? 'una colonna' : `${n} colonne`} a sinistra`,
+    `Insert ${n === 1 ? 'a column' : `${n} columns`} to the left`,
+  ],
+  insertColsRight: (n: number) => [
+    `Aggiungi ${n === 1 ? 'una colonna' : `${n} colonne`} a destra`,
+    `Insert ${n === 1 ? 'a column' : `${n} columns`} to the right`,
+  ],
+  deleteCols: (n: number, from: string, to: string) => [
+    n === 1 ? `Elimina la colonna (colonna ${from})` : `Elimina le ${n} colonne (colonne ${from}–${to})`,
+    n === 1 ? `Delete column ${from}` : `Delete columns ${from}–${to}`,
+  ],
+  copied: (n: number, cut: boolean) => [
+    n === 1 ? (cut ? 'Tagliata 1 cella' : 'Copiata 1 cella') : cut ? `Tagliate ${n} celle` : `Copiate ${n} celle`,
+    n === 1 ? (cut ? '1 cell cut' : '1 cell copied') : cut ? `${n} cells cut` : `${n} cells copied`,
+  ],
+  pasteHint: ['Per incollare da fuori usa Ctrl+V (⌘V sul Mac)', 'To paste from outside, use Ctrl+V (⌘V on a Mac)'],
+  cutCells: ['Taglia', 'Cut'],
+  copy: ['Copia', 'Copy'],
+  paste: ['Incolla', 'Paste'],
+  clear: ['Svuota le celle', 'Clear cells'],
+  deleteKey: ['Canc', 'Del'],
+  fillDown: ['Riempi in basso', 'Fill down'],
+  fillRight: ['Riempi a destra', 'Fill right'],
+  saved: ['Salvato nella nota', 'Saved in the note'],
+  gantt: ['Diagramma di Gantt', 'Gantt chart'],
+  network: ['Reticolo (PERT) con il percorso critico', 'Network diagram (PERT) with the critical path'],
+  networkTitle: ['Reticolo del progetto', 'Project network'],
+  closeTitle: ['Chiudere senza salvare?', 'Close without saving?'],
+  closeMessage: ['Le ultime modifiche alla tabella non sono ancora nella nota.', 'The latest changes to the table aren\'t in the note yet.'],
+  closeConfirm: ['Chiudi senza salvare', 'Close without saving'],
+  closeCancel: ['Torna alla tabella', 'Back to the table'],
+  addressHint: ['Scrivi il nome di una cella, come D10, o di un intervallo, come B2:D5', 'Type the name of a cell, like D10, or of a range, like B2:D5'],
+})
 
 export interface SheetEditorOptions {
   sheet: SheetModel
@@ -165,84 +296,84 @@ class SheetEditor {
       h('button', { class: `sheet-tool ${extra}`.trim(), title: label, attrs: { type: 'button', 'aria-label': label }, on: { click: () => this.toolbarRun(run) } }, text)
     const sep = () => h('span', { class: 'toolbar-sep', attrs: { 'aria-hidden': 'true' } })
 
-    this.undoButton = iconButton('Annulla (Ctrl+Z)', PATHS.undo, () => this.runUndo(false))
-    this.redoButton = iconButton('Ripeti (Ctrl+Y)', PATHS.redo, () => this.runUndo(true))
-    this.boldButton = iconButton('Grassetto (Ctrl+B)', ICONS.bold, () => this.toggleBold(), 'sheet-toggle')
-    this.headerButton = textButton('Intestazione', 'La prima riga è l\'intestazione della tabella', () => this.toggleHeader(), 'sheet-toggle')
+    this.undoButton = iconButton(T.undo, PATHS.undo, () => this.runUndo(false))
+    this.redoButton = iconButton(T.redo, PATHS.redo, () => this.runUndo(true))
+    this.boldButton = iconButton(T.bold, ICONS.bold, () => this.toggleBold(), 'sheet-toggle')
+    this.headerButton = textButton(T.header, T.headerTitle, () => this.toggleHeader(), 'sheet-toggle')
     this.status = h('span', { class: 'schema-status', attrs: { 'aria-live': 'polite' } })
 
     const bar = h(
       'header',
       { class: 'schema-bar sheet-bar' },
-      h('h2', { class: 'schema-title' }, 'Tabella'),
+      h('h2', { class: 'schema-title' }, T.table),
       h(
         'div',
-        { class: 'schema-tools sheet-tools', attrs: { role: 'toolbar', 'aria-label': 'Strumenti della tabella' } },
+        { class: 'schema-tools sheet-tools', attrs: { role: 'toolbar', 'aria-label': T.tools } },
         this.undoButton,
         this.redoButton,
         sep(),
-        textButton('Σ', 'Somma automatica: la somma dei numeri sopra (o a sinistra)', () => this.runAutoSum(), 'sheet-sigma'),
-        textButton('€', 'Euro: 1.234,50 €', () => this.toggleFormat('euro')),
-        textButton('%', 'Percentuale: 22%', () => this.toggleFormat('percent')),
-        textButton('000', 'Numero con i punti delle migliaia: 1.234,50', () => this.toggleFormat('number')),
-        textButton('←,0', 'Meno decimali', () => this.changeDecimals(-1)),
-        textButton(',00→', 'Più decimali', () => this.changeDecimals(1)),
+        textButton('Σ', T.autoSum, () => this.runAutoSum(), 'sheet-sigma'),
+        textButton('€', T.euro, () => this.toggleFormat('euro')),
+        textButton('%', T.percent, () => this.toggleFormat('percent')),
+        textButton('000', T.thousands, () => this.toggleFormat('number')),
+        textButton(T.fewerDecimalsIcon, T.fewerDecimals, () => this.changeDecimals(-1)),
+        textButton(T.moreDecimalsIcon, T.moreDecimals, () => this.changeDecimals(1)),
         sep(),
         this.boldButton,
         this.headerButton,
         sep(),
-        this.menuButton('Righe', 'Aggiungi o togli righe', PATHS.rows, () => this.rowEntries()),
-        this.menuButton('Colonne', 'Aggiungi o togli colonne', PATHS.cols, () => this.colEntries()),
+        this.menuButton(T.rows, T.rowsTitle, PATHS.rows, () => this.rowEntries()),
+        this.menuButton(T.cols, T.colsTitle, PATHS.cols, () => this.colEntries()),
         ...(options.onChart
           ? [
               h(
                 'button',
                 {
                   class: 'btn sheet-menu-button sheet-chart',
-                  title: 'Il grafico delle celle scelte, sotto la tabella nella nota: la prima colonna sull\'asse x, le altre come linee (con le attività di un progetto, il diagramma di Gantt o il reticolo)',
+                  title: T.chartTitle,
                   attrs: { type: 'button' },
                   on: { click: (ev) => this.makeChart(ev.currentTarget as HTMLButtonElement) },
                 },
                 icon(PATHS.chart, 16),
-                'Grafico',
+                T.chart,
               ),
             ]
           : []),
       ),
       h('div', { class: 'schema-spacer' }),
       this.status,
-      this.menuButton('File', 'Apri un file di Excel (.xlsx) o .csv, o scarica la tabella', PATHS.file, () => this.fileEntries()),
-      this.menuButton('Modelli', 'Tabelle pronte da cui partire', PATHS.templates, () =>
+      this.menuButton(T.file, T.fileTitle, PATHS.file, () => this.fileEntries(), 'sheet-file'),
+      this.menuButton(T.templates, T.templatesTitle, PATHS.templates, () =>
         TEMPLATES.map((t) => ({ label: t.name, run: () => void this.applyTemplate(t.source) })),
       ),
-      h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => void this.requestClose() } }, 'Chiudi'),
-      h('button', { class: 'btn btn-primary', attrs: { type: 'button' }, on: { click: () => this.finish() } }, 'Fatto'),
+      h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => void this.requestClose() } }, T.close),
+      h('button', { class: 'btn btn-primary', attrs: { type: 'button' }, on: { click: () => this.finish() } }, T.done),
     )
 
     this.address = h('input', {
       class: 'sheet-address',
-      attrs: { type: 'text', 'aria-label': 'Cella scelta (scrivi un nome come D10 per andarci)', spellcheck: 'false', autocomplete: 'off' },
+      attrs: { type: 'text', 'aria-label': T.address, spellcheck: 'false', autocomplete: 'off' },
     })
     this.bar = h('input', {
       class: 'sheet-formula',
-      attrs: { type: 'text', 'aria-label': 'Contenuto della cella: un numero, un testo o una formula che comincia con =', spellcheck: 'false', autocomplete: 'off' },
+      attrs: { type: 'text', 'aria-label': T.formulaBar, spellcheck: 'false', autocomplete: 'off' },
     })
     this.hint = h('div', { class: 'sheet-hint', attrs: { 'aria-live': 'polite' } })
     const formulaBar = h('div', { class: 'sheet-formula-bar' }, this.address, h('span', { class: 'sheet-fx', attrs: { 'aria-hidden': 'true' } }, 'fx'), this.bar)
 
-    this.table = h('table', { class: 'sheet-grid', attrs: { role: 'grid', 'aria-label': 'Celle della tabella' } })
+    this.table = h('table', { class: 'sheet-grid', attrs: { role: 'grid', 'aria-label': T.cells } })
     this.cellInput = h('input', {
       class: 'sheet-cell-input',
-      attrs: { type: 'text', hidden: true, 'aria-label': 'Contenuto della cella', spellcheck: 'false', autocomplete: 'off' },
+      attrs: { type: 'text', hidden: true, 'aria-label': T.cellInput, spellcheck: 'false', autocomplete: 'off' },
     })
-    this.handle = h('div', { class: 'sheet-handle', title: 'Trascina per riempire le celle vicine', attrs: { 'aria-hidden': 'true' } })
+    this.handle = h('div', { class: 'sheet-handle', title: T.fillHandle, attrs: { 'aria-hidden': 'true' } })
     this.canvas = h('div', { class: 'sheet-canvas' }, this.table, this.handle, this.cellInput)
-    this.grid = h('div', { class: 'sheet-grid-wrap', attrs: { tabindex: 0, 'aria-label': 'Tabella: le frecce scelgono la cella, scrivi per riempirla' } }, this.canvas)
-    this.suggest = h('ul', { class: 'sheet-suggest', attrs: { role: 'listbox', hidden: true, 'aria-label': 'Funzioni' } })
+    this.grid = h('div', { class: 'sheet-grid-wrap', attrs: { tabindex: 0, 'aria-label': T.grid } }, this.canvas)
+    this.suggest = h('ul', { class: 'sheet-suggest', attrs: { role: 'listbox', hidden: true, 'aria-label': T.functions } })
 
     this.dialog = h(
       'dialog',
-      { class: 'sheet-editor', attrs: { 'aria-label': 'Editor della tabella' } },
+      { class: 'sheet-editor', attrs: { 'aria-label': T.editor } },
       bar,
       formulaBar,
       this.hint,
@@ -298,9 +429,9 @@ class SheetEditor {
     this.fitSize()
     const widths = this.widths()
     const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-    let html = `<colgroup><col class="sheet-col-head">${widths.map((w) => `<col style="width:${Math.round(w)}px">`).join('')}</colgroup>`
-    html += `<thead><tr><th class="sheet-corner" title="Scegli tutta la tabella"></th>`
-    for (let c = 0; c < this.cols; c++) html += `<th class="sheet-colhead" data-c="${c}" scope="col">${colName(c)}</th>`
+    let html = `<colgroup><col class="sheet-col-head">${widths.map((w) => `<col style="width:${Math.round(w)}px">`).join('')}</colgroup>` // non si traduce: HTML
+    html += `<thead><tr><th class="sheet-corner" title="${esc(T.selectAll)}"></th>`
+    for (let c = 0; c < this.cols; c++) html += `<th class="sheet-colhead" data-c="${c}" scope="col">${colName(c)}</th>` // non si traduce: HTML
     html += '</tr></thead><tbody>'
     for (let r = 0; r < this.rows; r++) {
       const header = r === 0 && this.model.header
@@ -360,7 +491,7 @@ class SheetEditor {
     this.grid.setAttribute('aria-activedescendant', active?.id ?? '')
     // Le celle usate dalla formula che si sta scrivendo, colorate.
     if (this.editing) {
-      formulaRefs(this.editValue()).forEach((ref, i) => {
+      formulaRefs(this.editValue(), englishTyping()).forEach((ref, i) => {
         for (let row = ref.top; row <= Math.min(ref.bottom, this.rows - 1); row++) {
           for (let col = ref.left; col <= Math.min(ref.right, this.cols - 1); col++) this.td(row, col)?.setAttribute('data-ref', String(i % REF_COLORS))
         }
@@ -391,7 +522,7 @@ class SheetEditor {
     const r = this.range()
     if (document.activeElement !== this.address) this.address.value = rangeName(r.top, r.left, r.bottom, r.right)
     if (!this.editing) {
-      this.bar.value = this.cell(this.active.row, this.active.col)?.input ?? ''
+      this.bar.value = shownInput(this.cell(this.active.row, this.active.col)?.input ?? '')
       this.showHint()
     }
   }
@@ -410,20 +541,18 @@ class SheetEditor {
       const call = currentCall(input.value, input.selectionStart ?? input.value.length)
       const spec = call ? lookupFunction(call) : undefined
       if (spec) {
-        this.hint.replaceChildren(h('strong', {}, `${spec.name}(${spec.args})`), ` — ${spec.help}`)
+        this.hint.replaceChildren(h('strong', {}, `${shownName(spec.name)}(${spec.args})`), ` — ${spec.help}`)
         return
       }
-      this.hint.textContent = input.value.trimStart().startsWith('=')
-        ? 'Clicca una cella (o usa le frecce dopo un operatore) per scriverne il nome; F4 mette il $. Invio conferma, Esc annulla.'
-        : 'Invio conferma e va sotto, Tab va a destra, Esc annulla. Una formula comincia con =.'
+      this.hint.textContent = input.value.trimStart().startsWith('=') ? T.formulaHint : T.typingHint
       return
     }
     const v = this.result(this.active.row, this.active.col).value
     if (isError(v)) {
-      this.hint.replaceChildren(h('strong', { class: 'sheet-hint-error' }, v.error), ` — ${v.message}`)
+      this.hint.replaceChildren(h('strong', { class: 'sheet-hint-error' }, errorText(v.error)), ` — ${v.message}`)
       return
     }
-    this.hint.textContent = 'Scrivi un numero (anche 1,50 € o 22%), un testo o una formula che comincia con =, come =B2*C2 o =SOMMA(B2:B5).'
+    this.hint.textContent = T.cellHint
   }
 
   // ——— Selezione ———
@@ -508,9 +637,10 @@ class SheetEditor {
     this.render()
   }
 
+  /** Il contenuto della cella, come va nella nota (`storedInput` per quello che si scrive). */
   private setInput(row: number, col: number, input: string): void {
     const old = this.cell(row, col)
-    const text = isFormula(input) ? normalizeFormula(input) : input.trim()
+    const text = input.trim()
     setCell(this.model, row, col, text || old?.format ? { ...(old ?? {}), input: text } : undefined)
   }
 
@@ -577,7 +707,7 @@ class SheetEditor {
           const v = this.result(row, col).value
           if (typeof v !== 'number') continue
           const f = this.shownFormat(row, col)
-          const now = f.kind === 'general' ? (generalNumber(v).split(',')[1]?.replace(/E.*/, '').length ?? 0) : decimalsOf(f)
+          const now = f.kind === 'general' ? (generalNumber(v, ITALIAN).split(',')[1]?.replace(/E.*/, '').length ?? 0) : decimalsOf(f)
           const decimals = Math.max(0, Math.min(MAX_DECIMALS, now + delta))
           this.setFormat(row, col, f.kind === 'general' ? { kind: 'number', decimals } : { kind: f.kind, decimals })
         }
@@ -590,24 +720,27 @@ class SheetEditor {
     const { row, col } = this.active
     const formula = autoSum(this.results, row, col)
     if (!formula) {
-      this.say('Sopra e a sinistra non ci sono numeri da sommare: scrivi tu =SOMMA(…)')
+      this.say(T.noAutoSum)
       return
     }
     this.mutate(() => this.setInput(row, col, formula))
   }
 
   private async applyTemplate(source: string): Promise<void> {
-    await this.replaceWith(parseSheet(source), 'il modello')
+    await this.replaceWith(parseSheet(source), T.replaceTemplate)
   }
 
-  /** Al posto della tabella ne arriva un'altra (un modello, un file): se c'è già qualcosa, prima si chiede. Annulla la riporta com'era. */
-  private async replaceWith(model: SheetModel, what: string): Promise<boolean> {
+  /**
+   * Al posto della tabella ne arriva un'altra (un modello, un file): se c'è già qualcosa, prima si
+   * chiede (`message` dice che cosa arriva). Annulla la riporta com'era.
+   */
+  private async replaceWith(model: SheetModel, message: string): Promise<boolean> {
     if (sheetSize(this.model).rows) {
       const ok = await confirmDialog({
-        title: 'Sostituire la tabella?',
-        message: `Al posto di quello che c'è adesso arriva ${what}.`,
-        note: 'Se cambi idea, Annulla (Ctrl+Z) la riporta com\'era.',
-        confirmLabel: 'Sostituisci',
+        title: T.replaceTitle,
+        message,
+        note: T.replaceNote,
+        confirmLabel: T.replace,
       })
       if (!ok) {
         this.grid.focus()
@@ -626,15 +759,15 @@ class SheetEditor {
 
   private fileEntries(): MenuEntry[] {
     return [
-      { label: 'Apri un file Excel o .csv…', run: () => this.pickFile() },
-      { label: 'Scarica come Excel (.xlsx)', run: () => this.downloadXlsx() },
-      { label: 'Scarica come .csv', run: () => void this.downloadCsv() },
+      { label: T.openFile, run: () => this.pickFile() },
+      { label: T.downloadXlsx, run: () => this.downloadXlsx() },
+      { label: T.downloadCsv, run: () => void this.downloadCsv() },
     ]
   }
 
   /** Il nome dei file scaricati: il titolo della nota. */
   private fileName(ext: string): string {
-    return fileNameFor(this.options.title?.trim() || 'tabella', ext)
+    return fileNameFor(this.options.title?.trim() || T.fileName, ext)
   }
 
   private pickFile(): void {
@@ -653,62 +786,59 @@ class SheetEditor {
   /** Un file di Excel (un foglio: con più fogli si sceglie quale) o .csv al posto della tabella. */
   async openFile(file: File): Promise<void> {
     const note = (message: string, error = false) => {
-      this.hint.replaceChildren(h('strong', error ? { class: 'sheet-hint-error' } : {}, 'File'), ` — ${message}`)
+      this.hint.replaceChildren(h('strong', error ? { class: 'sheet-hint-error' } : {}, T.file), ` — ${message}`)
       this.say(message)
     }
     try {
       if (/\.xlsx$/i.test(file.name)) {
         const sheets = xlsxSheets(new Uint8Array(await file.arrayBuffer())).filter((sh) => sheetSize(sh.model).rows)
         if (!sheets.length) {
-          note(`«${file.name}» non ha celle da aprire.`, true)
+          note(T.noCells(file.name), true)
           return
         }
         const use = async (sheet: XlsxSheet) => {
-          if (!(await this.replaceWith(sheet.model, `il foglio «${sheet.name}» di «${file.name}»`))) return
-          const extra = [
-            sheet.valuesOnly ? `${sheet.valuesOnly === 1 ? 'una formula usa' : `${sheet.valuesOnly} formule usano`} funzioni o fogli che Glifo non ha: ${sheet.valuesOnly === 1 ? 'resta il suo valore' : 'restano i loro valori'}` : '',
-            sheet.cut ? `le tabelle di Glifo hanno al massimo ${MAX_ROWS} righe e ${MAX_COLS} colonne: il resto è rimasto fuori` : '',
-          ].filter(Boolean)
-          note(`Aperto il foglio «${sheet.name}»${extra.length ? `; ${extra.join('; ')}` : ''}.`)
+          if (!(await this.replaceWith(sheet.model, T.replaceSheet(sheet.name, file.name)))) return
+          const extra = [sheet.valuesOnly ? T.valuesOnly(sheet.valuesOnly) : '', sheet.cut ? T.cut(MAX_ROWS, MAX_COLS) : ''].filter(Boolean)
+          note(T.openedSheet(sheet.name, extra.join('; ')))
         }
         if (sheets.length === 1) {
           await use(sheets[0])
           return
         }
         // Più fogli: un menu per scegliere quale aprire.
-        const box = this.dialog.querySelector<HTMLElement>('.sheet-menu-button[title^="Apri un file"]')?.getBoundingClientRect() ?? this.grid.getBoundingClientRect()
+        const box = this.dialog.querySelector<HTMLElement>('.sheet-file')?.getBoundingClientRect() ?? this.grid.getBoundingClientRect()
         this.openMenu(
           sheets.map((sh) => {
             const size = sheetSize(sh.model)
-            return { label: `${sh.name} · ${size.rows} ${size.rows === 1 ? 'riga' : 'righe'}`, run: () => void use(sh) }
+            return { label: T.sheetRows(sh.name, size.rows), run: () => void use(sh) }
           }),
           box.left,
           box.bottom + 4,
         )
-        note(`«${file.name}» ha ${sheets.length} fogli: scegli quale aprire.`)
+        note(T.chooseSheet(file.name, sheets.length))
         return
       }
       const { model, cut } = csvToSheet(await file.text())
       if (!sheetSize(model).rows) {
-        note(`«${file.name}» non ha celle da aprire.`, true)
+        note(T.noCells(file.name), true)
         return
       }
-      if (await this.replaceWith(model, `la tabella di «${file.name}»`)) {
-        note(`Aperto «${file.name}»${cut ? `; le tabelle di Glifo hanno al massimo ${MAX_ROWS} righe e ${MAX_COLS} colonne: il resto è rimasto fuori` : ''}.`)
+      if (await this.replaceWith(model, T.replaceFile(file.name))) {
+        note(T.openedFile(file.name, cut ? T.cut(MAX_ROWS, MAX_COLS) : ''))
       }
     } catch (err) {
-      note(err instanceof XlsxError ? err.message : `«${file.name}» non si riesce ad aprire.`, true)
+      note(err instanceof XlsxError ? err.message : T.cantOpen(file.name), true)
     }
   }
 
   private downloadXlsx(): void {
-    const bytes = sheetToXlsx(this.current(), this.options.title?.trim() || 'Tabella')
+    const bytes = sheetToXlsx(this.current(), this.options.title?.trim() || T.table)
     downloadBlob(this.fileName('.xlsx'), new Blob([bytes as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
-    this.say('File di Excel scaricato')
+    this.say(T.excelDownloaded)
   }
 
   private async downloadCsv(): Promise<void> {
-    if (await downloadText(this.fileName('.csv'), sheetToCsv(this.current()), 'text/csv')) this.say('File .csv scaricato')
+    if (await downloadText(this.fileName('.csv'), sheetToCsv(this.current()), 'text/csv')) this.say(T.csvDownloaded)
   }
 
   // ——— Righe e colonne ———
@@ -716,36 +846,32 @@ class SheetEditor {
   private rowEntries(): MenuEntry[] {
     const r = this.range()
     const n = r.bottom - r.top + 1
-    const some = n === 1 ? 'la riga' : `le ${n} righe`
-    const add = n === 1 ? 'una riga' : `${n} righe`
     return [
-      { label: `Aggiungi ${add} sopra`, run: () => this.mutate(() => insertRows(this.model, r.top, n)) },
+      { label: T.insertRowsAbove(n), run: () => this.mutate(() => insertRows(this.model, r.top, n)) },
       {
-        label: `Aggiungi ${add} sotto`,
+        label: T.insertRowsBelow(n),
         run: () => {
           this.mutate(() => insertRows(this.model, r.bottom + 1, n))
           this.select(r.bottom + 1, this.active.col)
         },
       },
-      { label: `Elimina ${some} ${rangeLabel(r.top, r.bottom, true)}`, run: () => this.mutate(() => deleteRows(this.model, r.top, n)) },
+      { label: T.deleteRows(n, r.top + 1, r.bottom + 1), run: () => this.mutate(() => deleteRows(this.model, r.top, n)) },
     ]
   }
 
   private colEntries(): MenuEntry[] {
     const r = this.range()
     const n = r.right - r.left + 1
-    const some = n === 1 ? 'la colonna' : `le ${n} colonne`
-    const add = n === 1 ? 'una colonna' : `${n} colonne`
     return [
-      { label: `Aggiungi ${add} a sinistra`, run: () => this.mutate(() => insertCols(this.model, r.left, n)) },
+      { label: T.insertColsLeft(n), run: () => this.mutate(() => insertCols(this.model, r.left, n)) },
       {
-        label: `Aggiungi ${add} a destra`,
+        label: T.insertColsRight(n),
         run: () => {
           this.mutate(() => insertCols(this.model, r.right + 1, n))
           this.select(this.active.row, r.right + 1)
         },
       },
-      { label: `Elimina ${some} ${rangeLabel(r.left, r.right, false)}`, run: () => this.mutate(() => deleteCols(this.model, r.left, n)) },
+      { label: T.deleteCols(n, colName(r.left), colName(r.right)), run: () => this.mutate(() => deleteCols(this.model, r.left, n)) },
     ]
   }
 
@@ -768,7 +894,7 @@ class SheetEditor {
     const { row, col } = this.active
     this.anchor = { ...this.active }
     this.editing = { row, col, enter: initial !== undefined, point: null }
-    const value = initial ?? this.cell(row, col)?.input ?? ''
+    const value = initial ?? shownInput(this.cell(row, col)?.input ?? '')
     this.cellInput.value = value
     this.bar.value = value
     if (this.td(row, col) && !inBar) {
@@ -817,8 +943,11 @@ class SheetEditor {
     this.closeSuggestions()
     this.editing = null
     this.cellInput.hidden = true
-    if ((this.cell(editing.row, editing.col)?.input ?? '') !== (isFormula(value) ? normalizeFormula(value) : value.trim())) {
-      this.mutate(() => this.setInput(editing.row, editing.col, value))
+    const old = this.cell(editing.row, editing.col)?.input ?? ''
+    // In inglese la cella si vede all'inglese: riscritta com'era, resta com'è nella nota.
+    const stored = englishTyping() && value.trim() === shownInput(old).trim() ? old : storedInput(value)
+    if (old !== stored) {
+      this.mutate(() => this.setInput(editing.row, editing.col, stored))
     } else {
       this.paint()
     }
@@ -900,7 +1029,7 @@ class SheetEditor {
     const at = (input.selectionStart ?? value.length) - start
     let tokens
     try {
-      tokens = tokenize(value.slice(start))
+      tokens = tokenize(value.slice(start), englishTyping())
     } catch {
       return
     }
@@ -927,11 +1056,14 @@ class SheetEditor {
       return
     }
     const word = m[2].toUpperCase()
-    const list = allFunctions()
-      .filter((f) => f.name.startsWith(word) || f.aliases?.some((a) => a.startsWith(word)))
-      .sort((a, b) => Number(!a.name.startsWith(word)) - Number(!b.name.startsWith(word)) || a.name.length - b.name.length)
+    // In inglese i nomi dell'Excel inglese, in ordine alfabetico.
+    const label = functionLabel
+    const all = englishTyping() ? [...allFunctions()].sort((a, b) => label(a).localeCompare(label(b), 'en')) : allFunctions()
+    const list = all
+      .filter((f) => label(f).startsWith(word) || f.name.startsWith(word) || f.aliases?.some((a) => a.startsWith(word)))
+      .sort((a, b) => Number(!label(a).startsWith(word)) - Number(!label(b).startsWith(word)) || label(a).length - label(b).length)
       .slice(0, 8)
-    if (!list.length || (list.length === 1 && list[0].name === word)) {
+    if (!list.length || (list.length === 1 && label(list[0]) === word)) {
       this.closeSuggestions()
       return
     }
@@ -951,7 +1083,7 @@ class SheetEditor {
               },
             },
           },
-          h('strong', {}, f.name),
+          h('strong', {}, functionLabel(f)),
           h('span', {}, f.help),
         ),
       ),
@@ -975,7 +1107,7 @@ class SheetEditor {
   private acceptSuggestion(): void {
     const s = this.suggestions
     if (!s) return
-    const name = s.list[s.index].name
+    const name = functionLabel(s.list[s.index])
     const value = s.input.value
     const after = value.slice(s.to)
     const insert = after.startsWith('(') ? name : `${name}(`
@@ -1001,12 +1133,13 @@ class SheetEditor {
     this.clip = { clip: copyRange(this.model, r), text }
     if (cut) this.mutate(() => clearRange(this.model, r))
     const n = (r.bottom - r.top + 1) * (r.right - r.left + 1)
-    this.say(`${cut ? 'Tagliat' : 'Copiat'}${n === 1 ? 'a 1 cella' : `e ${n} celle`}`)
+    this.say(T.copied(n, cut))
     return text
   }
 
   private paste(text: string): void {
-    const clip = this.clip && text.replace(/\r\n/g, '\n') === this.clip.text ? this.clip.clip : clipFromText(text)
+    // Da fuori si incolla quello che si scriverebbe: in inglese all'inglese, e nella nota va all'italiana.
+    const clip = this.clip && text.replace(/\r\n/g, '\n') === this.clip.text ? this.clip.clip : clipFromText(text, englishTyping() ? storedInput : undefined)
     if (!clip.rows) return
     const target = this.range()
     let placed: CellRange | null = null
@@ -1034,7 +1167,7 @@ class SheetEditor {
     }
     if (text === null) {
       if (!this.clip) {
-        this.say('Per incollare da fuori usa Ctrl+V (⌘V sul Mac)')
+        this.say(T.pasteHint)
         return
       }
       text = this.clip.text
@@ -1059,10 +1192,10 @@ class SheetEditor {
 
   // ——— Menu ———
 
-  private menuButton(label: string, title: string, paths: string, entries: () => MenuEntry[]): HTMLButtonElement {
+  private menuButton(label: string, title: string, paths: string, entries: () => MenuEntry[], extra = ''): HTMLButtonElement {
     const button = h(
       'button',
-      { class: 'btn sheet-menu-button', title, attrs: { type: 'button', 'aria-haspopup': 'menu', 'aria-expanded': 'false' } },
+      { class: `btn sheet-menu-button ${extra}`.trim(), title, attrs: { type: 'button', 'aria-haspopup': 'menu', 'aria-expanded': 'false' } },
       icon(paths, 16),
       label,
       icon(PATHS.chevron, 14),
@@ -1139,12 +1272,12 @@ class SheetEditor {
     const mac = /Mac|iPhone|iPad/.test(navigator.platform)
     const k = (key: string) => (mac ? `⌘${key}` : `Ctrl+${key}`)
     return [
-      { label: 'Taglia', keys: k('X'), run: () => void this.menuCopy(true) },
-      { label: 'Copia', keys: k('C'), run: () => void this.menuCopy(false) },
-      { label: 'Incolla', keys: k('V'), run: () => void this.menuPaste() },
-      { label: 'Svuota le celle', keys: 'Canc', run: () => this.mutate(() => clearRange(this.model, this.range())) },
-      { label: 'Riempi in basso', keys: k('D'), run: () => this.fill('down') },
-      { label: 'Riempi a destra', keys: k('R'), run: () => this.fill('right') },
+      { label: T.cutCells, keys: k('X'), run: () => void this.menuCopy(true) },
+      { label: T.copy, keys: k('C'), run: () => void this.menuCopy(false) },
+      { label: T.paste, keys: k('V'), run: () => void this.menuPaste() },
+      { label: T.clear, keys: T.deleteKey, run: () => this.mutate(() => clearRange(this.model, this.range())) },
+      { label: T.fillDown, keys: k('D'), run: () => this.fill('down') },
+      { label: T.fillRight, keys: k('R'), run: () => this.fill('right') },
       ...this.rowEntries(),
       ...this.colEntries(),
     ]
@@ -1174,7 +1307,7 @@ class SheetEditor {
     const model = this.current()
     this.options.onSave(cloneSheet(model))
     this.saved = serializeSheet(model)
-    this.say('Salvato nella nota')
+    this.say(T.saved)
   }
 
   private finish(): void {
@@ -1204,8 +1337,9 @@ class SheetEditor {
       const box = (button ?? this.grid).getBoundingClientRect()
       this.openMenu(
         [
-          { label: 'Diagramma di Gantt', run: () => make(['titolo: Diagramma di Gantt', `gantt: ${cells}`]) },
-          { label: 'Reticolo (PERT) con il percorso critico', run: () => make(['titolo: Reticolo del progetto', `reticolo: ${cells}`]) },
+          // Le parole delle righe (titolo:, gantt:, reticolo:) sono quelle del blocco ```grafico; il titolo è nella lingua di Glifo.
+          { label: T.gantt, run: () => make([`titolo: ${T.gantt}`, `gantt: ${cells}`]) }, // non si traduce: «titolo:» e «gantt:» sono parole del blocco
+          { label: T.network, run: () => make([`titolo: ${T.networkTitle}`, `reticolo: ${cells}`]) }, // non si traduce: «titolo:» e «reticolo:» sono parole del blocco
         ],
         box.left,
         box.bottom + 4,
@@ -1216,7 +1350,7 @@ class SheetEditor {
     const made = chartLines(model, range)
     if (!made.lines) {
       // Sotto la barra della formula, che si vede anche sul telefono (il messaggio in alto no).
-      this.hint.replaceChildren(h('strong', { class: 'sheet-hint-error' }, 'Grafico'), ` — ${made.error}`)
+      this.hint.replaceChildren(h('strong', { class: 'sheet-hint-error' }, T.chart), ` — ${made.error}`)
       this.say(made.error)
       this.grid.focus({ preventScroll: true })
       return
@@ -1228,10 +1362,10 @@ class SheetEditor {
   private async requestClose(): Promise<void> {
     if (serializeSheet(this.current()) !== this.saved) {
       const ok = await confirmDialog({
-        title: 'Chiudere senza salvare?',
-        message: 'Le ultime modifiche alla tabella non sono ancora nella nota.',
-        confirmLabel: 'Chiudi senza salvare',
-        cancelLabel: 'Torna alla tabella',
+        title: T.closeTitle,
+        message: T.closeMessage,
+        confirmLabel: T.closeConfirm,
+        cancelLabel: T.closeCancel,
         danger: true,
       })
       if (!ok) {
@@ -1289,7 +1423,7 @@ class SheetEditor {
           this.select(to.row, to.col, true)
           this.grid.focus()
         } else {
-          this.say('Scrivi il nome di una cella, come D10, o di un intervallo, come B2:D5')
+          this.say(T.addressHint)
         }
       } else if (ev.key === 'Escape') {
         ev.preventDefault()
@@ -1686,10 +1820,8 @@ function currentCall(value: string, at: number): string | null {
   return stack[stack.length - 1] ?? null
 }
 
-/** «(riga 3)», «(righe 3–5)», «(colonna B)»… */
-function rangeLabel(from: number, to: number, rows: boolean): string {
-  const name = (i: number) => (rows ? String(i + 1) : colName(i))
-  if (from === to) return `(${rows ? 'riga' : 'colonna'} ${name(from)})`
-  return `(${rows ? 'righe' : 'colonne'} ${name(from)}–${name(to)})`
+/** Il nome della funzione nei suggerimenti: quello italiano, o quello dell'Excel inglese con Glifo in inglese. */
+function functionLabel(spec: FunctionSpec): string {
+  return englishTyping() ? englishName(spec) : spec.name
 }
 

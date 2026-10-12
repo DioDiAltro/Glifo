@@ -11,8 +11,8 @@ import { parseSync } from 'vite'
  */
 
 /**
- * Le parti già tradotte: una cartella (con la barra alla fine) o un file. Restano da tradurre (GRAFICA.md,
- * punto 6): le tabelle.
+ * Le parti tradotte: una cartella (con la barra alla fine) o un file. Dal 12 ottobre 2026 è tutto `src/`
+ * (GRAFICA.md, punto 6), tranne i dati dei simboli, che controlla tests/symbolsEn.test.ts.
  */
 const TRANSLATED = [
   'src/i18n.ts',
@@ -39,6 +39,7 @@ const TRANSLATED = [
   'src/symbols/template.ts',
   'src/symbols/types.ts',
   'src/search/',
+  'src/spreadsheet/',
 ]
 
 /** Dentro le parti tradotte, i file che restano in italiano (e perché). */
