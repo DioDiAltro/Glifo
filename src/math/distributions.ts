@@ -8,9 +8,35 @@
  *
  * Le funzioni speciali (la gamma e la beta incomplete, Φ) sono in `special.ts`.
  */
+import { texts, usesDecimalComma } from '../i18n'
 import { MathError } from './evaluate'
 import { Rational } from './exact'
 import { betaI, gammaP, gammaQ, logChoose, logGamma, normalCdf, normalQuantile, normalSf, solveCdf } from './special'
+
+const T = texts({
+  positiveInteger: (what: string) => [`${what} è un numero intero positivo`, `${what} must be a positive whole number`],
+  wholeNumber: (what: string) => [`${what} è un numero intero (0 o più)`, `${what} must be a whole number (0 or more)`],
+  probability: ['La probabilità p va da 0 a 1', 'The probability p goes from 0 to 1'],
+  positive: (what: string) => [`${what} è un numero positivo`, `${what} must be a positive number`],
+  oneParameter: (example: string) => [`Questa distribuzione vuole un parametro: X \\sim ${example}`, `This distribution takes one parameter: X \\sim ${example}`],
+  parameters: (n: number, example: string) => [`Questa distribuzione vuole ${n} parametri: X \\sim ${example}`, `This distribution takes ${n} parameters: X \\sim ${example}`],
+  // I parametri, nei messaggi.
+  trials: ['n (le prove)', 'n (the number of trials)'],
+  items: ['N (gli oggetti)', 'N (the number of items)'],
+  goodItems: ['K (gli oggetti «buoni»)', 'K (the “good” items)'],
+  draws: ['n (le estrazioni)', 'n (the number of draws)'],
+  variance: ['La varianza σ²', 'The variance σ²'],
+  degrees: ['I gradi di libertà', 'The degrees of freedom'],
+  shape: ['La forma α', 'The shape α'],
+  rate: ['Il tasso λ', 'The rate λ'],
+  neverSuccess: ['Con p = 0 il successo non arriva mai: p va da 0 (escluso) a 1', 'With p = 0 there is never a success: p goes from 0 (excluded) to 1'],
+  hypergeometric: ['In H(N, K, n) i «buoni» K e le estrazioni n sono al massimo N', 'In H(N, K, n) the “good” items K and the draws n are at most N'],
+  mean: ['La media μ è un numero', 'The mean μ must be a number'],
+  uniform: ['In U(a, b) va a < b', 'In U(a, b), a must be less than b'],
+})
+
+/** Un esempio scritto da Glifo, come B(10, 0{,}3): con il punto per i decimali in inglese. */
+const decimals = (tex: string) => (usesDecimalComma() ? tex : tex.replace(/\{,\}/g, '.'))
 
 // ——— I valori esatti ———
 
@@ -123,17 +149,17 @@ const invalid = (message: string): never => {
 }
 
 function integerParam(v: number, what: string, min: number): number {
-  if (!Number.isInteger(v) || v < min) invalid(`${what} è un numero intero${min > 0 ? ' positivo' : ' (0 o più)'}`)
+  if (!Number.isInteger(v) || v < min) invalid(min > 0 ? T.positiveInteger(what) : T.wholeNumber(what))
   return v
 }
 
 function probabilityParam(v: number): number {
-  if (!(v >= 0 && v <= 1)) invalid('La probabilità p va da 0 a 1')
+  if (!(v >= 0 && v <= 1)) invalid(T.probability)
   return v
 }
 
 function positiveParam(v: number, what: string): number {
-  if (!(v > 0) || !Number.isFinite(v)) invalid(`${what} è un numero positivo`)
+  if (!(v > 0) || !Number.isFinite(v)) invalid(T.positive(what))
   return v
 }
 
@@ -174,7 +200,8 @@ const snapFloor = (x: number): number => {
 export function makeDistribution(family: Family, params: number[], exact: (Rational | null)[] = params.map(() => null)): Distribution {
   const info = FAMILIES[family]
   if (params.length !== info.params) {
-    invalid(`${info.params === 1 ? 'Questa distribuzione vuole un parametro' : `Questa distribuzione vuole ${info.params} parametri`}: X \\sim ${info.example}`)
+    const example = decimals(info.example)
+    invalid(info.params === 1 ? T.oneParameter(example) : T.parameters(info.params, example))
   }
   const base = { family, params, exact, discrete: info.discrete }
   const noExact = () => null
@@ -199,7 +226,7 @@ export function makeDistribution(family: Family, params: number[], exact: (Ratio
       }
     }
     case 'binomial': {
-      const n = integerParam(params[0], 'n (le prove)', 0)
+      const n = integerParam(params[0], T.trials, 0)
       const p = probabilityParam(params[1])
       const P = exact[1]
       const pmf = (k: number): number => {
@@ -301,7 +328,7 @@ export function makeDistribution(family: Family, params: number[], exact: (Ratio
     case 'geometric': {
       // Il numero di prove fino al primo successo compreso: 1, 2, 3…
       const p = probabilityParam(params[0])
-      if (p === 0) invalid('Con p = 0 il successo non arriva mai: p va da 0 (escluso) a 1')
+      if (p === 0) invalid(T.neverSuccess)
       const P = exact[0]
       const q = 1 - p
       const d = {
@@ -338,10 +365,10 @@ export function makeDistribution(family: Family, params: number[], exact: (Ratio
     }
     case 'hypergeometric': {
       // H(N, K, n): N oggetti, K «buoni», se ne prendono n senza rimetterli.
-      const N = integerParam(params[0], 'N (gli oggetti)', 1)
-      const K = integerParam(params[1], 'K (gli oggetti «buoni»)', 0)
-      const n = integerParam(params[2], 'n (le estrazioni)', 0)
-      if (K > N || n > N) invalid('In H(N, K, n) i «buoni» K e le estrazioni n sono al massimo N')
+      const N = integerParam(params[0], T.items, 1)
+      const K = integerParam(params[1], T.goodItems, 0)
+      const n = integerParam(params[2], T.draws, 0)
+      if (K > N || n > N) invalid(T.hypergeometric)
       const lo = Math.max(0, n - (N - K))
       const hi = Math.min(n, K)
       const pmf = (k: number): number => (!Number.isInteger(k) || k < lo || k > hi ? 0 : Math.exp(logChoose(K, k) + logChoose(N - K, n - k) - logChoose(N, n)))
@@ -391,9 +418,9 @@ export function makeDistribution(family: Family, params: number[], exact: (Ratio
     case 'normal': {
       // N(μ, σ²): il secondo parametro è la varianza, come nei libri.
       const mu = params[0]
-      const s2 = positiveParam(params[1], 'La varianza σ²')
+      const s2 = positiveParam(params[1], T.variance)
       const s = Math.sqrt(s2)
-      if (!Number.isFinite(mu)) invalid('La media μ è un numero')
+      if (!Number.isFinite(mu)) invalid(T.mean)
       return {
         ...base,
         lo: -Infinity,
@@ -431,7 +458,7 @@ export function makeDistribution(family: Family, params: number[], exact: (Ratio
     }
     case 'uniform': {
       const [a, b] = params
-      if (!(a < b)) invalid('In U(a, b) va a < b')
+      if (!(a < b)) invalid(T.uniform)
       const [A, B] = exact
       const width = b - a
       return {
@@ -451,7 +478,7 @@ export function makeDistribution(family: Family, params: number[], exact: (Ratio
       }
     }
     case 'student': {
-      const nu = positiveParam(params[0], 'I gradi di libertà')
+      const nu = positiveParam(params[0], T.degrees)
       const c = Math.exp(logGamma((nu + 1) / 2) - logGamma(nu / 2)) / Math.sqrt(nu * Math.PI)
       const tail = (t: number) => 0.5 * betaI(nu / 2, 0.5, nu / (nu + t * t))
       const d = {
@@ -471,7 +498,7 @@ export function makeDistribution(family: Family, params: number[], exact: (Ratio
       return { ...d, quantile: (p) => continuousQuantile(d, p) }
     }
     case 'chi2': {
-      const k = positiveParam(params[0], 'I gradi di libertà')
+      const k = positiveParam(params[0], T.degrees)
       const logC = -(k / 2) * Math.LN2 - logGamma(k / 2)
       const d = {
         ...base,
@@ -490,8 +517,8 @@ export function makeDistribution(family: Family, params: number[], exact: (Ratio
       return { ...d, quantile: (p) => continuousQuantile(d, p) }
     }
     case 'fisher': {
-      const d1 = positiveParam(params[0], 'I gradi di libertà')
-      const d2 = positiveParam(params[1], 'I gradi di libertà')
+      const d1 = positiveParam(params[0], T.degrees)
+      const d2 = positiveParam(params[1], T.degrees)
       const logB = logGamma(d1 / 2) + logGamma(d2 / 2) - logGamma((d1 + d2) / 2)
       const d = {
         ...base,
@@ -512,8 +539,8 @@ export function makeDistribution(family: Family, params: number[], exact: (Ratio
     }
     case 'gamma': {
       // Γ(α, λ): la forma α e il tasso λ (la media è α/λ).
-      const alpha = positiveParam(params[0], 'La forma α')
-      const lambda = positiveParam(params[1], 'Il tasso λ')
+      const alpha = positiveParam(params[0], T.shape)
+      const lambda = positiveParam(params[1], T.rate)
       const logC = alpha * Math.log(lambda) - logGamma(alpha)
       const [A, L] = exact
       const d = {

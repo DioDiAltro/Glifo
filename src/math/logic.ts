@@ -5,7 +5,36 @@
  * Si scrive con \neg, \land, \lor, \oplus (o \veebar), \Rightarrow, \Leftrightarrow, \uparrow (NAND),
  * \downarrow (NOR), \top e \bot; anche come nell'algebra di Boole: A + B, AB, \overline{A}, A'.
  */
+import { texts } from '../i18n'
 import type { FormattedResult } from './format'
+
+const T = texts({
+  missingBrace: ['Manca una graffa }', 'A closing brace } is missing'],
+  invalidCommand: ['Comando non valido', 'Invalid command'],
+  textInBraces: (name: string) => [`Dopo \\${name} va il testo tra graffe`, `After \\${name} the text goes in braces`],
+  notConnective: (name: string) => [`\\${name} non è un connettivo`, `\\${name} is not a connective`],
+  notBefore: ['\\not va prima di \\equiv o \\Leftrightarrow', '\\not goes before \\equiv or \\Leftrightarrow'],
+  notConnectiveText: (text: string) => [`«${text}» non è un connettivo`, `“${text}” is not a connective`],
+  empty: ['La formula è vuota', 'The formula is empty'],
+  extraParenthesis: ['Una parentesi chiusa di troppo', 'One closing parenthesis too many'],
+  missingConnective: ['Manca un connettivo', 'A connective is missing'],
+  unfinished: ['La formula finisce a metà', 'The formula is unfinished'],
+  missingClose: ['Manca la parentesi che chiude', 'The closing parenthesis is missing'],
+  missingOperand: ['Manca una lettera o una parentesi', 'A letter or a parenthesis is missing'],
+  tooManyRows: (letters: number, rows: number) => [`Con ${letters} lettere la tavola avrebbe ${rows} righe: troppe`, `With ${letters} letters the table would have ${rows} rows: too many`],
+  tooManyLetters: ['Troppe lettere', 'Too many letters'],
+  // Che cosa è la formula, sotto la tavola di verità.
+  equivalent: ['tautologia: le due formule sono equivalenti', 'tautology: the two formulas are equivalent'],
+  follows: ['tautologia: la conclusione segue dalle premesse', 'tautology: the conclusion follows from the premises'],
+  tautology: ['tautologia (sempre vera)', 'tautology (always true)'],
+  contradiction: ['contraddizione (sempre falsa)', 'contradiction (always false)'],
+  trueIn: (k: number, n: number) => [`vera in ${k} ${k === 1 ? 'caso' : 'casi'} su ${n}`, `true in ${k} ${k === 1 ? 'case' : 'cases'} out of ${n}`],
+  alwaysTrue: ['⊤ (sempre vera)', '⊤ (always true)'],
+  alwaysFalse: ['⊥ (sempre falsa)', '⊥ (always false)'],
+  /** I valori nella tavola: V e F (vero e falso), in inglese T e F. */
+  trueLetter: ['V', 'T'],
+  falseLetter: ['F', 'F'],
+})
 
 type BinOp = 'and' | 'or' | 'xor' | 'imp' | 'iff' | 'nand' | 'nor'
 
@@ -61,7 +90,7 @@ function braced(src: string, i: number): { text: string; end: number } {
     if (src[j] === '{') depth++
     else if (src[j] === '}' && --depth === 0) return { text: src.slice(i, j), end: j + 1 }
   }
-  throw new LogicError('Manca una graffa }')
+  throw new LogicError(T.missingBrace)
 }
 
 function tokens(src: string): Tok[] {
@@ -75,7 +104,7 @@ function tokens(src: string): Tok[] {
     }
     if (c === '\\') {
       const m = /^\\([A-Za-z]+|.)/.exec(src.slice(i))
-      if (!m) throw new LogicError('Comando non valido')
+      if (!m) throw new LogicError(T.invalidCommand)
       const name = m[1]
       i += m[0].length
       if (/^[,;:! ]$/.test(name) || /^(q?quad|left|right|[bB]igg?[lr]?|displaystyle|mathrm|mathbf|mathit)$/.test(name)) {
@@ -96,7 +125,7 @@ function tokens(src: string): Tok[] {
         continue
       }
       if (name === 'text' || name === 'textrm' || name === 'mbox' || name === 'operatorname') {
-        if (src[i] !== '{') throw new LogicError(`Dopo \\${name} va il testo tra graffe`)
+        if (src[i] !== '{') throw new LogicError(T.textInBraces(name))
         const arg = braced(src, i + 1)
         i = arg.end
         out.push(...textToken(arg.text))
@@ -115,11 +144,11 @@ function tokens(src: string): Tok[] {
         continue
       }
       const tok = COMMANDS[name]
-      if (!tok) throw new LogicError(`\\${name} non è un connettivo`)
+      if (!tok) throw new LogicError(T.notConnective(name))
       // \not\equiv: lo xor.
       if (name === 'not') {
         const next = /^\s*\\(equiv|Leftrightarrow|leftrightarrow|iff)\b/.exec(src.slice(i))
-        if (!next) throw new LogicError('\\not va prima di \\equiv o \\Leftrightarrow')
+        if (!next) throw new LogicError(T.notBefore)
         i += next[0].length
       }
       out.push(tok)
@@ -131,7 +160,7 @@ function tokens(src: string): Tok[] {
       continue
     }
     const tok = CHARS[c]
-    if (!tok) throw new LogicError(`«${c}» non è un connettivo`)
+    if (!tok) throw new LogicError(T.notConnectiveText(c))
     out.push(tok)
     i++
   }
@@ -159,7 +188,7 @@ function textToken(text: string): Tok[] {
   if (t === 'nand') return [{ k: 'op', op: 'nand' }]
   if (t === 'nor') return [{ k: 'op', op: 'nor' }]
   if (/^[a-z]$/i.test(text.trim())) return [{ k: 'var', name: text.trim(), tex: `\\text{${text.trim()}}` }]
-  throw new LogicError(`«${text.trim()}» non è un connettivo`)
+  throw new LogicError(T.notConnectiveText(text.trim()))
 }
 
 class Parser {
@@ -176,9 +205,9 @@ class Parser {
   }
 
   parse(): Formula {
-    if (!this.toks.length) throw new LogicError('La formula è vuota')
+    if (!this.toks.length) throw new LogicError(T.empty)
     const f = this.iff()
-    if (this.i < this.toks.length) throw new LogicError(this.peek()!.k === 'close' ? 'Una parentesi chiusa di troppo' : 'Manca un connettivo')
+    if (this.i < this.toks.length) throw new LogicError(this.peek()!.k === 'close' ? T.extraParenthesis : T.missingConnective)
     return f
   }
 
@@ -229,7 +258,7 @@ class Parser {
 
   private unary(): Formula {
     const t = this.peek()
-    if (!t) throw new LogicError('La formula finisce a metà')
+    if (!t) throw new LogicError(T.unfinished)
     if (t.k === 'not') {
       this.i++
       return { t: 'not', a: this.unary() }
@@ -244,9 +273,9 @@ class Parser {
     } else if (t.k === 'open') {
       this.i++
       f = this.iff()
-      if (this.peek()?.k !== 'close') throw new LogicError('Manca la parentesi che chiude')
+      if (this.peek()?.k !== 'close') throw new LogicError(T.missingClose)
       this.i++
-    } else throw new LogicError('Manca una lettera o una parentesi')
+    } else throw new LogicError(T.missingOperand)
     // A': la negazione, come nell'algebra di Boole.
     while (this.peek()?.k === 'post') {
       this.i++
@@ -366,12 +395,12 @@ function rows(names: string[]): Map<string, boolean>[] {
 const MOST_VARIABLES = 6
 const MOST_COLUMNS = 9
 
-const cell = (v: boolean, bold = false) => (bold ? (v ? '\\mathbf{V}' : '\\mathbf{F}') : v ? '\\mathrm{V}' : '\\mathrm{F}')
+const cell = (v: boolean, bold = false) => `${bold ? '\\mathbf' : '\\mathrm'}{${v ? T.trueLetter : T.falseLetter}}`
 
 /** La tavola di verità, con la colonna di ogni sottoformula se non sono troppe, e cosa è la formula. */
 export function truthTable(f: Formula): FormattedResult {
   const names = sortedNames(f)
-  if (names.length > MOST_VARIABLES) throw new LogicError(`Con ${names.length} lettere la tavola avrebbe ${2 ** names.length} righe: troppe`)
+  if (names.length > MOST_VARIABLES) throw new LogicError(T.tooManyRows(names.length, 2 ** names.length))
   const all = rows(names)
   let columns = parts(f)
   if (names.length + columns.length > MOST_COLUMNS) columns = [f]
@@ -381,19 +410,19 @@ export function truthTable(f: Formula): FormattedResult {
   const verdict =
     trueCount === all.length
       ? f.t === 'bin' && f.op === 'iff'
-        ? 'tautologia: le due formule sono equivalenti'
+        ? T.equivalent
         : f.t === 'bin' && f.op === 'imp'
-          ? 'tautologia: la conclusione segue dalle premesse'
-          : 'tautologia (sempre vera)'
+          ? T.follows
+          : T.tautology
       : trueCount === 0
-        ? 'contraddizione (sempre falsa)'
-        : `vera in ${trueCount} ${trueCount === 1 ? 'caso' : 'casi'} su ${all.length}`
+        ? T.contradiction
+        : T.trueIn(trueCount, all.length)
   const head = [...names.map((n) => texOfVar(f, n)), ...columns.map((c) => shown(c, false))].join(' & ')
   const body = all.map((at) => [...names.map((n) => cell(at.get(n)!)), ...columns.map((c, k) => cell(value(c, at), k === columns.length - 1))].join(' & ')).join(' \\\\ ')
   const table = `\\begin{array}{${'c'.repeat(names.length)}${names.length ? '|' : ''}${'c'.repeat(columns.length)}} ${head} \\\\ \\hline ${body} \\end{array}`
   return {
     tex: `\\begin{array}{l} ${table} \\\\[0.4em] \\text{${verdict}} \\end{array}`,
-    text: `${verdict}; ${shown(f, true)}: ${final.map((v) => (v ? 'V' : 'F')).join(' ')}`,
+    text: `${verdict}; ${shown(f, true)}: ${final.map((v) => (v ? T.trueLetter : T.falseLetter)).join(' ')}`,
     rich: true,
   }
 }
@@ -401,7 +430,7 @@ export function truthTable(f: Formula): FormattedResult {
 /** La forma normale canonica: disgiuntiva (le righe vere) o congiuntiva (le righe false). */
 export function normalForm(f: Formula, disjunctive: boolean): FormattedResult {
   const names = sortedNames(f)
-  if (names.length > MOST_VARIABLES) throw new LogicError('Troppe lettere')
+  if (names.length > MOST_VARIABLES) throw new LogicError(T.tooManyLetters)
   const picked = rows(names).filter((at) => value(f, at) === disjunctive)
   const literal = (name: string, v: boolean, text: boolean) => {
     const tex = text ? shown({ t: 'var', name, tex: '' }, true) : texOfVar(f, name)
@@ -415,7 +444,7 @@ export function normalForm(f: Formula, disjunctive: boolean): FormattedResult {
   if (!picked.length || !names.length) {
     // Sempre falsa (per la disgiuntiva) o sempre vera (per la congiuntiva): ⊥ o ⊤.
     const v = picked.length ? disjunctive : !disjunctive
-    return { tex: v ? '\\top' : '\\bot', text: v ? '⊤ (sempre vera)' : '⊥ (sempre falsa)' }
+    return { tex: v ? '\\top' : '\\bot', text: v ? T.alwaysTrue : T.alwaysFalse }
   }
   const join = disjunctive ? [' \\lor ', ' ∨ '] : [' \\land ', ' ∧ ']
   return { tex: picked.map((at) => clause(at, false)).join(join[0]), text: picked.map((at) => clause(at, true)).join(join[1]), rich: true }

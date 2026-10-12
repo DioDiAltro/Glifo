@@ -9,10 +9,25 @@
  * ½ − ½i), gli altri con la virgola mobile; e in fondo ci sono le forme da mostrare: a + bi,
  * ρe^{iθ} con le radici e i multipli di π riconosciuti (√2 e^{iπ/4}).
  */
+import { texts } from '../i18n'
 import { binomial, factorial, integrate, MathError, spend, UndefinedName } from './evaluate'
 import { ExactUnavailable, Rational } from './exact'
 import { formatNumber, formatRational, type FormatOptions, type FormattedResult } from './format'
 import { productPower, type MathNode } from './parse'
+
+const T = texts({
+  pair: ['Una coppia di valori (a, b) non va qui', "A pair of values (a, b) doesn't belong here"],
+  emptyParentheses: ['Le parentesi sono vuote', 'The parentheses are empty'],
+  infinity: ['∞ non è un numero: si usa solo negli intervalli', '∞ is not a number: use it only in intervals'],
+  condition: ["Qui va un'espressione, non una condizione", 'An expression goes here, not a condition'],
+  unsupported: ['Con i numeri complessi questo non si sa calcolare', "This can't be calculated with complex numbers"],
+  isFunction: (name: string) => [`${name} è una funzione: scrivi ${name}(z)`, `${name} is a function: write ${name}(z)`],
+  oneValue: (name: string) => [`\\${name} vuole un solo valore`, `\\${name} takes a single value`],
+  unknownFunction: (name: string) => [`Con i numeri complessi non so calcolare \\${name}`, `I don't know how to calculate \\${name} with complex numbers`],
+  derivatives: ['Le derivate con i numeri complessi non si sanno calcolare', "Derivatives can't be calculated with complex numbers"],
+  values: (name: string, n: number) => [`${name} vuole ${n === 1 ? 'un valore' : `${n} valori`}`, `${name} takes ${n === 1 ? 'one value' : `${n} values`}`],
+  notDefined: (name: string) => [`${name} non è una funzione definita`, `${name} is not a defined function`],
+})
 
 export interface Complex {
   re: number
@@ -359,16 +374,16 @@ export function compileComplex(node: MathNode, scope: ComplexScope): ComplexComp
       }
     }
     case 'tuple':
-      throw new MathError(node.items.length ? 'Una coppia di valori (a, b) non va qui' : 'Le parentesi sono vuote')
+      throw new MathError(node.items.length ? T.pair : T.emptyParentheses)
     case 'infty':
-      throw new MathError('∞ non è un numero: si usa solo negli intervalli')
+      throw new MathError(T.infinity)
     case 'rel':
     case 'in':
     case 'and':
     case 'or':
-      throw new MathError('Qui va un\'espressione, non una condizione')
+      throw new MathError(T.condition)
   }
-  throw new MathError('Con i numeri complessi questo non si sa calcolare')
+  throw new MathError(T.unsupported)
 }
 
 /** Un valore che deve essere reale: con una parte immaginaria non c'è. */
@@ -388,7 +403,7 @@ function compileName(name: string, scope: ComplexScope): ComplexCompiled {
     const z = compileName(base, scope)
     return (v) => conj(z(v))
   }
-  if (scope.fns.has(name)) throw new MathError(`${name} è una funzione: scrivi ${name}(z)`)
+  if (scope.fns.has(name)) throw new MathError(T.isFunction(name))
   throw new UndefinedName(name)
 }
 
@@ -397,7 +412,7 @@ function compileFunction(node: Extract<MathNode, { k: 'fn' }>, scope: ComplexSco
   const pow2 = node.pow ? compileComplex(node.pow, scope) : null
   const name = node.name
   const one = () => {
-    if (args.length !== 1) throw new MathError(`\\${name} vuole un solo valore`)
+    if (args.length !== 1) throw new MathError(T.oneValue(name))
     return args[0]
   }
   let f: ComplexCompiled
@@ -422,7 +437,7 @@ function compileFunction(node: Extract<MathNode, { k: 'fn' }>, scope: ComplexSco
     }
   } else {
     const g = UNARY[name]
-    if (!g) throw new MathError(`Con i numeri complessi non so calcolare \\${name}`)
+    if (!g) throw new MathError(T.unknownFunction(name))
     const a = one()
     f = (v) => g(a(v))
   }
@@ -433,8 +448,8 @@ function compileFunction(node: Extract<MathNode, { k: 'fn' }>, scope: ComplexSco
 function compileApply(node: Extract<MathNode, { k: 'apply' }>, scope: ComplexScope): ComplexCompiled {
   const user = scope.vars.has(node.name) ? undefined : scope.fns.get(node.name)
   if (user) {
-    if (node.primes) throw new MathError('Le derivate con i numeri complessi non si sanno calcolare')
-    if (node.args.length !== user.params.length) throw new MathError(`${node.name} vuole ${user.params.length === 1 ? 'un valore' : `${user.params.length} valori`}`)
+    if (node.primes) throw new MathError(T.derivatives)
+    if (node.args.length !== user.params.length) throw new MathError(T.values(node.name, user.params.length))
     const args = node.args.map((a) => compileComplex(a, scope))
     const body = compileComplex(user.body, complexScopeWith(user.scope, user.params))
     return (v) => {
@@ -443,7 +458,7 @@ function compileApply(node: Extract<MathNode, { k: 'apply' }>, scope: ComplexSco
       return body(local)
     }
   }
-  if (node.primes) throw new MathError(`${node.name} non è una funzione definita`)
+  if (node.primes) throw new MathError(T.notDefined(node.name))
   // a(x + 1), i(1 + i): se il nome è un numero è un prodotto.
   if (node.args.length !== 1) throw new UndefinedName(node.name)
   const a = compileName(node.name, scope)

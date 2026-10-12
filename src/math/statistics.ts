@@ -8,8 +8,35 @@
  * frequenze in un secondo vettore se ci sono (\operatorname{media}(x, f)). Si fanno con le frazioni
  * (esatti) o con la virgola, come i conti con vettori e matrici (`Field`).
  */
+import { texts } from '../i18n'
 import { MathError } from './evaluate'
 import type { Field } from './linear'
+
+const T = texts({
+  noData: ['Non ci sono dati', 'There is no data'],
+  weightsLength: ['I valori e le frequenze vanno in due vettori lunghi uguali', 'The values and the frequencies go in two vectors of the same length'],
+  zeroWeights: ['Le frequenze sono tutte zero', 'The frequencies are all zero'],
+  sampleVariance: ['La varianza campionaria vuole almeno due dati', 'The sample variance needs at least two values'],
+  integerWeights: ['Per la mediana e i quantili le frequenze sono numeri interi', 'For the median and the quantiles the frequencies must be whole numbers'],
+  tooMuchData: ['Troppi dati', 'Too much data'],
+  quantileOrder: ["L'ordine del quantile va da 0 a 1 (0{,}25 è il primo quartile)", 'The order of a quantile goes from 0 to 1 (0.25 is the first quartile)'],
+  pairedLength: ['Le due serie di dati vanno in due vettori lunghi uguali', 'The two data series go in two vectors of the same length'],
+  twoPairs: ['Servono almeno due coppie di dati', 'At least two pairs of values are needed'],
+  noCorrelation: ["Con dati tutti uguali la correlazione non c'è", 'With all values equal there is no correlation'],
+  noRegression: ["Con le x tutte uguali la retta di regressione non c'è", 'With all x values equal there is no regression line'],
+  // \operatorname{moda}: il nome che si scrive nella nota (per ora italiano).
+  severalModes: ['Ci sono più mode: chiedile da sole, \\operatorname{moda}(x) =', 'There is more than one mode: ask for them on their own, \\operatorname{moda}(x) ='],
+  noMode: ["Non c'è una moda: i valori hanno tutti la stessa frequenza", 'There is no mode: the values all have the same frequency'],
+  missingOrder: (name: string) => [
+    `Manca l'ordine: \\operatorname{${name}}(x, ${name === 'quantile' ? '0{,}9' : '90'})`,
+    `The order is missing: \\operatorname{${name}}(x, ${name === 'quantile' ? '0.9' : '90'})`,
+  ],
+  unknown: (name: string) => [`Non so calcolare ${name}`, `I don't know how to calculate ${name}`],
+  usage: (name: string) => [
+    `Si scrive \\operatorname{${name}}(x, ${name === 'quantile' ? '0{,}9' : '90'}), con x i dati`,
+    `Write \\operatorname{${name}}(x, ${name === 'quantile' ? '0.9' : '90'}), with x the data`,
+  ],
+})
 
 /** Le funzioni dei dati che danno un numero. */
 export const DATA_FUNCTIONS = new Set(['mean', 'median', 'mode', 'var', 'svar', 'sd', 'ssd', 'range', 'quantile', 'percentile'])
@@ -25,8 +52,8 @@ const fail = (message: string): never => {
 }
 
 function check<T>(d: Data<T>): void {
-  if (!d.values.length) fail('Non ci sono dati')
-  if (d.weights && d.weights.length !== d.values.length) fail('I valori e le frequenze vanno in due vettori lunghi uguali')
+  if (!d.values.length) fail(T.noData)
+  if (d.weights && d.weights.length !== d.values.length) fail(T.weightsLength)
 }
 
 /** Quanti sono i dati: n, o la somma delle frequenze. */
@@ -39,7 +66,7 @@ export function mean<T>(F: Field<T>, d: Data<T>): T {
   let sum = F.zero()
   d.values.forEach((x, i) => (sum = F.add(sum, d.weights ? F.mul(d.weights[i], x) : x)))
   const n = count(F, d)
-  if (F.isZero(n, 0)) fail('Le frequenze sono tutte zero')
+  if (F.isZero(n, 0)) fail(T.zeroWeights)
   return F.div(sum, n)
 }
 
@@ -54,7 +81,7 @@ export function variance<T>(F: Field<T>, d: Data<T>, sample: boolean): T {
   })
   const n = count(F, d)
   const divisor = sample ? F.sub(n, F.one()) : n
-  if (F.toNumber(divisor) <= 0) fail('La varianza campionaria vuole almeno due dati')
+  if (F.toNumber(divisor) <= 0) fail(T.sampleVariance)
   return F.div(sum, divisor)
 }
 
@@ -68,18 +95,18 @@ export function sorted<T>(F: Field<T>, d: Data<T>): T[] {
   const out: T[] = []
   d.values.forEach((x, i) => {
     const times = d.weights ? F.integer(d.weights[i]) : 1
-    if (times === null || times < 0) fail('Per la mediana e i quantili le frequenze sono numeri interi')
-    if (out.length + times! > 1e6) fail('Troppi dati')
+    if (times === null || times < 0) fail(T.integerWeights)
+    if (out.length + times! > 1e6) fail(T.tooMuchData)
     for (let k = 0; k < times!; k++) out.push(x)
   })
-  if (!out.length) fail('Non ci sono dati')
+  if (!out.length) fail(T.noData)
   return out.sort((a, b) => F.cmp(a, b))
 }
 
 /** Il quantile di ordine p (da 0 a 1): la posizione (n − 1)p tra i dati in ordine, come QUARTILE.INC. */
 export function quantile<T>(F: Field<T>, d: Data<T>, p: T): T {
   const pv = F.toNumber(p)
-  if (!(pv >= 0 && pv <= 1)) fail('L\'ordine del quantile va da 0 a 1 (0{,}25 è il primo quartile)')
+  if (!(pv >= 0 && pv <= 1)) fail(T.quantileOrder)
   const s = sorted(F, d)
   const h = F.mul(F.int(s.length - 1), p)
   const lo = F.integer(h) ?? Math.floor(F.toNumber(h))
@@ -116,8 +143,8 @@ export function range<T>(F: Field<T>, d: Data<T>): T {
 }
 
 function paired<T>(x: T[], y: T[]): void {
-  if (x.length !== y.length) fail('Le due serie di dati vanno in due vettori lunghi uguali')
-  if (x.length < 2) fail('Servono almeno due coppie di dati')
+  if (x.length !== y.length) fail(T.pairedLength)
+  if (x.length < 2) fail(T.twoPairs)
 }
 
 /** La covarianza: Σ(x − x̄)(y − ȳ)/n (o /(n − 1), campionaria). */
@@ -135,7 +162,7 @@ export function correlation<T>(F: Field<T>, x: T[], y: T[]): T {
   const sxy = covariance(F, x, y)
   const sxx = covariance(F, x, x)
   const syy = covariance(F, y, y)
-  if (F.isZero(sxx, 1e-300) || F.isZero(syy, 1e-300)) fail('Con dati tutti uguali la correlazione non c\'è')
+  if (F.isZero(sxx, 1e-300) || F.isZero(syy, 1e-300)) fail(T.noCorrelation)
   return F.div(sxy, F.sqrt(F.mul(sxx, syy)))
 }
 
@@ -143,7 +170,7 @@ export function correlation<T>(F: Field<T>, x: T[], y: T[]): T {
 export function regression<T>(F: Field<T>, x: T[], y: T[]): { a: T; b: T } {
   const sxy = covariance(F, x, y)
   const sxx = covariance(F, x, x)
-  if (F.isZero(sxx, 1e-300)) fail('Con le x tutte uguali la retta di regressione non c\'è')
+  if (F.isZero(sxx, 1e-300)) fail(T.noRegression)
   const b = F.div(sxy, sxx)
   const a = F.sub(mean(F, { values: y, weights: null }), F.mul(b, mean(F, { values: x, weights: null })))
   return { a, b }
@@ -158,7 +185,7 @@ export function statistic<T>(F: Field<T>, name: string, d: Data<T>, p?: T): T {
       return median(F, d)
     case 'mode': {
       const m = modes(F, d)
-      if (m.length !== 1) fail(m.length ? 'Ci sono più mode: chiedile da sole, \\operatorname{moda}(x) =' : 'Non c\'è una moda: i valori hanno tutti la stessa frequenza')
+      if (m.length !== 1) fail(m.length ? T.severalModes : T.noMode)
       return m[0]
     }
     case 'var':
@@ -173,11 +200,11 @@ export function statistic<T>(F: Field<T>, name: string, d: Data<T>, p?: T): T {
       return range(F, d)
     case 'quantile':
     case 'percentile': {
-      if (p === undefined) return fail(`Manca l'ordine: \\operatorname{${name}}(x, ${name === 'quantile' ? '0{,}9' : '90'})`)
+      if (p === undefined) return fail(T.missingOrder(name))
       return quantile(F, d, name === 'percentile' ? F.div(p, F.int(100)) : p)
     }
   }
-  return fail(`Non so calcolare ${name}`)
+  return fail(T.unknown(name))
 }
 
 /** I numeri con la virgola, per i conti come \operatorname{media}(2, 3, 5). */
@@ -204,7 +231,7 @@ const NUMBERS: Field<number> = {
 /** La statistica di numeri scritti uno per uno (per quantile e percentile l'ultimo è l'ordine). */
 export function dataStatistic(name: string, values: number[]): number {
   if (name === 'quantile' || name === 'percentile') {
-    if (values.length < 2) fail(`Si scrive \\operatorname{${name}}(x, ${name === 'quantile' ? '0{,}9' : '90'}), con x i dati`)
+    if (values.length < 2) fail(T.usage(name))
     return statistic(NUMBERS, name, { values: values.slice(0, -1), weights: null }, values[values.length - 1])
   }
   return statistic(NUMBERS, name, { values, weights: null })
