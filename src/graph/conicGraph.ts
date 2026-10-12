@@ -12,7 +12,9 @@ import type { SymbolScope } from '../math/symbolic'
 import type { GraphItem } from './spec'
 
 const T = texts({
-  usage: ['Si scrive \\operatorname{conica}(x^2 + 4y^2 = 4)', 'Write \\operatorname{conica}(x^2 + 4y^2 = 4)'],
+  /** Il nome della funzione da scrivere nella nota, nella lingua di Glifo (per i messaggi). */
+  conic: ['conica', 'conic'],
+  usage: (name: string) => [`Si scrive \\operatorname{${name}}(x^2 + 4y^2 = 4)`, `Write \\operatorname{${name}}(x^2 + 4y^2 = 4)`],
 })
 
 export const isConicLine = (main: MathNode): boolean => main.k === 'fn' && main.name === 'conic' && main.args.length === 1
@@ -23,7 +25,7 @@ export const quadricEquation = (main: MathNode): MathNode | null => (main.k === 
 export function conicItems(main: MathNode, line: number, slot: number, scope: Scope, symbols: SymbolScope): { items: GraphItem[]; colors: number } | null {
   if (!isConicLine(main) || main.k !== 'fn') return null
   const eq = main.args[0]
-  if (eq.k !== 'rel' || eq.ops.length !== 1 || eq.ops[0] !== '=') throw new MathError(T.usage)
+  if (eq.k !== 'rel' || eq.ops.length !== 1 || eq.ops[0] !== '=') throw new MathError(T.usage(T.conic))
   const F = compile({ k: 'bin', op: '-', a: eq.items[0], b: eq.items[1] }, scopeWith(scope, ['x', 'y']))
   const v: Record<string, number> = {}
   const items: GraphItem[] = [

@@ -12,8 +12,10 @@ import { functionOf, type SymbolScope } from '../math/symbolic'
 import type { GraphItem } from './spec'
 
 const T = texts({
-  usage: ['Si scrive \\operatorname{studio}(f), con f una funzione di una variabile', 'Write \\operatorname{studio}(f), with f a function of one variable'],
-  oneVariable: ['Qui va una funzione di una variabile: \\operatorname{studio}(f)', 'This needs a function of one variable: \\operatorname{studio}(f)'],
+  /** Il nome della funzione da scrivere nella nota, nella lingua di Glifo (per i messaggi). */
+  study: ['studio', 'study'],
+  usage: (name: string) => [`Si scrive \\operatorname{${name}}(f), con f una funzione di una variabile`, `Write \\operatorname{${name}}(f), with f a function of one variable`],
+  oneVariable: (name: string) => [`Qui va una funzione di una variabile: \\operatorname{${name}}(f)`, `This needs a function of one variable: \\operatorname{${name}}(f)`],
   nowhere: ['Questa funzione non esiste in nessun punto', 'This function isn\'t defined anywhere'],
   max: ['massimo', 'maximum'],
   min: ['minimo', 'minimum'],
@@ -42,9 +44,9 @@ export function studyItems(
   drawn = false,
 ): { items: GraphItem[]; colors: number } | null {
   if (main.k !== 'fn' || !STUDY_GRAPH.has(main.name)) return null
-  if (main.args.length !== 1) throw new MathError(T.usage)
+  if (main.args.length !== 1) throw new MathError(T.usage(T.study))
   const target = functionOf(main.args[0], symbols)
-  if (!target) throw new MathError(T.oneVariable)
+  if (!target) throw new MathError(T.oneVariable(T.study))
   const s = study(target.f, target.v, scope, { comma: usesDecimalComma(), decimal: false }, target.name)
   if (!s) throw new MathError(T.nowhere)
   const arg = main.args[0]

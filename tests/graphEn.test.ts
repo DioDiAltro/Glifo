@@ -16,8 +16,8 @@ import type { ChartData } from '../src/spreadsheet/chart'
 
 /**
  * I grafici con Glifo in inglese (src/graph): i messaggi del blocco, le scritte nel disegno e intorno,
- * i numeri con il punto e le date come in inglese. Le parole che si scrivono nelle note (```grafico,
- * dati:, gantt:…) per ora restano italiane.
+ * i numeri con il punto e le date come in inglese. I messaggi citano le parole da scrivere in inglese
+ * (data:, study…); le parole inglesi nelle note sono in tests/noteWordsGraph.test.ts.
  */
 
 const r = String.raw
@@ -58,9 +58,9 @@ describe('il blocco ```grafico in inglese', () => {
     expect(message('1 + 1 = 2')).toBe('x and y are missing: what should I draw?')
     expect(message('w = 2, x > 0')).toBe('A number has no conditions')
     expect(message('|z - i| = 2, x > 0')).toMatch(/^In the complex plane, conditions go in a set/)
-    // I nomi delle funzioni nelle formule per ora restano italiani.
-    expect(message(r`\operatorname{studio}(f, g)`)).toBe(r`Write \operatorname{studio}(f), with f a function of one variable`)
-    expect(message(r`\operatorname{istogramma}(1, 2, 3)`)).toBe(r`Write \operatorname{istogramma}(x), or with the number of bins: \operatorname{istogramma}(x, 5)`)
+    // I messaggi citano le funzioni con il nome inglese.
+    expect(message(r`\operatorname{studio}(f, g)`)).toBe(r`Write \operatorname{study}(f), with f a function of one variable`)
+    expect(message(r`\operatorname{istogramma}(1, 2, 3)`)).toBe(r`Write \operatorname{histogram}(x), or with the number of bins: \operatorname{histogram}(x, 5)`)
   })
 
   it('le scritte del disegno e della legenda sono in inglese', () => {
@@ -169,11 +169,11 @@ describe('il punto di pareggio in inglese', () => {
   it('dice cosa non va', () => {
     const errors = (src: string) => parseGraph(src, [], undefined, data).errors.map((e) => e.message)
     expect(errors('pareggio: Revenue, Total costs')[0]).toBe(
-      'The break-even point is between two data lines: first write the dati: line with the table cells (dati: A8:D13)',
+      'The break-even point is between two data lines: first write the data: line with the table cells (data: A8:D13)',
     )
     expect(errors('dati: A1:C5\npareggio: Revenue, Expenses')[0]).toMatch(/^There's no “Expenses” column in the data/)
-    expect(errors('dati: A1:C5\npareggio: Revenue')[0]).toBe('Write the two lines, revenue first and then costs: pareggio: Revenue, Total costs')
-    expect(errors('dati: A1:C5\ndati: A1:B5')[0]).toBe('A graph takes its data from a single range: write only one dati: line')
+    expect(errors('dati: A1:C5\npareggio: Revenue')[0]).toBe('Write the two lines, revenue first and then costs: break-even: Revenue, Total costs')
+    expect(errors('dati: A1:C5\ndati: A1:B5')[0]).toBe('A graph takes its data from a single range: write only one data: line')
   })
 })
 
@@ -223,8 +223,8 @@ describe('il diagramma di Gantt e il reticolo in inglese', () => {
 
   it('gli errori del blocco e della tabella', () => {
     const errors = (src: string) => planBlock(src)!.errors.map((e) => e.message)
-    expect(errors('gantt: A1:C5\ny = x')[0]).toBe('In the Gantt chart you can only write the titolo:, gantt: and inizio: lines (the tasks are in the table)')
-    expect(errors('reticolo: A1:C5\ny = x')[0]).toBe('In the network diagram you can only write the titolo:, reticolo: and inizio: lines (the tasks are in the table)')
+    expect(errors('gantt: A1:C5\ny = x')[0]).toBe('In the Gantt chart you can only write the title:, gantt: and start: lines (the tasks are in the table)')
+    expect(errors('reticolo: A1:C5\ny = x')[0]).toBe('In the network diagram you can only write the title:, network: and start: lines (the tasks are in the table)')
     expect(errors('gantt: A1:C5\ninizio: 31/02/2026')[0]).toBe('Write the start date like 2026-10-12')
     expect(errors('gantt: A1:C5\nasse x: time')[0]).toBe('This chart has no x and y axes: the time and the tasks already have their names')
     expect(planPicture('gantt: A1:C5', null, PALETTES.light, 700)!.errors[0].message).toBe(

@@ -20,6 +20,9 @@
  *     pareggio: Ricavi, Costi totali   l'utile, la perdita e il punto di pareggio tra le due linee
  *     % commento                  non conta
  *
+ * Il blocco si chiama anche ```graph, e le parole delle righe valgono anche in inglese (title:, x axis:,
+ * data:, break-even:), in tutte e due le lingue di Glifo (src/noteWords.ts).
+ *
  * Con la z (o una funzione di x e y, o tre coordinate) il grafico è in 3D, e ogni equazione è
  * una superficie (vedi space.ts e view3d.ts):
  *
@@ -74,6 +77,7 @@ import { calculusDims, calculusItems, vectorDefinition, type FieldContext } from
 import { gaussItem, isComplexLine, onlyComplex } from './gauss'
 import { dataLine, planLine, tableItems } from './tableGraph'
 import type { ChartData } from '../spreadsheet/chart'
+import { blockWord, parseGraphKey, type GraphKey } from '../noteWords'
 
 const T = texts({
   conditionsInSet: ['Le condizioni vanno dentro l\'insieme', 'Conditions go inside the set'],
@@ -327,14 +331,14 @@ export interface GraphSpec {
   axes?: Partial<Record<'x' | 'y' | 'z', string>>
 }
 
-/** Le righe del titolo e dei nomi degli assi: `titolo: …`, `asse x: …` (e y, z). Parole delle note: per ora solo in italiano. */
-const LABEL_LINE = /^(titolo|asse\s*([xyz]))\s*:\s*(.*)$/i
+/** Le righe del titolo e dei nomi degli assi: `titolo: …`, `asse x: …` (e y, z), anche in inglese (`title:`, `x axis:`; src/noteWords.ts). */
+const LABEL_KEYS: Partial<Record<GraphKey, 'title' | 'x' | 'y' | 'z'>> = { titolo: 'title', 'asse x': 'x', 'asse y': 'y', 'asse z': 'z' }
 
 /** Una riga del titolo o del nome di un asse: quale e il testo (null se la riga è altro). */
 export function labelLine(text: string): { key: 'title' | 'x' | 'y' | 'z'; value: string } | null {
-  const m = LABEL_LINE.exec(text.trim())
-  if (!m) return null
-  return { key: m[2] ? (m[2].toLowerCase() as 'x' | 'y' | 'z') : 'title', value: m[3].trim() }
+  const line = parseGraphKey(text)
+  const key = line && LABEL_KEYS[line.key]
+  return key ? { key, value: line.value } : null
 }
 
 const TRIG_FUNCTIONS = new Set(['sin', 'cos', 'tan', 'cot', 'sec', 'csc'])
@@ -2058,7 +2062,7 @@ export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSp
   return spec.errors.length || !spec.items.length ? null : spec
 }
 
-/** Il blocco da mettere nella nota. */
+/** Il blocco da mettere nella nota, con il nome nella lingua di Glifo (```grafico o ```graph). */
 export function graphBlockText(lines: readonly string[]): string {
-  return '```grafico\n' + lines.join('\n') + '\n```' // non si traduce: il nome del blocco
+  return '```' + blockWord('grafico') + '\n' + lines.join('\n') + '\n```'
 }
