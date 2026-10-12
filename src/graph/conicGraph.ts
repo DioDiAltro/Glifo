@@ -3,12 +3,17 @@
  * C, i fuochi F₁ e F₂ (o F), il vertice V della parabola, e tratteggiati gli asintoti dell'iperbole e la
  * direttrice della parabola. Le quadriche (\operatorname{quadrica}(…)) sono la loro superficie.
  */
+import { texts } from '../i18n'
 import { conicOf } from '../math/conics'
 import { compile, MathError, scopeWith, type Scope } from '../math/evaluate'
 import { toLatex } from '../math/latex'
 import type { MathNode } from '../math/parse'
 import type { SymbolScope } from '../math/symbolic'
 import type { GraphItem } from './spec'
+
+const T = texts({
+  usage: ['Si scrive \\operatorname{conica}(x^2 + 4y^2 = 4)', 'Write \\operatorname{conica}(x^2 + 4y^2 = 4)'],
+})
 
 export const isConicLine = (main: MathNode): boolean => main.k === 'fn' && main.name === 'conic' && main.args.length === 1
 
@@ -18,7 +23,7 @@ export const quadricEquation = (main: MathNode): MathNode | null => (main.k === 
 export function conicItems(main: MathNode, line: number, slot: number, scope: Scope, symbols: SymbolScope): { items: GraphItem[]; colors: number } | null {
   if (!isConicLine(main) || main.k !== 'fn') return null
   const eq = main.args[0]
-  if (eq.k !== 'rel' || eq.ops.length !== 1 || eq.ops[0] !== '=') throw new MathError('Si scrive \\operatorname{conica}(x^2 + 4y^2 = 4)')
+  if (eq.k !== 'rel' || eq.ops.length !== 1 || eq.ops[0] !== '=') throw new MathError(T.usage)
   const F = compile({ k: 'bin', op: '-', a: eq.items[0], b: eq.items[1] }, scopeWith(scope, ['x', 'y']))
   const v: Record<string, number> = {}
   const items: GraphItem[] = [

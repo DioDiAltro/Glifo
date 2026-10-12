@@ -3,6 +3,7 @@
  * parte del piano mostrare quando il blocco non lo dice, e dove mettere le tacche sugli assi.
  * Le coordinate sullo schermo vanno da (0, 0) in alto a sinistra a (width, height).
  */
+import { usesDecimalComma } from '../i18n'
 import { withWorkLimit } from '../math/evaluate'
 import type { PlanePart } from './regions'
 import { GRAPH_WORK, type GraphItem, type GraphSpec, type Range } from './spec'
@@ -842,8 +843,17 @@ export interface Ticks {
 const SUPERSCRIPT = '⁰¹²³⁴⁵⁶⁷⁸⁹'
 
 /**
- * Un numero per le tacche: con la virgola e il meno lungo (−0,5), le potenze di 10 per i molto grandi.
- * `grouped` (i dati di una tabella: euro, quantità) con i punti delle migliaia, come nella tabella: 20.000.
+ * Un numero scritto da Glifo (come 0.5 in JavaScript) con il separatore dei decimali della lingua:
+ * 0,5 in italiano, 0.5 in inglese.
+ */
+export function decimalText(text: string): string {
+  return usesDecimalComma() ? text.replace('.', ',') : text
+}
+
+/**
+ * Un numero per le tacche: con la virgola (in inglese il punto) e il meno lungo (−0,5), le potenze di 10
+ * per i molto grandi. `grouped` (i dati di una tabella: euro, quantità) con i separatori delle migliaia,
+ * come nella tabella: 20.000 (in inglese 20,000).
  */
 export function tickLabel(v: number, step: number, grouped = false): string {
   if (v === 0) return '0'
@@ -852,7 +862,8 @@ export function tickLabel(v: number, step: number, grouped = false): string {
   if (grouped && a < 1e15) {
     const decimals = Math.max(0, -Math.floor(Math.log10(step) + 1e-9))
     const [int, dec] = a.toFixed(decimals).split('.')
-    return `${minus}${int.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}${dec ? `,${dec}` : ''}`
+    const comma = usesDecimalComma()
+    return `${minus}${int.replace(/\B(?=(\d{3})+(?!\d))/g, comma ? '.' : ',')}${dec ? `${comma ? ',' : '.'}${dec}` : ''}`
   }
   if (a >= 1e5 || a < 1e-3) {
     const exp = Math.floor(Math.log10(a))
@@ -861,10 +872,10 @@ export function tickLabel(v: number, step: number, grouped = false): string {
       .split('')
       .map((c) => SUPERSCRIPT[Number(c)])
       .join('')
-    return `${minus}${mant === 1 ? '' : `${String(mant).replace('.', ',')}·`}10${exp < 0 ? '⁻' : ''}${sup}`
+    return `${minus}${mant === 1 ? '' : `${decimalText(String(mant))}·`}10${exp < 0 ? '⁻' : ''}${sup}`
   }
   const decimals = Math.max(0, -Math.floor(Math.log10(step) + 1e-9))
-  return minus + a.toFixed(decimals).replace('.', ',')
+  return minus + decimalText(a.toFixed(decimals))
 }
 
 /** Un multiplo di π come si scrive: π/2, 3π/4, −2π. */

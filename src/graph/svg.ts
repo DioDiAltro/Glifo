@@ -2,11 +2,17 @@
  * Il disegno di un grafico in SVG: griglia, assi con le frecce e i numeri, le curve, i punti.
  * Lo stesso disegno serve all'anteprima (con i colori del tema) e alle immagini nei file .md.
  */
+import { texts } from '../i18n'
 import { withWorkLimit } from '../math/evaluate'
-import { lineAcross, regionEdges, sampleArea, sampleFunction, sampleImplicit, sampleParametric, sampleRegion, ticks, type Polyline, type Viewport } from './plot'
+import { decimalText, lineAcross, regionEdges, sampleArea, sampleFunction, sampleImplicit, sampleParametric, sampleRegion, ticks, type Polyline, type Viewport } from './plot'
 import { contourLevels, equilibria, phaseTrajectory, solutionCurves } from './ode'
 import { GRAPH_WORK, type GraphItem, type GraphSpec } from './spec'
 import { labelSvg } from './labels'
+
+const T = texts({
+  graph: ['Grafico', 'Graph'],
+  graphOf: (labels: readonly string[]) => [`Grafico di ${labels.join(' e ')}`, `Graph of ${labels.join(' and ')}`],
+})
 
 export interface Palette {
   /** Lo sfondo (null: trasparente, si vede quello dell'anteprima). */
@@ -856,7 +862,7 @@ function angleArc(
   const sweep = delta > 0 ? 1 : 0
   const mid = ta + delta / 2
   const round = Math.round(item.degrees * 10) / 10
-  const text = `${String(round).replace('.', ',')}°`
+  const text = `${decimalText(String(round))}°`
   // L'ampiezza sulla bisettrice, lontano quanto basta perché la scritta non tocchi i lati.
   const w = 6.6 * text.length + 4
   const h = 14
@@ -890,5 +896,5 @@ export function imaginaryLabel(label: string): string {
 export function graphTitle(spec: GraphSpec): string {
   // I nomi delle colonne di una tabella sono testo: senza il \text{…} della legenda.
   const labels = spec.items.filter((i) => i.kind !== 'point').map((i) => i.label.replace(/\\text\{([^}]*)\}/g, '$1'))
-  return labels.length ? `Grafico di ${labels.join(' e ')}` : 'Grafico'
+  return labels.length ? T.graphOf(labels) : T.graph
 }

@@ -3,12 +3,22 @@
  * minimi, S le selle), e gli estremi vincolati e assoluti con il vincolo (la curva, o l'insieme
  * colorato) e i punti di massimo e di minimo.
  */
+import { texts } from '../i18n'
 import { compile, MathError, scopeWith, type Scope } from '../math/evaluate'
 import { toLatex } from '../math/latex'
 import type { MathNode } from '../math/parse'
 import { criticalPoints, extremaOf, optimumOf, severalOf, type Several } from '../math/several'
 import { toNode, type SymbolScope } from '../math/symbolic'
 import type { GraphItem } from './spec'
+
+const T = texts({
+  twoVariables: ['Qui va una funzione di due variabili, come x^2 + y^2 o f della nota', 'This needs a function of two variables, like x^2 + y^2 or an f from the note'],
+  onlyTwo: ['Nel grafico vanno le funzioni di due variabili (si vedono le curve di livello)', 'The graph takes functions of two variables (it shows their level curves)'],
+  levels: (f: string) => [`\\text{livelli di } ${f}`, `\\text{level curves of } ${f}`],
+  max: ['massimo', 'maximum'],
+  min: ['minimo', 'minimum'],
+  saddle: ['sella', 'saddle point'],
+})
 
 /** Le righe che disegna questo modulo: \operatorname{critici}(f), \operatorname{lagrange}(f, g = c), \operatorname{estremi}(f, D), \max_{…} f. */
 export function isSeveralLine(main: MathNode): boolean {
@@ -46,17 +56,17 @@ export function severalItems(
   const critical = criticalLine(main, symbols)
   const problem = critical ? null : optimumOf(main.args[0], main.base ?? main.args[1], symbols, sets)
   const s = critical ? severalOf(main.args[0], symbols) : problem?.s
-  if (!s) throw new MathError('Qui va una funzione di due variabili, come x^2 + y^2 o f della nota')
-  if (s.vars.length !== 2) throw new MathError('Nel grafico vanno le funzioni di due variabili (si vedono le curve di livello)')
+  if (!s) throw new MathError(T.twoVariables)
+  if (s.vars.length !== 2) throw new MathError(T.onlyTwo)
   const F = surface(s, scope)
   const label = s.name ? `${s.name}(${s.vars.join(', ')})` : toLatex(main.args[0])
-  const items: GraphItem[] = [{ kind: 'contour', line, label: `\\text{livelli di } ${label}`, slot, F }]
+  const items: GraphItem[] = [{ kind: 'contour', line, label: T.levels(label), slot, F }]
   let colors = 1
   if (critical) {
     const found = criticalPoints(s)
     if (!found || found.infinite) return { items, colors }
     const groups = { max: found.points.filter((p) => p.kind === 'max'), min: found.points.filter((p) => p.kind === 'min'), saddle: found.points.filter((p) => p.kind === 'saddle') }
-    const what = { max: ['M', 'massimo'], min: ['m', 'minimo'], saddle: ['S', 'sella'] } as const
+    const what = { max: ['M', T.max], min: ['m', T.min], saddle: ['S', T.saddle] } as const
     for (const kind of ['max', 'min', 'saddle'] as const) {
       groups[kind].forEach((p, k) => {
         const name = named(what[kind][0], k, groups[kind].length)
@@ -87,7 +97,7 @@ export function severalItems(
     const list = found[kind]
     list.forEach((p, k) => {
       const name = named(kind === 'max' ? 'M' : 'm', k, list.length)
-      items.push({ kind: 'point', line, label: `${name}\\ \\text{(${kind === 'max' ? 'massimo' : 'minimo'})}`, slot: -1, x: p.at[0].v, y: p.at[1].v, name })
+      items.push({ kind: 'point', line, label: `${name}\\ \\text{(${kind === 'max' ? T.max : T.min})}`, slot: -1, x: p.at[0].v, y: p.at[1].v, name })
     })
   }
   return { items, colors }

@@ -2,6 +2,7 @@
  * I test d'ipotesi nei grafici: la densità della statistica sotto H₀ (normale, t, χ²) con la regione di
  * rifiuto colorata e la statistica calcolata tratteggiata: si vede se cade dentro.
  */
+import { texts, usesDecimalComma } from '../i18n'
 import { chiSquareTest, hypothesisTest, type TestResult } from '../math/inference'
 import { formatNumber } from '../math/format'
 import type { MathNode } from '../math/parse'
@@ -11,7 +12,11 @@ import { distributionExtent } from './statsGraph'
 
 export const isTestLine = (main: MathNode): boolean => main.k === 'fn' && !main.pow && (main.name === 'htest' || main.name === 'chisq')
 
-const number = (v: number) => formatNumber(v, { comma: true, decimal: true, digits: 5 })?.tex ?? String(v)
+const T = texts({
+  rejection: (alpha: string) => [`\\text{rifiuto } (\\alpha = ${alpha})`, `\\text{rejection region } (\\alpha = ${alpha})`],
+})
+
+const number = (v: number) => formatNumber(v, { comma: usesDecimalComma(), decimal: true, digits: 5 })?.tex ?? String(v)
 
 export function testItems(main: MathNode, line: number, slot: number, sheet: Sheet): { items: GraphItem[]; colors: number } | null {
   if (!isTestLine(main) || main.k !== 'fn') return null
@@ -27,7 +32,7 @@ export function testItems(main: MathNode, line: number, slot: number, sheet: She
     const to = Math.min(b, extent[1])
     if (to <= from) return
     const value = t.dist.cdf(Math.min(b, 1e300)) - (Number.isFinite(a) ? t.dist.cdf(a) : 0)
-    items.push({ kind: 'area', line, label: k === 0 ? `\\text{rifiuto } (\\alpha = ${number(t.alpha)})` : '', slot: slot + 1, f, from, to, value, curve: false, extent })
+    items.push({ kind: 'area', line, label: k === 0 ? T.rejection(number(t.alpha)) : '', slot: slot + 1, f, from, to, value, curve: false, extent })
   })
   items.push({ kind: 'vertical', line, label: `${t.symbol} = ${number(t.statistic)}`, slot: slot + 2, x: t.statistic, dashed: true })
   return { items, colors: 3 }

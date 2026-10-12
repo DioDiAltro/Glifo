@@ -35,6 +35,7 @@
  * slider sotto il grafico: `parseGraph` con `values` rifà il grafico con quei valori al posto di
  * quelli scritti, senza cambiare la nota.
  */
+import { texts, usesDecimalComma } from '../i18n'
 import { compileComplex, type Complex, type ComplexFunction, type ComplexScope } from '../math/complex'
 import { degreesText, evaluateLinear, EXACT, FLOAT, formatLinear, type Lin, type LinearScope, type LinearValue } from '../math/linear'
 import { compile, compileCondition, EMPTY_SCOPE, errorMessage, MathError, scopeWith, UndefinedName, withWorkLimit, type Compiled, type Scope, type UserFunction } from '../math/evaluate'
@@ -73,6 +74,83 @@ import { calculusDims, calculusItems, vectorDefinition, type FieldContext } from
 import { gaussItem, isComplexLine, onlyComplex } from './gauss'
 import { dataLine, planLine, tableItems } from './tableGraph'
 import type { ChartData } from '../spreadsheet/chart'
+
+const T = texts({
+  conditionsInSet: ['Le condizioni vanno dentro l\'insieme', 'Conditions go inside the set'],
+  numberConditions: ['Un numero non ha condizioni', 'A number has no conditions'],
+  notNumber: (name: string) => [`${name} non è un numero`, `${name} is not a number`],
+  figure3d: ['Una figura con tre coordinate va in un grafico 3D', 'A figure with three coordinates goes in a 3D graph'],
+  matrix: ['Una matrice non si disegna: disegna i vettori, come A v', 'A matrix can\'t be drawn: draw vectors, like A v'],
+  vectorSize: ['Si disegnano i vettori con due o tre componenti', 'Only vectors with two or three components can be drawn'],
+  vector3d: ['Un vettore con tre componenti va in un grafico 3D', 'A vector with three components goes in a 3D graph'],
+  line3d: ['Una retta nello spazio va in un grafico 3D', 'A line in space goes in a 3D graph'],
+  plane3d: ['Un piano va in un grafico 3D', 'A plane goes in a 3D graph'],
+  spanSize: ['Si disegnano gli span di uno o due vettori', 'Only spans of one or two vectors can be drawn'],
+  scalar: ['È un numero: si calcola nella nota (con «=»), non si disegna', 'It\'s a number: calculate it in the note (with “=”), it can\'t be drawn'],
+  noValue: (name: string) => [`${name} non ha un valore: controlla la sua definizione`, `${name} has no value: check its definition`],
+  startDate: [
+    'La data d\'inizio serve al diagramma di Gantt: scrivi anche la riga gantt: con le celle delle attività (gantt: A1:E9)',
+    'The start date is for the Gantt chart: also write the gantt: line with the task cells (gantt: A1:E9)',
+  ],
+  usesItself: (name: string) => [`${name} usa sé stessa (anche attraverso un'altra definizione)`, `${name} uses itself (possibly through another definition)`],
+  twoEnds: (example: string) => [`Servono due estremi, dal più piccolo al più grande: ${example}`, `Two endpoints are needed, from the smaller to the larger: ${example}`],
+  sliderFunction: (name: string) => [`${name} è una funzione: lo slider è per i numeri, come a = 2`, `${name} is a function: sliders are for numbers, like a = 2`],
+  sliderComputed: (name: string) => [
+    `${name} si calcola da altri numeri: lo slider è per quelli scritti con le cifre, come a = 2`,
+    `${name} is calculated from other numbers: sliders are for numbers written with digits, like a = 2`,
+  ],
+  tableIn3d: ['I dati di una tabella si disegnano nel piano, non nello spazio', 'Table data is drawn in the plane, not in space'],
+  integralConditions: ['Un integrale non ha condizioni: dicono dove gli estremi, es. \\int_0^2', 'An integral has no conditions: the limits say where, e.g. \\int_0^2'],
+  integralEnds: ['Gli estremi dell\'integrale non sono numeri', 'The limits of the integral aren\'t numbers'],
+  planeVars: (vars: string) => [
+    `Le variabili sono ${vars}: nel piano si disegnano i domini in x e y (o r e θ)`,
+    `The variables are ${vars}: only domains in x and y (or r and θ) can be drawn in the plane`,
+  ],
+  doubleConditions: ['Un integrale non ha condizioni: il dominio va sotto, es. \\iint_D', 'An integral has no conditions: the domain goes below, e.g. \\iint_D'],
+  tripleConditions: ['Un integrale non ha condizioni: il dominio va sotto, es. \\iiint_E', 'An integral has no conditions: the domain goes below, e.g. \\iiint_E'],
+  spaceDomainVars: (vars: string) => [
+    `Le variabili sono ${vars}: nello spazio si disegnano i domini in x, y e z (o cilindriche, o sferiche)`,
+    `The variables are ${vars}: only domains in x, y and z (or cylindrical, or spherical) can be drawn in space`,
+  ],
+  volume: [
+    'Il volume si disegna per gli integrali in x e y: con r e θ dentro la funzione c\'è anche r',
+    'The volume is drawn for integrals in x and y: with r and θ, the function also contains r',
+  ],
+  spaceSetVars: (vars: string) => [
+    `Le variabili sono ${vars}: nello spazio si disegnano gli insiemi in x, y e z`,
+    `The variables are ${vars}: only sets in x, y and z can be drawn in space`,
+  ],
+  point2: ['Un punto ha due coordinate: (x, y)', 'A point has two coordinates: (x, y)'],
+  pointConditions: ['Un punto non ha condizioni', 'A point has no conditions'],
+  pointNumbers: ['Le coordinate del punto non sono numeri', 'The point\'s coordinates aren\'t numbers'],
+  oneEquality: ['In una riga va un\'uguaglianza sola', 'Only one equality per line'],
+  mixed: ['Un\'uguaglianza e una disuguaglianza insieme: scrivile in due righe', 'An equality and an inequality together: write them on two lines'],
+  verticalConditions: ['Una retta verticale non ha condizioni', 'A vertical line has no conditions'],
+  xNotNumber: ['x non è un numero', 'x is not a number'],
+  noXY: ['Mancano x e y: cosa disegno?', 'x and y are missing: what should I draw?'],
+  conditionX: [
+    'Una condizione da sola non si disegna: per la parte da mostrare scrivi x \\in [a, b]',
+    'A condition alone can\'t be drawn: to choose the part to show, write x \\in [a, b]',
+  ],
+  variables: (name: string, n: number) => [`${name} ha ${n} variabili: si disegnano le funzioni di una`, `${name} has ${n} variables: only functions of one variable can be drawn`],
+  noX: ['Manca la x: per una retta orizzontale scrivi y = 3', 'x is missing: for a horizontal line write y = 3'],
+  point3: ['Un punto nello spazio ha tre coordinate: (x, y, z)', 'A point in space has three coordinates: (x, y, z)'],
+  parameters: (params: string) => [`Troppi parametri (${params}): una curva ne ha uno, una superficie due`, `Too many parameters (${params}): a curve has one, a surface two`],
+  area3d: [
+    'Nei grafici 3D l\'area sotto una curva non si disegna: scrivila in un grafico senza la z',
+    'A 3D graph can\'t draw the area under a curve: write it in a graph without z',
+  ],
+  noXYZ: ['Mancano x, y e z: cosa disegno?', 'x, y and z are missing: what should I draw?'],
+  conditionZ: [
+    'Una condizione da sola non si disegna: per la parte da mostrare scrivi z \\in [a, b]',
+    'A condition alone can\'t be drawn: to choose the part to show, write z \\in [a, b]',
+  ],
+  notSurface: (name: string) => [
+    `${name} non è una funzione di x e y: nello spazio si disegnano le superfici z = f(x, y)`,
+    `${name} isn't a function of x and y: only surfaces z = f(x, y) can be drawn in space`,
+  ],
+  noXYPlane: ['Mancano x e y: per un piano orizzontale scrivi z = 3', 'x and y are missing: for a horizontal plane write z = 3'],
+})
 
 export type Range = [number, number]
 
@@ -249,7 +327,7 @@ export interface GraphSpec {
   axes?: Partial<Record<'x' | 'y' | 'z', string>>
 }
 
-/** Le righe del titolo e dei nomi degli assi: `titolo: …`, `asse x: …` (e y, z). */
+/** Le righe del titolo e dei nomi degli assi: `titolo: …`, `asse x: …` (e y, z). Parole delle note: per ora solo in italiano. */
 const LABEL_LINE = /^(titolo|asse\s*([xyz]))\s*:\s*(.*)$/i
 
 /** Una riga del titolo o del nome di un asse: quale e il testo (null se la riga è altro). */
@@ -677,18 +755,18 @@ function define(
   complexes?.consts.delete(def.name)
   complexes?.fns.delete(def.name)
   if (!def.params && def.value.k === 'set') {
-    if (cond) throw new MathError('Le condizioni vanno dentro l\'insieme')
+    if (cond) throw new MathError(T.conditionsInSet)
     consts.delete(def.name)
     fns.delete(def.name)
     sets.set(def.name, def.value)
     return
   }
   if (!def.params) {
-    if (cond) throw new MathError('Un numero non ha condizioni')
+    if (cond) throw new MathError(T.numberConditions)
     let value: number
     try {
       value = values?.get(def.name) ?? compile(def.value, scope, { calc: true })({})
-      if (!Number.isFinite(value)) throw new MathError(`${def.name} non è un numero`)
+      if (!Number.isFinite(value)) throw new MathError(T.notNumber(def.name))
     } catch (err) {
       // Un numero complesso (w = 1 + i): per il piano di Gauss.
       const z = complexes ? complexValue(def.value, complexes.scope()) : null
@@ -794,7 +872,7 @@ function tryFormat<T>(run: () => T | null): T | null {
 
 /** Il valore di una figura per l'etichetta: con le frazioni, se si può. */
 function figureText(node: MathNode, scope: LinearScope, float: Lin<number>): string | null {
-  const options = { comma: true, decimal: false, digits: 9 }
+  const options = { comma: usesDecimalComma(), decimal: false, digits: 9 }
   const exact = tryFormat(() => formatLinear(EXACT, evaluateLinear(node, scope, EXACT), options))
   return (exact ?? formatLinear(FLOAT, float, { ...options, decimal: true }))?.tex ?? null
 }
@@ -816,16 +894,16 @@ function linearItem(l: Line, scope: LinearScope, slot: number, space: boolean): 
   const shown = () => figureText(node, scope, value) ?? ''
   const line = l.line
   const flat = (v: Vec3[]) => {
-    if (!space && v.some((p) => p[2] !== 0)) throw new MathError('Una figura con tre coordinate va in un grafico 3D')
+    if (!space && v.some((p) => p[2] !== 0)) throw new MathError(T.figure3d)
   }
   switch (value.k) {
     case 'matrix': {
-      if (value.m[0].length !== 1) throw new MathError('Una matrice non si disegna: disegna i vettori, come A v')
+      if (value.m[0].length !== 1) throw new MathError(T.matrix)
       const v = value.m.map((r) => r[0])
-      if (v.length < 2 || v.length > 3) throw new MathError('Si disegnano i vettori con due o tre componenti')
+      if (v.length < 2 || v.length > 3) throw new MathError(T.vectorSize)
       const [x, y, z = 0] = v
       if (name && /^[A-Z]/.test(name)) return space ? { kind: 'point3', line, label: nameLatex(name), slot: -1, x, y, z, name } : { kind: 'point', line, label: nameLatex(name), slot: -1, x, y, name }
-      if (!space && v.length === 3) throw new MathError('Un vettore con tre componenti va in un grafico 3D')
+      if (!space && v.length === 3) throw new MathError(T.vector3d)
       // Nella legenda anche le componenti, se la riga non le scrive già: u + v = (4, 1).
       const label = l.main.k === 'matrix' || l.main.k === 'tuple' ? written : `${written} = ${shown()}`
       return { kind: 'vector', line, label, slot, from: [0, 0, 0], to: [x, y, z], name }
@@ -847,7 +925,7 @@ function linearItem(l: Line, scope: LinearScope, slot: number, space: boolean): 
       const d = vec3(value.dir)
       const label = `${written}: ${shown()}`
       if (value.p.length === 3) {
-        if (!space) throw new MathError('Una retta nello spazio va in un grafico 3D')
+        if (!space) throw new MathError(T.line3d)
         return { kind: 'curve3', line, label, slot, param: 't', t: [0, 1], straight: true, fx: (t) => p[0] + t * d[0], fy: (t) => p[1] + t * d[1], fz: (t) => p[2] + t * d[2] }
       }
       return { kind: 'parametric', line, label, slot, param: 't', t: [0, 1], straight: true, fx: (t) => p[0] + t * d[0], fy: (t) => p[1] + t * d[1] }
@@ -858,7 +936,7 @@ function linearItem(l: Line, scope: LinearScope, slot: number, space: boolean): 
       return { kind: 'implicit', line, label: `${written}: ${shown()}`, slot, F: (x, y) => (x - cx) ** 2 + (y - cy) ** 2 - r2 }
     }
     case 'plane': {
-      if (!space) throw new MathError('Un piano va in un grafico 3D')
+      if (!space) throw new MathError(T.plane3d)
       const [a, b, c] = value.n.map((r) => r[0])
       const d = value.d
       return { kind: 'implicit3', line, label: `${written}: ${shown()}`, slot, F: (x, y, z) => a * x + b * y + c * z - d, plane: [a, b, c, d] }
@@ -878,7 +956,7 @@ function linearItem(l: Line, scope: LinearScope, slot: number, space: boolean): 
       const ub = b.map((c, i) => c - vertex[i])
       const cos = (ua[0] * ub[0] + ua[1] * ub[1] + ua[2] * ub[2]) / (Math.hypot(...ua) * Math.hypot(...ub))
       const degrees = (Math.acos(Math.max(-1, Math.min(1, cos))) * 180) / Math.PI
-      return { kind: 'angle', line, label: `${written} = ${degreesText(degrees, { comma: true, decimal: true, digits: 9 })?.tex ?? ''}`, slot, vertex, a, b, degrees }
+      return { kind: 'angle', line, label: `${written} = ${degreesText(degrees, { comma: usesDecimalComma(), decimal: true, digits: 9 })?.tex ?? ''}`, slot, vertex, a, b, degrees }
     }
     case 'points': {
       const points = value.list.map(vec3)
@@ -898,11 +976,11 @@ function linearItem(l: Line, scope: LinearScope, slot: number, space: boolean): 
         const n: Vec3 = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]]
         return { kind: 'implicit3', line, label: written, slot, F: (x, y, z) => n[0] * x + n[1] * y + n[2] * z, plane: [n[0], n[1], n[2], 0] }
       }
-      throw new MathError('Si disegnano gli span di uno o due vettori')
+      throw new MathError(T.spanSize)
     }
     case 'scalar':
     case 'length':
-      throw new MathError('È un numero: si calcola nella nota (con «=»), non si disegna')
+      throw new MathError(T.scalar)
   }
   return null
 }
@@ -944,7 +1022,7 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   const undefinedIn: { error: GraphError; line: Line }[] = []
   const failLine = (l: Line, err: unknown) => {
     if (err instanceof UndefinedName && defined.has(err.missing)) {
-      fail(l, new MathError(`${err.missing} non ha un valore: controlla la sua definizione`))
+      fail(l, new MathError(T.noValue(err.missing)))
       return
     }
     const error = fail(l, err)
@@ -973,7 +1051,7 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
     // Il diagramma di Gantt e il reticolo si disegnano a parte (planBlock.ts): qui resta solo la data da sola.
     const plan = planLine(l.text)
     if (plan) {
-      if (plan.key === 'inizio') fail(l, new MathError('La data d\'inizio serve al diagramma di Gantt: scrivi anche la riga gantt: con le celle delle attività (gantt: A1:E9)'))
+      if (plan.key === 'inizio') fail(l, new MathError(T.startDate))
       continue
     }
     try {
@@ -1163,7 +1241,7 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
       define(def, l.cond, scope(), consts, fns, sets, values, gauss ? complexes : undefined)
       madeLines.push(l)
     } catch (err) {
-      failLine(l, reaches(def.name, def.name, new Set()) ? new MathError(`${def.name} usa sé stessa (anche attraverso un'altra definizione)`) : err)
+      failLine(l, reaches(def.name, def.name, new Set()) ? new MathError(T.usesItself(def.name)) : err)
     }
   }
 
@@ -1240,7 +1318,7 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
         const range: Range = [constantValue(r.lo, scope()), constantValue(r.hi, scope())]
         if (!(Number.isFinite(range[0]) && Number.isFinite(range[1]) && range[1] > range[0])) {
           const example = AXES.includes(r.name) || coords.includes(r.name) ? 'x \\in [-5, 5]' : `${nameLatex(r.name)} \\in [0, 5]`
-          throw new MathError(`Servono due estremi, dal più piccolo al più grande: ${example}`)
+          throw new MathError(T.twoEnds(example))
         }
         ranges.set(r.name, range)
         if (!coords.includes(r.name)) sliderRanges.set(r.name, { range, ends: [toLatex(r.lo), toLatex(r.hi)], line: l })
@@ -1452,8 +1530,8 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   for (const [name, r] of sliderRanges) {
     if (isNumber(name) || name === 't' || name === 'θ' || params.has(name)) continue
     const def = blockDefs.get(name)?.def ?? lastNoteDef(name)
-    if (fns.has(name) || def?.params) failLine(r.line, new MathError(`${name} è una funzione: lo slider è per i numeri, come a = 2`))
-    else if (def && (def.value.k === 'int' || def.value.k === 'mint' || !onlyDigits(usesOf(name)))) failLine(r.line, new MathError(`${name} si calcola da altri numeri: lo slider è per quelli scritti con le cifre, come a = 2`))
+    if (fns.has(name) || def?.params) failLine(r.line, new MathError(T.sliderFunction(name)))
+    else if (def && (def.value.k === 'int' || def.value.k === 'mint' || !onlyDigits(usesOf(name)))) failLine(r.line, new MathError(T.sliderComputed(name)))
     else failLine(r.line, new UndefinedName(name))
   }
 
@@ -1471,7 +1549,7 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   // I numeri di una tabella della nota: le linee dopo quelle delle altre righe, con i loro colori.
   if (dataLines.length) {
     const table = tableItems(dataLines, chart, Math.max(-1, ...spec.items.map((i) => i.slot)) + 1)
-    if (spec.dim === 3 && table.items.length) fail(dataLines[0], new MathError('I dati di una tabella si disegnano nel piano, non nello spazio'))
+    if (spec.dim === 3 && table.items.length) fail(dataLines[0], new MathError(T.tableIn3d))
     else spec.items.push(...table.items)
     spec.errors.push(...table.errors)
   }
@@ -1536,15 +1614,15 @@ function missingNumbers(l: Line, scope: Scope, space = false): string[] {
 
 /** L'area di un integrale: la funzione da integrare (nella x del grafico), gli estremi e il valore. */
 function areaFor(l: Line, { int, name }: NonNullable<ReturnType<typeof areaOf>>, scope: Scope, slot: number, curve: boolean): GraphItem {
-  if (l.cond) throw new MathError('Un integrale non ha condizioni: dicono dove gli estremi, es. \\int_0^2')
+  if (l.cond) throw new MathError(T.integralConditions)
   const from = constantValue(int.from, scope)
   const to = constantValue(int.to, scope)
-  if (Number.isNaN(from) || Number.isNaN(to)) throw new MathError('Gli estremi dell\'integrale non sono numeri')
+  if (Number.isNaN(from) || Number.isNaN(to)) throw new MathError(T.integralEnds)
   const body = compile(int.body, scopeWith(scope, [int.v]))
   const v: Record<string, number> = { [int.v]: 0 }
   const value = compile(int, scope, { calc: true })({})
   // Il valore come nei risultati della nota (2,666666…); se l'integrale non converge, niente.
-  const shown = formatNumber(value, { comma: true, decimal: true, digits: 9 })
+  const shown = formatNumber(value, { comma: usesDecimalComma(), decimal: true, digits: 9 })
   const label = `${name ? `${nameLatex(name)} = ` : ''}${toLatex(int)}${shown ? ` = ${shown.tex}` : ''}`
   return { kind: 'area', line: l.line, label, slot, f: (x) => ((v[int.v] = x), body(v)), from, to, value, curve }
 }
@@ -1552,7 +1630,7 @@ function areaFor(l: Line, { int, name }: NonNullable<ReturnType<typeof areaOf>>,
 /** Il valore di un integrale doppio o triplo come nei risultati della nota (meno cifre di quelli semplici). */
 function multipleLabel(m: Multiple, scope: Scope): string {
   const value = compile(m.node, scope, { calc: true })({})
-  const shown = formatNumber(value, { comma: true, decimal: true, digits: m.dims === 2 ? 8 : 7 })
+  const shown = formatNumber(value, { comma: usesDecimalComma(), decimal: true, digits: m.dims === 2 ? 8 : 7 })
   return `${m.name ? `${nameLatex(m.name)} = ` : ''}${toLatex(m.node)}${shown ? ` = ${shown.tex}` : ''}`
 }
 
@@ -1579,7 +1657,7 @@ function planeExtent(M: (x: number, y: number) => number): { x: Range; y: Range 
 /** Il margine nel piano xy, o l'errore se le variabili non sono x e y (o r e θ). */
 function flatMargin(vars: string[], margin: Compiled): (x: number, y: number) => number {
   const M = planeMargin(vars, margin)
-  if (!M) throw new MathError(`Le variabili sono ${vars.join(', ')}: nel piano si disegnano i domini in x e y (o r e θ)`)
+  if (!M) throw new MathError(T.planeVars(vars.join(', ')))
   return M
 }
 
@@ -1591,13 +1669,13 @@ function planeRegionFor(l: Line, scope: Scope, slot: number): GraphItem | null {
   const { main, cond, line } = l
   const multiple = multipleOf(main)
   if (multiple) {
-    if (cond) throw new MathError('Un integrale non ha condizioni: il dominio va sotto, es. \\iint_D')
+    if (cond) throw new MathError(T.doubleConditions)
     const region = integralRegion(multiple.node, scope)
     return { kind: 'region', line, label: multipleLabel(multiple, scope), slot, M: flatMargin(region.vars, region.margin), strict: false, parts: planeParts(region) }
   }
   const set = setOf(main, scope)
   if (set) {
-    if (cond) throw new MathError('Le condizioni vanno dentro l\'insieme')
+    if (cond) throw new MathError(T.conditionsInSet)
     const domain = inequalityMargin(set.node, scope, null)
     return { kind: 'region', line, label: toLatex(main), slot, M: flatMargin(domain.vars, domain.margin), strict: domain.strict, parts: planeParts(domain) }
   }
@@ -1618,29 +1696,29 @@ function spaceRegionFor(l: Line, scope: Scope, slot: number): GraphItem | null {
   const { main, cond, line } = l
   const multiple = multipleOf(main)
   if (multiple) {
-    if (cond) throw new MathError('Un integrale non ha condizioni: il dominio va sotto, es. \\iiint_E')
+    if (cond) throw new MathError(T.tripleConditions)
     const region = integralRegion(multiple.node, scope)
     const label = multipleLabel(multiple, scope)
     if (multiple.dims === 3) {
       const M = spaceMargin(region.vars, region.margin)
-      if (!M) throw new MathError(`Le variabili sono ${region.vars.join(', ')}: nello spazio si disegnano i domini in x, y e z (o cilindriche, o sferiche)`)
+      if (!M) throw new MathError(T.spaceDomainVars(region.vars.join(', ')))
       return { kind: 'solid', line, label, slot, M, parts: spaceParts(region.vars, region.parts), layers: spaceLayers(region.layers) }
     }
     // L'area del dominio (la funzione è 1): il dominio nel piano xy.
     if (constantIntegrand(region)) return { kind: 'region', line, label, slot, M: flatMargin(region.vars, region.margin), strict: false, parts: planeParts(region) }
     const M = volumeMargin(region)
-    if (!M) throw new MathError('Il volume si disegna per gli integrali in x e y: con r e θ dentro la funzione c\'è anche r')
+    if (!M) throw new MathError(T.volume)
     const base = flatMargin(region.vars, region.margin)
     return { kind: 'solid', line, label, slot, M, parts: volumeParts(region, planeExtent(base)), layers: volumeLayers(region) }
   }
   const set = setOf(main, scope)
   if (set) {
-    if (cond) throw new MathError('Le condizioni vanno dentro l\'insieme')
+    if (cond) throw new MathError(T.conditionsInSet)
     const domain = inequalityMargin(set.node, scope, null)
     const { vars, margin, strict, parts, layers } = domain
     if (vars.length === 2) return { kind: 'region', line, label: toLatex(main), slot, M: flatMargin(vars, margin), strict, parts: planeParts(domain) }
     const M = spaceMargin(vars, margin)
-    if (!M) throw new MathError(`Le variabili sono ${vars.join(', ')}: nello spazio si disegnano gli insiemi in x, y e z`)
+    if (!M) throw new MathError(T.spaceSetVars(vars.join(', ')))
     return { kind: 'solid', line, label: toLatex(main), slot, M, parts: spaceParts(vars, parts), layers: spaceLayers(layers) }
   }
   if (inequalities(main)) {
@@ -1672,7 +1750,7 @@ function itemFor(l: Line, scope: Scope, slot: number, curve = true): GraphItem {
     name = main.name
   }
   if (coords) {
-    if (coords.length !== 2) throw new MathError('Un punto ha due coordinate: (x, y)')
+    if (coords.length !== 2) throw new MathError(T.point2)
     const param = coords.some((n) => dependsOn(n, 'θ')) ? 'θ' : 't'
     if (coords.some((n) => dependsOn(n, param))) {
       const inner = scopeWith(scope, [param])
@@ -1683,9 +1761,9 @@ function itemFor(l: Line, scope: Scope, slot: number, curve = true): GraphItem {
       const [fxt, fyt] = [(t: number) => ((v[param] = t), fx(v)), (t: number) => ((v[param] = t), fy(v))]
       return { kind: 'parametric', line, label, slot, param, t: [0, 2 * Math.PI], fx: fxt, fy: fyt, straight: !cond && isStraight([fxt, fyt]) }
     }
-    if (cond) throw new MathError('Un punto non ha condizioni')
+    if (cond) throw new MathError(T.pointConditions)
     const [x, y] = coords.map((n) => compile(n, scope)({}))
-    if (!Number.isFinite(x) || !Number.isFinite(y)) throw new MathError('Le coordinate del punto non sono numeri')
+    if (!Number.isFinite(x) || !Number.isFinite(y)) throw new MathError(T.pointNumbers)
     // \vec{v} = (2, 1): una freccia dall'origine.
     if (isVectorName(name)) return { kind: 'vector', line, label: `${nameLatex(name)} = ${toLatex({ k: 'tuple', items: coords })}`, slot, from: [0, 0, 0], to: [x, y, 0], name }
     return { kind: 'point', line, label: name ? nameLatex(name) : '', slot: -1, x, y, name }
@@ -1693,8 +1771,8 @@ function itemFor(l: Line, scope: Scope, slot: number, curve = true): GraphItem {
 
   if (main.k === 'rel') {
     if (main.ops.length !== 1 || main.ops[0] !== '=') {
-      if (main.ops.every((op) => op === '=')) throw new MathError('In una riga va un\'uguaglianza sola')
-      throw new MathError('Un\'uguaglianza e una disuguaglianza insieme: scrivile in due righe')
+      if (main.ops.every((op) => op === '=')) throw new MathError(T.oneEquality)
+      throw new MathError(T.mixed)
     }
     const [lhs, rhs] = main.items
     const label = `${toLatex(main)}${condLabel(cond)}`
@@ -1712,9 +1790,9 @@ function itemFor(l: Line, scope: Scope, slot: number, curve = true): GraphItem {
     }
     // x = 3: retta verticale
     if (lhs.k === 'name' && lhs.name === 'x' && !dependsOn(rhs, 'y') && !dependsOn(rhs, 'x')) {
-      if (cond) throw new MathError('Una retta verticale non ha condizioni')
+      if (cond) throw new MathError(T.verticalConditions)
       const x = compile(rhs, scope)({})
-      if (!Number.isFinite(x)) throw new MathError('x non è un numero')
+      if (!Number.isFinite(x)) throw new MathError(T.xNotNumber)
       return { kind: 'vertical', line, label, slot, x }
     }
     // r = f(θ): coordinate polari
@@ -1735,7 +1813,7 @@ function itemFor(l: Line, scope: Scope, slot: number, curve = true): GraphItem {
       }
     }
     // Una curva qualsiasi: sinistra - destra = 0
-    if (!dependsOn(main, 'x') && !dependsOn(main, 'y')) throw new MathError('Mancano x e y: cosa disegno?')
+    if (!dependsOn(main, 'x') && !dependsOn(main, 'y')) throw new MathError(T.noXY)
     const xy = scopeWith(scope, ['x', 'y'])
     const left = compile(lhs, xy)
     const right = compile(rhs, xy)
@@ -1754,15 +1832,15 @@ function itemFor(l: Line, scope: Scope, slot: number, curve = true): GraphItem {
     }
   }
 
-  if (main.k === 'in' || main.k === 'and' || main.k === 'or') throw new MathError('Una condizione da sola non si disegna: per la parte da mostrare scrivi x \\in [a, b]')
+  if (main.k === 'in' || main.k === 'and' || main.k === 'or') throw new MathError(T.conditionX)
   // f: una funzione definita (nella nota o nel blocco), da sola.
   if (main.k === 'name' && scope.fns.has(main.name)) {
     const fn = scope.fns.get(main.name)!
-    if (fn.params.length !== 1) throw new MathError(`${main.name} ha ${fn.params.length} variabili: si disegnano le funzioni di una`)
+    if (fn.params.length !== 1) throw new MathError(T.variables(main.name, fn.params.length))
     return { kind: 'function', line, label: `${nameLatex(main.name)}(${nameLatex(fn.params[0])})`, slot, f: (x) => fn.call([x]) }
   }
   // Un'espressione da sola: è y = …
-  if (!dependsOn(main, 'x')) throw new MathError('Manca la x: per una retta orizzontale scrivi y = 3')
+  if (!dependsOn(main, 'x')) throw new MathError(T.noX)
   const inner = scopeWith(scope, ['x'])
   const f = restrict(compile(main, inner), cond, inner)
   const v = { x: 0 }
@@ -1778,19 +1856,19 @@ function surfaceOf(fn: UserFunction): (x: number, y: number) => number {
 /** Un punto, un vettore, una curva o una superficie con i parametri, nello spazio. */
 function spaceTuple(l: Line, { coords, name }: { coords: MathNode[]; name: string | null }, scope: Scope, slot: number): GraphItem {
   const { cond, line } = l
-  if (coords.length !== 2 && coords.length !== 3) throw new MathError('Un punto nello spazio ha tre coordinate: (x, y, z)')
+  if (coords.length !== 2 && coords.length !== 3) throw new MathError(T.point3)
   // (x, y) nello spazio è nel piano xy.
   const all: MathNode[] = coords.length === 3 ? coords : [...coords, { k: 'num', v: 0, text: '0', comma: false }]
   const params = tupleParams(all, scope)
   const label = `${name ? `${nameLatex(name)} = ` : ''}${toLatex({ k: 'tuple', items: coords })}${condLabel(cond)}`
   if (!params.length) {
-    if (cond) throw new MathError('Un punto non ha condizioni')
+    if (cond) throw new MathError(T.pointConditions)
     const [x, y, z] = all.map((n) => compile(n, scope)({}))
-    if (![x, y, z].every(Number.isFinite)) throw new MathError('Le coordinate del punto non sono numeri')
+    if (![x, y, z].every(Number.isFinite)) throw new MathError(T.pointNumbers)
     if (isVectorName(name)) return { kind: 'vector', line, label, slot, from: [0, 0, 0], to: [x, y, z], name }
     return { kind: 'point3', line, label: name ? nameLatex(name) : '', slot: -1, x, y, z, name }
   }
-  if (params.length > 2) throw new MathError(`Troppi parametri (${params.join(', ')}): una curva ne ha uno, una superficie due`)
+  if (params.length > 2) throw new MathError(T.parameters(params.join(', ')))
   const inner = scopeWith(scope, params)
   const [cx, cy, cz] = all.map((n, i) => (i === 0 ? restrict(compile(n, inner), cond, inner) : compile(n, inner)))
   const v: Record<string, number> = Object.fromEntries(params.map((p) => [p, 0]))
@@ -1812,15 +1890,15 @@ function spaceTuple(l: Line, { coords, name }: { coords: MathNode[]; name: strin
  */
 function spaceItemFor(l: Line, scope: Scope, slot: number): GraphItem {
   const { main, cond, line } = l
-  if (areaOf(main)) throw new MathError('Nei grafici 3D l\'area sotto una curva non si disegna: scrivila in un grafico senza la z')
+  if (areaOf(main)) throw new MathError(T.area3d)
   const solid = spaceRegionFor(l, scope, slot)
   if (solid) return solid
   const tuple = tupleOf(main)
   if (tuple && !(main.k === 'apply' && scope.fns.has(main.name))) return spaceTuple(l, tuple, scope, slot)
   if (main.k === 'rel') {
     if (main.ops.length !== 1 || main.ops[0] !== '=') {
-      if (main.ops.every((op) => op === '=')) throw new MathError('In una riga va un\'uguaglianza sola')
-      throw new MathError('Un\'uguaglianza e una disuguaglianza insieme: scrivile in due righe')
+      if (main.ops.every((op) => op === '=')) throw new MathError(T.oneEquality)
+      throw new MathError(T.mixed)
     }
     const [lhs, rhs] = main.items
     const label = `${toLatex(main)}${condLabel(cond)}`
@@ -1842,7 +1920,7 @@ function spaceItemFor(l: Line, scope: Scope, slot: number): GraphItem {
       const at = (g: (t: number) => number) => (t: number) => ((v.θ = t), g(t) * r(v))
       return { kind: 'curve3', line, label, slot, param: 'θ', t: [0, 2 * Math.PI], straight: false, fx: at(Math.cos), fy: at(Math.sin), fz: () => 0 }
     }
-    if (!dependsOn(main, 'x') && !dependsOn(main, 'y') && !dependsOn(main, 'z')) throw new MathError('Mancano x, y e z: cosa disegno?')
+    if (!dependsOn(main, 'x') && !dependsOn(main, 'y') && !dependsOn(main, 'z')) throw new MathError(T.noXYZ)
     // Una superficie qualsiasi: sinistra - destra = 0.
     const xyz = scopeWith(scope, ['x', 'y', 'z'])
     const left = compile(lhs, xyz)
@@ -1857,14 +1935,14 @@ function spaceItemFor(l: Line, scope: Scope, slot: number): GraphItem {
     }
     return { kind: 'implicit3', line, label, slot, F, plane: ok ? null : planeOf(F) }
   }
-  if (main.k === 'in' || main.k === 'and' || main.k === 'or') throw new MathError('Una condizione da sola non si disegna: per la parte da mostrare scrivi z \\in [a, b]')
+  if (main.k === 'in' || main.k === 'and' || main.k === 'or') throw new MathError(T.conditionZ)
   // f: una funzione di x e y, da sola.
   if (main.k === 'name' && scope.fns.has(main.name)) {
     const fn = scope.fns.get(main.name)!
-    if (!xyParams(fn.params)) throw new MathError(`${main.name} non è una funzione di x e y: nello spazio si disegnano le superfici z = f(x, y)`)
+    if (!xyParams(fn.params)) throw new MathError(T.notSurface(main.name))
     return { kind: 'surface', line, label: `${nameLatex(main.name)}(${fn.params.map(nameLatex).join(', ')})`, slot, f: surfaceOf(fn) }
   }
-  if (!dependsOn(main, 'x') && !dependsOn(main, 'y')) throw new MathError('Mancano x e y: per un piano orizzontale scrivi z = 3')
+  if (!dependsOn(main, 'x') && !dependsOn(main, 'y')) throw new MathError(T.noXYPlane)
   // Un'espressione in x e y da sola: è z = …
   const inner = scopeWith(scope, ['x', 'y'])
   const f = restrict(compile(main, inner), cond, inner)
@@ -1982,5 +2060,5 @@ export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSp
 
 /** Il blocco da mettere nella nota. */
 export function graphBlockText(lines: readonly string[]): string {
-  return '```grafico\n' + lines.join('\n') + '\n```'
+  return '```grafico\n' + lines.join('\n') + '\n```' // non si traduce: il nome del blocco
 }

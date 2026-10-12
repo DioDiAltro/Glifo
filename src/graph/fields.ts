@@ -15,6 +15,7 @@
  *
  * Le curve, le superfici e i campi si definiscono come nella nota (vedi Sheet), anche lì.
  */
+import { texts, usesDecimalComma } from '../i18n'
 import { compileOde, initialConditions, odeOf, odeSolution, systemOf, systemStarts } from '../math/differential'
 import { compile, MathError, scopeWith, type Scope, type VectorFunction } from '../math/evaluate'
 import { formatNumber } from '../math/format'
@@ -22,6 +23,39 @@ import { nameLatex, toLatex } from '../math/latex'
 import { namesIn, type MathNode, type Statement } from '../math/parse'
 import { isVectorBody, symbolicField, type SymbolScope } from '../math/symbolic'
 import type { GraphItem, Range } from './spec'
+
+const T = texts({
+  field3d: ['Un campo con tre componenti va in un grafico 3D', 'A field with three components goes in a 3D graph'],
+  spaceCurve: (name: string) => [`${name} è una curva nello spazio: va in un grafico 3D`, `${name} is a curve in space: it goes in a 3D graph`],
+  surface3d: (name: string) => [`${name} è una superficie: va in un grafico 3D`, `${name} is a surface: it goes in a 3D graph`],
+  cantDraw: (name: string) => [
+    `${name} non si sa disegnare: una curva ha un parametro, una superficie due, un campo le coordinate`,
+    `${name} can't be drawn: a curve has one parameter, a surface two, a field the coordinates`,
+  ],
+  integral: ['L\'integrale non si riesce a calcolare', 'The integral can\'t be calculated'],
+  cantCalculate: (name: string) => [`${name} non si riesce a calcolare`, `${name} can't be calculated`],
+  levelsPlane: ['Le curve di livello si disegnano nel piano: per la superficie scrivi solo f', 'Level curves are drawn in the plane: for the surface write just f'],
+  levelsUsage: ['Si scrive \\operatorname{livelli}(f), con f una funzione di x e y', 'Write \\operatorname{livelli}(f), with f a function of x and y'],
+  twoVariables: (name: string) => [`${name} non è una funzione di due variabili`, `${name} isn't a function of two variables`],
+  phasePlane: ['Il ritratto di fase si disegna nel piano', 'The phase portrait is drawn in the plane'],
+  autonomous: (a: string, b: string, t: string) => [
+    `Il ritratto di fase è dei sistemi autonomi: ${a}' e ${b}' senza ${t}`,
+    `The phase portrait is for autonomous systems: ${a}' and ${b}' without ${t}`,
+  ],
+  odePlane: ['Le equazioni differenziali si disegnano nel piano', 'Differential equations are drawn in the plane'],
+  initial: (y: string) => [
+    `Per disegnare la soluzione servono le condizioni iniziali, come ${y}(0) = 1, \\; ${y}'(0) = 0`,
+    `To draw the solution you need initial conditions, like ${y}(0) = 1, \\; ${y}'(0) = 0`,
+  ],
+  notCurve: (name: string) => [
+    `${name} non è una curva: scrivila prima, come \\gamma(t) = (\\cos t, \\sin t), \\; t \\in [0, 2\\pi]`,
+    `${name} isn't a curve: write it first, like \\gamma(t) = (\\cos t, \\sin t), \\; t \\in [0, 2\\pi]`,
+  ],
+  notSurface: (name: string) => [
+    `${name} non è una superficie: scrivila prima, come S(u, v) = (u, v, u v), \\; u \\in [0, 1], \\; v \\in [0, 1]`,
+    `${name} isn't a surface: write it first, like S(u, v) = (u, v, u v), \\; u \\in [0, 1], \\; v \\in [0, 1]`,
+  ],
+})
 
 interface Line extends Statement {
   line: number
@@ -129,7 +163,7 @@ function fieldCall(f: VectorFunction): (p: number[]) => number[] {
 
 function fieldItem(line: number, label: string, slot: number, F: (p: number[]) => number[], dims: number, space: boolean): GraphItem {
   if (dims === 3) {
-    if (!space) throw new MathError('Un campo con tre componenti va in un grafico 3D')
+    if (!space) throw new MathError(T.field3d)
     return { kind: 'field3', line, label, slot, F: (x, y, z) => { const v = F([x, y, z]); return [v[0], v[1], v[2]] } }
   }
   if (space) return { kind: 'field3', line, label, slot, F: (x, y) => { const v = F([x, y]); return [v[0], v[1], 0] } }
@@ -159,16 +193,16 @@ function shapeItems(name: string, f: VectorFunction, label: string, line: number
   if (f.params.length === 1) {
     const t = range(0)
     const at = (k: number) => (s: number) => f.call([s])[k] ?? 0
-    if (n === 3 && !space) throw new MathError(`${name} è una curva nello spazio: va in un grafico 3D`)
+    if (n === 3 && !space) throw new MathError(T.spaceCurve(name))
     if (space) return { kind: 'curve3', line, label, slot, param: f.params[0], t, straight: false, arrow: true, fx: at(0), fy: at(1), fz: at(2) }
     return { kind: 'parametric', line, label, slot, param: 't', t, straight: false, arrow: true, fx: at(0), fy: at(1) }
   }
   if (f.params.length === 2 && n === 3) {
-    if (!space) throw new MathError(`${name} è una superficie: va in un grafico 3D`)
+    if (!space) throw new MathError(T.surface3d(name))
     const at = (k: number) => (u: number, v: number) => f.call([u, v])[k]
     return { kind: 'patch', line, label, slot, params: [f.params[0], f.params[1]], u: range(0), v: range(1), fx: at(0), fy: at(1), fz: at(2) }
   }
-  throw new MathError(`${name} non si sa disegnare: una curva ha un parametro, una superficie due, un campo le coordinate`)
+  throw new MathError(T.cantDraw(name))
 }
 
 /** La definizione come si scrive nella legenda: \gamma(t) = (\cos t, \sin t). */
@@ -186,8 +220,8 @@ function valueLabel(node: MathNode, scope: Scope): string {
   } catch (err) {
     if (err instanceof MathError) throw err
   }
-  const shown = formatNumber(value, { comma: true, decimal: true, digits: 9 })
-  if (!shown) throw new MathError('L\'integrale non si riesce a calcolare')
+  const shown = formatNumber(value, { comma: usesDecimalComma(), decimal: true, digits: 9 })
+  if (!shown) throw new MathError(T.integral)
   return `${toLatex(node)} = ${shown.tex}`
 }
 
@@ -201,7 +235,7 @@ export function calculusItems(l: Line, ctx: FieldContext, slot: number, space: b
   const def = vectorDefinition(main)
   if (def) {
     const shape = shapeOf(ctx.scope, def.name)
-    if (!shape) throw new MathError(`${def.name} non si riesce a calcolare`)
+    if (!shape) throw new MathError(T.cantCalculate(def.name))
     const label = `${toLatex(main)}${l.cond ? `, \\; ${toLatex(l.cond)}` : ''}`
     return { items: [shapeItems(shape.name, shape.f, label, line, slot, space, ctx)], colors: 1 }
   }
@@ -220,13 +254,13 @@ export function calculusItems(l: Line, ctx: FieldContext, slot: number, space: b
     return { items: [fieldItem(line, toLatex(main), slot, compiledField(main.items, vars, ctx.scope), main.items.length, space)], colors: 1 }
   }
   if (main.k === 'fn' && main.name === 'levels') {
-    if (space) throw new MathError('Le curve di livello si disegnano nel piano: per la superficie scrivi solo f')
-    if (main.args.length !== 1) throw new MathError('Si scrive \\operatorname{livelli}(f), con f una funzione di x e y')
+    if (space) throw new MathError(T.levelsPlane)
+    if (main.args.length !== 1) throw new MathError(T.levelsUsage)
     const arg = main.args[0]
     const user = arg.k === 'name' ? ctx.scope.fns.get(arg.name) : undefined
     let F: (x: number, y: number) => number
     if (user) {
-      if (user.params.length !== 2) throw new MathError(`${arg.k === 'name' ? arg.name : 'f'} non è una funzione di due variabili`)
+      if (user.params.length !== 2) throw new MathError(T.twoVariables(arg.k === 'name' ? arg.name : 'f'))
       const xFirst = user.params[0] !== 'y'
       F = (x, y) => user.call(xFirst ? [x, y] : [y, x])
     } else {
@@ -238,9 +272,9 @@ export function calculusItems(l: Line, ctx: FieldContext, slot: number, space: b
   // Un sistema x' = f(x, y), y' = g(x, y): il ritratto di fase nel piano x, y.
   const system = systemOf(main, l.cond, (name) => ctx.scope.fns.has(name))
   if (system) {
-    if (space) throw new MathError('Il ritratto di fase si disegna nel piano')
+    if (space) throw new MathError(T.phasePlane)
     const [a, b] = system.names
-    if (system.f.some((f) => namesIn(f).has(system.t))) throw new MathError(`Il ritratto di fase è dei sistemi autonomi: ${a}' e ${b}' senza ${system.t}`)
+    if (system.f.some((f) => namesIn(f).has(system.t))) throw new MathError(T.autonomous(a, b, system.t))
     const inner = scopeWith(ctx.scope, [a, b])
     const [f, g] = system.f.map((e) => compile(e, inner, { calc: true }))
     const v: Record<string, number> = {}
@@ -255,7 +289,7 @@ export function calculusItems(l: Line, ctx: FieldContext, slot: number, space: b
   }
   const ode = odeOf(main, (name) => ctx.scope.fns.has(name))
   if (ode) {
-    if (space) throw new MathError('Le equazioni differenziali si disegnano nel piano')
+    if (space) throw new MathError(T.odePlane)
     const F = compileOde(ode, ctx.scope)
     const conds = !l.cond ? [] : l.cond.k === 'and' ? l.cond.items : [l.cond]
     const starts = initialConditions(conds, ode, (n) => compile(n, ctx.scope)({}))
@@ -263,12 +297,12 @@ export function calculusItems(l: Line, ctx: FieldContext, slot: number, space: b
     // Del primo ordine: il campo di direzioni, con le soluzioni dai punti iniziali.
     if (ode.order === 1) return { items: [{ kind: 'slopes', line, label: labelOf(conds), slot, f: (x, y) => F(x, [y]), starts: starts.map((s) => [s.x0, s.Y0[0]]) }], colors: 1 }
     // Di ordine più alto: la soluzione di ogni gruppo di condizioni, come una funzione.
-    if (!starts.length) throw new MathError(`Per disegnare la soluzione servono le condizioni iniziali, come ${ode.y}(0) = 1, \\; ${ode.y}'(0) = 0`)
+    if (!starts.length) throw new MathError(T.initial(ode.y))
     return { items: starts.map((s, k) => ({ kind: 'function', line, label: labelOf(s.conds), slot: slot + k, f: odeSolution(F, s.x0, s.Y0) })), colors: starts.length }
   }
   if (main.k === 'lint') {
     const shape = shapeOf(ctx.scope, main.curve)
-    if (!shape) throw new MathError(`${main.curve} non è una curva: scrivila prima, come \\gamma(t) = (\\cos t, \\sin t), \\; t \\in [0, 2\\pi]`)
+    if (!shape) throw new MathError(T.notCurve(main.curve))
     const curve = shapeItems(shape.name, shape.f, valueLabel(main, ctx.scope), line, slot, space, ctx)
     // La curva che un'altra riga disegna già: qui solo nella legenda, con il suo colore.
     const sameAs = ctx.own.get(shape.name)
@@ -278,7 +312,7 @@ export function calculusItems(l: Line, ctx: FieldContext, slot: number, space: b
   }
   if (main.k === 'sint') {
     const shape = shapeOf(ctx.scope, main.surface)
-    if (!shape) throw new MathError(`${main.surface} non è una superficie: scrivila prima, come S(u, v) = (u, v, u v), \\; u \\in [0, 1], \\; v \\in [0, 1]`)
+    if (!shape) throw new MathError(T.notSurface(main.surface))
     const surface = shapeItems(shape.name, shape.f, valueLabel(main, ctx.scope), line, slot, space, ctx)
     const sameAs = ctx.own.get(shape.name)
     if (sameAs !== undefined) surface.same = true

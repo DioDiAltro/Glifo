@@ -18,6 +18,7 @@
  * come figura chiara su bianco: PNG, SVG o copiato come immagine, con il titolo e i nomi degli assi
  * scritti nel blocco (`titolo: …`, `asse x: …`), che «Titolo e nomi degli assi…» aiuta a scrivere.
  */
+import { texts, usesDecimalComma } from '../i18n'
 import { formatNumber } from '../math/format'
 import { nameLatex } from '../math/latex'
 import { escapeHtml, renderTex } from '../render/katex'
@@ -31,7 +32,7 @@ import { moveButtonsHtml } from '../ui/moveButtons'
 import { toast } from '../ui/toast'
 import { FIGURE_PALETTE, graphFigure } from './file'
 import { labelHtml, labelPlain } from './labels'
-import { chooseWindow, type Viewport } from './plot'
+import { chooseWindow, decimalText, type Viewport } from './plot'
 import { chooseBox, type Box } from './space'
 import { parseGraph, typedSliderValue, widenSlider, type GraphError, type GraphSlider, type GraphSpec, type Range } from './spec'
 import type { ChartData } from '../spreadsheet/chart'
@@ -39,6 +40,57 @@ import { readChart } from './tableGraph'
 import { PlanView } from './planPreview'
 import { graphSvg, graphTitle, itemColors, PALETTES, pointName, type Palette } from './svg'
 import { buildScene, DEFAULT_CAMERA, MAX_ELEVATION, sceneSvg, type Camera, type Quality, type Scene } from './view3d'
+
+const T = texts({
+  addSlider: (name: string) => [`Aggiungi lo slider per ${name}`, `Add a slider for ${name}`],
+  addSliders: (names: string, last: string) => [`Aggiungi gli slider per ${names} e ${last}`, `Add sliders for ${names} and ${last}`],
+  zoomIn: ['Ingrandisci', 'Zoom in'],
+  zoomOut: ['Rimpicciolisci', 'Zoom out'],
+  resetView: ['Torna alla vista di partenza', 'Back to the starting view'],
+  downloadImage: ['Scarica il grafico come immagine', 'Download the graph as an image'],
+  play: (name: string) => [`Muovi ${name} da solo`, `Animate ${name}`],
+  stop: (name: string) => [`Ferma ${name}`, `Stop ${name}`],
+  typeValue: (name: string) => [`Scrivi il valore di ${name}`, `Type the value of ${name}`],
+  value: (name: string) => [`Valore di ${name}`, `Value of ${name}`],
+  backToWritten: (name: string, value: string) => [`Torna al valore scritto: ${name} = ${value}`, `Back to the value in the note: ${name} = ${value}`],
+  hint: [
+    'Scrivi nel blocco una funzione, una per riga: per esempio {curve} (o {surface} per una superficie)',
+    'Write a function in the block, one per line: for example {curve} (or {surface} for a surface)',
+  ],
+  line: (n: number) => [`Riga ${n}`, `Line ${n}`],
+  png: ['Immagine PNG', 'PNG image'],
+  svg: ['Immagine SVG', 'SVG image'],
+  copy: ['Copia come immagine', 'Copy as image'],
+  labelsMenu: ['Titolo e nomi degli assi…', 'Title and axis names…'],
+  downloadMenu: ['Scarica il grafico', 'Download the graph'],
+  empty: ['Il grafico è vuoto: non c\'è ancora niente da salvare come immagine.', 'The graph is empty: there\'s nothing to save as an image yet.'],
+  fileName: ['grafico', 'graph'],
+  svgSaved: ['Immagine SVG scaricata', 'SVG image downloaded'],
+  pngSaved: ['Immagine PNG scaricata', 'PNG image downloaded'],
+  noCopy: ['Questo browser non sa copiare le immagini: scaricala come PNG.', 'This browser can\'t copy images: download it as PNG.'],
+  copied: ['Immagine copiata: incollala dove vuoi (Word, Google Docs, le slide…)', 'Image copied: paste it wherever you like (Word, Google Docs, slides…)'],
+  copyFailed: [
+    'L\'immagine non si è riuscita a copiare (il browser l\'ha impedito?): scaricala come PNG.',
+    'The image couldn\'t be copied (did the browser block it?): download it as PNG.',
+  ],
+  imageFailed: ['L\'immagine non si è riuscita a fare su questo browser: prova con l\'altro formato.', 'The image couldn\'t be made in this browser: try the other format.'],
+  title: ['Titolo', 'Title'],
+  titleExample: ['per esempio: La caduta di un grave', 'for example: A falling body'],
+  xName: ['Nome dell\'asse x', 'Name of the x axis'],
+  xExample: ['per esempio: tempo $t$ (s)', 'for example: time $t$ (s)'],
+  yName: ['Nome dell\'asse y', 'Name of the y axis'],
+  yExample: ['per esempio: spazio $s$ (m)', 'for example: distance $s$ (m)'],
+  zName: ['Nome dell\'asse z', 'Name of the z axis'],
+  zExample: ['per esempio: altezza $h$ (m)', 'for example: height $h$ (m)'],
+  labelsHelp: [
+    'Le formule tra $, come nella nota. Si vedono nel grafico e nelle immagini; un campo vuoto toglie il suo nome.',
+    'Formulas between $, as in the note. They appear in the graph and in the images; an empty field removes its name.',
+  ],
+  cancel: ['Annulla', 'Cancel'],
+  done: ['Fatto', 'Done'],
+  labelsTitle: ['Titolo e nomi degli assi', 'Title and axis names'],
+  broken: ['Il grafico non si riesce a disegnare.', 'The graph can\'t be drawn.'],
+})
 
 export interface GraphLook {
   theme: Theme
@@ -165,6 +217,11 @@ export function graphSize(available: number): { width: number; height: number } 
   return { width, height: Math.round(Math.max(200, Math.min(440, width * 0.62))) }
 }
 
+/** Le coordinate di un punto: (1,5; 2) in italiano, dove la virgola è nei numeri; (1.5, 2) in inglese. */
+function coordinates(...values: string[]): string {
+  return `(${values.join(usesDecimalComma() ? '; ' : ', ')})`
+}
+
 /** Un punto del piano di Gauss come numero complesso: 1,5 + 2i, −i, 3. */
 function complexCoord(x: number, y: number, xStep: number, yStep: number): string {
   const re = coord(x, xStep)
@@ -175,12 +232,12 @@ function complexCoord(x: number, y: number, xStep: number, yStep: number): strin
   return `${re} ${y < 0 ? '−' : '+'} ${i}`
 }
 
-/** Una coordinata con la virgola, con tante cifre quante servono a quello zoom. */
+/** Una coordinata con la virgola (in inglese il punto), con tante cifre quante servono a quello zoom. */
 function coord(v: number, step: number): string {
   const decimals = Math.max(0, Math.min(8, Math.ceil(-Math.log10(step))))
   let text = (Math.abs(v) < step / 2 ? 0 : v).toFixed(decimals)
   if (text.includes('.')) text = text.replace(/0+$/, '').replace(/\.$/, '')
-  return text.replace('.', ',').replace('-', '−')
+  return decimalText(text).replace('-', '−')
 }
 
 const ICON = {
@@ -200,7 +257,7 @@ function toolButton(label: string, paths: string, action: string, extra = ''): s
   return `<button type="button" class="icon-button graph-tool${extra}" data-action="${action}" title="${label}" aria-label="${label}">${icon(paths)}</button>`
 }
 
-/** Il valore di uno slider con la virgola, con le cifre del suo passo (o di più, per un valore scritto con più cifre). */
+/** Il valore di uno slider con la virgola (in inglese il punto), con le cifre del suo passo (o di più, per un valore scritto con più cifre). */
 function sliderText(v: number, step: number): string {
   const base = step >= 1 ? 0 : Math.round(-Math.log10(step))
   let decimals = base
@@ -208,7 +265,7 @@ function sliderText(v: number, step: number): string {
   let text = v.toFixed(decimals)
   if (text.includes('.')) text = text.replace(/0+$/, '').replace(/\.$/, '')
   if (text === '-0') text = '0'
-  return text.replace('.', ',').replace('-', '−')
+  return decimalText(text).replace('-', '−')
 }
 
 /** Il valore più vicino tra quelli dello slider (gli estremi, più un passo alla volta). */
@@ -220,7 +277,7 @@ function snap(v: number, [lo, hi]: Range, step: number): number {
 /** Un estremo dello slider: come è scritto nel blocco (2\pi) o, se lo slider si è allargato, il numero. */
 function endTex(slider: GraphSlider, range: Range, i: number): string {
   if (range[i] === slider.range[i]) return slider.ends[i]
-  return formatNumber(range[i], { comma: true, decimal: true, digits: 6 })?.tex ?? String(range[i])
+  return formatNumber(range[i], { comma: usesDecimalComma(), decimal: true, digits: 6 })?.tex ?? String(range[i])
 }
 
 /**
@@ -235,8 +292,8 @@ function fitField(row: SliderRow): void {
 /** «Aggiungi lo slider per k», «Aggiungi gli slider per a, b e c». */
 function addLabel(add: NonNullable<GraphError['add']>): string {
   const names = add.map((a) => pointName(a.name))
-  if (names.length === 1) return `Aggiungi lo slider per ${names[0]}`
-  return `Aggiungi gli slider per ${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`
+  if (names.length === 1) return T.addSlider(names[0])
+  return T.addSliders(names.slice(0, -1).join(', '), names[names.length - 1])
 }
 
 /** Il quadratino della legenda: una linea per le curve, un pallino per i punti, un riquadro per aree e superfici. */
@@ -392,7 +449,7 @@ class GraphView {
 
     // I pulsanti stanno sopra il disegno (e si vedono passandoci sopra); sui telefoni sotto, sempre.
     const title = this.written.title ? `<div class="graph-title" style="max-width:${this.width}px">${labelHtml(this.written.title)}</div>` : ''
-    block.innerHTML = `${title}<div class="graph-stage" style="max-width:${this.width}px"><div class="graph-frame"><div class="graph-canvas"></div><div class="graph-dot" hidden></div><div class="graph-tip" hidden></div></div><div class="graph-tools">${toolButton('Ingrandisci', ICON.plus, 'in')}${toolButton('Rimpicciolisci', ICON.minus, 'out')}${toolButton('Torna alla vista di partenza', ICON.reset, 'reset')}${toolButton('Scarica il grafico come immagine', ICON.download, 'image')}${this.editable && block.dataset.move !== undefined ? moveButtonsHtml('grafico', block.dataset.move, block.dataset.moveIn === 'voce') : ''}</div></div>${this.slidersHtml()}<div class="graph-notes"></div>`
+    block.innerHTML = `${title}<div class="graph-stage" style="max-width:${this.width}px"><div class="graph-frame"><div class="graph-canvas"></div><div class="graph-dot" hidden></div><div class="graph-tip" hidden></div></div><div class="graph-tools">${toolButton(T.zoomIn, ICON.plus, 'in')}${toolButton(T.zoomOut, ICON.minus, 'out')}${toolButton(T.resetView, ICON.reset, 'reset')}${toolButton(T.downloadImage, ICON.download, 'image')}${this.editable && block.dataset.move !== undefined ? moveButtonsHtml('grafico', block.dataset.move, block.dataset.moveIn === 'voce') : ''}</div></div>${this.slidersHtml()}<div class="graph-notes"></div>`
     const frame = block.querySelector<HTMLElement>('.graph-stage')!
     this.frameEl = frame
     this.canvas = block.querySelector<HTMLElement>('.graph-canvas')!
@@ -430,12 +487,12 @@ class GraphView {
       const name = escapeHtml(pointName(s.name))
       return (
         `<div class="graph-slider" data-index="${i}">` +
-        toolButton(`Muovi ${name} da solo`, ICON.play, 'play', ' graph-play') +
-        `<label class="graph-slider-label">${texHtml(nameLatex(s.name))} = <input type="text" class="graph-slider-value" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" title="Scrivi il valore di ${name}" aria-label="Scrivi il valore di ${name}"></label>` +
+        toolButton(T.play(name), ICON.play, 'play', ' graph-play') +
+        `<label class="graph-slider-label">${texHtml(nameLatex(s.name))} = <input type="text" class="graph-slider-value" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" title="${T.typeValue(name)}" aria-label="${T.typeValue(name)}"></label>` +
         '<span class="graph-slider-end"></span>' +
-        `<input type="range" class="graph-slider-input" aria-label="Valore di ${name}">` +
+        `<input type="range" class="graph-slider-input" aria-label="${T.value(name)}">` +
         '<span class="graph-slider-end"></span>' +
-        toolButton(`Torna al valore scritto: ${name} = ${escapeHtml(sliderText(s.value, s.step))}`, ICON.reset, 'written', ' graph-slider-back') +
+        toolButton(T.backToWritten(name, escapeHtml(sliderText(s.value, s.step))), ICON.reset, 'written', ' graph-slider-back') +
         '</div>'
       )
     })
@@ -570,7 +627,7 @@ class GraphView {
     const pressed = String(state.playing)
     if (play.getAttribute('aria-pressed') === pressed) return
     const name = pointName(slider.name)
-    const label = state.playing ? `Ferma ${name}` : `Muovi ${name} da solo`
+    const label = state.playing ? T.stop(name) : T.play(name)
     play.title = label
     play.setAttribute('aria-label', label)
     play.setAttribute('aria-pressed', pressed)
@@ -688,16 +745,16 @@ class GraphView {
         const label = error ? `<code>${escapeHtml(item.label)}</code>` : html
         const coords =
           item.kind === 'point'
-            ? `(${coord(item.x, 1e-3)}; ${coord(item.y, 1e-3)})`
+            ? coordinates(coord(item.x, 1e-3), coord(item.y, 1e-3))
             : item.kind === 'point3'
-              ? `(${coord(item.x, 1e-3)}; ${coord(item.y, 1e-3)}; ${coord(item.z, 1e-3)})`
+              ? coordinates(coord(item.x, 1e-3), coord(item.y, 1e-3), coord(item.z, 1e-3))
               : item.kind === 'mark'
                 ? item.coords
                 : ''
         return `<li><span class="${swatchClass(item)}" style="--graph-color:${color}"></span>${label}${coords ? ` <span class="graph-coords">${escapeHtml(coords)}</span>` : ''}</li>`
       })
     if (!rows.length && !this.spec.errors.length) {
-      return '<p class="graph-hint">Scrivi nel blocco una funzione, una per riga: per esempio <code>y = x^2</code> (o <code>z = x^2 + y^2</code> per una superficie)</p>'
+      return `<p class="graph-hint">${escapeHtml(T.hint).replace('{curve}', '<code>y = x^2</code>').replace('{surface}', '<code>z = x^2 + y^2</code>')}</p>`
     }
     return rows.length ? `<ul class="graph-legend">${rows.join('')}</ul>` : ''
   }
@@ -706,7 +763,7 @@ class GraphView {
     if (!this.spec.errors.length) return ''
     const first = Number(this.block.dataset.line)
     const rows = this.spec.errors.map((e) => {
-      const where = Number.isFinite(first) ? `Riga ${first + e.line + 2}` : `Riga ${e.line + 1}`
+      const where = Number.isFinite(first) ? T.line(first + e.line + 2) : T.line(e.line + 1)
       const add = e.add ? ` <button type="button" class="btn btn-small graph-add-slider" data-add="${escapeHtml(e.add.map((a) => a.line).join('\n'))}">${escapeHtml(addLabel(e.add))}</button>` : ''
       return `<li><strong>${where}</strong> <code>${escapeHtml(e.text)}</code> — ${escapeHtml(e.message)}${add}</li>`
     })
@@ -718,12 +775,12 @@ class GraphView {
     openMenu(
       anchor,
       [
-        { label: 'Immagine PNG', run: () => void this.exportImage('png') },
-        { label: 'Immagine SVG', run: () => void this.exportImage('svg') },
-        { label: 'Copia come immagine', run: () => void this.exportImage('copy') },
-        ...(this.editable ? ['sep' as const, { label: 'Titolo e nomi degli assi…', run: () => this.editLabels() }] : []),
+        { label: T.png, run: () => void this.exportImage('png') },
+        { label: T.svg, run: () => void this.exportImage('svg') },
+        { label: T.copy, run: () => void this.exportImage('copy') },
+        ...(this.editable ? ['sep' as const, { label: T.labelsMenu, run: () => this.editLabels() }] : []),
       ],
-      'Scarica il grafico',
+      T.downloadMenu,
       fromKeyboard,
     )
   }
@@ -745,35 +802,30 @@ class GraphView {
   /** PNG o SVG da scaricare, o PNG da incollare altrove (Word, Google Docs, le slide). */
   private async exportImage(kind: 'png' | 'svg' | 'copy'): Promise<void> {
     if (!this.spec.items.length) {
-      toast('Il grafico è vuoto: non c\'è ancora niente da salvare come immagine.')
+      toast(T.empty)
       return
     }
     const svg = this.figure()
-    const name = (ext: string) => fileNameFor(this.written.title ? labelPlain(this.written.title) : 'grafico', ext)
+    const name = (ext: string) => fileNameFor(this.written.title ? labelPlain(this.written.title) : T.fileName, ext)
     // Due volte più fitta (1280 pixel di larghezza): si legge anche ingrandita, su un foglio o su una slide.
     const scale = 2
     try {
       if (kind === 'svg') {
-        if (await downloadText(name('.svg'), svg, 'image/svg+xml')) toast('Immagine SVG scaricata')
+        if (await downloadText(name('.svg'), svg, 'image/svg+xml')) toast(T.svgSaved)
       } else if (kind === 'png') {
         downloadBlob(name('.png'), await svgToPng(svg, scale))
-        toast('Immagine PNG scaricata')
+        toast(T.pngSaved)
       } else {
         if (typeof ClipboardItem === 'undefined' || !navigator.clipboard?.write) {
-          toast('Questo browser non sa copiare le immagini: scaricala come PNG.', 'error')
+          toast(T.noCopy, 'error')
           return
         }
         // Safari vuole l'immagine (anche solo promessa) subito, durante il clic.
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': svgToPng(svg, scale) })])
-        toast('Immagine copiata: incollala dove vuoi (Word, Google Docs, le slide…)')
+        toast(T.copied)
       }
     } catch {
-      toast(
-        kind === 'copy'
-          ? 'L\'immagine non si è riuscita a copiare (il browser l\'ha impedito?): scaricala come PNG.'
-          : 'L\'immagine non si è riuscita a fare su questo browser: prova con l\'altro formato.',
-        'error',
-      )
+      toast(kind === 'copy' ? T.copyFailed : T.imageFailed, 'error')
     }
   }
 
@@ -788,10 +840,10 @@ class GraphView {
       return { input, row: h('label', { class: 'prompt-label' }, h('span', {}, label), input) }
     }
     const axes = this.written.axes ?? {}
-    const title = field('Titolo', this.written.title ?? '', 'per esempio: La caduta di un grave')
-    const x = field('Nome dell\'asse x', axes.x ?? '', 'per esempio: tempo $t$ (s)')
-    const y = field('Nome dell\'asse y', axes.y ?? '', 'per esempio: spazio $s$ (m)')
-    const z = this.space ? field('Nome dell\'asse z', axes.z ?? '', 'per esempio: altezza $h$ (m)') : null
+    const title = field(T.title, this.written.title ?? '', T.titleExample)
+    const x = field(T.xName, axes.x ?? '', T.xExample)
+    const y = field(T.yName, axes.y ?? '', T.yExample)
+    const z = this.space ? field(T.zName, axes.z ?? '', T.zExample) : null
     const form = h(
       'form',
       {
@@ -810,15 +862,15 @@ class GraphView {
       x.row,
       y.row,
       z?.row ?? null,
-      h('p', { class: 'field-help' }, 'Le formule tra $, come nella nota. Si vedono nel grafico e nelle immagini; un campo vuoto toglie il suo nome.'),
+      h('p', { class: 'field-help' }, T.labelsHelp),
       h(
         'div',
         { class: 'dialog-actions' },
-        h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => dialog.close() } }, 'Annulla'),
-        h('button', { class: 'btn btn-primary', attrs: { type: 'submit' } }, 'Fatto'),
+        h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => dialog.close() } }, T.cancel),
+        h('button', { class: 'btn btn-primary', attrs: { type: 'submit' } }, T.done),
       ),
     )
-    const dialog = dialogShell('Titolo e nomi degli assi', [form], 'dialog-prompt')
+    const dialog = dialogShell(T.labelsTitle, [form], 'dialog-prompt')
     dialog.showModal()
     title.input.focus()
   }
@@ -1137,7 +1189,7 @@ class GraphView {
     this.tip.hidden = false
     const yStep = (step * (v.y1 - v.y0)) / (v.x1 - v.x0)
     // Nel piano di Gauss il punto è un numero complesso: 1,5 + 2i.
-    this.tip.textContent = found.text ?? (this.spec.gauss ? complexCoord(found.x, found.y, step, yStep) : `(${coord(found.x, step)}; ${coord(found.y, yStep)})`)
+    this.tip.textContent = found.text ?? (this.spec.gauss ? complexCoord(found.x, found.y, step, yStep) : coordinates(coord(found.x, step), coord(found.y, yStep)))
     const right = left > (r.width || this.width) - 140
     this.tip.style.cssText = `left:${right ? left - 10 : left + 10}px;top:${top < 34 ? top + 12 : top - 34}px;${right ? 'transform:translateX(-100%)' : ''}`
   }
@@ -1184,7 +1236,7 @@ export function hydrateGraphs(root: HTMLElement, look: GraphLook): void {
       drawnViews.set(block, block.dataset.plan !== undefined ? new PlanView(block, look) : new GraphView(block, look))
       resizer?.observe(block)
     } catch {
-      block.innerHTML = '<p class="graph-errors">Il grafico non si riesce a disegnare.</p>'
+      block.innerHTML = `<p class="graph-errors">${escapeHtml(T.broken)}</p>`
     }
   }
 }
