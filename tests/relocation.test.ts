@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { accountSpace, knowsAccount } from '../src/account/space'
-import { chooseLang, LANG_KEY } from '../src/i18n'
 import { BoardStore, MemoryBoards } from '../src/board/store'
 import { newStrokeId, type Stroke } from '../src/board/strokes'
 import {
@@ -124,10 +123,10 @@ describe('trasloco su glifo.page: il pacco degli appunti', () => {
 
   it('sul sito nuovo arriva tutto: le note con i loro id, l\'account pronto per quando si entra, le lavagne', async () => {
     const pkg = await packageFromOldBrowser()
-    expect(pkg.lang).toBe('it')
+    expect(pkg.settings.language).toBe('it')
     localStorage.clear()
     // Il sito nuovo, appena aperto in un browser inglese: la sua nota di benvenuto, in inglese.
-    chooseLang('en')
+    saveSettings({ language: 'en' })
     const notes = new NotesStore()
     notes.create(WELCOME, null, { local: true })
     const boards = boardsFor()
@@ -148,7 +147,7 @@ describe('trasloco su glifo.page: il pacco degli appunti', () => {
     expect((await boards.load(ID_ACCOUNT)).strokes).toHaveLength(1)
     expect(loadSettings()).toMatchObject({ theme: 'dark', fontSize: 18, apiKey: '' })
     // Con gli appunti torna la lingua del vecchio sito.
-    expect(localStorage.getItem(LANG_KEY)).toBe('it')
+    expect(loadSettings().language).toBe('it')
     expect(dictionary).toEqual(['Weierstrass'])
     expect(tutorialSeen).toBe(true)
     expect(relocationMessage(result)).toBe(
@@ -173,8 +172,7 @@ describe('trasloco su glifo.page: il pacco degli appunti', () => {
     const pkg = await packageFromOldBrowser()
     localStorage.clear()
     accountSpace(USER).notes.applyRemote({ id: ID_ACCOUNT, content: '# Integrali, versione nuova', folderId: null, createdAt: 1500, updatedAt: 9000, rev: 7 })
-    saveSettings({ theme: 'light' })
-    chooseLang('en')
+    saveSettings({ theme: 'light', language: 'en' })
     savePersonalWords(['Cauchy'])
     const boards = boardsFor()
     const { result, dictionary } = await importPackage(pkg, { notes: new NotesStore(), folders: new FoldersStore(), boards, newStrokeId })
@@ -183,7 +181,7 @@ describe('trasloco su glifo.page: il pacco degli appunti', () => {
     // La lavagna della nota dell'account arriva lo stesso: la nota c'è.
     expect((await boards.load(ID_ACCOUNT)).strokes).toHaveLength(1)
     expect(loadSettings().theme).toBe('light')
-    expect(localStorage.getItem(LANG_KEY)).toBe('en')
+    expect(loadSettings().language).toBe('en')
     // Il dizionario si unisce (lo fa main.ts con setPersonalWords).
     expect(dictionary).toEqual(['Weierstrass'])
     expect(loadPersonalWords()).toEqual(['Cauchy'])
@@ -195,11 +193,11 @@ describe('trasloco su glifo.page: il pacco degli appunti', () => {
     const welcome = notes.create(WELCOME, null, { local: true })
     notes.activeId = welcome.id
     const pkg = { app: 'glifo-trasloco', version: 1, notes: [], folders: [], dictionary: [], boards: [], accounts: {}, settings: {}, tutorialSeen: false } as RelocationPackage
-    chooseLang('en')
+    saveSettings({ language: 'en' })
     const { result } = await importPackage(pkg, { notes, folders: new FoldersStore(), boards: boardsFor(), newStrokeId, welcome: WELCOME })
     expect(result).toEqual({ added: 0, already: 0, accountNotes: 0, boards: 0 })
-    // Un pacco di prima delle due lingue: Glifo era in italiano.
-    expect(localStorage.getItem(LANG_KEY)).toBe('it')
+    // Un pacco di prima delle due lingue (senza la lingua nelle impostazioni): Glifo era in italiano.
+    expect(loadSettings().language).toBe('it')
     expect(notes.list().map((n) => n.id)).toEqual([welcome.id])
     expect(notes.activeId).toBe(welcome.id)
   })

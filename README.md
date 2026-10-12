@@ -825,7 +825,8 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
   si usa» (il «?» in fondo alla barra laterale: quando si chiude il tutorial, un fumetto lo indica per
   qualche secondo), e da lì si arriva a tutte le scorciatoie.
 - **Italiano e inglese**: in *Impostazioni → Lingua*; la prima volta Glifo
-  prende la lingua del browser (chi aveva già gli appunti resta in italiano). Per ora in inglese sono
+  prende la lingua del browser (chi aveva già gli appunti resta in italiano). Con l'account la lingua
+  è la stessa su tutti i dispositivi, come il tema. Per ora in inglese sono
   tradotte le schermate (barre, finestre, pannelli, lavagna, account, condivisione, commenti, guida e
   tutorial) e la nota di benvenuto; i conti, i nomi dei simboli, le tabelle, i grafici, gli schemi e
   l'AI restano in italiano, e si traducono dopo (GRAFICA.md, punto 6). La lingua in cui si scrive è

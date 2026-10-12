@@ -17,6 +17,7 @@ import {
   accountSettings,
   isAccountSetting,
   loadSettings,
+  rememberLanguage,
   saveSettings,
   SETTINGS_KEY,
   sharedSettings,
@@ -43,7 +44,7 @@ import { confirmDialog, openHelpDialog, openSettingsDialog, openTouchLogDialog, 
 import { aiActivity } from './ui/aiActivity'
 import { openCommentsDialog } from './ui/comments'
 import { inClaudeViewer } from './host'
-import { byLang, chooseLang, lang, LANG_KEY, rememberLang, texts } from './i18n'
+import { byLang, lang, texts } from './i18n'
 import { accountOffMessage, type Site } from './site'
 import { SpellClient } from './spell/client'
 import type { SpellLanguage } from './spell/engine'
@@ -117,18 +118,29 @@ touchLog.resume()
 // Il progetto si chiamava Matherdown: recupera gli appunti salvati con il vecchio nome.
 migrateKeyPrefix('matherdown.', 'glifo.')
 
-// La lingua (src/i18n.ts): trovata la prima volta, da qui resta quella; la pagina la dice al browser.
-rememberLang()
+// La lingua (src/i18n.ts): trovata la prima volta, da qui resta quella (va con l'account, come il
+// tema); la pagina la dice al browser.
+rememberLanguage()
 document.documentElement.lang = lang
+
+/** Chi usa la pagina ha già toccato qualcosa: una lingua che cambia altrove si chiede, non si impone. */
+let interacted = false
+for (const type of ['keydown', 'pointerdown'] as const) {
+  document.addEventListener(type, () => (interacted = true), { capture: true, once: true })
+}
 
 /** La nota di benvenuto nella lingua di Glifo; mai toccata, si riconosce in tutte e due. */
 const welcomeNote = byLang({ it: () => welcomeIt, en: () => welcomeEn })
 const WELCOME_NOTES = [welcomeIt, welcomeEn]
 
 const T = texts({
-  languageElsewhere: [
+  languageOtherTab: [
     'La lingua di Glifo è cambiata in un\'altra scheda: ricarica per vederla anche qui.',
     'Glifo\'s language changed in another tab: reload to see it here too.',
+  ],
+  languageOtherDevice: [
+    'La lingua di Glifo è cambiata nel tuo account: ricarica per vederla anche qui.',
+    'Glifo\'s language changed in your account: reload to see it here too.',
   ],
   reload: ['Ricarica', 'Reload'],
   newNoteTitle: ['Nuovi appunti', 'New note'],
@@ -760,6 +772,21 @@ function updateSettings(next: Partial<Settings>, fromAccount = false): void {
     space.state.settingsChanged(forAccount)
     sync.schedule()
   }
+  if (fromAccount) languageChangedElsewhere(T.languageOtherDevice)
+}
+
+let languageNoticeShown = false
+
+/**
+ * La lingua delle impostazioni non è più quella della pagina: è cambiata nell'account (su un altro
+ * dispositivo, o appena entrati) o in un'altra scheda. La pagina si ricarica per mostrarla; se chi la
+ * usa ha già cominciato a lavorare, lo chiede con «Ricarica».
+ */
+function languageChangedElsewhere(message: string): void {
+  if (settings.language === lang || languageNoticeShown) return
+  if (!interacted) return reloadForUpdate()
+  languageNoticeShown = true
+  toast(message, 'info', { action: { label: T.reload, run: () => reloadForUpdate() } })
 }
 
 function setView(mode: ViewMode, focus = true): void {
@@ -862,7 +889,8 @@ function openSettings(): void {
     settings,
     onChange: (next) => updateSettings(next),
     onLanguageChange: (next) => {
-      chooseLang(next)
+      // Con l'account la lingua nuova parte anche dopo il ricaricamento: resta da mandare.
+      updateSettings({ language: next })
       reloadForUpdate()
     },
     personalWords: loadPersonalWords(),
@@ -1121,12 +1149,10 @@ if (storageAvailable()) {
       applyTheme()
       editor.setAutoWrap(settings.autoWrap)
       applySpellcheck()
+      // Un'altra scheda ha cambiato la lingua: qui la si vede ricaricando.
+      languageChangedElsewhere(T.languageOtherTab)
     }
     if (key === null || key === DICTIONARY_KEY) spell?.setPersonalWords(loadPersonalWords())
-    // Un'altra scheda ha cambiato la lingua: qui la si vede ricaricando.
-    if (key === LANG_KEY && ev.newValue && ev.newValue !== lang) {
-      toast(T.languageElsewhere, 'info', { action: { label: T.reload, run: () => reloadForUpdate() } })
-    }
   })
 }
 

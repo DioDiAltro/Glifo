@@ -367,6 +367,54 @@ try {
     `il tema scelto sul pc arriva sul telefono (${theme})`,
   )
 
+  // Anche la lingua va con l'account (12 ottobre 2026): scelto l'inglese sul pc, che si ricarica, il
+  // telefono (dove si stava lavorando) lo chiede con «Ricarica» e si apre in inglese. Tornati
+  // all'italiano sul pc, il telefono appena aperto si ricarica da solo.
+  const chooseLanguage = async (page, settingsLabel, value) => {
+    await page.locator(`.side-profile button[aria-label="${settingsLabel}"]`).click()
+    const reloaded = page.waitForEvent('load')
+    await page.locator(`dialog .language-settings label[lang="${value}"]`).click()
+    await reloaded
+    await page.waitForSelector('.cm-editor')
+  }
+  await tel.page.locator('.cm-content').click()
+  await chooseLanguage(pc.page, 'Impostazioni', 'en')
+  const pcLanguage = await pc.page.evaluate(() => document.documentElement.lang)
+  const languageAsked = await waitFor(
+    tel.page,
+    () => {
+      document.dispatchEvent(new Event('visibilitychange'))
+      return [...document.querySelectorAll('.toast')].some((t) => t.textContent.includes('La lingua di Glifo è cambiata nel tuo account'))
+    },
+    undefined,
+    15000,
+  )
+  const telReloaded = tel.page.waitForEvent('load')
+  await tel.page.locator('.toast .toast-action', { hasText: 'Ricarica' }).click()
+  await telReloaded
+  await tel.page.waitForSelector('.cm-editor')
+  const telLanguage = await tel.page.evaluate(() => ({ lang: document.documentElement.lang, settings: document.querySelector('.side-profile button[aria-label="Settings"]') !== null }))
+  check(
+    pcLanguage === 'en' && languageAsked && telLanguage.lang === 'en' && telLanguage.settings,
+    `la lingua scelta sul pc arriva sul telefono, che chiede di ricaricare e si apre in inglese (${JSON.stringify({ pcLanguage, languageAsked, telLanguage })})`,
+  )
+  await chooseLanguage(pc.page, 'Settings', 'it')
+  const telBack = await poll(async () => {
+    try {
+      return await tel.page.evaluate(() => {
+        document.dispatchEvent(new Event('visibilitychange'))
+        return document.documentElement.lang === 'it' && document.querySelector('.cm-editor') !== null
+      })
+    } catch {
+      // La pagina si sta ricaricando.
+      return false
+    }
+  }, 20000)
+  check(
+    telBack && (await pc.page.evaluate(() => document.documentElement.lang)) === 'it',
+    'tornati all\'italiano sul pc, il telefono appena aperto si ricarica da solo in italiano',
+  )
+
   // ——— Uscire dall'account ———
   // Una lavagna scritta sta solo in questo browser, non nell'account: uscendo Glifo lo dice, e la
   // toglie insieme alle note.

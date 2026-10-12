@@ -1,19 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import {
-  browserLang,
-  byLang,
-  chooseLang,
-  dateLocale,
-  detectLang,
-  lang,
-  LANG_KEY,
-  LANGUAGES,
-  rememberLang,
-  rich,
-  setLangForTests,
-  texts,
-} from '../src/i18n'
+import { browserLang, byLang, dateLocale, detectLang, lang, LANGUAGES, rich, savedLang, setLangForTests, texts } from '../src/i18n'
+import { accountSettings, ACCOUNT_SETTINGS, loadSettings, rememberLanguage, saveSettings, validAccountSettings } from '../src/store/settings'
 
 function browserLanguages(languages: string[]): void {
   Object.defineProperty(navigator, 'languages', { value: languages, configurable: true })
@@ -56,22 +44,34 @@ describe('la lingua di Glifo', () => {
     expect(detectLang()).toBe('en')
   })
 
-  it('la lingua scelta vale più del browser e degli appunti', () => {
+  it('la lingua scelta, tra le impostazioni, vale più del browser e degli appunti', () => {
     browserLanguages(['it-IT'])
-    chooseLang('en')
+    saveSettings({ language: 'en' })
+    expect(savedLang()).toBe('en')
     expect(detectLang()).toBe('en')
     localStorage.setItem('glifo.notes.v1', '[]')
     expect(detectLang()).toBe('en')
-    localStorage.setItem(LANG_KEY, 'fr')
+    localStorage.setItem('glifo.settings.v1', JSON.stringify({ language: 'fr', theme: 'dark' }))
+    expect(savedLang()).toBeNull()
+    expect(detectLang()).toBe('it')
+    localStorage.setItem('glifo.settings.v1', 'non è JSON')
     expect(detectLang()).toBe('it')
   })
 
-  it('all\'avvio la lingua trovata si ricorda, così gli appunti scritti dopo non la cambiano', () => {
-    rememberLang()
-    expect(localStorage.getItem(LANG_KEY)).toBe('it')
-    chooseLang('en')
-    rememberLang()
-    expect(localStorage.getItem(LANG_KEY)).toBe('en')
+  it('all\'avvio la lingua trovata si ricorda tra le impostazioni, così gli appunti scritti dopo non la cambiano', () => {
+    saveSettings({ theme: 'dark' })
+    rememberLanguage()
+    expect(JSON.parse(localStorage.getItem('glifo.settings.v1')!)).toEqual({ theme: 'dark', language: 'it' })
+    saveSettings({ language: 'en' })
+    rememberLanguage()
+    expect(loadSettings().language).toBe('en')
+  })
+
+  it('la lingua va con l\'account, come il tema', () => {
+    expect(ACCOUNT_SETTINGS).toContain('language')
+    expect(accountSettings({ ...loadSettings(), language: 'en' }).language).toBe('en')
+    expect(validAccountSettings({ language: 'en', theme: 'dark' })).toEqual({ language: 'en', theme: 'dark' })
+    expect(validAccountSettings({ language: 'fr' })).toEqual({})
   })
 })
 

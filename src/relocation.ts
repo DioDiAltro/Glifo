@@ -1,11 +1,10 @@
 import { isWelcome, knowsAccount } from './account/space'
 import type { BackupBoard } from './board/store'
-import { chooseLang, isLang, lang, type Lang } from './i18n'
 import { loadPersonalWords } from './store/dictionary'
 import { FoldersStore } from './store/folders'
 import { noteIdsInBrowser, NotesStore } from './store/notes'
 import { restoreBackup, type RestoreBoards } from './store/restore'
-import { accountSettings, DEFAULT_SETTINGS, loadSettings, saveSettings, validAccountSettings } from './store/settings'
+import { accountSettings, DEFAULT_SETTINGS, loadSettings, saveSettings, validAccountSettings, type Settings } from './store/settings'
 import { readItem, storageKeys, writeItem } from './store/storage'
 
 /**
@@ -81,11 +80,6 @@ export interface RelocationPackage {
   tutorialSeen: boolean
   /** L'appunto aperto (fuori dall'account): sul sito nuovo si apre quello. */
   active?: string | null
-  /**
-   * La lingua di Glifo sul vecchio sito (src/i18n.ts). Manca nei pacchi di prima delle due lingue: lì
-   * Glifo era in italiano.
-   */
-  lang?: Lang
 }
 
 const ACCOUNT_PREFIX = 'glifo.u.'
@@ -119,7 +113,6 @@ export async function buildPackage(deps: {
     settings: accountSettings(loadSettings()),
     tutorialSeen: deps.tutorialSeen,
     active: active && notes.some((n) => n.id === active) ? active : null,
-    lang,
   }
 }
 
@@ -188,11 +181,14 @@ export async function importPackage(
       // Senza lavagne (IndexedDB non disponibile) il resto arriva lo stesso.
     }
   }
-  // Le impostazioni del vecchio sito solo se qui sono ancora quelle di partenza, e così la lingua: sul
-  // sito nuovo, aperto la prima volta, è quella del browser, che può non essere quella di Glifo.
-  const untouched = JSON.stringify(accountSettings(loadSettings())) === JSON.stringify(accountSettings(DEFAULT_SETTINGS))
-  if (untouched && typeof pkg.settings === 'object' && pkg.settings) saveSettings(validAccountSettings(pkg.settings))
-  if (untouched) chooseLang(isLang(pkg.lang) ? pkg.lang : 'it')
+  // Le impostazioni del vecchio sito solo se qui sono ancora quelle di partenza. La lingua non conta: sul
+  // sito nuovo, aperto la prima volta, è quella del browser, che può non essere quella di Glifo; arriva
+  // con le altre, e nei pacchi di prima delle due lingue, che non ce l'hanno, è l'italiano.
+  const comparable = (s: Settings) => JSON.stringify({ ...accountSettings(s), language: null })
+  if (comparable(loadSettings()) === comparable(DEFAULT_SETTINGS)) {
+    const incoming = typeof pkg.settings === 'object' && pkg.settings ? validAccountSettings(pkg.settings) : {}
+    saveSettings({ language: 'it', ...incoming })
+  }
   return {
     result: { added: restored.added, already: restored.already, accountNotes, boards: drawn },
     dictionary: Array.isArray(pkg.dictionary) ? pkg.dictionary.filter((w): w is string => typeof w === 'string') : [],

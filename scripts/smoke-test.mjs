@@ -3600,7 +3600,7 @@ try {
   const uiIt = await english.evaluate(() => ({
     lang: document.documentElement.lang,
     split: document.querySelector('.view-button[data-view="split"]')?.getAttribute('aria-label'),
-    saved: localStorage.getItem('glifo.lang.v1'),
+    saved: JSON.parse(localStorage.getItem('glifo.settings.v1')).language,
   }))
   check(
     chosenEn && uiIt.lang === 'it' && uiIt.split === 'Diviso' && uiIt.saved === 'it',
@@ -3807,9 +3807,9 @@ try {
     await exContext.close()
 
     // Il pulsante ✨ (8 ottobre 2026): mentre l'AI lavora l'icona sfuma i colori (con il pannello AI aperto,
-    // anche il contorno del pulsante acceso, dal 12 ottobre); se finisce con il pannello chiuso, un pallino
-    // come quello dei messaggi, che se ne va riaprendo il pannello. Qui il modello finto risponde dopo un
-    // secondo e mezzo: il tempo di chiudere il pannello.
+    // dal 12 ottobre, il pulsante acceso ha il contorno sfumato, con i colori che girano e la luce dentro);
+    // se finisce con il pannello chiuso, un pallino come quello dei messaggi, che se ne va riaprendo il
+    // pannello. Qui il modello finto risponde dopo un secondo e mezzo: il tempo di chiudere il pannello.
     const slowContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block' })
     const slow = await slowContext.newPage()
     slow.on('pageerror', (e) => errors.push(e.message))
@@ -3830,6 +3830,8 @@ try {
           icon: getComputedStyle(b.querySelector('svg')).animationName,
           glow: getComputedStyle(b.querySelector('svg')).filter.includes('drop-shadow'),
           lit: getComputedStyle(b).boxShadow.includes('inset'),
+          ring: getComputedStyle(b, '::before').content,
+          turn: getComputedStyle(b, '::before').animationName,
           expanded: b.getAttribute('aria-expanded'),
           dot: getComputedStyle(b, '::after').content,
         }
@@ -3848,14 +3850,14 @@ try {
     const reopened = await aiButton()
     const explained = await slow.locator('.ai-panel .explain-box .explain-step').count()
     check(
-      !idle.working && !idle.news && idle.icon === 'none' && !idle.glow && !idle.lit && idle.expanded === 'false' && idle.dot === 'none' &&
-        whileOpen.working && whileOpen.button === 'ai-working-ring' && whileOpen.icon === 'ai-working' && whileOpen.lit && whileOpen.expanded === 'true' &&
-        whileClosed.working && whileClosed.icon === 'ai-working' && whileClosed.glow && !whileClosed.lit && whileClosed.label === 'Spiega con l\'AI, sta lavorando' &&
+      !idle.working && !idle.news && idle.icon === 'none' && !idle.glow && !idle.lit && idle.ring === 'none' && idle.expanded === 'false' && idle.dot === 'none' &&
+        whileOpen.working && whileOpen.ring === '""' && whileOpen.turn === 'ai-ring-turn' && whileOpen.button === 'ai-working-glow' && whileOpen.icon === 'ai-working' && whileOpen.lit && whileOpen.expanded === 'true' &&
+        whileClosed.working && whileClosed.icon === 'ai-working' && whileClosed.glow && !whileClosed.lit && whileClosed.ring === 'none' && whileClosed.label === 'Spiega con l\'AI, sta lavorando' &&
         !finished.glow &&
         finishedInTime && !finished.working && finished.news && finished.dot === '""' && finished.label === 'Spiega con l\'AI, ha finito' &&
-        !reopened.news && reopened.dot === 'none' && reopened.label === 'Spiega con l\'AI' && reopened.lit && reopened.button === 'none' &&
+        !reopened.news && reopened.dot === 'none' && reopened.label === 'Spiega con l\'AI' && reopened.ring === '""' && reopened.turn === 'none' && !reopened.lit && reopened.button === 'none' &&
         explained === 3,
-      `il pulsante ✨ sfuma mentre l'AI lavora, con l'alone del neon (aperto, anche il contorno); finito a pannello chiuso, il pallino, che se ne va riaprendolo (${JSON.stringify({ idle, whileOpen, whileClosed, finished, reopened, explained })})`,
+      `il pulsante ✨ sfuma mentre l'AI lavora, con l'alone del neon (aperto, con il contorno sfumato che gira); finito a pannello chiuso, il pallino, che se ne va riaprendolo (${JSON.stringify({ idle, whileOpen, whileClosed, finished, reopened, explained })})`,
     )
     await slowContext.close()
 

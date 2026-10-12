@@ -6,12 +6,16 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
 ## Dove sono le cose
 
 - `src/i18n.ts` (12 ottobre 2026, GRAFICA.md punto 6): le due lingue, italiano e inglese. `lang` si
-  decide all'avvio (`detectLang`: quella scelta, in `glifo.lang.v1`; la prima volta dal browser, la prima
-  tra italiano e inglese nelle sue lingue, se no inglese; con appunti già nel browser, anche `matherdown.*`,
-  italiano) e `rememberLang` in main.ts la fissa. Cambiarla (`chooseLang`, Impostazioni → «Lingua», il
-  primo riquadro) salva la nota e ricarica la pagina; le altre schede lo dicono con «Ricarica». È del
-  dispositivo, fuori dagli spazi degli account; il trasloco su glifo.page la porta (`lang` nel pacco:
-  senza, italiano), se no un browser inglese aprirebbe glifo.page in inglese prima degli appunti. I testi:
+  decide all'avvio (`detectLang`: quella scelta, `language` in `glifo.settings.v1`, letta da `savedLang`;
+  la prima volta dal browser, la prima tra italiano e inglese nelle sue lingue, se no inglese; con appunti
+  già nel browser, anche `matherdown.*`, italiano) e `rememberLanguage` (store/settings.ts, all'avvio in
+  main.ts) la scrive tra le impostazioni, così gli appunti scritti dopo non la cambiano. Cambiarla
+  (Impostazioni → «Lingua», il primo riquadro) salva la nota e ricarica la pagina. Va con l'account, come
+  il tema (`ACCOUNT_SETTINGS`, scelta dello studente il 12 ottobre): quando cambia in un'altra scheda o
+  arriva dall'account (`languageChangedElsewhere` in main.ts), la pagina appena aperta si ricarica da
+  sola, mentre se si è già premuto un tasto o toccato lo schermo (`interacted`) lo chiede con
+  «Ricarica». Il trasloco su glifo.page la porta con le altre impostazioni del pacco (senza, italiano), se
+  no un browser inglese aprirebbe glifo.page in inglese prima degli appunti. I testi:
   `texts({...})` in cima a ogni file (`T`), ogni voce `[italiano, inglese]` o una funzione che compone le
   due frasi intere; `rich` per gli elementi dentro una frase (`{nome}`), `byLang` per i pezzi lunghi (la
   guida di `openHelpDialog`, le parole della ricerca di CodeMirror), `dateLocale` per le date. Leggere i
@@ -462,10 +466,14 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   (le più vecchie si lasciano se il contesto non basta); Glifo controlla le formule della risposta
   (`checkFormulas`, lo stesso controllo dei grafici e dei teoremi) e fa correggere quelle sbagliate. Con
   un'altra spiegazione, «Rifai» o chiudendo, la chat ricomincia (`endChat` ferma il modello); non si salva.
-  Con il pannello aperto ✨ e «Simboli» hanno un contorno spesso, non il fondo pieno (12 ottobre 2026,
-  GRAFICA.md punto 8, variante A), e `aria-expanded` dice quale pannello si vede (`markPanelButtons` in
-  main.ts). Mentre la spiegazione o la chat del pannello lavorano il pulsante ✨ sfuma i colori con un alone, come un
-  neon (`.is-working`, con il pannello aperto anche il contorno: `ai-working-ring`; l'alone resta dentro il pulsante: la barra, che scorre, taglierebbe quello che esce), e se
+  Con il pannello aperto «Simboli» ha un contorno indaco spesso e ✨ un contorno sfumato con i colori
+  dell'AI, dall'azzurro al rosa, non il fondo pieno (12 ottobre 2026, GRAFICA.md punto 8, variante B:
+  l'anello è un `::before` con una maschera, così il pulsante non cambia misura), e `aria-expanded` dice
+  quale pannello si vede (`markPanelButtons` in main.ts). Mentre la spiegazione o la chat del pannello
+  lavorano il pulsante ✨ sfuma i colori con un alone, come un neon (`.is-working`; con il pannello aperto
+  i colori del contorno girano, `ai-ring-turn` sull'angolo `--ai-angle` registrato con `@property`, e
+  dentro c'è la luce, `ai-working-glow`; l'alone resta dentro il pulsante: la barra, che scorre,
+  taglierebbe quello che esce), e se
   finiscono con il pannello AI che non si vede ha un pallino finché non lo si riapre (`.has-news`), ma non
   se la spiegazione è stata chiusa o fermata (`src/ui/aiActivity.ts`, 8 ottobre 2026: `activity` passa da
   `SidePanel` ad `AiPanel`, `ExplainPanel` ed `ExplainChat`; in main.ts `aiWork` e `aiShown`, chiamata da

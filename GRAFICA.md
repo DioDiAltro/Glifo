@@ -18,9 +18,9 @@ quando i punti sono tutti fatti si cancella, insieme alla voce «La grafica» di
 | 3 | Le impostazioni divise in sezioni | da decidere |
 | 4 | Più modelli per «Spiegami» | da decidere |
 | 5 | A cosa serve la chiave dell'AI | da decidere |
-| 6 | Glifo anche in inglese | la base e le schermate fatte sul ramo `prova`, con il tutorial nuovo: da vedere |
+| 6 | Glifo anche in inglese | la base e le schermate fatte sul ramo `prova`, con il tutorial nuovo e la lingua che va con l'account: da decidere quando va sul sito vero |
 | 7 | Via il registro dei tocchi | deciso: si toglie (manca una risposta) |
-| 8 | Il pulsante ✨ con il contorno | fatto sul ramo `prova` con la variante A: da vedere (A o B) |
+| 8 | Il pulsante ✨ con il contorno | deciso: variante B, fatta sul ramo `prova` |
 
 ## 1. «Cambia account»
 
@@ -373,9 +373,8 @@ il 12 ottobre 2026:
   le impostazioni non sono divise in sezioni, punto 3; poi va in «Generale»); cambiandola Glifo salva la
   nota e si ricarica, e le altre schede aperte lo dicono. La prima volta la lingua si prende dal
   browser: italiano se tra le lingue del browser l'italiano viene prima dell'inglese, se no inglese; chi
-  ha già gli appunti nel browser resta in italiano. La lingua resta sul dispositivo (non va con
-  l'account); il trasloco su glifo.page la porta dal vecchio sito, altrimenti chi ha il browser in
-  inglese vedrebbe glifo.page in inglese;
+  ha già gli appunti nel browser resta in italiano. Il trasloco su glifo.page la porta dal vecchio sito,
+  altrimenti chi ha il browser in inglese vedrebbe glifo.page in inglese;
 - **le schermate** (tappa 2, la prima parte): in inglese ci sono la barra laterale, le due barre, le
   viste, le finestre (impostazioni, account e accesso, condividi, commenti, conferme), la guida con tutte
   le scorciatoie, il tutorial, la lavagna, i pannelli dei simboli e di «Spiega con l'AI», l'anteprima,
@@ -398,12 +397,17 @@ inglesi: «infinity», «for all», «square root»), le tabelle (editor e funzi
 punto, l'informativa, l'email per entrare e i video in inglese. I teoremi scritti in inglese
 («Theorem», «Definition») il pannello AI ancora non li riconosce.
 
-Da decidere:
+Lo studente, 12 ottobre 2026, sulla lingua: «le impostazioni devono seguire l'account». Fatto sul ramo
+`prova`: la lingua è un'impostazione come il tema (`language`, tra quelle che vanno con l'account) ed è
+nell'informativa tra le impostazioni salvate nell'account. Scelta su un dispositivo, arriva sugli altri:
+una pagina appena aperta (per esempio subito dopo essere entrati) si ricarica da sola nella lingua
+dell'account; dove si sta già lavorando, Glifo lo dice con «Ricarica». Lo stesso vale per le altre schede.
 
-- quando va sul sito: subito così (chi ha il browser in inglese vede le schermate in inglese e i conti
-  ancora in italiano) o quando è tradotto anche il resto?
-- la lingua va con l'account, come il tema? Oggi resta sul dispositivo: con l'account, entrando da un
-  dispositivo nuovo Glifo si ricaricherebbe nella lingua dell'account.
+Da decidere: quando portarlo sul sito vero. Tutto questo lavoro è solo sul sito di prova. Portandolo sul
+sito vero adesso, chi ha il browser in inglese vedrebbe Glifo a metà in inglese (menu e finestre sì;
+conti, nomi dei simboli, tabelle, grafici e spiegazioni dell'AI ancora in italiano), mentre per chi lo usa
+in italiano cambierebbero solo il tutorial nuovo, il pulsante ✨ e la scelta della lingua nelle
+impostazioni. L'altra strada è aspettare di aver tradotto anche il resto e portare tutto insieme.
 
 ## 7. Via il registro dei tocchi
 
@@ -456,8 +460,8 @@ chiuso resta com'è. Due varianti, da vedere prima in foto nei due temi:
 **Nel codice.** Gli stili in `src/styles/app.css` (`.ai-toggle`, `.is-working`, `.has-news`, i colori
 `--ai-1`…`--ai-4` dei due temi); gli stati in `src/ui/aiActivity.ts`.
 
-**Risposte e decisioni.** Lo studente, 12 ottobre 2026: «se puoi fai anche il punto 8». Fatto sul ramo
-`prova` con la variante A, quella che Claude consiglia (il colore resta il segno che l'AI sta lavorando):
+**Risposte e decisioni.** Lo studente, 12 ottobre 2026: «se puoi fai anche il punto 8». Fatta prima sul
+ramo `prova` la variante A, quella che Claude consigliava (il colore resta il segno che l'AI sta lavorando):
 
 - con il pannello aperto ✨ ha un contorno indaco di 2 px con l'icona indaco dentro, al posto del
   quadrato pieno con l'icona bianca; mentre l'AI lavora contorno e icona sfumano azzurro → indaco → viola
@@ -472,8 +476,13 @@ e B nei due temi, con quattro momenti dell'animazione. A riposo l'icona è grigi
 della barra, non indaco come era scritto qui sopra (la regola indaco era coperta da quella dei pulsanti):
 resta così.
 
-Da decidere: A o B (con B cambia solo lo stile: il contorno sfumato con i colori che girano); «Simboli»
-con il contorno va bene o torna pieno?
+Lo studente, viste le foto: «variante B, simboli con il contorno va bene». Fatto sul ramo `prova` il 12
+ottobre 2026: con il pannello aperto ✨ ha un contorno di 2 px sfumato azzurro → indaco → viola → rosa,
+con l'icona indaco dentro (un anello disegnato con una maschera: dentro il pulsante resta trasparente, e
+la misura non cambia); mentre l'AI lavora i colori del contorno girano (l'angolo della sfumatura,
+registrato con `@property`; dove il browser non lo conosce il contorno resta fermo), dentro c'è la luce
+dello stesso neon e l'icona sfuma come prima. Con «riduci animazioni» il contorno resta sfumato e fermo,
+con la luce viola. «Simboli» resta con il contorno indaco.
 
 ## Gli abbonamenti, in tutto questo
 

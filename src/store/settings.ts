@@ -1,6 +1,6 @@
 import type { ExplainTone } from '../ai/explain'
 import { DEFAULT_LOCAL_MODEL } from '../ai/localModels'
-import { lang, texts } from '../i18n'
+import { isLang, lang, texts, type Lang } from '../i18n'
 import { readJson, writeJson } from './storage'
 
 const T = texts({
@@ -18,6 +18,8 @@ export type ViewMode = 'editor' | 'split' | 'preview' | 'board'
 export type SpellLanguages = 'it+en' | 'it' | 'en'
 
 export interface Settings {
+  /** La lingua di Glifo (src/i18n.ts): cambiandola la pagina si ricarica. */
+  language: Lang
   theme: Theme
   view: ViewMode
   /** Aggiunge i `$` quando si inserisce un simbolo fuori da una formula. */
@@ -67,6 +69,8 @@ export const SETTINGS_KEY = 'glifo.settings.v1'
 const WINDOW_ONLY: (keyof Settings)[] = ['view', 'notesOpen', 'symbolsOpen']
 
 export const DEFAULT_SETTINGS: Settings = {
+  // Quella con cui si è aperta la pagina: la prima volta, dal browser.
+  language: lang,
   theme: 'auto',
   view: 'split',
   autoWrap: true,
@@ -105,11 +109,27 @@ export function saveSettings(changes: Partial<Settings>): void {
 }
 
 /**
- * Le impostazioni che vanno con l'account, su ogni dispositivo. Le altre dipendono dallo
- * schermo (vista e pannelli), e le chiavi API con il proxy e il servizio dell'assistente (che può
- * essere Ollama, su un computer solo) restano in questo browser.
+ * All'avvio (main.ts): la lingua trovata la prima volta dal browser si salva, così resta quella anche
+ * dopo, quando nel browser ci sono gli appunti (che altrimenti la farebbero tornare italiana).
  */
-export const ACCOUNT_SETTINGS = ['theme', 'autoWrap', 'spellcheck', 'spellLanguages', 'fontSize', 'model'] as const satisfies readonly (keyof Settings)[]
+export function rememberLanguage(): void {
+  if (!isLang(stored().language)) saveSettings({ language: lang })
+}
+
+/**
+ * Le impostazioni che vanno con l'account, su ogni dispositivo (dal 12 ottobre 2026 anche la lingua).
+ * Le altre dipendono dallo schermo (vista e pannelli), e le chiavi API con il proxy e il servizio
+ * dell'assistente (che può essere Ollama, su un computer solo) restano in questo browser.
+ */
+export const ACCOUNT_SETTINGS = [
+  'language',
+  'theme',
+  'autoWrap',
+  'spellcheck',
+  'spellLanguages',
+  'fontSize',
+  'model',
+] as const satisfies readonly (keyof Settings)[]
 
 export function isAccountSetting(key: string): boolean {
   return (ACCOUNT_SETTINGS as readonly string[]).includes(key)
@@ -122,12 +142,13 @@ export function accountSettings(s: Settings): Record<string, unknown> {
 /** Le impostazioni arrivate dall'account, tenendo solo i valori che questa versione di Glifo conosce. */
 export function validAccountSettings(values: Record<string, unknown>): Partial<Settings> {
   const out: Partial<Settings> = {}
-  const { theme, autoWrap, spellcheck, spellLanguages, fontSize, model } = values
+  const { language, theme, autoWrap, spellcheck, spellLanguages, fontSize, model } = values
+  if (isLang(language)) out.language = language
   if (theme === 'auto' || theme === 'light' || theme === 'dark') out.theme = theme
   if (typeof autoWrap === 'boolean') out.autoWrap = autoWrap
   if (typeof spellcheck === 'boolean') out.spellcheck = spellcheck
-  const language = SPELL_LANGUAGES.find((l) => l.id === spellLanguages)
-  if (language) out.spellLanguages = language.id
+  const spell = SPELL_LANGUAGES.find((l) => l.id === spellLanguages)
+  if (spell) out.spellLanguages = spell.id
   if (typeof fontSize === 'number' && fontSize >= 13 && fontSize <= 22) out.fontSize = Math.round(fontSize)
   const aiModel = AI_MODELS.find((m) => m.id === model)
   if (aiModel) out.model = aiModel.id

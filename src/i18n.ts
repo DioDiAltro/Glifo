@@ -6,10 +6,12 @@
  * resti italiano scritto direttamente nel codice.
  *
  * La lingua si decide una volta, quando la pagina si apre: cambiandola nelle impostazioni la pagina si
- * ricarica. La prima volta si prende dal browser (italiano se tra le lingue del browser l'italiano viene
- * prima dell'inglese, se no inglese); chi usava già Glifo, con gli appunti nel browser, resta in italiano.
- * Resta su questo dispositivo, come il modello di «Spiegami». La lingua in cui si scrive è un'altra cosa:
- * la sceglie il controllo ortografico (`spellLanguages`).
+ * ricarica. È un'impostazione come il tema (`language` in src/store/settings.ts) e va con l'account, su
+ * ogni dispositivo; qui si legge direttamente dal browser, perché settings.ts usa i testi di questo modulo
+ * e non lo si può importare. La prima volta si prende dal browser (italiano se tra le lingue del browser
+ * l'italiano viene prima dell'inglese, se no inglese); chi usava già Glifo, con gli appunti nel browser,
+ * resta in italiano. La lingua in cui si scrive è un'altra cosa: la sceglie il controllo ortografico
+ * (`spellLanguages`).
  */
 
 export type Lang = 'it' | 'en'
@@ -20,16 +22,18 @@ export const LANGUAGES: readonly { id: Lang; name: string }[] = [
   { id: 'en', name: 'English' },
 ]
 
-/** Chiave in localStorage: fuori dagli spazi degli account, perché è del dispositivo. */
-export const LANG_KEY = 'glifo.lang.v1'
+/** Dove sono le impostazioni (`SETTINGS_KEY` di src/store/settings.ts). */
+const SETTINGS_KEY = 'glifo.settings.v1'
 
 export function isLang(value: unknown): value is Lang {
   return value === 'it' || value === 'en'
 }
 
-function savedLang(): Lang | null {
+/** La lingua salvata nelle impostazioni, se c'è. */
+export function savedLang(): Lang | null {
   try {
-    const value = localStorage.getItem(LANG_KEY)
+    const settings: unknown = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? 'null')
+    const value = typeof settings === 'object' && settings !== null ? (settings as { language?: unknown }).language : null
     return isLang(value) ? value : null
   } catch {
     return null
@@ -74,28 +78,6 @@ export let lang: Lang = detectLang()
 /** Solo per le prove: cambia la lingua dei testi senza ricaricare. */
 export function setLangForTests(next: Lang): void {
   lang = next
-}
-
-/**
- * All'avvio (main.ts): la lingua trovata la prima volta resta quella, anche dopo, quando nel browser ci
- * sono gli appunti (che altrimenti la farebbero tornare italiana).
- */
-export function rememberLang(): void {
-  if (savedLang()) return
-  try {
-    localStorage.setItem(LANG_KEY, lang)
-  } catch {
-    // Senza memoria del browser la lingua si ricalcola ogni volta, dal browser: va bene lo stesso.
-  }
-}
-
-/** La lingua scelta nelle impostazioni (vale dalla prossima apertura: chi chiama ricarica la pagina). */
-export function chooseLang(next: Lang): void {
-  try {
-    localStorage.setItem(LANG_KEY, next)
-  } catch {
-    // Senza memoria del browser non si può ricordare: resta quella di prima.
-  }
 }
 
 /** Un testo nelle due lingue: prima l'italiano, poi l'inglese. */

@@ -93,7 +93,8 @@ resta solo quello che non è stato fatto. Si fanno sul ramo `prova`, con le foto
 ottobre 2026: lo studente ha detto «va bene» per provarlo, perché sul sito di prova l'account è spento,
 e poi, lo stesso giorno, «il punto 1 va bene». Sul ramo `prova` dal 12 ottobre 2026, da vedere: il punto
 6 nella prima parte (la scelta della lingua, le schermate in inglese e il tutorial rifatto, con 11
-pagine) e il punto 8 (il pulsante ✨ con il contorno, variante A).
+pagine; la lingua va con l'account, come il tema) e il punto 8 (il pulsante ✨ con il contorno sfumato,
+variante B, scelta dallo studente).
 
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
