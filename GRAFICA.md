@@ -405,6 +405,19 @@ Hugging Face di claude.ai, attivo dal 13 ottobre, legge i file dei modelli sull'
 licenza, l'elenco dei pezzi) ma non li fa girare. Se i Qwen3.5 vanno bene passano tra i consigliati
 (`FAMILIES` in src/ai/localModels.ts); com'è andata si scrive qui.
 
+**La prova sulla CPU** (13 ottobre 2026, sera, in una sessione nuova). Lo studente: «sì, partiamo con le
+prove dei modelli veri». Ora Hugging Face si raggiunge (405 MB in 6 secondi), e la licenza dei Qwen3.5 è
+Apache 2.0 (la scheda di ognuno su Hugging Face). La sessione non ha una scheda grafica: Chromium usa
+WebGPU sul processore (SwiftShader), senza `shader-f16`, quindi le varianti q4f32. Qwen3.5 0.8B si carica
+in 11 secondi e scrive in italiano con il ragionamento spento (WebLLM mette il blocco `<think>` vuoto a
+ogni modello a cui Glifo lo spegne, qualunque sia il suo modello di conversazione), ma è lentissimo: la
+prima risposta aspetta 15 minuti (la preparazione dei calcoli), poi legge il testo a 0,4 token al secondo
+e scrive un token ogni 39 secondi. Una spiegazione di «Spiegami» (più di mille token da leggere, qualche
+centinaio da scrivere, più i giri con il motore) durerebbe molte ore, con l'8B giorni: in queste sessioni
+`scripts/spiegami-qwen.mjs` non serve a provare i modelli. llama.cpp, che sulla CPU è molto più veloce,
+la protezione della sessione l'ha fermato perché è un programma scaricato da fuori: si chiede allo
+studente come fare le prove.
+
 ## 5. A cosa serve la chiave dell'AI
 
 **Com'è oggi.** Nelle impostazioni, «Assistente AI (facoltativo)»: il servizio (Anthropic, Gemini,
