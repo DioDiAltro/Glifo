@@ -14,7 +14,7 @@ quando i punti sono tutti fatti si cancella, insieme alla voce «La grafica» di
 | Punto | Cosa | Stato |
 |---|---|---|
 | 1 | «Cambia account» | fatto: sul sito dal 12 ottobre; lo studente: «va bene» |
-| 2 | La pagina dei commenti, tipo FAQ | sul ramo `prova` dal 13 ottobre 2026: lo studente deve dire se lo convince |
+| 2 | La pagina dei commenti, tipo FAQ | fatto: sul sito dal 13 ottobre 2026; lo studente: «va bene» |
 | 3 | Le impostazioni divise in sezioni | fatto: sul sito dal 13 ottobre 2026; lo studente: «va bene» |
 | 4 | Più modelli per «Spiegami» | da decidere |
 | 5 | A cosa serve la chiave dell'AI | da decidere |
@@ -182,6 +182,13 @@ ottobre 2026, con le scelte che Claude consigliava:
   nuovo (il video resta: passa solo sopra il fumetto).
 
 Sul sito di prova la pagina è https://glifo-prova.pages.dev/faq (i commenti lì sono quelli veri).
+
+Lo studente, 13 ottobre 2026, provata la pagina: «va bene, portalo sul sito vero». Sul sito dal 13 ottobre
+2026 (glifo.page/faq e il vecchio indirizzo). Ha chiesto come si risponde a chi scrive e come si toglie un
+commento, per esempio un problema risolto: per ora dalla dashboard di Supabase (Table Editor → `feedback`:
+`reply` per rispondere, `visible` → false per nasconderlo, o la riga eliminata), oppure chiedendolo a
+Claude; rispondere e nascondere dalla pagina, con il proprio account, resta un'idea per dopo (ROADMAP.md,
+nei commenti).
 
 ## 3. Le impostazioni divise in sezioni
 

@@ -103,9 +103,9 @@ sezione «Account», aperta dal pulsante dell'account; in «Dati» lo spazio occ
 vero». Il punto 7, via il registro dei tocchi (dalle impostazioni, dalla lavagna e dal codice), è sul
 sito dal 13 ottobre 2026: lo studente, viste le foto, «va bene, portalo sul sito vero». Il punto 2, la
 pagina «Domande frequenti e commenti» (faq.html, glifo.page/faq: 14 domande frequenti per argomento, poi i
-commenti; il fumetto apre subito la finestra per scrivere, con il link alla pagina), è sul ramo `prova`
-dal 13 ottobre 2026: lo studente, «fai faq, però dobbiamo prima capire perché forse non mi convince
-molto; falla e mettila su prova, poi ti dico».
+commenti; il fumetto apre subito la finestra per scrivere, con il link alla pagina), è sul sito dal 13
+ottobre 2026: lo studente l'ha voluta prima sul ramo `prova` («fai faq, però dobbiamo prima capire perché
+forse non mi convince molto»), poi, provata, «va bene, portalo sul sito vero».
 
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
@@ -305,13 +305,15 @@ risposta (migrazione «commenti pubblici»); quelli arrivati prima restano priva
 (`reply`) e nasconde (`visible`) dalla dashboard. Informativa aggiornata. Vista sul sito di prova, lo
 studente ha detto «va bene» ed è andata sul sito vero con il pulsante ✨ nuovo.
 
-**Domande frequenti e commenti (sul ramo `prova` dal 13 ottobre 2026, GRAFICA.md punto 2).** I commenti
+**Domande frequenti e commenti (online dal 13 ottobre 2026, GRAFICA.md punto 2).** I commenti
 passano in una pagina a parte, `faq.html` (glifo.page/faq), con in cima le domande frequenti; il fumetto
 apre subito la finestra per scrivere, con il link alla pagina. Dal sito di prova i commenti partono
 sempre privati.
 
 Idee per dopo:
-- rispondere e nascondere i commenti da Glifo, con l'account di chi lo fa, invece che dalla dashboard;
+- rispondere, nascondere ed eliminare i commenti dalla pagina delle domande frequenti, con l'account di chi
+  fa Glifo, invece che dalla dashboard (il 13 ottobre 2026 lo studente ha chiesto come si toglie un problema
+  risolto: per ora dalla dashboard o chiedendolo a Claude);
 - un avviso quando arriva un commento (un'email o una notifica: serve un servizio di posta, da
   scegliere tra quelli gratuiti);
 - quando saranno tanti: cercare tra i commenti e un «Anche a me» per dire che un problema capita anche
