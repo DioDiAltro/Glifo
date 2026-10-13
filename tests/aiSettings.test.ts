@@ -191,8 +191,8 @@ describe('le impostazioni delle spiegazioni (prova)', () => {
     expect(notes(section)[0]).toBe('Gemma is provided under and subject to the Gemma Terms of Use found at ai.google.dev/gemma/terms')
   })
 
-  it('i modelli già in questo browser, ognuno con quanto pesa e «Togli»', async () => {
-    huggingFace()
+  it('i modelli già in questo browser, ognuno con quanto pesa e «Togli»; per quello scelto Hugging Face non si chiama', async () => {
+    const fetch = huggingFace()
     const base = 'https://huggingface.co/mlc-ai/Qwen3-4B-q4f16_1-MLC/resolve/main/'
     const stored = new Map<string, unknown>([
       [`${base}tensor-cache.json`, { records: [{ dataPath: 'params_shard_0.bin', nbytes: 2_300_000_000 }] }],
@@ -208,5 +208,6 @@ describe('le impostazioni delle spiegazioni (prova)', () => {
     await vi.waitFor(() => expect(rows()).toEqual([['Qwen3 4B, quello scelto', '2,3 GB']]))
     expect(facts(section)[1]).toEqual(['In questo browser', '2,3 GB: le spiegazioni funzionano anche offline'])
     expect(section.querySelector('.models-here button')?.getAttribute('aria-label')).toBe('Togli Qwen3 4B da questo browser')
+    expect(fetch).not.toHaveBeenCalled()
   })
 })

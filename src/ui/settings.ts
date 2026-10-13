@@ -756,7 +756,8 @@ function explainFieldset(initial: Settings, deps: SettingsDialogDeps): { el: HTM
       h('dt', {}, T.license),
       h('dd', {}, h('a', { attrs: { href: license.url, target: '_blank', rel: 'noopener' } }, license.name)),
     )
-    if (!mine && variant) {
+    // Hugging Face si chiama solo per un modello che di sicuro non è qui (finché non si è guardato, no).
+    if (here && !mine && variant) {
       const asked = chosen
       void downloadSize(variant.id).then((bytes) => {
         if (bytes && asked === chosen && !here?.some((m) => m.id === asked.id)) size.textContent = T.toDownloadValue(formatBytes(bytes))
