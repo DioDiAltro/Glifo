@@ -100,8 +100,8 @@ scelta dallo studente). Lo studente, il 13 ottobre 2026: «quello che hai fatto 
 le impostazioni divise in sezioni (Generale, Scrittura, AI, Account, Dati, Informazioni; l'account è la
 sezione «Account», aperta dal pulsante dell'account; in «Dati» lo spazio occupato, con i modelli di
 «Spiegami»), è sul sito dal 13 ottobre 2026: lo studente, viste le foto, «va bene, portalo sul sito
-vero». Il punto 7, via il registro dei tocchi, è fatto sul ramo `prova` il 13 ottobre 2026 e aspetta il
-«va bene» dello studente.
+vero». Il punto 7, via il registro dei tocchi (dalle impostazioni, dalla lavagna e dal codice), è sul
+sito dal 13 ottobre 2026: lo studente, viste le foto, «va bene, portalo sul sito vero».
 
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 

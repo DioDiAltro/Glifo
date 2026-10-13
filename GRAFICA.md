@@ -19,7 +19,7 @@ quando i punti sono tutti fatti si cancella, insieme alla voce «La grafica» di
 | 4 | Più modelli per «Spiegami» | da decidere |
 | 5 | A cosa serve la chiave dell'AI | da decidere |
 | 6 | Glifo anche in inglese | fatto: tutto tradotto, anche le parole delle note, i numeri, l'AI e l'informativa; sul sito vero dal 12 ottobre 2026; lo studente: «va bene» |
-| 7 | Via il registro dei tocchi | fatto sul ramo `prova` il 13 ottobre 2026: aspetta il «va bene» |
+| 7 | Via il registro dei tocchi | fatto: sul sito dal 13 ottobre 2026; lo studente: «va bene» |
 | 8 | Il pulsante ✨ con il contorno | fatto: variante B, sul sito vero dal 12 ottobre 2026; lo studente: «va bene» |
 
 ## 1. «Cambia account»
@@ -517,6 +517,9 @@ Fatto sul ramo `prova` il 13 ottobre 2026:
 
 Le foto (Impostazioni → Informazioni prima e dopo, computer e telefono, anche in inglese) sono nella chat;
 sul sito di prova https://glifo-prova.pages.dev si prova tutto.
+
+Lo studente, 13 ottobre 2026, viste le foto: «va bene, portalo sul sito vero». Sul sito dal 13 ottobre
+2026 (glifo.page e il vecchio indirizzo).
 
 ## 8. Il pulsante ✨ con il contorno
 
