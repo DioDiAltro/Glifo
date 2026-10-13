@@ -1,12 +1,13 @@
 /**
  * «Spiegami»: i passaggi di un conto della nota, scritti da un modello AI e controllati dal motore di
  * Glifo (ABBONAMENTI.md, «Le spiegazioni, come funzionano»). Per ora (dal 7 ottobre 2026, online dall'8)
- * con un Qwen3 piccolo che gira nel browser (src/ai/local.ts):
+ * con un modello piccolo che gira nel browser (src/ai/local.ts), di solito un Qwen3:
  *
  * 1. Glifo manda al modello la formula, il risultato che ha già calcolato, le definizioni della nota e
  *    quello che il motore sa già dire (la primitiva della funzione da integrare);
  * 2. il modello può chiedere conti al motore (gli strumenti di src/ai/tools.ts) e poi scrive i passaggi,
- *    «1. frase $$formula$$»;
+ *    «1. frase $$formula$$»; un modello che non sa chiedere i conti (13 ottobre 2026: nell'elenco dei
+ *    modelli ce ne sono, src/ai/localModels.ts) non ha gli strumenti e usa quelli del primo messaggio;
  * 3. Glifo controlla ogni passaggio (✓, ✗ con il valore giusto, o niente se non si sa controllare) e che
  *    l'ultimo arrivi al suo risultato; se qualcosa non torna lo dice al modello, che riscrive.
  *
@@ -18,13 +19,13 @@ import type { FormattedResult } from '../math/format'
 import { toLatex } from '../math/latex'
 import { children, namesIn, parseMath, type MathNode } from '../math/parse'
 import { calculationRequest, Sheet, solveRequest, splitEquals, splitPieces } from '../math/sheet'
-import type { ChatMessage } from './localModels'
+import { CONTEXT_TOKENS, type ChatMessage } from './localModels'
 import { checkFormula, nameLike, runTool, toolCallsIn, toolResponses, toolsPrompt, withoutToolCalls, type FormulaCheck, type SheetFactory, type ToolCall } from './tools'
 
 export type ExplainTone = 'professore' | 'semplice'
 
 /*
- * Le etichette dei toni nelle impostazioni (src/ui/dialogs.ts), gli errori e tutto quello che il modello
+ * Le etichette dei toni nelle impostazioni (src/ui/settings.ts), gli errori e tutto quello che il modello
  * legge, nella lingua di Glifo: con Glifo in inglese il modello spiega in inglese. Il testo si prepara qui,
  * nella pagina: il worker del modello (src/ai/llmWorker.ts) non sa la lingua scelta in Glifo.
  */
@@ -48,6 +49,11 @@ const T = texts({
   calcEngine: [
     '- I conti li fa il motore di Glifo, che non sbaglia: non fare conti a mente. Per un integrale, una derivata, una primitiva, un\'equazione o una semplificazione usa gli strumenti.',
     '- Glifo\'s engine does the calculations, and it makes no mistakes: don\'t calculate in your head. For an integral, a derivative, an antiderivative, an equation or a simplification, use the tools.',
+  ],
+  // Per i modelli che non sanno chiedere i conti al motore: i conti sono già nel messaggio.
+  calcEngineGiven: [
+    '- I conti li fa il motore di Glifo, che non sbaglia: nel messaggio trovi il suo risultato e i conti che ha già fatto. Usali e non inventare numeri.',
+    '- Glifo\'s engine does the calculations, and it makes no mistakes: the message has its result and the calculations it has already done. Use them and don\'t make up numbers.',
   ],
   calcChecks: [
     '- Glifo controlla ogni passaggio che scrivi e ti fa correggere quelli sbagliati.',
@@ -89,9 +95,9 @@ const T = texts({
   ],
   lastStepMisses: (tex: string) => [`- L'ultimo passaggio non arriva al risultato di Glifo, $${tex}$.`, `- The last step doesn't reach Glifo's result, $${tex}$.`],
   stepsChecked: ['Glifo ha controllato i passaggi:', 'Glifo checked the steps:'],
-  fixSteps: [
-    'Correggi e riscrivi tutta la spiegazione nello stesso formato. Se ti serve un conto, usa gli strumenti.',
-    'Fix the mistakes and rewrite the whole explanation in the same format. If you need a calculation, use the tools.',
+  fixSteps: (tools: boolean) => [
+    `Correggi e riscrivi tutta la spiegazione nello stesso formato.${tools ? ' Se ti serve un conto, usa gli strumenti.' : ''}`,
+    `Fix the mistakes and rewrite the whole explanation in the same format.${tools ? ' If you need a calculation, use the tools.' : ''}`,
   ],
   formulaWrong: (n: number, value: string | null) => [
     `- La formula del punto ${n} è sbagliata${value !== null ? `: Glifo calcola $${value}$` : ''}.`,
@@ -272,8 +278,7 @@ export class ExplainError extends Error {}
 const MAX_TOOL_ROUNDS = 3
 const MAX_CORRECTIONS = 2
 const MAX_STEPS = 8
-/** Una stima per eccesso dei token della conversazione (i caratteri / 2,8) e quanti ne restano per la risposta. */
-const CONTEXT_TOKENS = 4096
+/** Quanti token restano per la risposta; la conversazione si stima per eccesso (i caratteri / 2,8), vedi `tooLong`. */
 export const REPLY_TOKENS = 900
 
 /**
@@ -310,13 +315,17 @@ function toneRule(tone: ExplainTone): string {
   return tones[tone]
 }
 
-export function systemPrompt(tone: ExplainTone): string {
+/**
+ * Il messaggio di sistema dei conti. `tools`: il modello sa chiedere i conti al motore (src/ai/localModels.ts);
+ * se no gli strumenti non ci sono, e i conti che servono sono già nel primo messaggio (`engineHints`).
+ */
+export function systemPrompt(tone: ExplainTone, tools = true): string {
   return [
     T.calcTutor,
     toneRule(tone),
     '',
     T.rules,
-    T.calcEngine,
+    tools ? T.calcEngine : T.calcEngineGiven,
     T.calcChecks,
     // Un esempio vero, non uno schema da riempire: il 7 ottobre 2026 Qwen3 copiava «Una frase breve:» in
     // ogni passaggio. È una derivata, così sugli integrali non copia il contenuto.
@@ -324,8 +333,7 @@ export function systemPrompt(tone: ExplainTone): string {
     T.calcExample,
     T.calcEquality,
     T.calcNames,
-    '',
-    toolsPrompt(),
+    ...(tools ? ['', toolsPrompt()] : []),
   ].join('\n')
 }
 
@@ -565,14 +573,14 @@ export function checkSteps(raw: { text: string; formula: string | null }[], targ
 }
 
 /** Il messaggio per il modello con quello che Glifo ha trovato sbagliato; null se va tutto bene. */
-export function feedback(result: { steps: ExplainStep[]; reaches: boolean | null }, target: ExplainTarget): string | null {
+export function feedback(result: { steps: ExplainStep[]; reaches: boolean | null }, target: ExplainTarget, tools = true): string | null {
   const lines: string[] = []
   result.steps.forEach((s, i) => {
     if (s.check && !s.check.ok) lines.push(T.stepWrong(i + 1, s.check.value?.tex ?? null))
   })
   if (result.reaches === false) lines.push(T.lastStepMisses(target.answer.tex))
   if (!lines.length) return null
-  return [T.stepsChecked, ...lines, T.fixSteps].join('\n')
+  return [T.stepsChecked, ...lines, T.fixSteps(tools)].join('\n')
 }
 
 /** Cosa si chiede al modello per ogni tipo di cosa della nota. */
@@ -596,9 +604,9 @@ function topicAsk(kind: TopicKind): string {
 /** Quanto della nota si manda al modello: il contesto è di 4096 token. */
 const TOPIC_CHARS = 1600
 
-export function topicSystemPrompt(tone: ExplainTone, kind: TopicKind): string {
+export function topicSystemPrompt(tone: ExplainTone, kind: TopicKind, modelTools = true): string {
   // Gli strumenti servono dove ci sono conti da fare (un grafico, una formula); altrove occupano posto.
-  const tools = kind === 'grafico' || kind === 'formula'
+  const tools = modelTools && (kind === 'grafico' || kind === 'formula')
   return [
     T.topicTutor(topicTask(kind)),
     toneRule(tone),
@@ -681,18 +689,21 @@ function said(reply: string): string {
   return reply.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').trim()
 }
 
-/** La spiegazione di un conto: il giro tra il modello (`chat`) e il motore, vedi in cima al file. */
-export async function explain(target: ExplainTarget, tone: ExplainTone, chat: ChatFn, events: ExplainEvents = {}): Promise<Explanation> {
+/**
+ * La spiegazione di un conto: il giro tra il modello (`chat`) e il motore, vedi in cima al file. `tools`: il
+ * modello sa chiedere i conti al motore (src/ai/localModels.ts); se no, ha solo quelli del primo messaggio.
+ */
+export async function explain(target: ExplainTarget, tone: ExplainTone, chat: ChatFn, events: ExplainEvents = {}, tools = true): Promise<Explanation> {
   const sheet = sheetFactory(target.defs)
   return converse(
     {
       messages: [
-        { role: 'system', content: systemPrompt(tone) },
+        { role: 'system', content: systemPrompt(tone, tools) },
         { role: 'user', content: questionPrompt(target, engineHints(target, sheet)) },
       ],
       sheet,
       check: (raw) => checkSteps(raw, target, sheet),
-      feedback: (result) => feedback(result, target),
+      feedback: (result) => feedback(result, target, tools),
       needsFormula: true,
     },
     chat,
@@ -701,12 +712,12 @@ export async function explain(target: ExplainTarget, tone: ExplainTone, chat: Ch
 }
 
 /** La spiegazione di un grafico (o di un'altra cosa della nota): lo stesso giro, senza un risultato a cui arrivare. */
-export async function explainTopic(topic: ExplainTopic, tone: ExplainTone, chat: ChatFn, events: ExplainEvents = {}): Promise<Explanation> {
+export async function explainTopic(topic: ExplainTopic, tone: ExplainTone, chat: ChatFn, events: ExplainEvents = {}, tools = true): Promise<Explanation> {
   const sheet = sheetFactory(topic.defs)
   return converse(
     {
       messages: [
-        { role: 'system', content: topicSystemPrompt(tone, topic.kind) },
+        { role: 'system', content: topicSystemPrompt(tone, topic.kind, tools) },
         { role: 'user', content: topicPrompt(topic) },
       ],
       sheet,
@@ -754,8 +765,8 @@ function chatSubject(kind: 'conto' | TopicKind): string {
 /** Le domande di prima che si rimandano al modello, al massimo: il contesto è di 4096 token. */
 const CHAT_HISTORY = 3
 
-export function chatSystemPrompt(tone: ExplainTone, kind: 'conto' | TopicKind): string {
-  const tools = kind === 'conto' || kind === 'grafico' || kind === 'formula'
+export function chatSystemPrompt(tone: ExplainTone, kind: 'conto' | TopicKind, modelTools = true): string {
+  const tools = modelTools && (kind === 'conto' || kind === 'grafico' || kind === 'formula')
   return [
     T.chatTutor(chatSubject(kind)),
     toneRule(tone),
@@ -785,10 +796,18 @@ export function chatContext(about: ExplainTarget | ExplainTopic, e: Explanation)
  * domande (le più vecchie si lasciano se il contesto non basta), può chiedere conti al motore, e Glifo
  * controlla le formule della risposta come quelle della spiegazione (e fa correggere quelle sbagliate).
  */
-export async function answerFollowUp(context: ChatContext, history: FollowUp[], question: string, tone: ExplainTone, chat: ChatFn, events: ExplainEvents = {}): Promise<Explanation> {
+export async function answerFollowUp(
+  context: ChatContext,
+  history: FollowUp[],
+  question: string,
+  tone: ExplainTone,
+  chat: ChatFn,
+  events: ExplainEvents = {},
+  tools = true,
+): Promise<Explanation> {
   const sheet = sheetFactory(context.defs)
   const head: ChatMessage[] = [
-    { role: 'system', content: chatSystemPrompt(tone, context.kind) },
+    { role: 'system', content: chatSystemPrompt(tone, context.kind, tools) },
     { role: 'user', content: context.prompt },
     { role: 'assistant', content: context.explanation },
   ]

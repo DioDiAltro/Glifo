@@ -7,7 +7,8 @@
  * Senza scheda grafica Chromium usa WebGPU sulla CPU (SwiftShader, con --enable-unsafe-webgpu): va
  * bene per vedere se i passaggi e gli strumenti funzionano, non per la velocità.
  *
- * MODELLO=Qwen3-1.7B per un altro modello (di solito Qwen3-0.6B, il più leggero), FORMULA per un altro
+ * MODELLO=Qwen3-1.7B per un altro modello (di solito Qwen3-0.6B, il più leggero; uno qualunque dell'elenco
+ * di src/ai/localModels.ts, per esempio Qwen3.5-2B o Llama-3.2-1B-Instruct), FORMULA per un altro
  * conto, MINUTI per aspettare di più (60), FOTO=cartella per la foto della spiegazione. Scrive le
  * domande e le risposte del modello, poi i passaggi con i segni di Glifo.
  */

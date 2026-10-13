@@ -54,7 +54,8 @@ prossimi passi sono in «In programma» nella ROADMAP.
   sempre usano un modello finto). Serve la rete verso Hugging Face (`huggingface.co` e i server dei
   file, `*.hf.co`); senza scheda grafica Chromium usa WebGPU sulla CPU (SwiftShader): va bene per
   vedere se passaggi e strumenti funzionano, non per la velocità. `MODELLO=Qwen3-1.7B` per un altro
-  modello; scrive le domande, le risposte del modello e i passaggi con i segni di Glifo.
+  modello (un nome dell'elenco di `src/ai/localModels.ts`, anche `Qwen3.5-2B` o `Llama-3.2-1B-Instruct`);
+  scrive le domande, le risposte del modello e i passaggi con i segni di Glifo.
 - `node scripts/relocation-test.mjs`: prova il trasloco su glifo.page con i due indirizzi veri
   (vecchio sito → nuovo): fa da sé una build con le date del trasloco accese e serve `CHROMIUM_PATH`;
   con `FOTO=cartella` salva le foto della fascia, della pagina finale e del messaggio sul sito nuovo.
@@ -93,7 +94,7 @@ documentazione, non codice: la regola di delegare all'esploratore vale per il co
 - `src/math/`: le espressioni delle formule: lettura, calcoli e il «foglio» della nota con i controlli.
 - `src/graph/`: i grafici nella nota (2D e 3D, zone, piano di Gauss, statistica, i dati delle tabelle, il Gantt e il reticolo) con gli slider.
 - `src/board/`: la lavagna per scrivere a mano accanto al testo.
-- `src/ai/`: assistente AI, con la chiave di chi lo usa, e «Spiegami» (in prova): Qwen3 nel browser con WebLLM, con il motore come strumenti.
+- `src/ai/`: assistente AI, con la chiave di chi lo usa, e «Spiegami» (in prova): un modello nel browser con WebLLM (Qwen3 o un altro dell'elenco ragionato), con il motore come strumenti.
 - `src/i18n.ts`: le due lingue dell'interfaccia (la lingua della pagina e le tabelle dei testi).
 - `src/host.ts`: funzioni della demo dentro claude.ai.
 - `src/account/`: account e sincronizzazione con Supabase.
@@ -148,9 +149,10 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
   nella finestra «Condividi» di NotebookLM) e lo scrivere insieme senza conflitti. Il 4 ottobre
   2026, fatto il link, lo studente ha chiesto di tenerlo per dopo e di sistemare prima la
   grafica: le idee sono al passo 5 di ROADMAP.md.
-- Dire quale modello di «Spiegami» tenere all'inizio (0.6B, 1.7B o 4B, nelle impostazioni) e quanto ci
-  mette a rispondere: l'8 ottobre 2026 ha usato il 4B e ha detto «ora funziona tutto», e «Spiegami» con
-  il pannello ✨ è andato sul sito vero. Le prove nuove si fanno ancora sul sito di prova
+- Dire quale modello di «Spiegami» tenere all'inizio (0.6B, 1.7B, 4B o, dal 13 ottobre 2026, 8B, nelle
+  impostazioni) e quanto ci mette a rispondere: l'8 ottobre 2026 ha usato il 4B e ha detto «ora funziona
+  tutto», e «Spiegami» con il pannello ✨ è andato sul sito vero. Se prova gli altri modelli dell'elenco
+  (GRAFICA.md, punto 4), dire come vanno: i Qwen3.5, se funzionano, passano tra i consigliati. Le prove nuove si fanno ancora sul sito di prova
   https://glifo-prova.pages.dev (Cloudflare Pages, dal ramo `prova`; lì l'account è spento).
 - Leggere ogni tanto i commenti di chi prova Glifo (online dall'8 ottobre 2026; si leggono nella pagina
   «Domande frequenti e commenti», glifo.page/faq, a cui porta il link nella finestra del fumetto in fondo

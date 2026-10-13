@@ -4,7 +4,7 @@
  * tiene il modello caricato sulla scheda grafica tra una spiegazione e l'altra.
  */
 import { texts } from '../i18n'
-import { GLIFO_ERROR, localModel, type ChatMessage, type ChatOptions, type FromWorker, type GlifoErrorCode, type LoadProgress, type ToWorker } from './localModels'
+import { GLIFO_ERROR, localModel, variantsOf, type ChatMessage, type ChatOptions, type FromWorker, type GlifoErrorCode, type LoadProgress, type ToWorker } from './localModels'
 
 export type { ChatMessage, ChatOptions, LoadProgress } from './localModels'
 
@@ -16,6 +16,10 @@ const T = texts({
   ],
   noGpu: ['WebGPU c\'è, ma non trova una scheda grafica da usare su questo dispositivo.', 'WebGPU is there, but it can\'t find a graphics card to use on this device.'],
   unknownModel: (model: string) => [`Il modello ${model} non c'è in questa versione di WebLLM.`, `The model ${model} isn't in this version of WebLLM.`],
+  needsF16: (model: string) => [
+    `${model} ha bisogno di una scheda grafica che sa fare i conti a 16 bit, e questa non li sa fare: scegli un altro modello nelle impostazioni.`,
+    `${model} needs a graphics card that can do 16-bit math, and this one can't: choose another model in Settings.`,
+  ],
   notReady: ['Il modello non è ancora pronto.', 'The model isn\'t ready yet.'],
   tooLong: [
     'La spiegazione è diventata troppo lunga per il modello nel browser: riprova, o scegli un modello più grande nelle impostazioni.',
@@ -57,6 +61,8 @@ function glifoError(message: string): string | null {
       return T.unknownModel(detail)
     case 'not-ready':
       return T.notReady
+    case 'needs-f16':
+      return T.needsF16(detail)
     default:
       return null
   }
@@ -141,10 +147,10 @@ export class LocalLlm {
 
   /** Scarica il modello (la prima volta) e lo carica sulla scheda grafica; restituisce il nome per WebLLM. */
   async load(model: string, onProgress?: (p: LoadProgress) => void): Promise<string> {
-    const id = localModel(model).id
-    if (this.loaded?.startsWith(`${id}-`)) return this.loaded
+    const chosen = localModel(model)
+    if (this.loaded && variantsOf(chosen).includes(this.loaded)) return this.loaded
     this.loaded = null
-    this.loaded = await this.request((n) => ({ type: 'load', id: n, model: id }), { onProgress })
+    this.loaded = await this.request((n) => ({ type: 'load', id: n, model: chosen.id }), { onProgress })
     return this.loaded
   }
 
@@ -163,11 +169,10 @@ export class LocalLlm {
     })
   }
 
-  /** Toglie il modello da questo browser (i pesi, la libreria e la configurazione). */
-  async remove(model: string): Promise<void> {
-    const id = localModel(model).id
-    await this.request((n) => ({ type: 'remove', id: n, model: id }))
-    if (this.loaded?.startsWith(`${id}-`)) this.loaded = null
+  /** Toglie un modello da questo browser (i pesi, la libreria e la configurazione): le sue varianti, con i nomi per WebLLM. */
+  async remove(models: string[]): Promise<void> {
+    await this.request((n) => ({ type: 'remove', id: n, models }))
+    if (this.loaded && models.includes(this.loaded)) this.loaded = null
   }
 }
 

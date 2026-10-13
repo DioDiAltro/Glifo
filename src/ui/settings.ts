@@ -7,10 +7,10 @@
  */
 import { EXPLAIN_TONES } from '../ai/explain'
 import { localLlm } from '../ai/local'
-import { LOCAL_MODELS, localModel, modelInBrowser, modelsInBrowser, type DownloadedModel } from '../ai/localModels'
+import { downloadSize, gpuF16, LOCAL_MODELS, localModel, MODEL_LICENSES, modelsInBrowser, modelVariant, type DownloadedModel, type ModelGroup } from '../ai/localModels'
 import { AI_SERVICES, aiService } from '../ai/services'
 import { inClaudeViewer } from '../host'
-import { dateLocale, lang, LANGUAGES, rich, texts, type Lang } from '../i18n'
+import { dateLocale, lang, LANGUAGES, numberLocale, rich, texts, type Lang } from '../i18n'
 import { AI_MODELS, SPELL_LANGUAGES, type Settings, type SpellLanguages, type Theme } from '../store/settings'
 import { formatBytes, notesBytes, storageEstimate } from '../store/usage'
 import { accountSection, guestAccountSection, type AccountSectionDeps } from './account'
@@ -123,19 +123,44 @@ const T = texts({
   // AI: le spiegazioni
   explainLegend: ['Spiegazioni (prova)', 'Explanations (beta)'],
   explainHelp: [
-    'Con il cursore su un conto, «Spiegami» (sotto l\'anteprima della formula) fa scrivere i passaggi a Qwen3, un modello AI che gira in questo browser con WebLLM: niente chiave, niente costi, e la nota non esce dal dispositivo. I conti li fa e li controlla il motore di Glifo. Serve WebGPU: Chrome o Edge aggiornati, su un computer.',
-    'With the cursor on a calculation, “Explain” (below the formula preview) has Qwen3, an AI model that runs in this browser with WebLLM, write out the steps: no key, no cost, and the note never leaves your device. Glifo\'s engine does the math and checks it. Requires WebGPU: an up-to-date Chrome or Edge, on a computer.',
+    'Con il cursore su un conto, «Spiegami» (sotto l\'anteprima della formula) fa scrivere i passaggi a un modello AI che gira in questo browser con WebLLM: niente chiave, niente costi, e la nota non esce dal dispositivo. I conti li fa e li controlla il motore di Glifo. Serve WebGPU: Chrome o Edge aggiornati, su un computer.',
+    'With the cursor on a calculation, “Explain” (below the formula preview) has an AI model that runs in this browser with WebLLM write out the steps: no key, no cost, and the note never leaves your device. Glifo\'s engine does the math and checks it. Requires WebGPU: an up-to-date Chrome or Edge, on a computer.',
   ],
-  removing: (name: string) => [`Tolgo ${name} da questo browser…`, `Removing ${name} from this browser…`],
-  removeModel: ['Toglilo da questo browser', 'Remove it from this browser'],
-  modelHere: (name: string) => [
-    `${name} è già in questo browser: le spiegazioni funzionano anche offline.`,
-    `${name} is already in this browser: explanations work offline too.`,
+  modelsRecommended: ['Consigliati, provati con Glifo', 'Recommended, tested with Glifo'],
+  modelsOther: ['Altri modelli, non provati con Glifo', 'Other models, not tested with Glifo'],
+  modelsAll: ['Tutti gli altri (avanzate)', 'All the others (advanced)'],
+  modelOption: (label: string, memory: string) => [`${label} (${memory} di memoria)`, `${label} (${memory} of memory)`],
+  modelOptionNoF16: (label: string) => [`${label} (non va su questa scheda grafica)`, `${label} (doesn't run on this graphics card)`],
+  allModels: [
+    'Mostra anche tutti gli altri (avanzate): versioni di prima, modelli per il codice o per i conti, quasi solo in inglese, senza compressione.',
+    'Also show all the others (advanced): older versions, models for code or for math, almost only in English, uncompressed.',
   ],
-  modelDownload: (name: string, size: string) => [
-    `${name} si scarica la prima volta che premi «Spiegami» (${size}) e poi resta in questo browser.`,
-    `${name} downloads the first time you press “Explain” (${size}) and then stays in this browser.`,
+  memory: ['Memoria', 'Memory'],
+  memoryValue: (size: string) => [`circa ${size} della scheda grafica`, `about ${size} of graphics card memory`],
+  memoryNoF16: [
+    'non va su questa scheda grafica: servono i conti a 16 bit, che la scheda non sa fare',
+    'doesn\'t run on this graphics card: it needs 16-bit math, which the card can\'t do',
   ],
+  toDownload: ['Da scaricare', 'Download'],
+  toDownloadValue: (size: string) => [`${size}, la prima volta che premi «Spiegami»`, `${size}, the first time you press “Explain”`],
+  toDownloadUnknown: ['la prima volta che premi «Spiegami»', 'the first time you press “Explain”'],
+  inBrowser: ['In questo browser', 'In this browser'],
+  inBrowserValue: (size: string) => [`${size}: le spiegazioni funzionano anche offline`, `${size}: explanations work offline too`],
+  partlyValue: (size: string) => [`${size}, scaricato a metà: finisce la prossima volta che premi «Spiegami»`, `${size}, partly downloaded: it finishes the next time you press “Explain”`],
+  license: ['Licenza', 'License'],
+  notTested: ['Non provato con Glifo: può sbagliare di più.', 'Not tested with Glifo: it may make more mistakes.'],
+  noTools: [
+    'Non sa chiedere i conti al motore di Glifo: Glifo gli dà quelli già fatti e poi controlla i passaggi come sempre.',
+    'It can\'t ask Glifo\'s engine for calculations: Glifo gives it the ones already done and then checks the steps as usual.',
+  ],
+  english: ['Scrive quasi solo in inglese: in italiano può sbagliare di più.', 'It writes almost only in English.'],
+  modelsHere: ['I modelli in questo browser', 'Models in this browser'],
+  modelsHereNone: ['Nessuno: il modello scelto si scarica la prima volta che premi «Spiegami».', 'None: the chosen model downloads the first time you press “Explain”.'],
+  modelsHereHelp: [
+    'Ogni modello pesa da qualche centinaio di MB a qualche GB: quelli che non usi, toglili. Si riscaricano da soli se li scegli di nuovo.',
+    'Each model takes from a few hundred MB to a few GB: remove the ones you don\'t use. They download again by themselves if you choose them again.',
+  ],
+  chosenModel: (name: string) => [`${name}, quello scelto`, `${name}, the chosen one`],
   tone: ['Tono', 'Tone'],
   toneLabel: ['Tono delle spiegazioni', 'Tone of the explanations'],
 
@@ -668,68 +693,149 @@ function aiFieldset(initial: Settings, deps: SettingsDialogDeps): HTMLElement {
 
 /**
  * «Spiegazioni (prova)»: il modello che scrive i passaggi di «Spiegami», che gira in questo browser
- * (src/ai/localModels.ts), se è già scaricato (e il pulsante per toglierlo) e il tono. `refresh` guarda
- * di nuovo se il modello c'è: ogni volta che la sezione si mostra (si può togliere anche da «Dati»).
+ * (src/ai/localModels.ts). L'elenco è ragionato: i consigliati, gli altri modelli e, con la casella delle
+ * avanzate, tutti gli altri (il modello scelto si vede sempre). Sotto, del modello scelto: la memoria della
+ * scheda grafica, per la variante che questa scheda usa (`gpuF16`); quanto si scarica (dal suo elenco dei
+ * pezzi su Hugging Face) o quanto pesa qui; la licenza, con la scritta che chiede; se è provato con Glifo e
+ * se sa chiedere i conti al motore. Poi il tono e i modelli già in questo browser, ognuno con «Togli».
+ * `refresh` guarda di nuovo i modelli nel browser: ogni volta che la sezione si mostra (si possono togliere
+ * anche da «Dati»).
  */
 function explainFieldset(initial: Settings, deps: SettingsDialogDeps): { el: HTMLElement; refresh(): void } {
-  let chosen = localModel(initial.localModel).id
-  const status = h('p', { class: 'field-help explain-status', attrs: { 'aria-live': 'polite' } })
-  const remove = h(
-    'button',
-    {
-      class: 'btn btn-small',
-      attrs: { type: 'button', hidden: true },
-      on: {
-        click: () => {
-          const model = localModel(chosen)
-          remove.disabled = true
-          status.textContent = T.removing(model.name)
-          localLlm()
-            .remove(model.id)
-            .then(
-              () => refresh(),
-              (err: unknown) => (status.textContent = err instanceof Error ? err.message : String(err)),
-            )
-            .finally(() => (remove.disabled = false))
-        },
-      },
-    },
-    icon(ICONS.trash, 14),
-    T.removeModel,
-  )
-  const refresh = async () => {
-    const model = localModel(chosen)
-    const here = await modelInBrowser(model.id)
-    if (model.id !== chosen) return
-    status.textContent = here ? T.modelHere(model.name) : T.modelDownload(model.name, model.size)
-    remove.hidden = !here
+  let chosen = localModel(initial.localModel)
+  // Finché WebGPU non risponde, la variante a 16 bit: quella di quasi tutte le schede.
+  let f16 = true
+  // null finché non si sono guardati.
+  let here: DownloadedModel[] | null = null
+  const select = h('select', { attrs: { id: 'local-model' } }) as HTMLSelectElement
+  const all = h('input', { attrs: { type: 'checkbox', id: 'all-models', checked: chosen.group === 'all' } }) as HTMLInputElement
+  const facts = h('dl', { class: 'model-facts' })
+  const notes = h('div', { class: 'model-notes' })
+  const list = h('dl', { class: 'space-list model-list' })
+  const empty = h('p', { class: 'field-help', attrs: { hidden: true } }, T.modelsHereNone)
+  const problem = h('p', { class: 'field-help space-problem', attrs: { role: 'alert', hidden: true } })
+
+  const fill = () => {
+    const groups: [ModelGroup, string][] = [
+      ['recommended', T.modelsRecommended],
+      ['other', T.modelsOther],
+      ['all', T.modelsAll],
+    ]
+    select.replaceChildren(
+      ...groups.flatMap(([group, label]) => {
+        const models = LOCAL_MODELS.filter((m) => m.group === group && (group !== 'all' || all.checked || m.id === chosen.id))
+        if (!models.length) return []
+        const options = models.map((m) => {
+          const variant = modelVariant(m, f16)
+          return h(
+            'option',
+            { attrs: { value: m.id, selected: m.id === chosen.id, disabled: !variant && m.id !== chosen.id } },
+            variant ? T.modelOption(m.label, modelGb(variant.vram)) : T.modelOptionNoF16(m.label),
+          )
+        })
+        return [h('optgroup', { attrs: { label } }, options)]
+      }),
+    )
+    select.value = chosen.id
   }
+
+  const describe = () => {
+    const variant = modelVariant(chosen, f16)
+    const mine = here?.find((m) => m.id === chosen.id)
+    const license = MODEL_LICENSES[chosen.license]
+    const size = h(
+      'dd',
+      {},
+      mine ? (mine.complete ? T.inBrowserValue(formatBytes(mine.bytes)) : T.partlyValue(formatBytes(mine.bytes))) : T.toDownloadUnknown,
+    )
+    facts.replaceChildren(
+      h('dt', {}, T.memory),
+      h('dd', {}, variant ? T.memoryValue(modelGb(variant.vram)) : T.memoryNoF16),
+      h('dt', {}, mine ? T.inBrowser : T.toDownload),
+      size,
+      h('dt', {}, T.license),
+      h('dd', {}, h('a', { attrs: { href: license.url, target: '_blank', rel: 'noopener' } }, license.name)),
+    )
+    if (!mine && variant) {
+      const asked = chosen
+      void downloadSize(variant.id).then((bytes) => {
+        if (bytes && asked === chosen && !here?.some((m) => m.id === asked.id)) size.textContent = T.toDownloadValue(formatBytes(bytes))
+      })
+    }
+    const lines: [string, string][] = []
+    if (license.notice) lines.push([license.notice, 'model-notice'])
+    if (chosen.group !== 'recommended') lines.push([T.notTested, 'model-warning'])
+    if (!chosen.tools) lines.push([T.noTools, ''])
+    if (chosen.english && lang === 'it') lines.push([T.english, ''])
+    notes.replaceChildren(...lines.map(([text, kind]) => h('p', { class: `field-help ${kind}`.trim() }, text)))
+  }
+
+  const showList = () => {
+    if (here === null) {
+      list.replaceChildren(h('div', { class: 'space-row' }, h('dt', {}, T.measuring)))
+      return
+    }
+    list.hidden = !here.length
+    empty.hidden = here.length > 0
+    list.replaceChildren(
+      ...here.map((m) =>
+        h(
+          'div',
+          { class: 'space-row space-model' },
+          h('dt', {}, m.id === chosen.id ? T.chosenModel(m.name) : m.complete ? m.name : T.spacePartModel(m.name)),
+          h(
+            'dd',
+            {},
+            h('span', { class: 'space-size' }, formatBytes(m.bytes)),
+            removeModelButton(
+              m,
+              () => void refresh(),
+              (message) => {
+                problem.textContent = message
+                problem.hidden = false
+              },
+            ),
+          ),
+        ),
+      ),
+    )
+  }
+
+  let run = 0
+  const refresh = async () => {
+    const mine = ++run
+    const [found, gpu] = await Promise.all([modelsInBrowser(), gpuF16()])
+    if (mine !== run) return
+    here = found
+    problem.hidden = true
+    if (gpu !== null && gpu !== f16) {
+      f16 = gpu
+      fill()
+    }
+    describe()
+    showList()
+  }
+
+  select.addEventListener('change', () => {
+    chosen = localModel(select.value)
+    deps.onChange({ localModel: chosen.id })
+    describe()
+    if (here) showList()
+  })
+  all.addEventListener('change', fill)
+  fill()
+  describe()
+  showList()
+
   const el = h(
     'fieldset',
     { class: 'explain-settings' },
     h('legend', {}, T.explainLegend),
     h('p', { class: 'field-help' }, T.explainHelp),
-    h(
-      'label',
-      { class: 'field field-column' },
-      h('span', {}, T.model),
-      h(
-        'select',
-        {
-          attrs: { id: 'local-model' },
-          on: {
-            change: (ev) => {
-              chosen = (ev.target as HTMLSelectElement).value
-              deps.onChange({ localModel: chosen })
-              void refresh()
-            },
-          },
-        },
-        LOCAL_MODELS.map((m) => h('option', { attrs: { value: m.id, selected: m.id === chosen } }, `${m.label} (${m.size})`)),
-      ),
-    ),
-    status,
-    remove,
+    h('label', { class: 'field field-column' }, h('span', {}, T.model), select),
+    h('label', { class: 'check model-all' }, all, h('span', {}, T.allModels)),
+    facts,
+    notes,
     h(
       'div',
       { class: 'field field-column' },
@@ -747,8 +853,35 @@ function explainFieldset(initial: Settings, deps: SettingsDialogDeps): { el: HTM
         ),
       ),
     ),
+    h('div', { class: 'field field-column models-here' }, h('span', {}, T.modelsHere), list, empty, problem, h('p', { class: 'field-help' }, T.modelsHereHelp)),
   )
   return { el, refresh: () => void refresh() }
+}
+
+/** La memoria che chiede un modello (WebLLM la dice in MB), sempre in GB per confrontarli: «2 GB», «0,9 GB», «31 GB». */
+function modelGb(mb: number): string {
+  const gb = mb / 1000
+  return `${new Intl.NumberFormat(numberLocale(), { maximumFractionDigits: gb < 10 ? 1 : 0 }).format(gb)} GB`
+}
+
+/** «Togli» per un modello di «Spiegami» in questo browser (sezioni «AI» e «Dati»): `done` dopo, `failed` con l'errore. */
+function removeModelButton(model: DownloadedModel, done: () => void, failed: (message: string) => void): HTMLElement {
+  const button = h(
+    'button',
+    { class: 'btn btn-small', title: T.removeLabel(model.name), attrs: { type: 'button', 'aria-label': T.removeLabel(model.name) } },
+    icon(ICONS.trash, 14),
+    T.remove,
+  ) as HTMLButtonElement
+  button.addEventListener('click', () => {
+    button.disabled = true
+    localLlm()
+      .remove(model.webllm)
+      .then(done, (err: unknown) => {
+        failed(err instanceof Error ? err.message : String(err))
+        button.disabled = false
+      })
+  })
+  return button
 }
 
 /** «Backup»: scaricarlo e ripristinarlo; `accountLink` porta alla sezione «Account». */
@@ -784,32 +917,6 @@ function spaceFieldset(deps: SettingsDialogDeps, onRemoved: () => void): { el: H
   const el = h('fieldset', { class: 'space-settings' }, h('legend', {}, T.space), list, problem, quota, h('p', { class: 'field-help' }, T.spaceHelp))
   const row = (label: string, size: string, extra: HTMLElement | null = null, className = '') =>
     h('div', { class: `space-row ${className}`.trim() }, h('dt', {}, label), h('dd', {}, h('span', { class: 'space-size' }, size), extra))
-  const removeButton = (model: DownloadedModel) => {
-    const button = h(
-      'button',
-      { class: 'btn btn-small', title: T.removeLabel(model.name), attrs: { type: 'button', 'aria-label': T.removeLabel(model.name) } },
-      icon(ICONS.trash, 14),
-      T.remove,
-    )
-    button.addEventListener('click', () => {
-      button.disabled = true
-      problem.hidden = true
-      localLlm()
-        .remove(model.id)
-        .then(
-          () => {
-            onRemoved()
-            void refresh()
-          },
-          (err: unknown) => {
-            problem.textContent = err instanceof Error ? err.message : String(err)
-            problem.hidden = false
-            button.disabled = false
-          },
-        )
-    })
-    return button
-  }
   let run = 0
   const refresh = async () => {
     const mine = ++run
@@ -821,9 +928,20 @@ function spaceFieldset(deps: SettingsDialogDeps, onRemoved: () => void): { el: H
       storageEstimate(),
     ])
     if (mine !== run) return
+    problem.hidden = true
     const rows = [row(T.spaceNotes, formatBytes(notes)), row(T.spaceBoards, boards === null ? T.unknown : formatBytes(boards))]
     if (!models.length) rows.push(row(T.spaceModels, T.spaceNone))
-    for (const m of models) rows.push(row(m.complete ? T.spaceModel(m.name) : T.spacePartModel(m.name), formatBytes(m.bytes), removeButton(m), 'space-model'))
+    const removed = () => {
+      onRemoved()
+      void refresh()
+    }
+    const failed = (message: string) => {
+      problem.textContent = message
+      problem.hidden = false
+    }
+    for (const m of models) {
+      rows.push(row(m.complete ? T.spaceModel(m.name) : T.spacePartModel(m.name), formatBytes(m.bytes), removeModelButton(m, removed, failed), 'space-model'))
+    }
     // Nel totale del browser gli appunti (localStorage) di solito non ci sono: si aggiungono.
     if (estimate) rows.push(row(T.spaceTotal, formatBytes(estimate.usage + notes), null, 'space-total'))
     list.replaceChildren(...rows)

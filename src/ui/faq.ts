@@ -190,7 +190,7 @@ export function faqGroups(): FaqGroup[] {
                 '«Spiegami» usa un modello di intelligenza artificiale che gira dentro il tuo browser, senza mandare la nota a nessuno. Per farlo servono WebGPU e una scheda grafica con abbastanza memoria: su un computer con Chrome o Edge aggiornati di solito va, su telefoni e iPad spesso no.',
               ),
               p(
-                'La prima volta il modello si scarica (circa 1 GB quello di partenza) e poi resta nel browser. Se la scheda grafica non ce la fa, scegli un modello più piccolo in Impostazioni → AI.',
+                'La prima volta il modello si scarica (circa 1 GB quello di partenza) e poi resta nel browser. Se la scheda grafica non ce la fa, scegli un modello più piccolo in Impostazioni → AI, dove accanto a ogni modello c\'è quanta memoria chiede.',
               ),
             ],
           },
@@ -383,7 +383,7 @@ export function faqGroups(): FaqGroup[] {
                 '“Explain” uses an AI model that runs inside your browser, without sending your note to anyone. For that it needs WebGPU and a graphics card with enough memory: on a computer with an up-to-date Chrome or Edge it usually works, on phones and iPads often not.',
               ),
               p(
-                'The first time, the model is downloaded (about 1 GB for the default one) and then it stays in the browser. If your graphics card can\'t handle it, choose a smaller model in Settings → AI.',
+                'The first time, the model is downloaded (about 1 GB for the default one) and then it stays in the browser. If your graphics card can\'t handle it, choose a smaller model in Settings → AI, where each model shows how much memory it needs.',
               ),
             ],
           },

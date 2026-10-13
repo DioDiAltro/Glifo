@@ -85,6 +85,8 @@ function fakeLlmWorker(delay = 0) {
         if (ask.startsWith('Dalla nota:')) return theorem
         if (ask.startsWith('Lo schema nella nota')) return ask.includes('«Inizio» → «Ordina»') ? schema : '1. Non vedo le frecce.'
         if (ask.startsWith('La tabella nella nota')) return ask.includes('| 2 | Penne | 2 | 3 | 6 |') ? table : '1. Non vedo i valori.'
+        // Un modello che non sa chiedere i conti al motore non vede gli strumenti: scrive subito i passaggi.
+        if (!msg.messages[0].content.includes('<tools>')) return steps
         return msg.messages.at(-1).content.includes('<tool_response>') ? steps : call
       })()
       const send = () => {
@@ -3741,6 +3743,10 @@ try {
       workerRequests.push(route.request().url())
       return route.fulfill({ contentType: 'text/javascript', body: `(${fakeLlmWorker})()` })
     })
+    // Hugging Face finto: l'elenco dei pezzi di un modello, per quanto si scarica (1,1 GB).
+    await ex.route('https://huggingface.co/mlc-ai/**/tensor-cache.json', (route) =>
+      route.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ records: [{ dataPath: 'a.bin', nbytes: 600_000_000 }, { dataPath: 'b.bin', nbytes: 500_000_000 }] }) }),
+    )
     await ex.goto(url)
     await ex.waitForSelector('.cm-editor')
     await ex.locator('.notes-head button[aria-label="Nuova nota"]').click()
@@ -3772,14 +3778,48 @@ try {
       inserted.length === 2 && inserted[0].startsWith('1. Porto fuori') && inserted[1].startsWith('2. Sostituisco') && wrongInNote === 0,
       `«Inserisci nella nota» mette i passaggi dopo la formula, e la nota li controlla (${JSON.stringify(inserted)})`,
     )
-    // Le impostazioni, nella sezione «AI»: il modello nel browser e il tono.
+    // Le impostazioni, nella sezione «AI»: l'elenco ragionato dei modelli (GRAFICA.md punto 4), del modello
+    // scelto la memoria, quanto si scarica (da Hugging Face, qui finto) e la licenza; il tono.
     await openSettings(ex, 'ai')
     const settings = ex.locator('dialog fieldset.explain-settings')
     await settings.waitFor()
-    const models = await settings.locator('#local-model option').allInnerTexts()
+    await settings.locator('.model-facts dd', { hasText: '1,1 GB' }).waitFor({ timeout: 5000 })
+    const modelGroups = await settings.locator('#local-model optgroup').evaluateAll((groups) => groups.map((g) => [g.label, g.querySelectorAll('option').length]))
+    const recommended = await settings.locator('#local-model optgroup').first().locator('option').allInnerTexts()
+    const facts = await settings.locator('.model-facts').innerText()
     const tones = await settings.locator('.segmented label').allInnerTexts()
+    check(
+      modelGroups.length === 2 &&
+        modelGroups[0][0] === 'Consigliati, provati con Glifo' &&
+        recommended.length === 4 &&
+        /^Qwen3 1\.7B, consigliato \([\d,]+ GB di memoria\)$/.test(recommended[1]) &&
+        modelGroups[1][1] > 10 &&
+        facts.includes('1,1 GB, la prima volta che premi «Spiegami»') &&
+        facts.includes('Apache 2.0') &&
+        tones.join() === 'Come il professore,Più semplice',
+      `nelle impostazioni l'elenco ragionato dei modelli, con la memoria, quanto si scarica e la licenza, e il tono (${JSON.stringify({ modelGroups, recommended, facts, tones })})`,
+    )
+    // Un modello di un'altra famiglia, tra tutti gli altri: lo dice, e spiega con i conti che Glifo gli dà.
+    await settings.locator('#all-models').check()
+    const allGroups = await settings.locator('#local-model optgroup').count()
+    await settings.locator('#local-model').selectOption('Llama-3.2-1B-Instruct')
+    const llamaNotes = await settings.locator('.model-notes').innerText()
     await ex.keyboard.press('Escape')
-    check(models.length === 3 && models[1].startsWith('Qwen3 1.7B') && tones.join() === 'Come il professore,Più semplice', `nelle impostazioni il modello e il tono delle spiegazioni (${JSON.stringify({ models, tones })})`)
+    check(
+      allGroups === 3 && llamaNotes.includes('Built with Llama') && llamaNotes.includes('Non provato con Glifo') && llamaNotes.includes('Non sa chiedere i conti al motore'),
+      `con la casella delle avanzate tutti i modelli; scelto Llama, la sua licenza e gli avvisi (${JSON.stringify({ allGroups, llamaNotes })})`,
+    )
+    await ex.locator('.explain-box button', { hasText: 'Rifai' }).click()
+    await ex.waitForFunction(() => document.querySelector('.explain-box .ai-model')?.textContent === 'Llama 3.2 1B' && document.querySelectorAll('.explain-box .explain-step').length === 2, null, { timeout: 10000 })
+    const llama = await ex.evaluate(() => ({
+      ok: document.querySelectorAll('.explain-box .calc-check.is-ok').length,
+      hints: [...document.querySelectorAll('.explain-box .ai-hint')].map((p) => p.textContent),
+    }))
+    check(llama.ok === 2 && !llama.hints.some((t) => t.includes('ha chiesto')), `con Llama, senza gli strumenti, i passaggi con il ✓ di Glifo (${JSON.stringify(llama)})`)
+    // Di nuovo Qwen3 1.7B, per le prove che seguono.
+    await openSettings(ex, 'ai')
+    await ex.locator('dialog #local-model').selectOption('Qwen3-1.7B')
+    await ex.keyboard.press('Escape')
 
     // «Spiega con l'AI»: il pulsante ✨ dopo $$ apre, al posto dei simboli, l'elenco di quello che c'è
     // nella nota; scelto il grafico, la spiegazione con le formule controllate da Glifo.

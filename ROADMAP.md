@@ -105,7 +105,11 @@ sito dal 13 ottobre 2026: lo studente, viste le foto, «va bene, portalo sul sit
 pagina «Domande frequenti e commenti» (faq.html, glifo.page/faq: 14 domande frequenti per argomento, poi i
 commenti; il fumetto apre subito la finestra per scrivere, con il link alla pagina), è sul sito dal 13
 ottobre 2026: lo studente l'ha voluta prima sul ramo `prova` («fai faq, però dobbiamo prima capire perché
-forse non mi convince molto»), poi, provata, «va bene, portalo sul sito vero».
+forse non mi convince molto»), poi, provata, «va bene, portalo sul sito vero». Il punto 4, più modelli per
+«Spiegami», è fatto sul ramo `prova` il 13 ottobre 2026: l'elenco ragionato (i Qwen3 consigliati, con l'8B;
+gli altri modelli, non provati con Glifo; tutti gli altri nelle avanzate), con la memoria, il peso e la
+licenza di ognuno, i modelli che non sanno chiedere i conti che li ricevono già fatti e i modelli nel browser
+con «Togli» anche nella sezione «AI»; si aspetta che lo studente lo veda.
 
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
@@ -555,6 +559,10 @@ Da fare:
   bloccato, anche riprovando il 7 ottobre 2026, e dentro claude.ai il modello non si scarica). Quando
   l'ambiente delle sessioni permette `huggingface.co` e `*.hf.co`, la prova con Qwen3 vero si fa anche
   lì con `node scripts/spiegami-qwen.mjs` (WebGPU sulla CPU: lento, ma il resto è già pronto);
+- provare con Glifo il Qwen3 8B e i Qwen3.5 (dal 13 ottobre 2026 nell'elenco, GRAFICA.md punto 4; i
+  Qwen3.5 scrivono le chiamate in un altro formato, che Glifo legge): se vanno bene, i Qwen3.5 passano
+  tra i consigliati. Anche questo si fa con `MODELLO=Qwen3.5-2B node scripts/spiegami-qwen.mjs`, con la
+  rete verso Hugging Face;
 - dove WebGPU non c'è (telefono, iPad): lo stesso giro con il modello sul server (Cloudflare Workers
   AI) o con la propria chiave;
 - il «Perché?» su ogni passaggio, i passaggi che il motore sa scrivere da solo (derivate, Ruffini,

@@ -9,7 +9,7 @@
  */
 import { chatContext, explain, explainTopic, REPLY_TOKENS, type ExplainEvents, type Explanation, type ExplainTarget, type ExplainTopic } from '../ai/explain'
 import { LocalAbort, localLlm, type ChatMessage, type ChatOptions, type LoadProgress } from '../ai/local'
-import { localModel, modelName } from '../ai/localModels'
+import { localModel, modelName, modelOf } from '../ai/localModels'
 import type { MarkdownEditor } from '../editor/editor'
 import { explanationMarkdown, insertAfterText, insertExplanation, regionToExplain, targetAt } from '../editor/explainInsert'
 import type { MathRegion } from '../editor/mathContext'
@@ -46,9 +46,9 @@ const T = texts({
   downloading: (name: string, percent: number) => [`Scarico ${name}: ${percent}%`, `Downloading ${name}: ${percent}%`],
   preparing: (name: string, percent: number) => [`Preparo ${name}: ${percent}%`, `Preparing ${name}: ${percent}%`],
   progress: ['Avanzamento', 'Progress'],
-  firstDownload: (size: string) => [
-    `La prima volta il modello si scarica (${size}) e poi resta in questo browser, anche offline.`,
-    `The first time, the model is downloaded (${size}); then it stays in this browser, even offline.`,
+  firstDownload: [
+    'La prima volta il modello si scarica e poi resta in questo browser, anche offline.',
+    'The first time, the model is downloaded; then it stays in this browser, even offline.',
   ],
   fixingSteps: ['Correggo i passaggi che Glifo ha segnato…', 'Fixing the steps Glifo flagged…'],
   writingSteps: ['Scrivo i passaggi…', 'Writing the steps…'],
@@ -230,7 +230,11 @@ export class ExplainPanel {
       this.set({ status: 'writing', asked, model: name, correcting: false, tools: 0 })
       const chat = (messages: ChatMessage[], onDelta?: (text: string) => void) => model.chat(messages, { maxTokens: REPLY_TOKENS }, onDelta, asked.controller.signal)
       const events = this.events(asked)
-      const explanation = await (subject.kind === 'conto' ? explain(subject.target, settings.explainTone, chat, events) : explainTopic(subject.topic, settings.explainTone, chat, events))
+      // Un modello che non sa chiedere i conti al motore spiega con quelli che Glifo gli dà (src/ai/explain.ts).
+      const tools = modelOf(loaded)?.tools ?? true
+      const explanation = await (subject.kind === 'conto'
+        ? explain(subject.target, settings.explainTone, chat, events, tools)
+        : explainTopic(subject.topic, settings.explainTone, chat, events, tools))
       if (!this.current(asked)) return
       if (this.deps.chat) {
         const context = chatContext(subject.kind === 'conto' ? subject.target : subject.topic, explanation)
@@ -324,7 +328,7 @@ export class ExplainPanel {
       parts.push(
         h('div', { class: 'ai-loading', attrs: { role: 'status' } }, h('span', { class: 'spinner', attrs: { 'aria-hidden': 'true' } }), s.fetching ? T.downloading(chosen.name, percent) : T.preparing(chosen.name, percent)),
         h('progress', { class: 'explain-progress', attrs: { max: 100, value: percent, 'aria-label': T.progress } }),
-        h('p', { class: 'ai-hint' }, T.firstDownload(chosen.size)),
+        h('p', { class: 'ai-hint' }, T.firstDownload),
         this.cancelButton(),
       )
     } else if (s.status === 'writing') {

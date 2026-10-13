@@ -16,7 +16,7 @@ quando i punti sono tutti fatti si cancella, insieme alla voce «La grafica» di
 | 1 | «Cambia account» | fatto: sul sito dal 12 ottobre; lo studente: «va bene» |
 | 2 | La pagina dei commenti, tipo FAQ | fatto: sul sito dal 13 ottobre 2026; lo studente: «va bene» |
 | 3 | Le impostazioni divise in sezioni | fatto: sul sito dal 13 ottobre 2026; lo studente: «va bene» |
-| 4 | Più modelli per «Spiegami» | da decidere |
+| 4 | Più modelli per «Spiegami» | fatto sul ramo `prova` il 13 ottobre 2026: lo studente lo deve vedere |
 | 5 | A cosa serve la chiave dell'AI | da decidere |
 | 6 | Glifo anche in inglese | fatto: tutto tradotto, anche le parole delle note, i numeri, l'AI e l'informativa; sul sito vero dal 12 ottobre 2026; lo studente: «va bene» |
 | 7 | Via il registro dei tocchi | fatto: sul sito dal 13 ottobre 2026; lo studente: «va bene» |
@@ -351,7 +351,49 @@ in ogni piano.
 `CONTEXT_TOKENS` in `src/ai/explain.ts`; l'elenco completo è `prebuiltAppConfig.model_list` di
 `@mlc-ai/web-llm` (con `vram_required_MB` e il contesto di ogni modello).
 
-**Risposte e decisioni.** —
+**Risposte e decisioni.** Lo studente, 13 ottobre 2026: «facciamo ora il punto 4 del file GRAFICA.md». Si
+fa la proposta, con le scelte che Claude consigliava: l'elenco ragionato, con quello completo nelle
+avanzate, e il Qwen3 8B tra i consigliati, per chi ha una scheda grafica potente (è un Qwen3: chiede i
+conti e spegne il ragionamento come gli altri). I Qwen3.5 restano tra gli altri modelli finché non si
+provano: in questa sessione Hugging Face era bloccato, quindi nessun modello vero è stato provato, né l'8B
+né i Qwen3.5. Fatto sul ramo `prova` il 13 ottobre 2026:
+
+- **l'elenco**, in Impostazioni → AI, è una tendina con i gruppi: «Consigliati, provati con Glifo» (Qwen3
+  0.6B, 1.7B, 4B e 8B), «Altri modelli, non provati con Glifo» (16: Qwen3.5 0.8B, 2B, 4B e 9B; Llama 3.2
+  1B e 3B e Llama 3.1 8B; Hermes 3 3B e 8B; Gemma 2 2B e 9B; Phi-4 mini; Ministral 3 3B; Mistral 7B v0.3;
+  Qwen2.5 1.5B e 7B) e, con la casella «Mostra anche tutti gli altri (avanzate)», «Tutti gli altri» (37:
+  le versioni di prima, i modelli per il codice o per i conti, quelli quasi solo in inglese, quelli senza
+  compressione e i 70B). Accanto a ogni modello c'è la memoria della scheda grafica che chiede; il modello
+  scelto si vede sempre, anche tra gli altri con la casella tolta;
+- **i controlli**: ci sono solo i modelli di WebLLM con cui si chatta, che leggono almeno 4096 token e che
+  hanno una licenza che va bene anche con Glifo a pagamento (Apache 2.0, MIT, quelle di Llama e di
+  Gemma). Restano fuori Qwen2.5 3B e Qwen2.5 Coder 3B (licenza solo per la ricerca), StableLM 2 (non
+  commerciale), WizardMath (licenza non chiara), i DeepSeek-R1 e Ministral 3 Reasoning (ragionano sempre a
+  lungo: in 4096 token non resta posto per la spiegazione), Ministral 3 Base (non è fatto per chattare) e
+  Gemma 2 giapponese, oltre agli embedding, ai modelli che leggono le immagini e a quelli con 1024 o 2048
+  token. Quando WebLLM aggiunge un modello una prova fallisce finché non si decide se entra;
+- **del modello scelto**: la memoria (della variante che userà la scheda grafica di questo browser, con i
+  conti a 16 o a 32 bit), quanto si scarica (chiesto a Hugging Face, dall'elenco dei suoi file) o quanto
+  pesa se è già nel browser, la licenza con il link (per Llama «Built with Llama», per Gemma l'avviso che
+  chiede la sua licenza) e gli avvisi: «Non provato con Glifo: può sbagliare di più», «Non sa chiedere i
+  conti al motore di Glifo: Glifo gli dà quelli già fatti e poi controlla i passaggi come sempre», «Scrive
+  quasi solo in inglese»;
+- **i modelli che non sanno chiedere i conti** (tutti tranne i Qwen dal 2.5 in poi e gli Hermes) non
+  vedono gli strumenti: nel primo messaggio hanno il risultato di Glifo e la primitiva di ogni integrale,
+  come sempre, e Glifo controlla i passaggi e fa correggere quelli sbagliati. Il ragionamento si spegne
+  solo ai Qwen3 e ai Qwen3.5 (agli altri WebLLM avrebbe messo nella risposta un <think></think> vuoto, che
+  non conoscono). Le chiamate dei Qwen3.5 si leggono anche nel loro formato (<function=…>);
+- **i modelli in questo browser**, sotto il tono: ognuno con quanto pesa e «Togli», anche quelli che non
+  sono più nell'elenco; in «Dati» come prima. «Toglilo da questo browser» non c'è più: si toglie da lì;
+- le grandezze non sono più scritte a mano: la memoria e il contesto li legge la build da WebLLM, il peso
+  viene da Hugging Face;
+- l'informativa (italiano e inglese) dice che le impostazioni chiedono a Hugging Face l'elenco dei file del
+  modello, per dire quanto pesa; la domanda frequente su «Spiegami» dice che accanto a ogni modello c'è la
+  memoria che chiede; nelle licenze, quella dei Qwen3 vale per i consigliati, quella degli altri è accanto
+  a ognuno. Tutto in italiano e in inglese.
+
+Le foto (computer e telefono, tema chiaro e scuro) sono nella chat; sul sito di prova
+https://glifo-prova.pages.dev si prova tutto, anche con i modelli veri, su un computer con Chrome o Edge.
 
 ## 5. A cosa serve la chiave dell'AI
 

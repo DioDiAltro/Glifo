@@ -7,7 +7,7 @@
  */
 import { answerFollowUp, REPLY_TOKENS, type ChatContext, type Explanation, type FollowUp } from '../ai/explain'
 import { LocalAbort, type ChatMessage } from '../ai/local'
-import { localModel } from '../ai/localModels'
+import { localModel, modelOf } from '../ai/localModels'
 import { texts } from '../i18n'
 import type { Settings } from '../store/settings'
 import { h } from './dom'
@@ -98,9 +98,10 @@ export class ExplainChat {
     const end = this.deps.activity?.start()
     try {
       // Il modello è già nel browser (ha scritto la spiegazione): qui si riprende.
-      await model.load(localModel(settings.localModel).id)
+      const loaded = await model.load(localModel(settings.localModel).id)
       const chat = (messages: ChatMessage[], onDelta?: (text: string) => void) => model.chat(messages, { maxTokens: REPLY_TOKENS }, onDelta, controller.signal)
-      turn.answer = await answerFollowUp(this.deps.context, history, text, settings.explainTone, chat, { onDelta: (delta) => this.write(controller, delta) })
+      const tools = modelOf(loaded)?.tools ?? true
+      turn.answer = await answerFollowUp(this.deps.context, history, text, settings.explainTone, chat, { onDelta: (delta) => this.write(controller, delta) }, tools)
     } catch (err) {
       if (err instanceof LocalAbort || controller.signal.aborted) {
         // Fermata: la domanda torna da scrivere, come prima.

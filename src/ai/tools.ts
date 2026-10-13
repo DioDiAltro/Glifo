@@ -7,7 +7,9 @@
  * Le chiamate sono nel formato dei Qwen3, quello con cui sono stati addestrati: gli strumenti descritti
  * dentro <tools></tools> nel messaggio di sistema, le chiamate come JSON dentro <tool_call></tool_call>
  * e le risposte dentro <tool_response></tool_response>, in un messaggio dell'utente. WebLLM le fa da
- * solo solo per i modelli Hermes: qui si leggono dal testo.
+ * solo solo per i modelli Hermes: qui si leggono dal testo. Si leggono anche le chiamate dei Qwen3.5,
+ * addestrati a scriverle con <function=…> e <parameter=…> dentro <tool_call>. I modelli che non sanno
+ * chiedere i conti (src/ai/localModels.ts) gli strumenti non li vedono.
  *
  * Il modello legge gli strumenti nella lingua di Glifo: con Glifo in inglese sono inglesi i nomi, gli
  * argomenti, le descrizioni e le risposte. `runTool` riconosce i nomi delle due lingue (dentro Glifo si
@@ -289,7 +291,8 @@ export function toolResponses(responses: string[]): string {
  * Le chiamate nel testo del modello: <tool_call>{"name": …, "arguments": {…}}</tool_call>, anche senza
  * il tag che chiude (il testo è finito lì). Il LaTeX dentro il JSON spesso ha le barre semplici
  * (\frac): si aggiustano, sia quelle che il JSON non accetta (\int) sia quelle che legge come altro
- * (\f, \t, \n, \r, \b).
+ * (\f, \t, \n, \r, \b). Anche nel formato dei Qwen3.5: <tool_call><function=calcola><parameter=espressione>
+ * \int_0^1 x^2 \, dx</parameter></function></tool_call>, dove il LaTeX resta com'è.
  */
 export function toolCallsIn(text: string): ToolCall[] {
   const calls: ToolCall[] = []
@@ -306,6 +309,12 @@ export function withoutToolCalls(text: string): string {
 }
 
 function callOf(src: string): ToolCall | null {
+  const fn = /<function=([^>\s]+)\s*>([\s\S]*?)(?:<\/function>|$)/.exec(src)
+  if (fn) {
+    const args: Record<string, string> = {}
+    for (const p of fn[2].matchAll(/<parameter=([^>\s]+)\s*>([\s\S]*?)(?:<\/parameter>|$)/g)) args[p[1]] = p[2].trim()
+    return { name: fn[1].trim(), args }
+  }
   const start = src.indexOf('{')
   const end = src.lastIndexOf('}')
   if (start < 0 || end <= start) return null

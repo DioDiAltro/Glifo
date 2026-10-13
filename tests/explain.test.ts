@@ -1,5 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { checkSteps, engineHints, explain, ExplainError, explainTarget, feedback, questionPrompt, sheetFactory, stepsIn, systemPrompt, type ChatFn, type ExplainTarget } from '../src/ai/explain'
+import {
+  chatSystemPrompt,
+  checkSteps,
+  engineHints,
+  explain,
+  ExplainError,
+  explainTarget,
+  feedback,
+  questionPrompt,
+  sheetFactory,
+  stepsIn,
+  systemPrompt,
+  topicSystemPrompt,
+  type ChatFn,
+  type ExplainTarget,
+} from '../src/ai/explain'
 import type { ChatMessage } from '../src/ai/localModels'
 import { checkFormula, runTool, toolCallsIn, toolsPrompt } from '../src/ai/tools'
 import { Sheet } from '../src/math/sheet'
@@ -87,6 +102,65 @@ describe('il motore di Glifo come strumenti', () => {
       { name: 'risolvi', args: { equazione: 'x = 1' } },
     ])
     expect(toolCallsIn('Nessuna chiamata qui. <tool_call>non è JSON</tool_call>')).toEqual([])
+  })
+
+  it('legge anche le chiamate nel formato dei Qwen3.5, con <function=…> e <parameter=…>, dove il LaTeX resta com\'è', () => {
+    const qwen35 = `<tool_call>
+<function=primitiva>
+<parameter=funzione>
+\\frac{1}{x} + \\theta
+</parameter>
+<parameter=variabile>
+x
+</parameter>
+</function>
+</tool_call>`
+    expect(toolCallsIn(qwen35)).toEqual([{ name: 'primitiva', args: { funzione: r`\frac{1}{x} + \theta`, variabile: 'x' } }])
+    // Anche senza i tag che chiudono (il testo è finito lì).
+    expect(toolCallsIn('<tool_call><function=calcola><parameter=espressione>\\int_0^1 x^2 \\, dx')).toEqual([{ name: 'calcola', args: { espressione: r`\int_0^1 x^2 \, dx` } }])
+  })
+})
+
+describe('i modelli che non sanno chiedere i conti al motore', () => {
+  it('niente strumenti nel messaggio di sistema: i conti sono quelli che Glifo dà nel primo messaggio', () => {
+    const without = systemPrompt('professore', false)
+    expect(without).not.toContain('<tools>')
+    expect(without).not.toContain('usa gli strumenti')
+    expect(without).toContain('nel messaggio trovi il suo risultato e i conti che ha già fatto')
+    expect(systemPrompt('professore')).toContain('<tools>')
+    expect(topicSystemPrompt('professore', 'grafico', false)).not.toContain('<tools>')
+    expect(topicSystemPrompt('professore', 'grafico')).toContain('<tools>')
+    expect(chatSystemPrompt('semplice', 'conto', false)).not.toContain('<tools>')
+    expect(chatSystemPrompt('semplice', 'conto', false)).not.toContain('strumenti')
+  })
+
+  it('la correzione non dice di usare gli strumenti', () => {
+    const t = target(r`\int_0^1 x^2 \, dx =`)
+    const wrong = checkSteps(stepsIn(r`1. Il risultato: $$\int_0^1 x^2 \, dx = \frac{1}{2}$$`), t, sheet)
+    expect(feedback(wrong, t)).toContain('usa gli strumenti')
+    expect(feedback(wrong, t, false)).not.toContain('strumenti')
+  })
+
+  it('il giro: la stessa domanda con la primitiva già fatta, e Glifo fa correggere', async () => {
+    const t = target(SPHERE)
+    const seen: ChatMessage[][] = []
+    const replies = [
+      r`1. Porto fuori $\pi$: $$\int_{-R}^{R} \pi (R^2 - x^2) \, dx = \pi \int_{-R}^{R} (R^2 - x^2) \, dx$$
+2. Sostituisco gli estremi: $$\pi \left[R^2 x - \frac{x^3}{3}\right]_{-R}^{R} = \frac{2\pi R^3}{3}$$`,
+      r`1. Porto fuori $\pi$: $$\int_{-R}^{R} \pi (R^2 - x^2) \, dx = \pi \int_{-R}^{R} (R^2 - x^2) \, dx$$
+2. Sostituisco gli estremi: $$\pi \left[R^2 x - \frac{x^3}{3}\right]_{-R}^{R} = \frac{4\pi R^3}{3}$$`,
+    ]
+    const chat: ChatFn = async (messages) => {
+      seen.push(messages.map((m) => ({ ...m })))
+      return replies.shift() ?? ''
+    }
+    const result = await explain(t, 'professore', chat, {}, false)
+    expect(result).toMatchObject({ reaches: true, toolCalls: 0, corrections: 1 })
+    expect(seen[0][0].content).not.toContain('<tools>')
+    expect(seen[0][1].content).toBe(questionPrompt(t, engineHints(t, sheet)))
+    expect(seen[0][1].content).toContain('Dal motore di Glifo:')
+    expect(seen[1].at(-1)!.content).toContain('Il passaggio 2 è sbagliato')
+    expect(seen[1].at(-1)!.content).not.toContain('strumenti')
   })
 })
 

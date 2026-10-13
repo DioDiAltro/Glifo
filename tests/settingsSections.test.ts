@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SyncStatus } from '../src/account/controller'
 import { setLangForTests } from '../src/i18n'
 import { DEFAULT_SETTINGS } from '../src/store/settings'
@@ -8,8 +8,11 @@ import { LICENSES } from '../src/ui/licenses'
 import { openSettingsDialog, type SettingsDialogDeps, type SettingsSection } from '../src/ui/settings'
 
 // «Togli» di un modello passa dal worker di WebLLM: qui un finto, che lo toglie dalla cache finta.
-const removeModel = vi.fn(async (_id: string) => {})
-vi.mock('../src/ai/local', () => ({ localLlm: () => ({ remove: (id: string) => removeModel(id) }) }))
+const removeModel = vi.fn(async (_models: string[]) => {})
+vi.mock('../src/ai/local', () => ({ localLlm: () => ({ remove: (models: string[]) => removeModel(models) }) }))
+
+// La sezione «AI» chiede a Hugging Face quanto pesa il modello scelto: qui mai davvero (come offline).
+beforeEach(() => vi.stubGlobal('fetch', async () => new Response('', { status: 404 })))
 
 // jsdom non ha le finestre modali.
 HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) {
@@ -276,7 +279,7 @@ describe('la sezione «Dati»', () => {
     })
     expect(remove.getAttribute('aria-label')).toBe('Togli Qwen3 0.6B da questo browser')
     remove.click()
-    expect(removeModel).toHaveBeenCalledWith('Qwen3-0.6B')
+    expect(removeModel).toHaveBeenCalledWith(['Qwen3-0.6B-q4f16_1-MLC'])
     await vi.waitFor(() => expect(panel('data').querySelector('.space-model')).toBeNull())
     expect(panel('data').textContent).toContain('Modelli di «Spiegami»nessuno')
   })

@@ -124,8 +124,10 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   aperta. Nei testi un collegamento porta da una sezione all'altra (dalla lingua a «Scrittura», dal
   backup ad «Account»). Lo spazio: gli appunti da localStorage (`notesBytes` in `src/store/usage.ts`, le
   chiavi `glifo.*` in UTF-8), le lavagne da IndexedDB (`bytes` in `src/board/store.ts`, i punti a 4
-  byte), i modelli dalla Cache Storage di WebLLM (`modelsInBrowser` in `src/ai/localModels.ts`: i
-  `nbytes` di tensor-cache.json, senza leggere i pezzi; «Togli» con `localLlm().remove`) e il totale da
+  byte), i modelli dalla Cache Storage di WebLLM (`modelsInBrowser` in `src/ai/localModels.ts`: gli
+  elenchi dei pezzi, tensor-cache.json, che ci sono nella cache, con i `nbytes`, senza leggere i pezzi;
+  anche i modelli che non sono più nell'elenco, con il nome di WebLLM; «Togli» con `localLlm().remove` e i
+  nomi di WebLLM delle varianti, `removeModelButton`, lo stesso nella sezione «AI») e il totale da
   `navigator.storage.estimate`, con quanto il browser concede.
   I messaggi brevi in basso sono `toast.ts`; con un pulsante (per esempio «Ricarica») restano finché
   non lo si preme o non li si chiude. L'avviso lasciato prima di ricaricare la pagina (`notice.ts`)
@@ -432,15 +434,30 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   risposta con `jsonIn`). Chiave, modello e indirizzo di ogni servizio restano nel browser (`aiKeys`,
   `aiModels`, `aiUrls` nelle impostazioni). `src/host.ts`: funzioni della demo dentro claude.ai.
   «Spiegami» (7 ottobre 2026, online dall'8; il disegno è in ABBONAMENTI.md, «Le
-  spiegazioni, come funzionano»): un Qwen3 piccolo che gira nel browser con WebLLM scrive i passaggi di
-  un conto e il motore li firma. `localModels.ts` i modelli (Qwen3 0.6B, 1.7B, 4B: `webllmId` sceglie
-  q4f16 o q4f32 secondo `shader-f16`), se sono già nella Cache Storage di WebLLM (`modelInBrowser`, senza
+  spiegazioni, come funzionano»): un modello piccolo che gira nel browser con WebLLM (di solito un Qwen3)
+  scrive i passaggi di un conto e il motore li firma. `localModels.ts` i modelli (13 ottobre 2026,
+  GRAFICA.md punto 4): l'elenco ragionato `LOCAL_MODELS` viene da `catalogFrom` con i modelli di WebLLM
+  (`__WEBLLM_MODELS__`, che vite.config.ts legge da `prebuiltAppConfig` della versione installata: nome,
+  memoria della scheda grafica, contesto; la pagina non importa WebLLM) e le righe di `FAMILIES`, con
+  quello che WebLLM non dice: il nome, il gruppo (`recommended`, i Qwen3 provati con Glifo; `other`, i
+  più nuovi delle altre famiglie; `all`, gli altri, nelle avanzate, con quelli senza compressione, q0,
+  che hanno l'id `<nome>-q0`), la licenza (`MODEL_LICENSES`, con la scritta che chiede: «Built with
+  Llama», l'avviso di Gemma), `tools` (sa chiedere i conti con <tool_call>: i Qwen dal 2.5 e gli Hermes),
+  `thinking` (Qwen3 e Qwen3.5) ed `english`. Entrano solo i modelli che leggono almeno `CONTEXT_TOKENS`
+  (4096) token; quelli lasciati fuori, con il perché, sono in `LEFT_OUT` di tests/localModel.test.ts, che
+  fallisce se WebLLM ne aggiunge uno senza decidere. `modelVariant` e `webllmId` scelgono la variante
+  a 16 bit se la scheda sa fare `shader-f16`, se no quella a 32 (null se c'è solo a 16: il worker
+  risponde `needs-f16`); `modelOf` dal nome di WebLLM al modello; `downloadSize` quanto si scarica (i
+  `nbytes` di tensor-cache.json su Hugging Face, una volta per pagina); `gpuF16` chiede a WebGPU, nella
+  pagina, quale variante si userà; `modelsInBrowser` i modelli già nella Cache Storage di WebLLM (senza
   caricarlo) e i messaggi con il worker; `llmWorker.ts` il worker con WebLLM (6 MB, solo lì: la pagina
-  non lo importa mai), senza il ragionamento (`enable_thinking: false`); `local.ts` il lato pagina
+  non lo importa mai), senza il ragionamento (`enable_thinking: false`, solo ai modelli con `thinking`:
+  WebLLM metterebbe un <think></think> vuoto nella risposta di qualunque modello); `local.ts` il lato pagina
   (`LocalLlm`, uno per pagina con `localLlm()`: carica una volta, risposte a pezzi, `stop` con Annulla,
   `localErrorMessage` nella lingua di Glifo: il worker manda solo un codice). `tools.ts` il motore come strumenti nel formato dei Qwen3
   (`<tools>` nel messaggio di sistema, `<tool_call>` letti dal testo con le barre del LaTeX aggiustate,
-  `<tool_response>` in un messaggio dell'utente): calcola, controlla, deriva, primitiva, risolvi, ognuno
+  anche nel formato dei Qwen3.5 con <function=…> e <parameter=…>, `<tool_response>` in un messaggio
+  dell'utente): calcola, controlla, deriva, primitiva, risolvi, ognuno
   su un foglio nuovo con le definizioni della nota (`sheetFactory`); `checkFormula` controlla un
   passaggio prima come la nota (`Sheet.read`) e poi parte con parte con `Sheet.same` (`strict`, `soft`
   nelle equazioni: solo ✓). `explain.ts` il giro: `explainTarget` (un risultato dopo «=», un risultato
@@ -452,13 +469,19 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   fondamentale del calcolo integrale, regola della potenza…). `checkSteps` (un ✗ con lettere che la formula non ha, come
   u = x², non è sicuro e non si dice; `reaches`: l'ultimo passaggio contro il risultato), `feedback` fa
   correggere fino a 2 volte e si tiene la spiegazione con meno ✗; il contesto è di 4096 token
-  (`tooLong`). L'interfaccia è `src/ui/explainPanel.ts`: «Spiegami» nel riquadro della formula di
+  (`tooLong`, `CONTEXT_TOKENS` di localModels.ts). Un modello senza `tools` (`explain`, `explainTopic` e
+  `answerFollowUp` con `tools` false, da `modelOf(loaded)` nel pannello e nella chat) non ha gli strumenti
+  nei messaggi di sistema (`calcEngineGiven`: i conti sono quelli del primo messaggio, `engineHints`) e
+  la correzione non gli dice di usarli. L'interfaccia è `src/ui/explainPanel.ts`: «Spiegami» nel riquadro della formula di
   `sidePanel.ts` (`.formula-actions`, solo su un conto: `regionToExplain` e `targetAt` in
   `src/editor/explainInsert.ts`, ricalcolati quando cambiano nota o formula) e sotto il riquadro la
   spiegazione (`.explain-box`: scaricamento, testo mentre arriva, passaggi con `checkHtml`, «Inserisci
   nella nota» con `insertExplanation` dopo il blocco della formula, «Rifai»); resta finché non si chiude.
   Dentro claude.ai lo dice subito (la pagina blocca i download). Impostazioni `localModel` ed
-  `explainTone`, solo su questo dispositivo (`explainFieldset` in `src/ui/settings.ts`, sezione «AI»). Nella PWA il
+  `explainTone`, solo su questo dispositivo (`explainFieldset` in `src/ui/settings.ts`, sezione «AI»:
+  la tendina con i gruppi, la casella delle avanzate per `all`, che parte spuntata se il modello scelto è
+  lì, la memoria della variante di questa scheda, quanto si scarica o quanto pesa qui, la licenza, gli
+  avvisi, il tono e i modelli già nel browser con «Togli»). Nella PWA il
   worker non è tra i file precaricati: alla prima spiegazione va nella cache `glifo-webllm`, per
   l'offline. Nelle prove nel browser il worker è sostituito da uno finto (`fakeLlmWorker` in
   `scripts/smoke-test.mjs`; per un grafico risponde con tre punti, uno sbagliato, per uno schema e una

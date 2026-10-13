@@ -173,8 +173,8 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
 - **Assistente AI** (facoltativo) per le domande difficili, es. «freccia con scritto sopra
   n → ∞»: risponde con il codice LaTeX pronto da inserire. Con la chiave di Anthropic, di Gemini
   (gratis), di OpenRouter, con Ollama sul tuo computer o con un altro servizio compatibile con OpenAI.
-- **Spiegami** (in prova): con il cursore su un conto, i passaggi scritti da Qwen3, un modello AI
-  che gira nel browser, con i conti fatti e controllati dal motore di Glifo (vedi «Spiegami»).
+- **Spiegami** (in prova): con il cursore su un conto, i passaggi scritti da un modello AI che gira nel
+  browser (Qwen3, o un altro che scegli), con i conti fatti e controllati dal motore di Glifo (vedi «Spiegami»).
 
 **Calcoli e grafici** (come le Note matematiche della Calcolatrice dell'iPad)
 - Una formula che finisce con `=` mostra il **risultato**: nell'editor accanto all'uguale, più chiaro,
@@ -941,13 +941,14 @@ e indicarne l'indirizzo in **Impostazioni → AI**, nelle avanzate dell'assisten
 
 Con il cursore su un conto che Glifo sa fare (una formula che finisce con `=`, un risultato scritto
 come `\int_0^1 x^2 \, dx = \frac{1}{2}`, un'equazione con `\Rightarrow`), sotto l'anteprima della
-formula compare **Spiegami**. Premendolo, i passaggi li scrive **Qwen3**, un modello AI aperto che
+formula compare **Spiegami**. Premendolo, i passaggi li scrive un modello AI aperto (di solito **Qwen3**) che
 gira **nel browser** con [WebLLM](https://github.com/mlc-ai/web-llm), sulla scheda grafica (WebGPU):
 niente chiave, niente costi, e la nota non esce dal dispositivo. Serve un browser con WebGPU (Chrome
 o Edge aggiornati, su un computer).
 
 I conti li fa il **motore di Glifo**: il modello glieli chiede (calcolare, controllare
-un'uguaglianza, derivare, trovare una primitiva, risolvere), e alla fine Glifo controlla ogni
+un'uguaglianza, derivare, trovare una primitiva, risolvere; un modello che non sa chiederli riceve
+quelli che servono già fatti), e alla fine Glifo controlla ogni
 passaggio. Accanto a ogni passaggio c'è il segno: ✓ giusto, ✗ sbagliato (con il valore giusto) o
 «non controllato» quando non si sa controllare (una sostituzione come $u = x^2$). Se qualcosa non
 torna, Glifo lo fa correggere al modello prima di mostrare la spiegazione; sotto si vede se l'ultimo
@@ -974,12 +975,25 @@ colore sfumando: puoi
 chiudere il pannello e continuare a scrivere, e quando ha finito sul pulsante compare un pallino, come per i
 messaggi, che se ne va riaprendo il pannello.
 
-In **Impostazioni → AI**, nel riquadro «Spiegazioni (prova)», si sceglie il modello (Qwen3 0.6B, il più leggero, circa 0,4 GB;
-1.7B, consigliato, circa 1 GB; 4B, il più bravo, circa 2,3 GB) e il tono (come il professore o più
-semplice). Il modello si scarica da Hugging Face la prima volta che premi Spiegami e poi resta nel
-browser: le spiegazioni funzionano anche offline; dalle impostazioni lo puoi togliere (anche da «Dati», che dice
-quanto pesa). Dentro
-claude.ai il modello non si può scaricare: lì Spiegami lo dice.
+In **Impostazioni → AI**, nel riquadro «Spiegazioni (prova)», si sceglie il modello e il tono (come il
+professore o più semplice). I modelli sono in un elenco ragionato:
+
+- **consigliati**, provati con Glifo: Qwen3 0.6B (il più leggero), 1.7B (quello di partenza), 4B e 8B
+  (il più bravo, per le schede grafiche potenti);
+- **altri modelli**, non provati con Glifo (possono sbagliare di più): i più nuovi delle altre famiglie,
+  Qwen3.5, Llama 3.2 e 3.1, Hermes 3, Gemma 2, Phi-4 mini, Ministral 3, Mistral 7B e Qwen2.5;
+- con la casella **avanzate**, tutti gli altri: le versioni di prima, i modelli per il codice o per i
+  conti, quelli che scrivono quasi solo in inglese e quelli senza compressione.
+
+Ci sono solo i modelli di WebLLM con cui si chatta, che leggono almeno 4096 token e che hanno una
+licenza che va bene anche con Glifo a pagamento. Del modello scelto si vede quanta memoria della scheda
+grafica chiede (lo dice WebLLM), quanto si scarica (dal suo elenco dei file su Hugging Face) o quanto
+pesa nel browser, la licenza (con «Built with Llama» per Llama e l'avviso di Gemma) e, se serve, che non
+è provato con Glifo, che scrive quasi solo in inglese o che non sa chiedere i conti al motore (allora
+Glifo gli dà quelli già fatti e controlla i passaggi come sempre). Il modello si scarica da Hugging Face
+la prima volta che premi Spiegami e poi resta nel browser: le spiegazioni funzionano anche offline.
+Sotto, **i modelli in questo browser**, ognuno con quanto pesa e «Togli» (anche in «Dati»): provandone
+tanti si riempie il disco. Dentro claude.ai il modello non si può scaricare: lì Spiegami lo dice.
 
 ## Compatibilità con VS Code
 
@@ -1010,7 +1024,7 @@ Web app in **TypeScript** con [Vite](https://vite.dev), senza framework e senza 
 | Anteprima Markdown | [markdown-it](https://github.com/markdown-it/markdown-it), highlight.js, DOMPurify |
 | Controllo ortografico | [Hunspell](https://hunspell.github.io) in WebAssembly ([@farscrl/hunspell-wasm](https://github.com/farscrl/hunspell-wasm)) in un worker, dizionari [dictionary-it e dictionary-en](https://github.com/wooorm/dictionaries) |
 | Assistente AI | SDK ufficiale di Anthropic (caricato solo quando serve) |
-| Spiegami (in prova) | [WebLLM](https://github.com/mlc-ai/web-llm) con i modelli Qwen3, sulla scheda grafica con WebGPU (in un worker, caricato solo quando serve) |
+| Spiegami (in prova) | [WebLLM](https://github.com/mlc-ai/web-llm) con i modelli Qwen3 (o un altro dell'elenco), sulla scheda grafica con WebGPU (in un worker, caricato solo quando serve) |
 | Account e sincronizzazione | [Supabase](https://supabase.com): database Postgres e accesso via email, senza password (il client si carica solo se si accede) |
 | Schemi | [maxGraph](https://github.com/maxGraph/maxGraph), il motore di draw.io (caricato solo quando serve) |
 | Lavagna | [perfect-freehand](https://github.com/steveruizok/perfect-freehand) per il contorno dei tratti con la pressione; disegno su canvas, salvataggio in IndexedDB |
@@ -1241,7 +1255,9 @@ sua licenza).
   `dictionary-it`) e quello inglese di SCOWL ([MIT e BSD](public/licenze/dizionario-inglese.txt), dal
   pacchetto `dictionary-en`);
 - «Spiegami»: [WebLLM](https://github.com/mlc-ai/web-llm) ([Apache 2.0](public/licenze/web-llm.txt)) e i
-  modelli Qwen3 del Qwen Team di Alibaba Cloud ([Apache 2.0](public/licenze/qwen3.txt));
+  modelli Qwen3 del Qwen Team di Alibaba Cloud ([Apache 2.0](public/licenze/qwen3.txt)), quelli
+  consigliati; gli altri modelli si scaricano solo se li scegli, e la loro licenza è nelle impostazioni,
+  accanto a ognuno;
 - l'account: [Supabase](https://github.com/supabase/supabase-js) ([MIT](public/licenze/supabase.txt));
 - l'assistente AI: l'[SDK di Anthropic](https://github.com/anthropics/anthropic-sdk-typescript)
   ([MIT](public/licenze/anthropic-sdk.txt)).

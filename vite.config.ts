@@ -1,7 +1,15 @@
 import { defineConfig } from 'vitest/config'
 import { VitePWA } from 'vite-plugin-pwa'
+import { prebuiltAppConfig } from '@mlc-ai/web-llm'
 
 declare const process: { env: Record<string, string | undefined> }
+
+// I modelli di WebLLM per «Spiegami» (src/ai/localModels.ts), letti dalla versione installata: il nome, la
+// memoria della scheda grafica (MB) e il contesto (token). Solo questi: la pagina non importa mai WebLLM
+// (6 MB), che sta nel worker. Senza gli embedding e i modelli che leggono le immagini (`model_type`).
+const webllmModels = prebuiltAppConfig.model_list
+  .filter((m) => !m.model_type)
+  .map((m) => ({ id: m.model_id, vram: Math.round(m.vram_required_MB ?? 0), context: m.overrides?.context_window_size ?? 0 }))
 
 // Il ramo principale del repository: su Cloudflare Pages (dove Cloudflare mette CF_PAGES e il ramo in
 // CF_PAGES_BRANCH) solo la sua build è il sito vero, quello di glifo.page. Se il ramo cambia nome, va
@@ -28,6 +36,7 @@ export default defineConfig({
     // In Impostazioni → Informazioni (src/ui/settings.ts): quale Glifo è, il commit (arriva da GitHub
     // o da Cloudflare) e quando è stato costruito.
     __GLIFO_VERSION__: JSON.stringify(`${(process.env.GITHUB_SHA || process.env.CF_PAGES_COMMIT_SHA || '').slice(0, 7) || 'locale'}, ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`),
+    __WEBLLM_MODELS__: JSON.stringify(webllmModels),
   },
   build: {
     target: 'es2022',

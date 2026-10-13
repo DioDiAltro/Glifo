@@ -19,7 +19,10 @@ const T = texts({
   italian: ['il dizionario italiano, di Andrea Pescetti e altri', 'the Italian dictionary, by Andrea Pescetti and others'],
   english: ['il dizionario inglese, di SCOWL', 'the English dictionary, from SCOWL'],
   explain: ['«Spiegami» nel browser', '“Explain” in the browser'],
-  models: ['i modelli di «Spiegami», del Qwen Team di Alibaba Cloud', 'the “Explain” models, by Alibaba Cloud\'s Qwen Team'],
+  models: [
+    'i modelli consigliati di «Spiegami», del Qwen Team di Alibaba Cloud (la licenza degli altri modelli è nella sezione «AI», accanto a ognuno)',
+    'the recommended “Explain” models, by Alibaba Cloud\'s Qwen Team (the license of the other models is in the “AI” section, next to each one)',
+  ],
   account: ['l\'account', 'the account'],
   assistant: ['l\'assistente AI con Claude', 'the AI assistant with Claude'],
 })
