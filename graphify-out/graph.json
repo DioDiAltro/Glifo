@@ -51492,7 +51492,7 @@
       "node_kind": "heading",
       "norm_label": "account: i propri appunti su ogni dispositivo, anche da condividere",
       "source_file": "ROADMAP.md",
-      "source_location": "L104"
+      "source_location": "L105"
     },
     {
       "id": "roadmap_commenti_di_chi_prova_glifo",
@@ -51504,7 +51504,7 @@
       "node_kind": "heading",
       "norm_label": "commenti di chi prova glifo",
       "source_file": "ROADMAP.md",
-      "source_location": "L282"
+      "source_location": "L283"
     },
     {
       "id": "roadmap_idee_per_il_futuro",
@@ -51552,7 +51552,7 @@
       "node_kind": "heading",
       "norm_label": "la lavagna: idee in piu",
       "source_file": "ROADMAP.md",
-      "source_location": "L313"
+      "source_location": "L314"
     },
     {
       "id": "roadmap_pi\u00f9_avanti",
@@ -51564,7 +51564,7 @@
       "node_kind": "heading",
       "norm_label": "piu avanti",
       "source_file": "ROADMAP.md",
-      "source_location": "L280"
+      "source_location": "L281"
     },
     {
       "id": "roadmap_schemi_idee_in_pi\u00f9",
@@ -51576,7 +51576,7 @@
       "node_kind": "heading",
       "norm_label": "schemi: idee in piu",
       "source_file": "ROADMAP.md",
-      "source_location": "L360"
+      "source_location": "L361"
     },
     {
       "id": "roadmap_trasloco_il_sito_su_cloudflare_con_un_dominio_tutto_di_glifo",
@@ -53826,7 +53826,7 @@
       "node_kind": "heading",
       "norm_label": "4. piu modelli per \u00abspiegami\u00bb",
       "source_file": "GRAFICA.md",
-      "source_location": "L246"
+      "source_location": "L249"
     },
     {
       "id": "grafica_5_a_cosa_serve_la_chiave_dell_ai",
@@ -53838,7 +53838,7 @@
       "node_kind": "heading",
       "norm_label": "5. a cosa serve la chiave dell'ai",
       "source_file": "GRAFICA.md",
-      "source_location": "L315"
+      "source_location": "L318"
     },
     {
       "id": "grafica_6_glifo_anche_in_inglese",
@@ -53850,7 +53850,7 @@
       "node_kind": "heading",
       "norm_label": "6. glifo anche in inglese",
       "source_file": "GRAFICA.md",
-      "source_location": "L354"
+      "source_location": "L357"
     },
     {
       "id": "grafica_8_il_pulsante_con_il_contorno",
@@ -53862,7 +53862,7 @@
       "node_kind": "heading",
       "norm_label": "8. il pulsante \u2728 con il contorno",
       "source_file": "GRAFICA.md",
-      "source_location": "L497"
+      "source_location": "L500"
     },
     {
       "id": "grafica_gli_abbonamenti_in_tutto_questo",
@@ -53874,7 +53874,7 @@
       "node_kind": "heading",
       "norm_label": "gli abbonamenti, in tutto questo",
       "source_file": "GRAFICA.md",
-      "source_location": "L548"
+      "source_location": "L551"
     },
     {
       "id": "grafica_in_che_ordine",
@@ -53886,7 +53886,7 @@
       "node_kind": "heading",
       "norm_label": "in che ordine",
       "source_file": "GRAFICA.md",
-      "source_location": "L565"
+      "source_location": "L568"
     },
     {
       "id": "grafica_la_grafica_le_otto_richieste_del_10_ottobre_2026",
@@ -62852,7 +62852,7 @@
       "node_kind": "heading",
       "norm_label": "7. via il registro dei tocchi",
       "source_file": "GRAFICA.md",
-      "source_location": "L470"
+      "source_location": "L473"
     },
     {
       "id": "src_schema_model_shape_size",
@@ -65628,6 +65628,18 @@
       "type": "external"
     },
     {
+      "id": "ref_package_json_raw",
+      "label": "ref_package_json_raw",
+      "_origin": "semantic",
+      "community": 11,
+      "community_name": "i18n.ts",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "ref_package_json_raw",
+      "source_file": "",
+      "type": "external"
+    },
+    {
       "id": "ref_privacy_html_raw",
       "label": "ref_privacy_html_raw",
       "_origin": "semantic",
@@ -66020,17 +66032,6 @@
       "external": true,
       "file_type": "concept",
       "norm_label": "ref_node_crypto",
-      "source_file": "",
-      "type": "external"
-    },
-    {
-      "id": "ref_package_json_raw",
-      "label": "ref_package_json_raw",
-      "community": 11,
-      "community_name": "i18n.ts",
-      "external": true,
-      "file_type": "concept",
-      "norm_label": "ref_package_json_raw",
       "source_file": "",
       "type": "external"
     }
@@ -244384,7 +244385,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "GRAFICA.md",
-      "source_location": "L246",
+      "source_location": "L249",
       "weight": 1.0
     },
     {
@@ -244406,7 +244407,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "GRAFICA.md",
-      "source_location": "L315",
+      "source_location": "L318",
       "weight": 1.0
     },
     {
@@ -244417,7 +244418,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "GRAFICA.md",
-      "source_location": "L354",
+      "source_location": "L357",
       "weight": 1.0
     },
     {
@@ -244428,7 +244429,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "GRAFICA.md",
-      "source_location": "L470",
+      "source_location": "L473",
       "weight": 1.0
     },
     {
@@ -244439,7 +244440,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "GRAFICA.md",
-      "source_location": "L497",
+      "source_location": "L500",
       "weight": 1.0
     },
     {
@@ -244450,7 +244451,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "GRAFICA.md",
-      "source_location": "L548",
+      "source_location": "L551",
       "weight": 1.0
     },
     {
@@ -244461,7 +244462,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "GRAFICA.md",
-      "source_location": "L565",
+      "source_location": "L568",
       "weight": 1.0
     },
     {
@@ -245209,7 +245210,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ROADMAP.md",
-      "source_location": "L280",
+      "source_location": "L281",
       "weight": 1.0
     },
     {
@@ -245220,7 +245221,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ROADMAP.md",
-      "source_location": "L104",
+      "source_location": "L105",
       "weight": 1.0
     },
     {
@@ -245253,7 +245254,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ROADMAP.md",
-      "source_location": "L282",
+      "source_location": "L283",
       "weight": 1.0
     },
     {
@@ -245264,7 +245265,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ROADMAP.md",
-      "source_location": "L313",
+      "source_location": "L314",
       "weight": 1.0
     },
     {
@@ -245275,7 +245276,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ROADMAP.md",
-      "source_location": "L360",
+      "source_location": "L361",
       "weight": 1.0
     },
     {
@@ -296699,7 +296700,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ROADMAP.md",
-      "source_location": "L120",
+      "source_location": "L121",
       "weight": 1.0
     },
     {
@@ -301364,7 +301365,7 @@
       "confidence_score": 0.95,
       "context": "askCompatible",
       "source_file": "GRAFICA.md",
-      "source_location": "L347",
+      "source_location": "L350",
       "weight": 1.0
     },
     {
@@ -301760,7 +301761,7 @@
       "confidence_score": 0.95,
       "context": "converse",
       "source_file": "GRAFICA.md",
-      "source_location": "L349",
+      "source_location": "L352",
       "weight": 1.0
     },
     {
@@ -304628,7 +304629,7 @@
       "confidence_score": 0.95,
       "context": "touchLog.add",
       "source_file": "GRAFICA.md",
-      "source_location": "L490",
+      "source_location": "L493",
       "weight": 1.0
     },
     {
@@ -304652,7 +304653,7 @@
       "confidence_score": 0.95,
       "context": "touchLog.resume()",
       "source_file": "GRAFICA.md",
-      "source_location": "L491",
+      "source_location": "L494",
       "weight": 1.0
     },
     {
@@ -304736,7 +304737,7 @@
       "confidence_score": 0.95,
       "context": "visible",
       "source_file": "ROADMAP.md",
-      "source_location": "L299",
+      "source_location": "L300",
       "weight": 1.0
     },
     {
@@ -304808,7 +304809,7 @@
       "confidence_score": 0.95,
       "context": "webllmId",
       "source_file": "GRAFICA.md",
-      "source_location": "L308",
+      "source_location": "L311",
       "weight": 1.0
     },
     {
@@ -304933,5 +304934,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "68e8ae9653ff6b98b84f3e42fdbf93049c012eed"
+  "built_at_commit": "f835bd61ed8d2ae6b21e92d332c233da1731eb2e"
 }
