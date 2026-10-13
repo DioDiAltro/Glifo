@@ -313,7 +313,8 @@ sempre privati.
 Idee per dopo:
 - rispondere, nascondere ed eliminare i commenti dalla pagina delle domande frequenti, con l'account di chi
   fa Glifo, invece che dalla dashboard (il 13 ottobre 2026 lo studente ha chiesto come si toglie un problema
-  risolto: per ora dalla dashboard o chiedendolo a Claude);
+  risolto: per ora dalla dashboard; rispondere e nascondere li può fare anche Claude, cancellare no, perché
+  la conferma che il collegamento a Supabase chiede prima di cancellare allo studente non arriva);
 - un avviso quando arriva un commento (un'email o una notifica: serve un servizio di posta, da
   scegliere tra quelli gratuiti);
 - quando saranno tanti: cercare tra i commenti e un «Anche a me» per dire che un problema capita anche

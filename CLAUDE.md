@@ -153,11 +153,14 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
   il pannello ✨ è andato sul sito vero. Le prove nuove si fanno ancora sul sito di prova
   https://glifo-prova.pages.dev (Cloudflare Pages, dal ramo `prova`; lì l'account è spento).
 - Leggere ogni tanto i commenti di chi prova Glifo (online dall'8 ottobre 2026; si leggono nella pagina
-  «Domande frequenti e commenti», glifo.page/faq, a cui porta il fumetto in fondo alla barra laterale):
-  dashboard di Supabase → progetto `glifo` →
-  Table Editor → `feedback`, dove ci sono anche quelli privati. Lì si risponde (colonna `reply`: si
-  vede sotto il commento), si nasconde dalla pagina un commento che non va (`visible` → false) e si
-  cancellano quelli che non servono più; oppure lo si chiede a Claude.
+  «Domande frequenti e commenti», glifo.page/faq, a cui porta il link nella finestra del fumetto in fondo
+  alla barra laterale): dashboard di Supabase → progetto `glifo` → Table Editor → `feedback`, dove ci sono
+  anche quelli privati. Lì si risponde (colonna `reply`: si vede sotto il commento), si nasconde dalla
+  pagina un commento che non va (`visible` → false) e si cancellano quelli che non servono più (si
+  spuntano le righe → «Delete N rows» → Delete). Rispondere e nascondere li può fare anche Claude (una
+  modifica parte senza conferma); cancellare no: prima di una cancellazione il collegamento di Claude a
+  Supabase chiede una conferma che allo studente non arriva (13 ottobre 2026: i due commenti di prova li
+  ha cancellati lui dalla dashboard).
 
 ## Regole
 

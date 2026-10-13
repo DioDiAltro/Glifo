@@ -186,9 +186,11 @@ Sul sito di prova la pagina è https://glifo-prova.pages.dev/faq (i commenti lì
 Lo studente, 13 ottobre 2026, provata la pagina: «va bene, portalo sul sito vero». Sul sito dal 13 ottobre
 2026 (glifo.page/faq e il vecchio indirizzo). Ha chiesto come si risponde a chi scrive e come si toglie un
 commento, per esempio un problema risolto: per ora dalla dashboard di Supabase (Table Editor → `feedback`:
-`reply` per rispondere, `visible` → false per nasconderlo, o la riga eliminata), oppure chiedendolo a
-Claude; rispondere e nascondere dalla pagina, con il proprio account, resta un'idea per dopo (ROADMAP.md,
-nei commenti).
+`reply` per rispondere, `visible` → false per nasconderlo, o la riga eliminata). Rispondere e nascondere li
+può fare anche Claude; cancellare no: prima di cancellare il collegamento di Claude a Supabase chiede una
+conferma che allo studente non arriva (tre tentativi a vuoto), e i due commenti mandati dal sito di prova
+lo studente li ha cancellati dalla dashboard. Rispondere, nascondere ed eliminare dalla pagina, con il
+proprio account, resta un'idea per dopo (ROADMAP.md, nei commenti).
 
 ## 3. Le impostazioni divise in sezioni
 
