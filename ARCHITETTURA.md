@@ -31,8 +31,8 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   gli stessi `{nomi}`, e in `src/` (`TRANSLATED`: dal 12 ottobre 2026 tutto, tranne i dati dei simboli,
   che controlla `tests/symbolsEn.test.ts`) non resta italiano scritto nel codice (una stima: frasi con le
   parole e le lettere dell'italiano, etichette come «Chiudi»; classi CSS e nomi di file no); quello che
-  deve restare italiano (le parole del correttore italiano, le parole vuote della ricerca, le righe del
-  registro dei tocchi, le chiavi interne) ha sulla riga il commento «non si traduce». **Le parole delle
+  deve restare italiano (le parole del correttore italiano, le parole vuote della ricerca, le chiavi
+  interne) ha sulla riga il commento «non si traduce». **Le parole delle
   note** (`src/noteWords.ts`): le italiane valgono per sempre e ci sono le inglesi, lette in tutte e due
   le lingue, così una nota si legge uguale per tutti; chi scrive nella nota (pulsanti, modelli, risultati,
   la guida) usa quelle della lingua di Glifo, e una riga che c'è già resta nella sua lingua. I nomi dei
@@ -110,9 +110,9 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   ortografico, il dizionario), AI (prima «Spiegazioni», `explainFieldset`, poi l'assistente con la chiave,
   `aiFieldset`), Account, Dati (backup e «Spazio in questo browser») e Informazioni (la versione da
   `__GLIFO_VERSION__`, «Come si usa» e «Commenti», che si aprono sopra, l'informativa, le licenze di
-  `licenses.ts` con i testi in `public/licenze/`, precaricati per l'offline, e in fondo il registro dei
-  tocchi): a sinistra l'elenco (`role="tablist"`, verticale, le frecce scorrono e aprono), a destra la
-  sezione, che scorre da sola in una finestra di altezza fissa. Sotto i 600 px (`PHONE`, lo stesso numero
+  `licenses.ts` con i testi in `public/licenze/`, precaricati per l'offline): a sinistra l'elenco
+  (`role="tablist"`, verticale, le frecce scorrono e aprono), a destra la sezione, che scorre da sola in
+  una finestra di altezza fissa. Sotto i 600 px (`PHONE`, lo stesso numero
   in app.css) la finestra prende lo schermo e va a pagine: `data-view` dice se si vede l'elenco, con una
   riga che descrive ogni sezione, o una sezione, con la freccia per tornare e il suo nome nella testata
   (le frecce lì spostano soltanto). Ogni sezione si costruisce la prima volta che si apre e poi resta
@@ -138,7 +138,10 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   carica in anticipo l'editor degli schemi o delle tabelle della nota aperta, così «Modifica» lo apre
   subito anche dopo una pubblicazione.
   `src/store/`: note, cartelle (`folders.ts`), impostazioni e misure delle sezioni (`layout.ts`,
-  solo su quel dispositivo) nel browser (chiavi `glifo.*`); `usage.ts` misura quanto occupano. `restore.ts` è «Ripristina backup»: una
+  solo su quel dispositivo) nel browser (chiavi `glifo.*`); all'avvio `storage.ts` sposta le vecchie
+  chiavi `matherdown.*` (`migrateKeyPrefix`) e toglie quelle delle parti che non ci sono più
+  (`forgetOldKeys`, `OLD_KEYS`: il registro dei tocchi, tolto il 13 ottobre 2026); `usage.ts` misura
+  quanto occupano. `restore.ts` è «Ripristina backup»: una
   nota con lo stesso id e lo stesso testo non si raddoppia, le altre tornano con il loro id se è
   libero (`adopt`), così l'account le riconosce e le lavagne le ritrovano; una lavagna va sulla sua
   nota solo se lì non c'è già niente di scritto (9 ottobre 2026: prima ogni ripristino aggiungeva
@@ -416,13 +419,7 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   passi, il tratto a mano e la figura con `pair`, così Annulla riporta il tratto), schermo intero (su iPad e iPhone
   senza quello del browser, `device.ts`: Safari ne usciva prendendo la penna per una tastiera; sotto,
   il resto dell'app è nascosto con `.board-full`). Sulla lavagna touchstart, touchmove e touchend
-  sono annullati: sull'iPad selezionavano le parole e facevano partire Scribble. `touchlog.ts` è il
-  registro dei tocchi (`glifo.registro.v1`, acceso in fondo a Impostazioni → Informazioni da `src/ui/touchLogPanel.ts`;
-  riprende all'avvio con `touchLog.resume()` in main.ts, perché il modulo finisce anche in nota.html):
-  penna, dita e mouse (i movimenti uniti in una riga), le decisioni della lavagna (le righe con «→»,
-  scritte da board.ts) e il browser (tocchi presi dal sistema, selezione, fuoco, scrittura, tastiera,
-  schermo intero, pagina nascosta, errori), mai il testo delle note (`where`); il pallino rosso sulla
-  lavagna lo apre, e lo studente lo copia o lo scarica per mandarlo nella chat. In `main.ts`
+  sono annullati: sull'iPad selezionavano le parole e facevano partire Scribble. In `main.ts`
   la lavagna si toglie con la nota, segue la nota che cambia id con l'account (`replaced`,
   `adoptGuestNotes`) e uscendo dall'account si toglie, con l'avviso (con «Cambia account» resta, con le
   note dell'account). Per le prove nel browser lo stato

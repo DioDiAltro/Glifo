@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest'
-import { migrateKeyPrefix } from '../src/store/storage'
+import { forgetOldKeys, migrateKeyPrefix } from '../src/store/storage'
 import { addPersonalWord, loadPersonalWords, savePersonalWords } from '../src/store/dictionary'
 import { loadSettings, saveSettings, sharedSettings } from '../src/store/settings'
 
@@ -32,6 +32,22 @@ describe('cambio di nome (Matherdown → Glifo)', () => {
   it('senza vecchi dati non fa nulla', () => {
     migrateKeyPrefix('matherdown.', 'glifo.')
     expect(localStorage.length).toBe(0)
+  })
+})
+
+describe('chiavi che non servono più', () => {
+  it('all\'avvio toglie quello che ha lasciato il registro dei tocchi, il resto resta', () => {
+    localStorage.setItem('glifo.registro.v1', '{"on":true,"lines":["penna giù"]}')
+    localStorage.setItem('glifo.notes.v1', '[{"id":"a"}]')
+    forgetOldKeys()
+    expect(localStorage.getItem('glifo.registro.v1')).toBeNull()
+    expect(localStorage.getItem('glifo.notes.v1')).toBe('[{"id":"a"}]')
+  })
+
+  it('senza la chiave vecchia non fa nulla', () => {
+    localStorage.setItem('glifo.settings.v1', '{"theme":"dark"}')
+    forgetOldKeys()
+    expect(localStorage.length).toBe(1)
   })
 })
 

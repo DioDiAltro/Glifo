@@ -18,7 +18,6 @@ import { dialogShell } from './dialogs'
 import { ICONS, h, icon } from './dom'
 import { LICENSES } from './licenses'
 import { privacyLink } from './links'
-import { touchLogFieldset } from './touchLogPanel'
 
 /** La versione di Glifo: il commit pubblicato e quando è stato costruito (vedi vite.config.ts). */
 declare const __GLIFO_VERSION__: string
@@ -841,7 +840,7 @@ function versionText(version: string): string {
   return commit === 'locale' ? T.localVersion(date) : T.version(commit, date)
 }
 
-/** «Informazioni»: la versione, la guida e i commenti, l'informativa, le licenze; in fondo il registro dei tocchi. */
+/** «Informazioni»: la versione, la guida e i commenti, l'informativa, le licenze. */
 function aboutSection(deps: SettingsDialogDeps): HTMLElement[] {
   return [
     h(
@@ -881,6 +880,5 @@ function aboutSection(deps: SettingsDialogDeps): HTMLElement[] {
         ),
       ),
     ),
-    touchLogFieldset(),
   ]
 }

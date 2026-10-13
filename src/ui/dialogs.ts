@@ -1,6 +1,5 @@
 import { byLang, texts } from '../i18n'
 import { ICONS, h, icon } from './dom'
-import { touchLogFieldset } from './touchLogPanel'
 
 // Le impostazioni sono in src/ui/settings.ts: qui le finestre che usano anche le altre parti.
 const T = texts({
@@ -32,11 +31,6 @@ export function dialogShell(title: string, body: (HTMLElement | null)[], extraCl
   dialog.addEventListener('close', () => dialog.remove())
   document.body.append(dialog)
   return dialog
-}
-
-/** Il registro dei tocchi, dal pallino rosso sulla lavagna (anche a tutto schermo). */
-export function openTouchLogDialog(): void {
-  dialogShell('Registro dei tocchi', [touchLogFieldset()], 'dialog-touch-log').showModal() // non si traduce: il registro dei tocchi si toglie (GRAFICA.md, punto 7)
 }
 
 /** Conferma dentro la pagina (i `confirm()` del browser non sempre sono disponibili). */

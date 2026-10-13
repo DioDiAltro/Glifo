@@ -111,7 +111,7 @@ describe('le impostazioni divise in sezioni', () => {
     tab('data').click()
     expect(legends('data')).toEqual(['Backup', 'Spazio in questo browser'])
     tab('about').click()
-    expect(legends('about')).toEqual(['Glifo', 'Privacy e licenze', 'Registro dei tocchi (lavagna)'])
+    expect(legends('about')).toEqual(['Glifo', 'Privacy e licenze'])
     // Tornando su una sezione già aperta, è com'era.
     tab('writing').click()
     expect(panel('writing').querySelector<HTMLInputElement>('.spell-settings input[type="checkbox"]')).toBe(spell)
@@ -304,7 +304,8 @@ describe('la sezione «Informazioni»', () => {
     const links = [...panel('about').querySelectorAll<HTMLAnchorElement>('.license-list a')]
     expect(links.map((a) => a.getAttribute('href'))).toEqual(LICENSES.map((l) => `licenze/${l.file}`))
     expect(panel('about').querySelector('.license-list li')?.textContent).toBe('CodeMirror · l\'editor · licenza MIT')
-    // In fondo, finché c'è, il registro dei tocchi.
-    expect(panel('about').querySelector(':scope > fieldset:last-of-type')?.classList.contains('touch-log')).toBe(true)
+    // In fondo privacy e licenze: il registro dei tocchi non c'è più (GRAFICA.md, punto 7).
+    expect(panel('about').querySelector(':scope > fieldset:last-of-type')?.classList.contains('licenses-settings')).toBe(true)
+    expect(panel('about').querySelector('.touch-log')).toBeNull()
   })
 })

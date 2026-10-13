@@ -25,8 +25,8 @@ export default defineConfig({
   base: './',
   define: {
     __GLIFO_SITE__: JSON.stringify(site),
-    // Nel registro dei tocchi (src/ui/touchLogPanel.ts): quale Glifo si stava provando (il commit
-    // arriva da GitHub o da Cloudflare).
+    // In Impostazioni → Informazioni (src/ui/settings.ts): quale Glifo è, il commit (arriva da GitHub
+    // o da Cloudflare) e quando è stato costruito.
     __GLIFO_VERSION__: JSON.stringify(`${(process.env.GITHUB_SHA || process.env.CF_PAGES_COMMIT_SHA || '').slice(0, 7) || 'locale'}, ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`),
   },
   build: {

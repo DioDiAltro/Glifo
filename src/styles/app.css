@@ -2752,20 +2752,6 @@ kbd {
   resize: vertical;
 }
 
-/* Cosa è successo, da mandare con il registro dei tocchi: si scrive come un messaggio. */
-.dialog textarea.touch-log-note {
-  font-family: inherit;
-}
-
-.dialog-touch-log {
-  width: min(520px, calc(100vw - 32px));
-}
-
-/* Nella finestra del pallino rosso il titolo c'è già. */
-.dialog-touch-log .touch-log > legend {
-  display: none;
-}
-
 /* ——— Le impostazioni (src/ui/settings.ts): a sinistra l'elenco delle sezioni, a destra quella scelta,
    che scorre da sola. Sotto i 600 px, come sul telefono, una pagina per volta: l'elenco
    (`data-view='list'`) o la sezione, con la freccia per tornare (`data-view='section'`). ——— */
@@ -5383,12 +5369,6 @@ kbd {
   margin-left: 2px;
   padding-left: 4px;
   border-left: 1px solid var(--border);
-}
-
-/* Il registro dei tocchi sta registrando (src/board/touchlog.ts): il pallino rosso lo apre. */
-.board-button.board-log,
-.board-button.board-log:hover {
-  color: var(--danger);
 }
 
 .board-color[aria-pressed='true'] .board-swatch {

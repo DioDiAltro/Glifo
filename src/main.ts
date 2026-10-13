@@ -39,9 +39,9 @@ import { sheetsForFile, sheetsFromFile } from './spreadsheet/file'
 import { emptySheet, parseSheet, serializeSheet, sheetBlockText, type SheetModel } from './spreadsheet/model'
 import { BLOCK_NAMES } from './ui/moveButtons'
 import { loadPaneSizes, savePaneSizes } from './store/layout'
-import { migrateKeyPrefix, storageAvailable } from './store/storage'
+import { forgetOldKeys, migrateKeyPrefix, storageAvailable } from './store/storage'
 import { ICONS, h, icon } from './ui/dom'
-import { confirmDialog, openHelpDialog, openTouchLogDialog, promptDialog } from './ui/dialogs'
+import { confirmDialog, openHelpDialog, promptDialog } from './ui/dialogs'
 import { openSettingsDialog, type SettingsSection } from './ui/settings'
 import { aiActivity } from './ui/aiActivity'
 import { openCommentsDialog } from './ui/comments'
@@ -104,7 +104,6 @@ import {
 } from './relocation'
 import { leaveRelocationDone, relocationBanner, showRelocationDone, showRelocationPage, takeRelocationDone } from './ui/relocation'
 import { Board } from './board/board'
-import { touchLog } from './board/touchlog'
 import { BoardStore } from './board/store'
 import { newStrokeId } from './board/strokes'
 
@@ -113,11 +112,10 @@ declare const __GLIFO_SITE__: Site
 /** La versione di Glifo (il commit pubblicato e quando, vedi vite.config.ts). */
 declare const __GLIFO_VERSION__: string
 
-// Il registro dei tocchi della lavagna, se era acceso, riprende da qui (src/board/touchlog.ts).
-touchLog.resume()
-
 // Il progetto si chiamava Matherdown: recupera gli appunti salvati con il vecchio nome.
 migrateKeyPrefix('matherdown.', 'glifo.')
+// Quello che hanno lasciato nel browser le parti che non ci sono più (il registro dei tocchi).
+forgetOldKeys()
 
 // La lingua (src/i18n.ts): trovata la prima volta, da qui resta quella (va con l'account, come il
 // tema); la pagina la dice al browser.
@@ -418,8 +416,6 @@ function saveState(state: 'salvato' | 'da-salvare' | 'non-salvato'): void {
 saveState('salvato')
 
 const viewButtons = new Map<ViewMode, HTMLButtonElement>()
-/** Le viste a parole, per il registro dei tocchi. */
-const VIEW_NAMES: Record<ViewMode, string> = { editor: 'Editor', split: 'Diviso', preview: 'Anteprima', board: 'Lavagna' } // non si traduce: il registro dei tocchi resta in italiano
 const viewSwitch = h(
   'div',
   { class: 'view-switch', attrs: { role: 'radiogroup', 'aria-label': T.view } },
@@ -539,7 +535,6 @@ const board = new Board({
       confirmLabel: T.clear,
       danger: true,
     }),
-  openLog: () => openTouchLogDialog(),
   warn: (message) => toast(message, 'error'),
 })
 
@@ -792,7 +787,6 @@ function languageChangedElsewhere(message: string): void {
 }
 
 function setView(mode: ViewMode, focus = true): void {
-  touchLog.add(`vista dell'app: ${VIEW_NAMES[mode]}`) // non si traduce: il registro dei tocchi resta in italiano
   updateSettings({ view: mode })
   app.dataset.view = mode
   for (const [m, b] of viewButtons) b.setAttribute('aria-checked', String(m === mode))

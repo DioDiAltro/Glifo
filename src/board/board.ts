@@ -18,9 +18,8 @@ import {
   transformStrokes,
   type Transform,
 } from './selection'
-import { adjustShape, recognize, SHAPE_NAMES, shapePoints, type Shape } from './shapes'
+import { adjustShape, recognize, shapePoints, type Shape } from './shapes'
 import type { BoardChange, BoardStore, BoardView } from './store'
-import { touchLog, where } from './touchlog'
 import {
   boxesTouch,
   compareStrokes,
@@ -95,8 +94,6 @@ const T = texts({
   clearTitle: ['Pulisci la lavagna: cancella tutto', 'Clear the whiteboard: erase everything'],
   fullScreen: ['Schermo intero', 'Full screen'],
   exitFullScreen: ['Esci dallo schermo intero', 'Exit full screen'],
-  touchLog: ['Registro dei tocchi', 'Touch log'],
-  touchLogRecording: ['Registro dei tocchi: sta registrando', 'Touch log: recording'],
   resetView: ['Torna alla vista di partenza', 'Back to the starting view'],
   zoomOut: ['Rimpicciolisci', 'Zoom out'],
   zoomIn: ['Ingrandisci', 'Zoom in'],
@@ -159,8 +156,6 @@ export interface BoardOptions {
   confirmClear(): Promise<boolean>
   /** Un problema da dire (per esempio: la lavagna non si salva). */
   warn(message: string): void
-  /** Apre il registro dei tocchi (il pallino rosso, che si vede quando registra: touchlog.ts). */
-  openLog?(): void
 }
 
 type Tool = 'pen' | 'highlight' | 'eraser' | 'lasso'
@@ -266,16 +261,6 @@ interface MoveAction {
 
 type Action = DrawAction | EraseAction | PanAction | PinchAction | LassoAction | MoveAction
 
-/** Le azioni, a parole: per il registro dei tocchi. */
-const ACTION_NAMES: Record<Action['kind'], string> = {
-  draw: 'un tratto', // non si traduce: registro dei tocchi
-  erase: 'la gomma', // non si traduce: registro dei tocchi
-  pan: 'uno spostamento', // non si traduce: registro dei tocchi
-  pinch: 'un gesto con due dita', // non si traduce: registro dei tocchi
-  lasso: 'il lazo', // non si traduce: registro dei tocchi
-  move: 'la selezione che si sposta', // non si traduce: registro dei tocchi
-}
-
 interface Finger extends Pt {
   /** Un dito (o il palmo) da non considerare finché non si alza: c'era la penna. */
   ignored: boolean
@@ -321,7 +306,6 @@ const ICON = {
   exitFull: '<path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/>',
   minus: '<path d="M5 12h14"/>',
   highlight: '<path d="M13.5 3.5l7 7-6 6-7-7z"/><path d="M7.5 9.5l-3 6.5 3.5 3.5 6.5-3"/><path d="M3 21h9"/>',
-  rec: '<circle cx="12" cy="12" r="6" fill="currentColor" stroke="none"/>',
   lasso: '<ellipse cx="12.5" cy="9.5" rx="8.5" ry="5.5" stroke-dasharray="3 2.4"/><path d="M7.4 14.3c-1.9 1-2.3 2.4-1.2 3.4 1 .9.9 2.2-.4 3.3"/>',
   all: '<rect x="4" y="4" width="16" height="16" rx="2.5" stroke-dasharray="3 2.6"/>',
   paste: '<rect x="5" y="4.5" width="14" height="16.5" rx="2"/><path d="M9 4.5V3h6v1.5M9 10h6M9 14h4"/>',
@@ -350,13 +334,6 @@ function pointsOf(s: Stroke): Pt[] {
   const out: Pt[] = []
   for (let i = 0; i + 1 < s.points.length; i += 3) out.push({ x: s.points[i], y: s.points[i + 1] })
   return out
-}
-
-/** Un tratto in breve, per il registro dei tocchi: quanti punti, la pressione e quanto è durato. */
-function strokeSummary(a: DrawAction): string {
-  const p = a.stroke.points.filter((_, i) => i % 3 === 2)
-  const pressure = a.stroke.pen ? `, pressione ${Math.min(...p).toFixed(2)}–${Math.max(...p).toFixed(2)}` : ''
-  return `${p.length} punti${pressure}, ${Math.round(a.travel)} px in ${((performance.now() - a.started) / 1000).toFixed(2)} s`
 }
 
 /** La gomma in fondo alla penna, o la penna con il tasto laterale premuto. */
@@ -390,7 +367,6 @@ const SIZE_NAMES: Record<SizedTool, readonly string[]> = {
   highlight: [T.highlighterFine, T.highlighterMedium, T.highlighterWide],
   eraser: [T.eraserSmall, T.eraserMedium, T.eraserLarge],
 }
-const TOOL_NAMES: Record<Tool, string> = { pen: 'penna', highlight: 'evidenziatore', eraser: 'gomma', lasso: 'selezione' }
 const MODE_NAMES: Record<EraserMode, string> = { area: T.wherePasses, stroke: T.wholeLine }
 /** Il pallino delle tre misure (in px), nel pulsante e nel menu. */
 const DOT_SIZES = [7, 11, 16] as const
@@ -433,7 +409,6 @@ export class Board {
   private readonly redoButton: HTMLButtonElement
   private readonly clearButton: HTMLButtonElement
   private readonly fullButton: HTMLButtonElement
-  private readonly logButton: HTMLButtonElement
   private readonly zoomLevel: HTMLButtonElement
 
   private note: string | null = null
@@ -583,19 +558,6 @@ export class Board {
     this.redoButton = button(T.redo, ICON.redo, () => (this.redo(), this.focus()), T.redoKeys)
     this.clearButton = button(T.clear, ICONS.trash, () => void this.clear(), T.clearTitle)
     this.fullButton = button(T.fullScreen, ICON.full, () => this.setFull(!this.full))
-    // Il registro dei tocchi sta registrando: il pallino rosso lo apre, e segna il momento.
-    this.logButton = button(
-      T.touchLog,
-      ICON.rec,
-      () => {
-        touchLog.add('segno: premuto il pallino del registro') // non si traduce: registro dei tocchi
-        opts.openLog?.()
-      },
-      T.touchLogRecording,
-    )
-    this.logButton.classList.add('board-log')
-    this.logButton.hidden = !touchLog.on
-    touchLog.onChange(() => (this.logButton.hidden = !touchLog.on))
     const tools = h(
       'div',
       { class: 'board-tools', attrs: { role: 'toolbar', 'aria-label': T.tools } },
@@ -608,7 +570,6 @@ export class Board {
       sep(),
       this.clearButton,
       this.fullButton,
-      this.logButton,
     )
     this.toolsBar = tools
     // In basso a sinistra annulla e ripeti, a destra l'ingrandimento: in alto c'è posto anche
@@ -666,7 +627,6 @@ export class Board {
       (ev) => {
         if (ev.pointerType === 'touch' && !stage.contains(ev.target as Node) && this.penMode && this.penNear()) {
           this.palmTaps.add(ev.pointerId)
-          touchLog.add('→ tocco su un pulsante con la penna vicina: è la mano, non vale come clic') // non si traduce: registro dei tocchi
         }
       },
       true,
@@ -686,7 +646,6 @@ export class Board {
         this.palmClickUntil = 0
         ev.preventDefault()
         ev.stopPropagation()
-        touchLog.add(`→ clic della mano ignorato · ${where(ev.target)}`) // non si traduce: registro dei tocchi
       },
       true,
     )
@@ -698,7 +657,6 @@ export class Board {
     document.addEventListener('fullscreenchange', () => {
       if (!document.fullscreenElement && this.browserFull) {
         this.browserFull = false
-        touchLog.add('il browser è uscito dallo schermo intero: la lavagna torna com\'era') // non si traduce: registro dei tocchi
         this.setFull(false)
       }
     })
@@ -733,7 +691,6 @@ export class Board {
 
   /** Mostra la lavagna della nota (la carica se è un'altra). */
   show(note: string): void {
-    if (!this.shown) touchLog.add('lavagna mostrata')
     this.shown = true
     if (note === this.note) {
       this.resize()
@@ -763,7 +720,6 @@ export class Board {
 
   /** La lavagna non si vede più (si è passati a un'altra vista). */
   hide(): void {
-    if (this.shown) touchLog.add('lavagna nascosta')
     this.shown = false
     this.cancelAction()
     this.clearSelection()
@@ -809,7 +765,6 @@ export class Board {
     this.fullButton.setAttribute('aria-label', label)
     const root = document.documentElement
     const browser = on && !document.fullscreenElement && !appleTouch() && typeof root.requestFullscreen === 'function'
-    touchLog.add(`schermo intero della lavagna: ${on ? `sì, ${browser ? 'anche del browser' : 'senza quello del browser'}` : 'no'}`) // non si traduce: registro dei tocchi
     if (browser) {
       root
         .requestFullscreen({ navigationUI: 'hide' })
@@ -830,7 +785,6 @@ export class Board {
   // ——— Strumenti ———
 
   private setTool(tool: Tool): void {
-    if (tool !== this.tool) touchLog.add(`strumento: ${TOOL_NAMES[tool]}`)
     this.tool = tool
     this.el.dataset.tool = tool
     for (const [t, b] of this.toolButtons) b.setAttribute('aria-pressed', String(t === tool))
@@ -844,7 +798,6 @@ export class Board {
   }
 
   private setColor(color: InkColor, pickPen = true): void {
-    if (color !== this.color) touchLog.add(`colore della penna: ${inkName(color, this.theme).toLowerCase()}`) // non si traduce: registro dei tocchi
     this.color = color
     for (const [c, b] of this.colorButtons) b.setAttribute('aria-pressed', String(c === color))
     if (pickPen) {
@@ -855,7 +808,6 @@ export class Board {
   }
 
   private setHighlightColor(color: HighlightColor, pick = true): void {
-    if (color !== this.highlightColor) touchLog.add(`colore dell'evidenziatore: ${highlightName(color).toLowerCase()}`) // non si traduce: registro dei tocchi
     this.highlightColor = color
     for (const [c, b] of this.highlightButtons) b.setAttribute('aria-pressed', String(c === color))
     if (pick) {
@@ -866,7 +818,6 @@ export class Board {
   }
 
   private setSize(tool: SizedTool, choice: SizeChoice): void {
-    touchLog.add(`misura ${TOOL_NAMES[tool] === 'gomma' ? 'della gomma' : `dell${tool === 'pen' ? 'a penna' : "'evidenziatore"}`}: ${SIZE_NAMES[tool][choice]}`) // non si traduce: registro dei tocchi
     this.sizes[tool] = choice
     this.savePrefs({ sizes: { ...this.sizes } })
     this.updateToolUi()
@@ -874,14 +825,12 @@ export class Board {
   }
 
   private setAutoShapes(on: boolean): void {
-    touchLog.add(`forme automatiche: ${on ? 'accese' : 'spente'}`)
     this.autoShapes = on
     this.el.dataset.shapes = on ? 'auto' : 'hold'
     this.savePrefs({ shapes: on })
   }
 
   private setEraserMode(mode: EraserMode): void {
-    touchLog.add(`gomma: ${MODE_NAMES[mode].toLowerCase()}`) // non si traduce: registro dei tocchi
     this.eraserMode = mode
     this.el.dataset.eraser = mode
     this.savePrefs({ eraser: mode })
@@ -1034,12 +983,6 @@ export class Board {
     writeJson(PREFS_KEY, { ...loadPrefs(), ...changes })
   }
 
-  /** Che cosa fa lo strumento, per il registro dei tocchi. */
-  private verb(tool: Tool): string {
-    if (tool === 'lasso') return this.selection ? 'seleziona (c\'è una selezione)' : 'seleziona' // non si traduce: registro dei tocchi
-    return tool === 'pen' ? 'scrive' : tool === 'highlight' ? 'evidenzia' : `cancella (${MODE_NAMES[this.eraserMode].toLowerCase()})`
-  }
-
   /** La penna sta scrivendo, o si è appena alzata: un tocco adesso è la mano che si appoggia. */
   private penNear(): boolean {
     return this.action?.type === 'pen' || performance.now() - this.lastPen < PALM_MS
@@ -1051,11 +994,9 @@ export class Board {
     this.penMode = true
     this.el.dataset.pen = 'true'
     this.savePrefs({ pen: true })
-    touchLog.add('→ prima penna su questo dispositivo: da ora un dito solo non fa niente') // non si traduce: registro dei tocchi
     // Il tratto fatto col dito un attimo prima era il palmo, appoggiato prima della penna.
     const last = this.lastTouchStep
     if (last && performance.now() - last.at < 900 && this.undoStack[this.undoStack.length - 1] === last.step) {
-      touchLog.add('→ tolto il tratto fatto un attimo prima col dito: era il palmo') // non si traduce: registro dei tocchi
       this.undoStack.pop()
       // Diventato una figura: anche il passo prima, quello del tratto a mano, se ne va.
       if (last.step.pair && this.undoStack[this.undoStack.length - 1]?.added[0] === last.step.removed[0]) this.undoStack.pop()
@@ -1096,20 +1037,17 @@ export class Board {
       this.rememberPen()
       // Le dita e il palmo appoggiati: non scrivono e non spostano niente finché non si alzano.
       this.dropTouches()
-      if (this.action) return void touchLog.add(`→ penna ignorata: c'è già ${ACTION_NAMES[this.action.kind]}`) // non si traduce: registro dei tocchi
+      if (this.action) return
       this.capture(ev)
       const tool = penErases(ev) ? 'eraser' : this.tool
-      touchLog.add(`→ penna: ${this.verb(tool)}${penErases(ev) ? ' (gomma della penna)' : ''}`) // non si traduce: registro dei tocchi
       return this.startTool(ev, pos, tool)
     }
-    if (this.action) return void touchLog.add(`→ ${ev.pointerType} ignorato: c'è già ${ACTION_NAMES[this.action.kind]}`) // non si traduce: registro dei tocchi
+    if (this.action) return
     if (ev.button === 1 || (ev.button === 0 && this.spaceDown)) {
       this.capture(ev)
-      touchLog.add(`→ ${ev.pointerType}: sposta la lavagna`) // non si traduce: registro dei tocchi
       this.startPan(ev.pointerId, ev.pointerType, pos)
     } else if (ev.button === 0) {
       this.capture(ev)
-      touchLog.add(`→ ${ev.pointerType}: ${this.verb(this.tool)}`)
       this.startTool(ev, pos, this.tool)
     }
   }
@@ -1118,24 +1056,19 @@ export class Board {
     // La mano che si appoggia mentre si scrive con la penna, o appena dopo: non conta finché non si alza.
     const palm = this.penMode && this.penNear()
     this.touches.set(ev.pointerId, { ...pos, ignored: palm })
-    if (palm) {
-      const why = this.action?.type === 'pen' ? 'la penna sta scrivendo' : `la penna si è alzata ${Math.round(performance.now() - this.lastPen)} ms fa` // non si traduce: registro dei tocchi
-      return void touchLog.add(`→ mano (${why}): non conta finché non si alza`) // non si traduce: registro dei tocchi
-    }
+    if (palm) return
     const active = [...this.touches].filter(([, t]) => !t.ignored).map(([id]) => id)
     const a = this.action
     if (active.length === 1) {
-      if (a) return void touchLog.add(`→ dito ignorato: c'è già ${ACTION_NAMES[a.kind]}`) // non si traduce: registro dei tocchi
+      if (a) return
       this.capture(ev)
       // Con la penna un dito solo non fa niente: è quasi sempre il palmo. Si sposta con due dita.
-      if (this.penMode) return void touchLog.add('→ un dito solo con la penna: non fa niente') // non si traduce: registro dei tocchi
-      touchLog.add(`→ un dito: ${this.verb(this.tool)}`) // non si traduce: registro dei tocchi
+      if (this.penMode) return
       this.startTool(ev, pos, this.tool)
     } else if (active.length === 2) {
-      if (a && a.type !== 'touch') return void touchLog.add(`→ secondo dito ignorato: c'è già ${ACTION_NAMES[a.kind]} (${a.type})`) // non si traduce: registro dei tocchi
+      if (a && a.type !== 'touch') return
       // Il secondo dito: si sposta e si ingrandisce. Il tratto appena cominciato col primo era l'inizio del gesto.
       const young = a?.kind === 'draw' && !(performance.now() - a.started > YOUNG.ms || a.travel > YOUNG.px)
-      touchLog.add(`→ due dita: spostano e ingrandiscono${young ? ' (il tratto appena cominciato col primo dito era l\'inizio del gesto: tolto)' : ''}`) // non si traduce: registro dei tocchi
       if (a?.kind === 'draw') this.finishDraw(a, !young)
       else if (a?.kind === 'erase') this.finishErase(a)
       else if (a?.kind === 'pan') this.finishPan()
@@ -1145,7 +1078,6 @@ export class Board {
       this.startPinch(active as [number, number])
     } else {
       this.touches.get(ev.pointerId)!.ignored = true
-      touchLog.add('→ terzo dito: non conta') // non si traduce: registro dei tocchi
     }
   }
 
@@ -1207,8 +1139,6 @@ export class Board {
     // Un tocco annullato dal sistema (sull'iPad, quando capisce che era il palmo): quello che
     // stava facendo si annulla, come se non fosse successo.
     const dropped = cancelled && a.type === 'touch'
-    if (dropped && (a.kind === 'pinch' ? a.pointers.includes(ev.pointerId) : a.pointer === ev.pointerId))
-      touchLog.add(`→ tocco annullato dal sistema: ${ACTION_NAMES[a.kind]} annullato, la lavagna torna com'era`) // non si traduce: registro dei tocchi
     if (a.kind === 'pinch') {
       if (!a.pointers.includes(ev.pointerId)) return
       if (dropped) return this.cancelAction()
@@ -1238,10 +1168,8 @@ export class Board {
 
   /** Arriva la penna: quello che stavano facendo dita o palmo si annulla, come se non fosse successo. */
   private dropTouches(): void {
-    const fingers = [...this.touches.values()].filter((t) => !t.ignored).length
     for (const t of this.touches.values()) t.ignored = true
     const busy = this.action?.type === 'touch' ? this.action.kind : null
-    if (fingers || busy) touchLog.add(`→ arriva la penna: ${fingers} ${fingers === 1 ? 'dito appoggiato non conta' : 'dita appoggiate non contano'} più${busy ? `, e ${ACTION_NAMES[busy]} si annulla` : ''}`) // non si traduce: registro dei tocchi
     if (busy) this.cancelAction()
   }
 
@@ -1324,11 +1252,10 @@ export class Board {
   private holdShape(a: DrawAction): void {
     if (this.action !== a || a.snapped) return
     const shape = recognize(pointsOf(a.stroke), { unit: 1 / this.view.zoom })
-    if (!shape) return void touchLog.add('→ punta ferma: il tratto non somiglia a una figura') // non si traduce: registro dei tocchi
+    if (!shape) return
     const pts = a.stroke.points
     const anchor = { x: pts[pts.length - 3], y: pts[pts.length - 2] }
     a.snapped = { base: shape, anchor, shape }
-    touchLog.add(`→ punta ferma: diventa ${SHAPE_NAMES[shape.kind]}`)
     this.scheduleLive()
   }
 
@@ -1350,7 +1277,6 @@ export class Board {
   private finishDraw(a: DrawAction, keep: boolean): void {
     this.action = null
     clearTimeout(a.holdTimer)
-    if (touchLog.on) touchLog.add(keep ? `tratto: ${strokeSummary(a)}` : 'tratto scartato')
     if (keep) {
       const s = { ...a.stroke, points: roundPoints(a.stroke.points) }
       // La figura: quella tenendo ferma la penna o, con le forme automatiche, quella che somiglia (solo la penna).
@@ -1373,7 +1299,6 @@ export class Board {
       this.record(step)
       if (shape) {
         this.el.dataset.shape = shape.kind
-        touchLog.add(`figura (${a.snapped ? 'punta ferma' : 'forme automatiche'}): ${SHAPE_NAMES[shape.kind]}`)
       }
       this.lastTouchStep = a.type === 'touch' ? { step, at: performance.now() } : null
       this.persist({ put: [drawn] })
@@ -1431,7 +1356,6 @@ export class Board {
     if (a.type === 'touch') this.cursor = null
     const removed = [...a.removed.values()]
     const added = [...a.added.values()]
-    touchLog.add(removed.length ? `gomma: ${removed.length} ${removed.length === 1 ? 'tratto toccato' : 'tratti toccati'}, ${added.length} ${added.length === 1 ? 'pezzo rimasto' : 'pezzi rimasti'}` : 'gomma: niente da cancellare') // non si traduce: registro dei tocchi
     if (removed.length || added.length) {
       this.record({ removed, added })
       this.persist({ put: added, remove: removed.map((s) => s.id) })
@@ -1531,11 +1455,9 @@ export class Board {
         limits: [Math.min(1, 16 / Math.max(1, side)), Math.max(1, Math.min(20, MAX_SIZE / thickest))],
         menuWasOpen,
       }
-      touchLog.add(hit === 'handle' ? '→ sul pallino della selezione: la ingrandisce' : '→ sulla selezione: la sposta (o, toccandola, il menu)') // non si traduce: registro dei tocchi
       return
     }
     const cleared = !!sel
-    if (sel) touchLog.add('→ fuori dalla selezione: la toglie') // non si traduce: registro dei tocchi
     this.clearSelection()
     this.action = { kind: 'lasso', pointer: ev.pointerId, type: ev.pointerType, points: [this.world(pos)], last: pos, travel: 0, cleared }
     this.scheduleLive()
@@ -1557,15 +1479,12 @@ export class Board {
       const reach = (a.type === 'mouse' ? TAP_REACH.mouse : TAP_REACH.touch) / this.view.zoom
       const hit = strokeAt(this.sorted(), p, reach, (s) => this.boxOf(s))
       if (hit) {
-        touchLog.add('lazo: toccata una linea, selezionata') // non si traduce: registro dei tocchi
         this.select([hit])
       } else if (clipboard && !a.cleared) {
-        touchLog.add('lazo: toccato un punto vuoto, il menu per incollare') // non si traduce: registro dei tocchi
         this.openPasteMenu(p)
-      } else touchLog.add('lazo: toccato un punto vuoto') // non si traduce: registro dei tocchi
+      }
     } else {
       const got = lassoed(this.sorted(), a.points, (s) => this.boxOf(s))
-      touchLog.add(`lazo: ${got.length ? `${got.length} ${got.length === 1 ? 'tratto preso' : 'tratti presi'}` : 'niente dentro'}`) // non si traduce: registro dei tocchi
       this.select(got)
     }
     this.renderLive()
@@ -1601,13 +1520,11 @@ export class Board {
     if (!a.moved || (!t.dx && !t.dy && t.scale === 1)) {
       // Un tocco sulla selezione: apre o chiude il menu.
       if (a.moved) this.render()
-      else touchLog.add(`selezione: toccata, menu ${a.menuWasOpen ? 'chiuso' : 'aperto'}`) // non si traduce: registro dei tocchi
       if (!a.menuWasOpen || a.moved) this.openSelMenu()
       this.renderLive()
       return this.ended()
     }
     const before = this.selected()
-    touchLog.add(a.mode === 'move' ? `selezione: spostata di ${Math.round(t.dx)}, ${Math.round(t.dy)}` : `selezione: ingrandita al ${Math.round(t.scale * 100)}%`) // non si traduce: registro dei tocchi
     this.replaceSelected(before, transformStrokes(before, t))
     this.ended()
   }
@@ -1626,11 +1543,10 @@ export class Board {
     this.select(next)
   }
 
-  private deleteSelection(verb = 'eliminata'): void {
+  private deleteSelection(): void {
     const list = this.selected()
     if (!list.length || this.action) return
     const ids = list.map((s) => s.id)
-    touchLog.add(`selezione: ${verb} (${list.length} ${list.length === 1 ? 'tratto' : 'tratti'})`) // non si traduce: registro dei tocchi
     this.record({ removed: list, added: [], selection: { before: ids, after: [] } })
     this.removeStrokes(ids)
     this.persist({ remove: ids })
@@ -1643,9 +1559,8 @@ export class Board {
     if (!list.length || this.action || !this.selection) return
     // Dopo Taglia la prima copia incollata va dov'era; dopo Copia un po' spostata, per vederla.
     clipboard = { strokes: list.map((s) => ({ ...s, points: s.points.slice() })), box: this.selection.box, shift: cut ? 0 : 1 }
-    if (cut) this.deleteSelection('tagliata')
+    if (cut) this.deleteSelection()
     else {
-      touchLog.add(`selezione: copiata (${list.length} ${list.length === 1 ? 'tratto' : 'tratti'})`) // non si traduce: registro dei tocchi
       this.closeSelMenu()
     }
     this.updateState()
@@ -1670,7 +1585,6 @@ export class Board {
     // Tutto dentro la vista, se ci sta.
     const fix = keepInside(moveBox(clip.box, { ...IDENTITY, ...move }), v, 8 / this.view.zoom)
     const copies = copyStrokes(clip.strokes, move.dx + fix.dx, move.dy + fix.dy, Date.now())
-    touchLog.add(`incollati ${copies.length} ${copies.length === 1 ? 'tratto' : 'tratti'}`)
     this.addCopies(copies)
   }
 
@@ -1678,7 +1592,6 @@ export class Board {
     const list = this.selected()
     if (!list.length || this.action) return
     const d = COPY_SHIFT / this.view.zoom
-    touchLog.add(`selezione: duplicata (${list.length} ${list.length === 1 ? 'tratto' : 'tratti'})`) // non si traduce: registro dei tocchi
     this.addCopies(copyStrokes(list, d, d, Date.now()))
   }
 
@@ -1698,14 +1611,12 @@ export class Board {
     if (!list.length || this.action) return
     const { before, after } = recolor(list, color, highlight)
     if (!before.length) return
-    touchLog.add(`selezione: colore ${(highlight ? highlightName(color as HighlightColor) : inkName(color as InkColor, this.theme)).toLowerCase()} a ${before.length} ${before.length === 1 ? 'tratto' : 'tratti'}`) // non si traduce: registro dei tocchi
     this.replaceSelected(before, after, list.filter((s) => !before.includes(s)))
   }
 
   private selectAll(): void {
     if (this.action || !this.strokes.size) return
     if (this.tool !== 'lasso') this.setTool('lasso')
-    touchLog.add(`selezione: tutto (${this.strokes.size} tratti)`) // non si traduce: registro dei tocchi
     this.select(this.sorted())
   }
 
@@ -1842,7 +1753,6 @@ export class Board {
 
   private finishPan(): void {
     this.action = null
-    touchLog.add(`vista: ingrandita al ${Math.round(this.view.zoom * 100)}%`) // non si traduce: registro dei tocchi
     this.stage.classList.remove('is-panning')
     this.saveViewSoon()
     this.ended()
@@ -1869,7 +1779,6 @@ export class Board {
     const dist = Math.max(1, Math.hypot(p.x - q.x, p.y - q.y))
     // Finché le dita si muovono appena la lavagna sta ferma: la mano che si posa trema un po'.
     if (!a.moving && Math.hypot(mid.x - a.mid.x, mid.y - a.mid.y) < SLOP && Math.abs(dist - a.dist) < SLOP) return
-    if (!a.moving) touchLog.add('→ le dita si muovono: la lavagna le segue') // non si traduce: registro dei tocchi
     a.moving = true
     const zoom = clampZoom((a.before.zoom * dist) / a.dist)
     // Il punto della lavagna che era sotto le dita resta sotto le dita.
@@ -1880,7 +1789,6 @@ export class Board {
 
   private finishPinch(): void {
     this.action = null
-    touchLog.add(`vista: ingrandita al ${Math.round(this.view.zoom * 100)}%`) // non si traduce: registro dei tocchi
     this.saveViewSoon()
     this.ended()
   }
@@ -2076,7 +1984,6 @@ export class Board {
     if (this.action) return
     const step = this.undoStack.pop()
     if (!step) return
-    touchLog.add('annulla')
     this.redoStack.push(step)
     this.apply(step.added, step.removed)
     this.afterHistory(step.selection?.before)
@@ -2086,7 +1993,6 @@ export class Board {
     if (this.action) return
     const step = this.redoStack.pop()
     if (!step) return
-    touchLog.add('ripeti')
     this.undoStack.push(step)
     this.apply(step.removed, step.added)
     this.afterHistory(step.selection?.after)
@@ -2115,7 +2021,6 @@ export class Board {
     const note = this.note
     if (!(await this.opts.confirmClear()) || note !== this.note || this.action) return
     const removed = [...this.strokes.values()]
-    touchLog.add(`pulisci: ${removed.length} tratti tolti`)
     this.record({ removed, added: [] })
     this.apply(removed, [])
     this.clearSelection()

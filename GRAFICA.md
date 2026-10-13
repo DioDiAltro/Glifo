@@ -19,7 +19,7 @@ quando i punti sono tutti fatti si cancella, insieme alla voce «La grafica» di
 | 4 | Più modelli per «Spiegami» | da decidere |
 | 5 | A cosa serve la chiave dell'AI | da decidere |
 | 6 | Glifo anche in inglese | fatto: tutto tradotto, anche le parole delle note, i numeri, l'AI e l'informativa; sul sito vero dal 12 ottobre 2026; lo studente: «va bene» |
-| 7 | Via il registro dei tocchi | deciso: si toglie (manca una risposta) |
+| 7 | Via il registro dei tocchi | fatto sul ramo `prova` il 13 ottobre 2026: aspetta il «va bene» |
 | 8 | Il pulsante ✨ con il contorno | fatto: variante B, sul sito vero dal 12 ottobre 2026; lo studente: «va bene» |
 
 ## 1. «Cambia account»
@@ -495,7 +495,28 @@ togliere insieme, se no `tsc` (noUnusedLocals) si ferma; in `src/main.ts` `touch
 `VIEW_NAMES`; `SHAPE_NAMES` in `src/board/shapes.ts`; le prove `tests/boardTouchLog.test.ts`,
 `tests/boardTouchLogWhere.test.ts` e il pezzo di `scripts/smoke-test.mjs`.
 
-**Risposte e decisioni.** —
+**Risposte e decisioni.** Lo studente, 13 ottobre 2026: «facciamo il punto 7 di GRAFICA.md»; alla domanda
+sull'iPad: «sì, l'ho già fatto e funziona», così il promemoria della prova sull'iPad esce da CLAUDE.md.
+Fatto sul ramo `prova` il 13 ottobre 2026:
+
+- **via dall'interfaccia** il registro in fondo a Impostazioni → Informazioni (ora la sezione finisce con
+  «Privacy e licenze») e il pallino rosso sulla lavagna, con la sua finestra;
+- **via dal codice** `src/board/touchlog.ts` e `src/ui/touchLogPanel.ts`, le righe della lavagna che
+  scrivevano nel registro e quello che serviva solo a loro (in board.ts `ACTION_NAMES`, `TOOL_NAMES`,
+  `strokeSummary`, `verb`, il pulsante con i suoi testi; `SHAPE_NAMES` in shapes.ts; `VIEW_NAMES` e
+  `touchLog.resume()` in main.ts; `openTouchLogDialog` in dialogs.ts), gli stili e le due prove; il modulo
+  non finisce più nemmeno nella pagina delle note condivise. La lavagna funziona come prima: dove una riga
+  del registro era anche un `return`, il `return` è rimasto, e le prove della lavagna nel browser (penna,
+  mano, dita, figure, selezione) passano tutte;
+- **nei browser** all'avvio Glifo toglie quello che il registro aveva lasciato (`glifo.registro.v1`:
+  `forgetOldKeys` in `src/store/storage.ts`), con la sua prova, la controprova e un controllo nella prova
+  nel browser;
+- **l'informativa** senza il paragrafo sul registro, in italiano e in inglese, con la data del 13 ottobre
+  2026; README, ARCHITETTURA.md, ROADMAP.md e CLAUDE.md senza il registro; dall'idea dei commenti resta
+  «allegare una foto della pagina».
+
+Le foto (Impostazioni → Informazioni prima e dopo, computer e telefono, anche in inglese) sono nella chat;
+sul sito di prova https://glifo-prova.pages.dev si prova tutto.
 
 ## 8. Il pulsante ✨ con il contorno
 

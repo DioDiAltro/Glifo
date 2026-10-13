@@ -55,7 +55,7 @@ describe('sito di prova su Cloudflare Pages', () => {
     expect(accountOffMessage('claude')).toContain('dentro claude.ai')
   })
 
-  it('nel registro dei tocchi c\'è il commit anche sul sito di prova', async () => {
+  it('nella versione (Impostazioni → Informazioni) c\'è il commit anche sul sito di prova', async () => {
     expect((await defineFor({ CF_PAGES: '1', CF_PAGES_COMMIT_SHA: 'abc1234def567' })).__GLIFO_VERSION__).toMatch(/^"abc1234, /)
     expect((await defineFor({ GITHUB_SHA: '9f8e7d6c5b4a' })).__GLIFO_VERSION__).toMatch(/^"9f8e7d6, /)
   })

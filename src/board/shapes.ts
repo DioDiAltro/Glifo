@@ -24,24 +24,6 @@ export type Shape =
   /** `angle`: la direzione di `rx`, in radianti. */
   | { kind: 'ellipse' | 'circle'; c: Pt; rx: number; ry: number; angle: number }
 
-export type ShapeKind = Shape['kind']
-
-/** I nomi delle figure, per il registro dei tocchi. */
-export const SHAPE_NAMES: Record<ShapeKind, string> = {
-  line: 'linea',
-  arrow: 'freccia',
-  polyline: 'spezzata',
-  triangle: 'triangolo',
-  rectangle: 'rettangolo',
-  square: 'quadrato',
-  diamond: 'rombo',
-  quadrilateral: 'quadrilatero',
-  pentagon: 'pentagono',
-  hexagon: 'esagono',
-  ellipse: 'ellisse',
-  circle: 'cerchio',
-}
-
 export interface RecognizeOptions {
   /** Quante unità della lavagna fa un pixel dello schermo (1 / ingrandimento). */
   unit?: number

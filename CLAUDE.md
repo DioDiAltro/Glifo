@@ -92,7 +92,7 @@ documentazione, non codice: la regola di delegare all'esploratore vale per il co
 - `src/spreadsheet/`: le tabelle con le formule come Excel (blocchi ```tabella), con il loro editor e i file .xlsx e .csv.
 - `src/math/`: le espressioni delle formule: lettura, calcoli e il «foglio» della nota con i controlli.
 - `src/graph/`: i grafici nella nota (2D e 3D, zone, piano di Gauss, statistica, i dati delle tabelle, il Gantt e il reticolo) con gli slider.
-- `src/board/`: la lavagna per scrivere a mano accanto al testo, con il registro dei tocchi.
+- `src/board/`: la lavagna per scrivere a mano accanto al testo.
 - `src/ai/`: assistente AI, con la chiave di chi lo usa, e «Spiegami» (in prova): Qwen3 nel browser con WebLLM, con il motore come strumenti.
 - `src/i18n.ts`: le due lingue dell'interfaccia (la lingua della pagina e le tabelle dei testi).
 - `src/host.ts`: funzioni della demo dentro claude.ai.
@@ -119,8 +119,7 @@ documentazione, non codice: la regola di delegare all'esploratore vale per il co
   disegno vecchio.
 - Sulla lavagna touchstart, touchmove e touchend sono annullati: sull'iPad selezionavano le parole
   e facevano partire Scribble.
-- Chiave, modello e indirizzo di ogni servizio dell'AI restano nel browser; il registro dei tocchi
-  non tiene mai il testo delle note (`where`).
+- Chiave, modello e indirizzo di ogni servizio dell'AI restano nel browser.
 - Prima di sincronizzare, scaricare o eliminare, `src/account/supabase.ts` controlla che l'accesso
   salvato nel browser sia dell'account aperto.
 - L'email per entrare parte solo con il token di Cloudflare Turnstile (`src/account/captcha.ts`, il
@@ -158,12 +157,6 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
   Table Editor → `feedback`, dove ci sono anche quelli privati. Lì si risponde (colonna `reply`: si
   vede sotto il commento), si nasconde dalla pagina un commento che non va (`visible` → false) e si
   cancellano quelli che non servono più; oppure lo si chiede a Claude.
-- Provare la lavagna sull'iPad con la Apple Pencil, quando l'avrà di nuovo: le correzioni del 5
-  ottobre 2026 sono già online. Prima accendere il registro dei tocchi (Impostazioni → Informazioni, in fondo).
-  Scrivendo non si deve selezionare niente, a tutto schermo la lavagna non si deve chiudere e la
-  mano appoggiata non deve spostarla né premere i pulsanti; per spostarla servono due dita. Poi dire
-  com'è andata e, se qualcosa non va, premere il pallino rosso sulla lavagna, scrivere cosa è
-  successo e mandare il registro nella chat (Copia, oppure Scarica o Condividi e allegarlo).
 
 ## Regole
 

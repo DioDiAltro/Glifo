@@ -84,7 +84,7 @@ Lo studente, «ora la grafica»: otto cose viste a colpo d'occhio, da discutere 
 toccare il codice, ricordando che Glifo avrà gli abbonamenti (vedi ABBONAMENTI.md, «Com'è andata la
 discussione», punto 18): 1) «Cambia account»; 2) la pagina dei commenti, tipo FAQ; 3) le impostazioni
 divise in sezioni; 4) più modelli per «Spiegami»; 5) a cosa serve la chiave dell'AI; 6) Glifo anche in
-inglese; 7) via il registro dei tocchi (deciso); 8) il pulsante ✨ con il contorno.
+inglese; 7) via il registro dei tocchi; 8) il pulsante ✨ con il contorno.
 
 Com'è oggi ogni punto, le proposte di Claude, le domande e le decisioni sono in
 [GRAFICA.md](GRAFICA.md), un file solo per questo lavoro: quando i punti sono fatti si cancella, e qui
@@ -100,7 +100,8 @@ scelta dallo studente). Lo studente, il 13 ottobre 2026: «quello che hai fatto 
 le impostazioni divise in sezioni (Generale, Scrittura, AI, Account, Dati, Informazioni; l'account è la
 sezione «Account», aperta dal pulsante dell'account; in «Dati» lo spazio occupato, con i modelli di
 «Spiegami»), è sul sito dal 13 ottobre 2026: lo studente, viste le foto, «va bene, portalo sul sito
-vero».
+vero». Il punto 7, via il registro dei tocchi, è fatto sul ramo `prova` il 13 ottobre 2026 e aspetta il
+«va bene» dello studente.
 
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
@@ -308,7 +309,7 @@ Idee per dopo:
   a sé, invece di riscriverlo;
 - le risposte di chi prova Glifo sotto un commento, come in un forum vero (servirebbe controllare
   quello che si scrive);
-- allegare, se chi scrive vuole, il registro dei tocchi o una foto della pagina;
+- allegare, se chi scrive vuole, una foto della pagina;
 - rispondere da Glifo a chi ha lasciato l'email.
 
 ### La lavagna: idee in più
@@ -318,10 +319,10 @@ lavagna» e poi, vista sul ramo `prova`, «va bene, pubblicala»). È descritta 
 `src/board/`: la vista «Lavagna» accanto al testo (sul telefono al suo posto, e a tutto schermo con
 un pulsante), penna con la pressione, gomma che taglia i tratti, quattro colori, annulla e ripeti,
 due dita per spostare e ingrandire, il palmo che non scrive; una lavagna per nota, salvata su quel
-dispositivo (IndexedDB), che va nel backup e non nell'account. C'è anche il registro dei tocchi
-(fatto il 5 ottobre 2026, chiesto dallo studente per la prova sull'iPad): acceso nelle impostazioni,
-annota penna, dita, le decisioni della lavagna e quello che fa il browser, e si manda nella chat
-con Claude. La discussione è in [ABBONAMENTI.md](ABBONAMENTI.md), «La lavagna». Se servirà:
+dispositivo (IndexedDB), che va nel backup e non nell'account. Il registro dei tocchi, fatto il 5
+ottobre 2026 per la prova sull'iPad, è stato tolto il 13 ottobre 2026: serviva solo mentre si faceva
+la lavagna (GRAFICA.md, punto 7). La discussione è in [ABBONAMENTI.md](ABBONAMENTI.md), «La
+lavagna». Se servirà:
 
 - con l'AI e nei piani a pagamento, le formule scritte a mano convertite in LaTeX e aggiunte alla
   nota se si vuole («Aggiungi alla nota»): aspetta la discussione sulla chiave API;
@@ -354,9 +355,8 @@ con Claude. La discussione è in [ABBONAMENTI.md](ABBONAMENTI.md), «La lavagna�
 - sull'iPad la prima prova (5 ottobre 2026) ha trovato quattro problemi, corretti subito: le parole
   che si selezionavano, la lavagna che si chiudeva e l'iPad che la prendeva per una tastiera (era lo
   schermo intero di Safari, che lì non si usa più), e la mano appoggiata (con la penna un dito solo
-  non fa niente). Le correzioni sono online ma vanno ancora provate sull'iPad, che lo studente per
-  ora non ha: con il registro dei tocchi acceso, così se qualcosa non va lo si manda a Claude. Se
-  resta qualcosa, o con la tavoletta grafica senza schermo, si sistema.
+  non fa niente). Poi lo studente ha provato le correzioni sull'iPad con la Apple Pencil: «funziona»
+  (13 ottobre 2026). Se qualcosa non andrà con la tavoletta grafica senza schermo, si sistema.
 
 ### Schemi: idee in più
 

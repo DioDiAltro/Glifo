@@ -121,3 +121,21 @@ export function migrateKeyPrefix(oldPrefix: string, newPrefix: string): void {
     /* i vecchi dati restano dove sono */
   }
 }
+
+/**
+ * Le chiavi di parti di Glifo che non ci sono più: `glifo.registro.v1` era il registro dei tocchi
+ * della lavagna, tolto il 13 ottobre 2026 (GRAFICA.md, punto 7).
+ */
+export const OLD_KEYS = ['glifo.registro.v1']
+
+/** Toglie dal browser quello che hanno lasciato le parti che non ci sono più. Va chiamata all'avvio. */
+export function forgetOldKeys(): void {
+  if (!hasLocalStorage()) return
+  for (const k of OLD_KEYS) {
+    try {
+      localStorage.removeItem(k)
+    } catch {
+      /* resta: si riprova al prossimo avvio */
+    }
+  }
+}
