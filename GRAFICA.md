@@ -16,7 +16,7 @@ quando i punti sono tutti fatti si cancella, insieme alla voce «La grafica» di
 | 1 | «Cambia account» | fatto: sul sito dal 12 ottobre; lo studente: «va bene» |
 | 2 | La pagina dei commenti, tipo FAQ | fatto: sul sito dal 13 ottobre 2026; lo studente: «va bene» |
 | 3 | Le impostazioni divise in sezioni | fatto: sul sito dal 13 ottobre 2026; lo studente: «va bene» |
-| 4 | Più modelli per «Spiegami» | fatto sul ramo `prova` il 13 ottobre 2026: lo studente lo deve vedere |
+| 4 | Più modelli per «Spiegami» | fatto sul ramo `prova` il 13 ottobre 2026; prossimo passo: provare i modelli veri con Hugging Face |
 | 5 | A cosa serve la chiave dell'AI | da decidere |
 | 6 | Glifo anche in inglese | fatto: tutto tradotto, anche le parole delle note, i numeri, l'AI e l'informativa; sul sito vero dal 12 ottobre 2026; lo studente: «va bene» |
 | 7 | Via il registro dei tocchi | fatto: sul sito dal 13 ottobre 2026; lo studente: «va bene» |
@@ -394,6 +394,16 @@ né i Qwen3.5. Fatto sul ramo `prova` il 13 ottobre 2026:
 
 Le foto (computer e telefono, tema chiaro e scuro) sono nella chat; sul sito di prova
 https://glifo-prova.pages.dev si prova tutto, anche con i modelli veri, su un computer con Chrome o Edge.
+
+**Prossimo passo.** Lo studente, 13 ottobre 2026: «salva sul file che stiamo per provare i modelli con
+huggingface». Nella prossima sessione, prima di portare il punto 4 sul sito vero, si provano i modelli
+veri: il Qwen3 8B, i Qwen3.5 (scrivono le chiamate al motore nel loro formato, <function=…>, che Glifo
+ora legge) e un paio degli altri, per esempio Llama 3.2 1B, che non sa chiedere i conti. Si fa con
+`MODELLO=<nome> node scripts/spiegami-qwen.mjs` sulla build in `dist/`: serve che l'ambiente lasci
+passare la rete verso `huggingface.co` e `*.hf.co` (in questa sessione era bloccata). Il collegamento a
+Hugging Face di claude.ai, attivo dal 13 ottobre, legge i file dei modelli sull'Hub (il chat template, la
+licenza, l'elenco dei pezzi) ma non li fa girare. Se i Qwen3.5 vanno bene passano tra i consigliati
+(`FAMILIES` in src/ai/localModels.ts); com'è andata si scrive qui.
 
 ## 5. A cosa serve la chiave dell'AI
 
