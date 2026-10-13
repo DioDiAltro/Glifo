@@ -103,6 +103,12 @@ export const ICONS = {
   image: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5-5-8 8"/>',
   chevron: '<path d="M9 6l6 6-6 6"/>',
   chevronDown: '<path d="M6 9l6 6 6-6"/>',
+  /** La freccia per tornare indietro (sul telefono, dalle sezioni delle impostazioni all'elenco). */
+  back: '<path d="M19 12H5M11 18l-6-6 6-6"/>',
+  /** «Informazioni»: la i in un cerchio. */
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/>',
+  /** «Dati»: i dischi di un archivio. */
+  database: '<ellipse cx="12" cy="5.5" rx="8" ry="2.5"/><path d="M4 5.5v13c0 1.4 3.6 2.5 8 2.5s8-1.1 8-2.5v-13M4 12c0 1.4 3.6 2.5 8 2.5s8-1.1 8-2.5"/>',
   copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
   file: '<path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/>',
   folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',

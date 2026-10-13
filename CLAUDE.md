@@ -86,8 +86,8 @@ documentazione, non codice: la regola di delegare all'esploratore vale per il co
 - `src/lists/`: i marcatori degli elenchi (`markers.ts`), usati da editor e anteprima.
 - `src/spell/`: controllo ortografico (Hunspell in WebAssembly in un worker).
 - `src/render/`: KaTeX e anteprima Markdown; i conti per spostare schemi e grafici con le frecce ↑ ↓.
-- `src/ui/`: interfaccia: barra laterale, pulsanti volanti, barra di formattazione, anteprima, tutorial, la pagina «Commenti».
-- `src/store/`: note, cartelle, impostazioni e misure delle sezioni nel browser (chiavi `glifo.*`).
+- `src/ui/`: interfaccia: barra laterale, pulsanti volanti, barra di formattazione, anteprima, tutorial, la pagina «Commenti», le impostazioni divise in sezioni (`settings.ts`, con dentro l'account).
+- `src/store/`: note, cartelle, impostazioni e misure delle sezioni nel browser (chiavi `glifo.*`), e quanto spazio occupano.
 - `src/schema/`: schemi stile draw.io con maxGraph: editor a tutto schermo, corsie dei processi, file .md, codice SQL.
 - `src/spreadsheet/`: le tabelle con le formule come Excel (blocchi ```tabella), con il loro editor e i file .xlsx e .csv.
 - `src/math/`: le espressioni delle formule: lettura, calcoli e il «foglio» della nota con i controlli.
@@ -159,7 +159,7 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
   vede sotto il commento), si nasconde dalla pagina un commento che non va (`visible` → false) e si
   cancellano quelli che non servono più; oppure lo si chiede a Claude.
 - Provare la lavagna sull'iPad con la Apple Pencil, quando l'avrà di nuovo: le correzioni del 5
-  ottobre 2026 sono già online. Prima accendere il registro dei tocchi (Impostazioni, in fondo).
+  ottobre 2026 sono già online. Prima accendere il registro dei tocchi (Impostazioni → Informazioni, in fondo).
   Scrivendo non si deve selezionare niente, a tutto schermo la lavagna non si deve chiudere e la
   mano appoggiata non deve spostarla né premere i pulsanti; per spostarla servono due dita. Poi dire
   com'è andata e, se qualcosa non va, premere il pallino rosso sulla lavagna, scrivere cosa è

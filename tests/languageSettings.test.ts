@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { setLangForTests, type Lang } from '../src/i18n'
 import { DEFAULT_SETTINGS } from '../src/store/settings'
-import { openSettingsDialog } from '../src/ui/dialogs'
+import { openSettingsDialog } from '../src/ui/settings'
 
 // jsdom non ha showModal.
 HTMLDialogElement.prototype.showModal = function () {

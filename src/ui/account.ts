@@ -68,7 +68,8 @@ const T = texts({
   ],
   notArrived: ['Non è arrivata? Guarda anche nello spam. {resend}', 'Didn\'t get it? Check your spam folder too. {resend}'],
   changeEmail: ['Cambia indirizzo', 'Change email'],
-  // La finestra dell'account.
+  // La sezione «Account» delle impostazioni.
+  notSignedIn: ['Non sei entrato in un account.', 'You\'re not signed in.'],
   syncNow: ['Sincronizza ora', 'Sync now'],
   signInAgain: ['Accedi di nuovo', 'Sign in again'],
   guestNotes: ['Appunti di questo browser', 'Notes in this browser'],
@@ -403,8 +404,8 @@ export function openLoginDialog(opts: {
   dialog.showModal()
 }
 
-/** L'account con cui si è entrati: stato della sincronizzazione, appunti da aggiungere, uscita. */
-export function openAccountDialog(opts: {
+/** Cosa serve alla sezione «Account» delle impostazioni (src/ui/settings.ts), con chi è entrato. */
+export interface AccountSectionDeps {
   email: string
   status: SyncStatus
   onStatus(listener: (status: SyncStatus) => void): () => void
@@ -419,23 +420,34 @@ export function openAccountDialog(opts: {
   /** «Scarica i miei dati»: prepara il file e lo scarica (gli errori li mostra lei). */
   onDownload(): Promise<void>
   onDelete(): void
-}): void {
+}
+
+/**
+ * La sezione «Account» delle impostazioni con chi è entrato (fino al 13 ottobre 2026 era una finestra
+ * sua): lo stato della sincronizzazione, gli appunti da aggiungere, il cambio di account e l'uscita, i
+ * dati dell'account. `close` chiude le impostazioni prima delle azioni che aprono un'altra finestra o
+ * ricaricano la pagina; `dispose` smette di seguire la sincronizzazione, quando le impostazioni si chiudono.
+ */
+export function accountSection(opts: AccountSectionDeps, close: () => void): { nodes: HTMLElement[]; dispose(): void } {
   const statusEl = h('p', { class: 'account-status', attrs: { 'aria-live': 'polite' } })
   const syncButton = h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => opts.syncNow() } }, icon(ICONS.refresh, 15), T.syncNow)
-  const relogin = h(
-    'button',
-    {
-      class: 'btn btn-primary',
-      attrs: { type: 'button' },
-      on: {
-        click: () => {
-          dialog.close()
-          opts.onRelogin()
+  // Le azioni che aprono un'altra finestra o ricaricano la pagina chiudono prima le impostazioni.
+  const closing = (label: string, action: () => void, className = 'btn') =>
+    h(
+      'button',
+      {
+        class: className,
+        attrs: { type: 'button' },
+        on: {
+          click: () => {
+            close()
+            action()
+          },
         },
       },
-    },
-    T.signInAgain,
-  )
+      label,
+    )
+  const relogin = closing(T.signInAgain, () => opts.onRelogin(), 'btn btn-primary')
   const render = (status: SyncStatus) => {
     statusEl.textContent = statusText(status)
     statusEl.dataset.kind = status.kind
@@ -475,88 +487,67 @@ export function openAccountDialog(opts: {
     download.disabled = true
     void opts.onDownload().finally(() => (download.disabled = false))
   })
-  const dialog = dialogShell(
-    'Account',
-    [
-      h(
-        'fieldset',
-        {},
-        h('p', { class: 'account-email' }, ...rich(T.signedInAs, { email: h('strong', {}, opts.email) })),
-        statusEl,
-        h('div', { class: 'button-row' }, syncButton, relogin),
-      ),
-      guest,
-      h(
-        'fieldset',
-        {},
-        h('legend', {}, T.switchOrSignOut),
-        h('p', { class: 'field-help' }, T.switchHelp),
-        h(
-          'div',
-          { class: 'button-row' },
-          h(
-            'button',
-            {
-              class: 'btn',
-              attrs: { type: 'button' },
-              on: {
-                click: () => {
-                  dialog.close()
-                  opts.onSwitch()
-                },
-              },
-            },
-            T.switchAccount,
-          ),
-          h(
-            'button',
-            {
-              class: 'btn',
-              attrs: { type: 'button' },
-              on: {
-                click: () => {
-                  dialog.close()
-                  opts.onSignOut()
-                },
-              },
-            },
-            T.signOut,
-          ),
-        ),
-      ),
-      h(
-        'fieldset',
-        {},
-        h('legend', {}, T.yourData),
-        h('p', { class: 'field-help' }, T.dataHelp),
-        h(
-          'div',
-          { class: 'button-row' },
-          download,
-          h(
-            'button',
-            {
-              class: 'btn btn-danger-quiet',
-              attrs: { type: 'button' },
-              on: {
-                click: () => {
-                  dialog.close()
-                  opts.onDelete()
-                },
-              },
-            },
-            T.deleteAccountButton,
-          ),
-        ),
-        h('p', { class: 'field-help' }, ...rich(T.howWeHandle, { privacy: privacyLink() })),
-      ),
-    ],
-    'dialog-account',
-  )
+  const nodes = [
+    h(
+      'fieldset',
+      { class: 'account-signed-in' },
+      h('p', { class: 'account-email' }, ...rich(T.signedInAs, { email: h('strong', {}, opts.email) })),
+      statusEl,
+      h('div', { class: 'button-row' }, syncButton, relogin),
+    ),
+    guest,
+    h(
+      'fieldset',
+      {},
+      h('legend', {}, T.switchOrSignOut),
+      h('p', { class: 'field-help' }, T.switchHelp),
+      h('div', { class: 'button-row' }, closing(T.switchAccount, () => opts.onSwitch()), closing(T.signOut, () => opts.onSignOut())),
+    ),
+    h(
+      'fieldset',
+      {},
+      h('legend', {}, T.yourData),
+      h('p', { class: 'field-help' }, T.dataHelp),
+      h('div', { class: 'button-row' }, download, closing(T.deleteAccountButton, () => opts.onDelete(), 'btn btn-danger-quiet')),
+      h('p', { class: 'field-help' }, ...rich(T.howWeHandle, { privacy: privacyLink() })),
+    ),
+  ].filter((node): node is HTMLFieldSetElement => node !== null)
   render(opts.status)
-  const unsubscribe = opts.onStatus(render)
-  dialog.addEventListener('close', unsubscribe)
-  dialog.showModal()
+  return { nodes, dispose: opts.onStatus(render) }
+}
+
+/**
+ * La sezione «Account» senza account: cosa dà l'account e «Accedi», che chiude le impostazioni e apre
+ * la finestra per entrare (dove l'account è spento, quella che dice perché lì non si entra).
+ */
+export function guestAccountSection(signIn: () => void, close: () => void): HTMLElement[] {
+  return [
+    h(
+      'fieldset',
+      { class: 'account-guest' },
+      h('p', { class: 'account-email' }, T.notSignedIn),
+      h('p', { class: 'field-help' }, T.loginIntro),
+      h(
+        'div',
+        { class: 'button-row' },
+        h(
+          'button',
+          {
+            class: 'btn btn-primary',
+            attrs: { type: 'button' },
+            on: {
+              click: () => {
+                close()
+                signIn()
+              },
+            },
+          },
+          icon(ICONS.user, 15),
+          T.signIn,
+        ),
+      ),
+    ),
+  ]
 }
 
 /**

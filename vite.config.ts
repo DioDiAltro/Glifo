@@ -68,8 +68,9 @@ export default defineConfig({
             ],
           },
           workbox: {
-            // Anche i dizionari del controllo ortografico (.aff e .dic), per usarlo offline.
-            globPatterns: ['**/*.{js,css,html,svg,png,woff2,aff,dic}'],
+            // Anche i dizionari del controllo ortografico (.aff e .dic), per usarlo offline, e i testi
+            // delle licenze (licenze/*.txt), che si aprono da Impostazioni → Informazioni.
+            globPatterns: ['**/*.{js,css,html,svg,png,woff2,aff,dic,txt}'],
             maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
             // L'SDK dell'assistente AI si scarica solo quando serve; service e hunspell.web
             // servono solo dove i worker non sono ammessi (il correttore di solito gira in un worker).

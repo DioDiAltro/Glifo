@@ -10,7 +10,7 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   la prima volta dal browser, la prima tra italiano e inglese nelle sue lingue, se no inglese; con appunti
   già nel browser, anche `matherdown.*`, italiano) e `rememberLanguage` (store/settings.ts, all'avvio in
   main.ts) la scrive tra le impostazioni, così gli appunti scritti dopo non la cambiano. Cambiarla
-  (Impostazioni → «Lingua», il primo riquadro) salva la nota e ricarica la pagina. Va con l'account, come
+  (Impostazioni → Generale, «Lingua», il primo riquadro) salva la nota e ricarica la pagina. Va con l'account, come
   il tema (`ACCOUNT_SETTINGS`, scelta dello studente il 12 ottobre): quando cambia in un'altra scheda o
   arriva dall'account (`languageChangedElsewhere` in main.ts), la pagina appena aperta si ricarica da
   sola, mentre se si è già premuto un tasto o toccato lo schermo (`interacted`) lo chiede con
@@ -105,6 +105,27 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   tradotto);
   chiuso quello della prima volta, o lasciato per le scorciatoie, `showTutorialHint` mostra un
   fumetto che punta al «?» (o al logo, se la barra è chiusa) e se ne va da solo dopo 8 secondi.
+  Le impostazioni (`settings.ts`, 13 ottobre 2026, GRAFICA.md punto 3) sono una finestra con le sezioni
+  Generale (lingua, per prima, poi tema e dimensione del testo), Scrittura (i `$` automatici, il controllo
+  ortografico, il dizionario), AI (prima «Spiegazioni», `explainFieldset`, poi l'assistente con la chiave,
+  `aiFieldset`), Account, Dati (backup e «Spazio in questo browser») e Informazioni (la versione da
+  `__GLIFO_VERSION__`, «Come si usa» e «Commenti», che si aprono sopra, l'informativa, le licenze di
+  `licenses.ts` con i testi in `public/licenze/`, precaricati per l'offline, e in fondo il registro dei
+  tocchi): a sinistra l'elenco (`role="tablist"`, verticale, le frecce scorrono e aprono), a destra la
+  sezione, che scorre da sola in una finestra di altezza fissa. Sotto i 600 px (`PHONE`, lo stesso numero
+  in app.css) la finestra prende lo schermo e va a pagine: `data-view` dice se si vede l'elenco, con una
+  riga che descrive ogni sezione, o una sezione, con la freccia per tornare e il suo nome nella testata
+  (le frecce lì spostano soltanto). Ogni sezione si costruisce la prima volta che si apre e poi resta
+  com'è; `shown` rifà quello che può cambiare (se il modello di «Spiegami» c'è, lo spazio). Ogni cambio
+  vale subito, e il tema si cambia solo qui. `openSettingsDialog(deps, section)` apre su una sezione:
+  il pulsante dell'account su «Account» (`openAccount` in main.ts, con `accountDeps`; senza account resta
+  la finestra per entrare), gli errori dell'AI e di «Spiegami» su «AI»; `data-section` dice quella
+  aperta. Nei testi un collegamento porta da una sezione all'altra (dalla lingua a «Scrittura», dal
+  backup ad «Account»). Lo spazio: gli appunti da localStorage (`notesBytes` in `src/store/usage.ts`, le
+  chiavi `glifo.*` in UTF-8), le lavagne da IndexedDB (`bytes` in `src/board/store.ts`, i punti a 4
+  byte), i modelli dalla Cache Storage di WebLLM (`modelsInBrowser` in `src/ai/localModels.ts`: i
+  `nbytes` di tensor-cache.json, senza leggere i pezzi; «Togli» con `localLlm().remove`) e il totale da
+  `navigator.storage.estimate`, con quanto il browser concede.
   I messaggi brevi in basso sono `toast.ts`; con un pulsante (per esempio «Ricarica») restano finché
   non lo si preme o non li si chiude. L'avviso lasciato prima di ricaricare la pagina (`notice.ts`)
   resta 8 secondi. `siteUpdate.ts` (8 ottobre 2026) serve quando il sito si aggiorna con
@@ -117,7 +138,7 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   carica in anticipo l'editor degli schemi o delle tabelle della nota aperta, così «Modifica» lo apre
   subito anche dopo una pubblicazione.
   `src/store/`: note, cartelle (`folders.ts`), impostazioni e misure delle sezioni (`layout.ts`,
-  solo su quel dispositivo) nel browser (chiavi `glifo.*`). `restore.ts` è «Ripristina backup»: una
+  solo su quel dispositivo) nel browser (chiavi `glifo.*`); `usage.ts` misura quanto occupano. `restore.ts` è «Ripristina backup»: una
   nota con lo stesso id e lo stesso testo non si raddoppia, le altre tornano con il loro id se è
   libero (`adopt`), così l'account le riconosce e le lavagne le ritrovano; una lavagna va sulla sua
   nota solo se lì non c'è già niente di scritto (9 ottobre 2026: prima ogni ripristino aggiungeva
@@ -396,7 +417,7 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   senza quello del browser, `device.ts`: Safari ne usciva prendendo la penna per una tastiera; sotto,
   il resto dell'app è nascosto con `.board-full`). Sulla lavagna touchstart, touchmove e touchend
   sono annullati: sull'iPad selezionavano le parole e facevano partire Scribble. `touchlog.ts` è il
-  registro dei tocchi (`glifo.registro.v1`, acceso nelle impostazioni da `src/ui/touchLogPanel.ts`;
+  registro dei tocchi (`glifo.registro.v1`, acceso in fondo a Impostazioni → Informazioni da `src/ui/touchLogPanel.ts`;
   riprende all'avvio con `touchLog.resume()` in main.ts, perché il modulo finisce anche in nota.html):
   penna, dita e mouse (i movimenti uniti in una riga), le decisioni della lavagna (le righe con «→»,
   scritte da board.ts) e il browser (tocchi presi dal sistema, selezione, fuoco, scrittura, tastiera,
@@ -439,7 +460,7 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   spiegazione (`.explain-box`: scaricamento, testo mentre arriva, passaggi con `checkHtml`, «Inserisci
   nella nota» con `insertExplanation` dopo il blocco della formula, «Rifai»); resta finché non si chiude.
   Dentro claude.ai lo dice subito (la pagina blocca i download). Impostazioni `localModel` ed
-  `explainTone`, solo su questo dispositivo (`explainFieldset` in `src/ui/dialogs.ts`). Nella PWA il
+  `explainTone`, solo su questo dispositivo (`explainFieldset` in `src/ui/settings.ts`, sezione «AI»). Nella PWA il
   worker non è tra i file precaricati: alla prima spiegazione va nella cache `glifo-webllm`, per
   l'offline. Nelle prove nel browser il worker è sostituito da uno finto (`fakeLlmWorker` in
   `scripts/smoke-test.mjs`; per un grafico risponde con tre punti, uno sbagliato, per uno schema e una
@@ -513,7 +534,12 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   che ha già lo spazio, `completeSignIn` rimette le sue impostazioni (`restorePrefs`; senza, la
   sincronizzazione le riscarica tutte); il cambio senza il pulsante (accesso scaduto, «Accedi di
   nuovo» e un altro account Google) mette da parte quelle dell'account di prima e lo dice con un
-  avviso. Google chiede sempre quale account usare (`prompt: 'select_account'`).
+  avviso. Google chiede sempre quale account usare (`prompt: 'select_account'`). Dal 13 ottobre 2026
+  (GRAFICA.md punto 3) la finestra dell'account è la sezione «Account» delle impostazioni
+  (`accountSection` in `src/ui/account.ts`: lo stato, che segue la sincronizzazione finché le
+  impostazioni sono aperte, gli appunti da aggiungere, «Cambia account» ed «Esci», «Scarica i miei dati»
+  ed «Elimina account…»; le azioni che aprono un'altra finestra o ricaricano la pagina chiudono prima le
+  impostazioni). Senza account la sezione dice cosa dà l'account e ha «Accedi» (`guestAccountSection`).
   `captcha.ts` chiede a Cloudflare Turnstile il token anti-robot prima dell'email (lo script si
   scarica solo allora; la chiave del sito è in `config.ts`, nelle prove nel browser Turnstile è finto).
   Nella build per claude.ai (`GLIFO_NO_PWA=1`), dentro claude.ai (`inClaudeViewer`) e sul sito di

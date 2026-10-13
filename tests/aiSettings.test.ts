@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { openSettingsDialog } from '../src/ui/dialogs'
+import { openSettingsDialog } from '../src/ui/settings'
 import { DEFAULT_SETTINGS, type Settings } from '../src/store/settings'
 
 // jsdom non ha le finestre modali.
@@ -16,15 +16,19 @@ afterEach(() => document.body.replaceChildren())
 
 function open(settings: Partial<Settings> = {}): { changes: Partial<Settings>[]; section: HTMLElement } {
   const changes: Partial<Settings>[] = []
-  openSettingsDialog({
-    settings: { ...DEFAULT_SETTINGS, ...settings },
-    onChange: (next) => changes.push(next),
-    onLanguageChange: () => {},
-    personalWords: [],
-    onPersonalWordsChange: (words) => words,
-    onBackup: () => {},
-    onRestore: () => {},
-  })
+  // L'assistente e le spiegazioni sono nella sezione «AI».
+  openSettingsDialog(
+    {
+      settings: { ...DEFAULT_SETTINGS, ...settings },
+      onChange: (next) => changes.push(next),
+      onLanguageChange: () => {},
+      personalWords: [],
+      onPersonalWordsChange: (words) => words,
+      onBackup: () => {},
+      onRestore: () => {},
+    },
+    'ai',
+  )
   return { changes, section: document.querySelector<HTMLElement>('fieldset.ai-settings')! }
 }
 

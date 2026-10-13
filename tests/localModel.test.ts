@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LocalAbort, LocalLlm, localErrorMessage, type WorkerLike } from '../src/ai/local'
-import { GLIFO_ERROR, LOCAL_MODELS, localModel, modelInBrowser, modelName, webllmId, type FromWorker, type ToWorker } from '../src/ai/localModels'
+import { GLIFO_ERROR, LOCAL_MODELS, localModel, modelInBrowser, modelName, modelsInBrowser, webllmId, type FromWorker, type ToWorker } from '../src/ai/localModels'
 
 /** Un worker finto: tiene i messaggi ricevuti e risponde con `reply`. */
 function fakeWorker(reply: (msg: ToWorker, send: (m: FromWorker) => void) => void) {
@@ -60,6 +60,46 @@ describe('il modello già scaricato', () => {
 
   it('senza Cache Storage: non c\'è', async () => {
     expect(await modelInBrowser('Qwen3-1.7B')).toBe(false)
+    expect(await modelsInBrowser()).toEqual([])
+  })
+
+  it('quanto pesano i modelli scaricati, anche a metà, dall\'elenco dei pezzi (senza leggerli)', async () => {
+    const small = 'https://huggingface.co/mlc-ai/Qwen3-0.6B-q4f32_1-MLC/resolve/main/'
+    const big = 'https://huggingface.co/mlc-ai/Qwen3-4B-q4f16_1-MLC/resolve/main/'
+    const stored = new Map<string, { json?: unknown; length?: string }>([
+      [`${small}tensor-cache.json`, { json: { records: [{ dataPath: 'params_shard_0.bin', nbytes: 300_000_000 }, { dataPath: 'params_shard_1.bin', nbytes: 100_000_000 }] } }],
+      [`${small}params_shard_0.bin`, {}],
+      [`${small}params_shard_1.bin`, {}],
+      // Del 4B solo il primo pezzo: è scaricato a metà. Il secondo elenco non ha `nbytes`: vale il file.
+      [`${big}tensor-cache.json`, { json: { records: [{ dataPath: 'params_shard_0.bin' }, { dataPath: 'params_shard_1.bin' }] } }],
+      [`${big}params_shard_0.bin`, { length: '1200000000' }],
+    ])
+    const cache = {
+      match: async (url: string) => {
+        const entry = stored.get(url)
+        return entry ? { json: async () => entry.json, headers: new Headers(entry.length ? { 'content-length': entry.length } : {}) } : undefined
+      },
+      keys: async () => [...stored.keys()].map((url) => ({ url })),
+    }
+    const opened: string[] = []
+    vi.stubGlobal('caches', {
+      has: async (name: string) => name === 'webllm/model',
+      open: async (name: string) => {
+        opened.push(name)
+        return cache
+      },
+    })
+    expect(await modelsInBrowser()).toEqual([
+      { id: 'Qwen3-0.6B', name: 'Qwen3 0.6B', bytes: 400_000_000, complete: true },
+      { id: 'Qwen3-4B', name: 'Qwen3 4B', bytes: 1_200_000_000, complete: false },
+    ])
+    expect(await modelInBrowser('Qwen3-0.6B')).toBe(true)
+    expect(await modelInBrowser('Qwen3-4B')).toBe(false)
+    // Se WebLLM non ha mai aperto la sua cache, non la si crea per guardarci dentro.
+    opened.length = 0
+    vi.stubGlobal('caches', { has: async () => false, open: async (name: string) => (opened.push(name), cache) })
+    expect(await modelsInBrowser()).toEqual([])
+    expect(opened).toEqual([])
   })
 })
 

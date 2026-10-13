@@ -41,7 +41,8 @@ import { BLOCK_NAMES } from './ui/moveButtons'
 import { loadPaneSizes, savePaneSizes } from './store/layout'
 import { migrateKeyPrefix, storageAvailable } from './store/storage'
 import { ICONS, h, icon } from './ui/dom'
-import { confirmDialog, openHelpDialog, openSettingsDialog, openTouchLogDialog, promptDialog } from './ui/dialogs'
+import { confirmDialog, openHelpDialog, openTouchLogDialog, promptDialog } from './ui/dialogs'
+import { openSettingsDialog, type SettingsSection } from './ui/settings'
 import { aiActivity } from './ui/aiActivity'
 import { openCommentsDialog } from './ui/comments'
 import { inClaudeViewer } from './host'
@@ -79,7 +80,7 @@ import {
 } from './account/supabase'
 import { openShareDialog } from './share/dialog'
 import { SyncError, type LocalChange } from './account/sync'
-import { AccountButton, confirmAccountDeletion, openAccountDialog, openLoginDialog, type SignedIn } from './ui/account'
+import { AccountButton, confirmAccountDeletion, openLoginDialog, type AccountSectionDeps, type SignedIn } from './ui/account'
 import { logoMark } from './ui/logo'
 import { NotesPanel } from './ui/notesPanel'
 import { Preview } from './ui/preview'
@@ -619,7 +620,8 @@ const sidePanel = new SidePanel({
   editor,
   settings: () => settings,
   isDark: () => isDark(),
-  openSettings: () => openSettings(),
+  // Le impostazioni che chiedono l'AI e «Spiegami» sono nella sezione «AI».
+  openSettings: () => openSettings('ai'),
   toast,
   closePanel: () => setPanels({ symbolsOpen: false }),
   // Il pulsante ✨ si fa più sotto, con la barra: qui basta che ci sia quando l'AI comincia.
@@ -884,21 +886,32 @@ function openComments(): void {
   })
 }
 
-function openSettings(): void {
-  openSettingsDialog({
-    settings,
-    onChange: (next) => updateSettings(next),
-    onLanguageChange: (next) => {
-      // Con l'account la lingua nuova parte anche dopo il ricaricamento: resta da mandare.
-      updateSettings({ language: next })
-      reloadForUpdate()
+/**
+ * Le impostazioni (src/ui/settings.ts), sulla sezione `section` se c'è: il pulsante dell'account la apre
+ * su «Account», gli errori dell'AI su «AI».
+ */
+function openSettings(section?: SettingsSection): void {
+  openSettingsDialog(
+    {
+      settings,
+      onChange: (next) => updateSettings(next),
+      onLanguageChange: (next) => {
+        // Con l'account la lingua nuova parte anche dopo il ricaricamento: resta da mandare.
+        updateSettings({ language: next })
+        reloadForUpdate()
+      },
+      personalWords: loadPersonalWords(),
+      onPersonalWordsChange: (words) => setPersonalWords(words),
+      onBackup: () => void backup(),
+      onRestore: () => void restore(),
+      account: accountDeps(),
+      onSignIn: () => openAccount(),
+      onGuide: () => openGuide(),
+      onComments: () => openComments(),
+      boardsBytes: () => boards.bytes(),
     },
-    personalWords: loadPersonalWords(),
-    onPersonalWordsChange: (words) => setPersonalWords(words),
-    onBackup: () => void backup(),
-    onRestore: () => void restore(),
-    accountEmail: account?.email,
-  })
+    section,
+  )
 }
 
 applyTheme()
@@ -1740,6 +1753,10 @@ async function sendCodeChecked(email: string, captcha: HTMLElement): Promise<voi
   await sendCode(email, await captchaToken(captcha, isDark() ? 'dark' : 'light'))
 }
 
+/**
+ * Il pulsante dell'account: senza account la finestra per entrare (dove l'account è spento, quella che
+ * dice perché lì non si entra); con l'account le impostazioni, sulla sezione «Account».
+ */
 function openAccount(): void {
   if (accountOff) {
     // La finestra si vede com'è sul sito, ma non si entra.
@@ -1751,38 +1768,46 @@ function openAccount(): void {
     openLoginDialog({ sendCode: sendCodeChecked, verifyCode, withGoogle: startGoogleSignIn, onSignedIn: (user) => completeSignIn(user) })
     return
   }
-  openAccountDialog({
-    email: account.email,
-    status: sync.status,
-    onStatus: (listener) => sync.onStatus(listener),
+  openSettings('account')
+}
+
+/** Quello che serve alla sezione «Account» delle impostazioni, se si è entrati (e l'account non è spento). */
+function accountDeps(): AccountSectionDeps | null {
+  if (accountOff || !account || !sync) return null
+  const user = account
+  const engine = sync
+  return {
+    email: user.email,
+    status: engine.status,
+    onStatus: (listener) => engine.onStatus(listener),
     syncNow: () => {
       flushSave()
-      void sync.syncNow()
+      void engine.syncNow()
     },
     guestCount: guestNoteCount(WELCOME_NOTES),
     onAdoptGuest: () => {
       flushSave()
-      const moved = adoptGuestNotes(account.userId, WELCOME_NOTES, (from, to) => void boards.move(from, to).catch(() => {}))
+      const moved = adoptGuestNotes(user.userId, WELCOME_NOTES, (from, to) => void boards.move(from, to).catch(() => {}))
       store.reload()
       folders.reload()
       notesPanel.refresh(active.id)
-      void sync.syncNow()
+      void engine.syncNow()
       return moved
     },
     onRelogin: () =>
       openLoginDialog({
-        email: account.email,
+        email: user.email,
         lockEmail: true,
         sendCode: sendCodeChecked,
         verifyCode,
         withGoogle: startGoogleSignIn,
-        onSignedIn: (user) => completeSignIn(user),
+        onSignedIn: (signedIn) => completeSignIn(signedIn),
       }),
     onSwitch: () => void switchAccount(),
     onSignOut: () => void signOutAccount(),
     onDownload: () => downloadAccountData(),
     onDelete: () => void deleteAccount(),
-  })
+  }
 }
 
 /** «Condividi»: la nota aperta con un link, una fotografia che si apre anche senza account (src/share). */

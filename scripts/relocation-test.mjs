@@ -259,7 +259,9 @@ const ids = { OLD, ID_A, ID_B, ID_ACCOUNT, USER }
   await other.addInitScript(() => localStorage.setItem('glifo.tutorial.v1', 'visto'))
   const fresh = await other.newPage()
   await fresh.goto(`${NEW}/`)
+  // «Ripristina backup» è nella sezione «Dati» delle impostazioni.
   await fresh.locator('.side-profile button[aria-label="Impostazioni"]').click()
+  await fresh.locator('dialog.dialog-settings .settings-tab[data-section="data"]').click()
   const [chooser] = await Promise.all([fresh.waitForEvent('filechooser'), fresh.locator('dialog button', { hasText: 'Ripristina backup' }).click()])
   await chooser.setFiles(file)
   await fresh.locator('dialog[open]', { hasText: 'Benvenuto nel nuovo Glifo' }).waitFor({ timeout: 20000 })

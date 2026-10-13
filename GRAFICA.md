@@ -15,7 +15,7 @@ quando i punti sono tutti fatti si cancella, insieme alla voce «La grafica» di
 |---|---|---|
 | 1 | «Cambia account» | fatto: sul sito dal 12 ottobre; lo studente: «va bene» |
 | 2 | La pagina dei commenti, tipo FAQ | da decidere |
-| 3 | Le impostazioni divise in sezioni | da decidere |
+| 3 | Le impostazioni divise in sezioni | fatto sul ramo `prova` il 13 ottobre 2026: da vedere nelle foto e sul sito di prova |
 | 4 | Più modelli per «Spiegami» | da decidere |
 | 5 | A cosa serve la chiave dell'AI | da decidere |
 | 6 | Glifo anche in inglese | fatto: tutto tradotto, anche le parole delle note, i numeri, l'AI e l'informativa; sul sito vero dal 12 ottobre 2026; lo studente: «va bene» |
@@ -198,9 +198,50 @@ trovarsi subito.
 **Nel codice.** `openSettingsDialog`, `aiFieldset` ed `explainFieldset` in `src/ui/dialogs.ts`
 (`dialogShell` serve anche alle altre finestre); le impostazioni e quali vanno con l'account
 (`ACCOUNT_SETTINGS`) in `src/store/settings.ts`; le prove che leggono i testi delle impostazioni:
-`tests/aiSettings.test.ts` e `tests/accountPosition.test.ts`.
+`tests/aiSettings.test.ts` e `tests/accountPosition.test.ts`. Dal 13 ottobre 2026 le impostazioni sono in
+`src/ui/settings.ts` e la sezione «Account» in `accountSection` di `src/ui/account.ts` (vedi
+ARCHITETTURA.md).
 
-**Risposte e decisioni.** —
+**Risposte e decisioni.** Lo studente, 13 ottobre 2026: «facciamo il punto 3 di GRAFICA.md». Si fa la
+proposta, con le sei sezioni, e l'account diventa una sezione delle impostazioni: una finestra sola, con
+il pulsante dell'account che apre le impostazioni su «Account» (se lo studente preferisce che resti anche
+la finestra sua, è un cambio piccolo). Fatto sul ramo `prova` il 13 ottobre 2026:
+
+- **la finestra**: a sinistra l'elenco delle sezioni, con le icone (quella aperta è chiara con il nome in
+  indaco, come la nota aperta nella barra laterale), a destra la sezione, con il suo nome in cima, che
+  scorre da sola: la finestra non cambia misura passando da una sezione all'altra. Con la tastiera le
+  frecce ↑ ↓ scorrono le sezioni. Ogni cambio vale subito, come prima, e il tema resta solo qui;
+- **sul telefono** (sotto i 600 px) le impostazioni prendono tutto lo schermo: prima l'elenco, con sotto
+  ogni sezione una riga che dice cosa c'è dentro (sotto «Account» l'email), poi una pagina per sezione,
+  con la freccia ← per tornare e il nome della sezione in alto;
+- **Generale**: la lingua (per prima, come prima), il tema e la dimensione del testo; il testo della
+  lingua porta con un collegamento a «Scrittura», dove si scelgono le lingue del controllo ortografico;
+- **Scrittura**: i `$` automatici e il controllo ortografico, con le lingue e il dizionario;
+- **AI**: prima «Spiegazioni (prova)» (il modello Qwen3, «Toglilo da questo browser», il tono), poi
+  «Assistente AI (facoltativo)» con la propria chiave. «Chi spiega» e gli altri modelli (punti 4 e 5)
+  arriveranno qui. I pulsanti «Impostazioni» negli errori dell'AI e di «Spiegami» ora aprono direttamente
+  questa sezione;
+- **Account**: quello che era nella finestra «Account» (lo stato della sincronizzazione con «Sincronizza
+  ora», gli appunti fuori dall'account, «Cambia account» ed «Esci dall'account», «Scarica i miei dati» ed
+  «Elimina account…»); il pulsante dell'account in fondo alla barra laterale apre le impostazioni qui.
+  Senza account la sezione dice cosa dà l'account e ha «Accedi»; il pulsante in fondo alla barra laterale,
+  senza account, apre come prima la finestra per entrare;
+- **Dati**: il backup («Scarica backup», «Ripristina backup», con un collegamento ad «Account» per i dati
+  dell'account) e «Spazio in questo browser»: appunti, cartelle e impostazioni; lavagne; ogni modello di
+  «Spiegami» scaricato, con quanto pesa davvero (letto dall'elenco dei suoi pezzi) e «Togli», come
+  proponeva il punto 4; il totale, con i file per usare Glifo offline, e fino a quanto il browser lascia
+  arrivare Glifo;
+- **Informazioni**: la versione di Glifo (il commit e il giorno), «Come si usa» e «Commenti» (si aprono
+  sopra le impostazioni; le domande frequenti arriveranno con il punto 2), l'informativa e le licenze: i
+  15 programmi liberi su cui è costruito Glifo, ognuno con il testo della sua licenza, che si apre anche
+  offline (prima ce n'erano 5, in fondo alla guida, che ora rimanda qui). In fondo, finché c'è (punto 7),
+  il registro dei tocchi;
+- tutto in italiano e in inglese.
+
+I video del tutorial non cambiano: nessuno mostra la finestra delle impostazioni o dell'account, e il fondo
+della barra laterale è lo stesso. Le foto (computer e telefono, tema chiaro e scuro) sono nella chat; sul
+sito di prova https://glifo-prova.pages.dev si prova tutto tranne la sezione «Account» con un account dentro
+(lì l'account è spento): quella si vede nelle foto, fatte con il Supabase finto delle prove.
 
 ## 4. Più modelli per «Spiegami»
 

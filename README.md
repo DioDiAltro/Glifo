@@ -44,10 +44,12 @@ Cose da sapere:
   quelli scritti sul computer non compaiono da soli sul telefono. Con l'**account** sì
   (vedi sotto).
 - Per spostarli o tenerli al sicuro puoi anche usare **Salva .md** (pure dentro una cartella
-  di OneDrive, Google Drive o iCloud) e **Apri .md** sull'altro dispositivo. In *Impostazioni*
-  c'è anche **Scarica backup**, con tutti gli appunti (e le loro lavagne) in un solo file.
+  di OneDrive, Google Drive o iCloud) e **Apri .md** sull'altro dispositivo. In *Impostazioni →
+  Dati* c'è anche **Scarica backup**, con tutti gli appunti (e le loro lavagne) in un solo file.
   **Ripristina backup** lo rilegge senza doppioni: gli appunti che ci sono già restano come sono, e
-  le lavagne tornano sulle loro note (anche su quelle arrivate con l'account).
+  le lavagne tornano sulle loro note (anche su quelle arrivate con l'account). Lì si vede anche
+  quanto spazio occupano nel browser appunti, lavagne e modelli di «Spiegami» (un modello si toglie da
+  lì), e in tutto, con i file per usare Glifo offline.
   **Apri .md** apre anche i file di Excel (.xlsx) e .csv: diventano note con le tabelle.
 - Puoi tenere Glifo aperto in più schede, o nell'app installata e nel browser insieme: si
   aggiornano a vicenda e nessuna cancella gli appunti scritti nelle altre.
@@ -63,7 +65,8 @@ e si incolla nella finestra di Glifo. Prima di mandare l'email Glifo fa un contr
 Cloudflare: di solito non si vede, a volte chiede di cliccare una casella. *Per ora è in prova.*
 
 - **Sincronizzazione automatica:** all'avvio, quando torni su Glifo, quando torna la rete e
-  poco dopo ogni modifica. Il pallino sul pulsante dell'account dice com'è andata.
+  poco dopo ogni modifica. Il pallino sul pulsante dell'account dice com'è andata; il pulsante apre
+  le impostazioni sulla sezione **Account**, con lo stato per intero e «Sincronizza ora».
 - **Senza rete** Glifo funziona come sempre, e le modifiche partono quando la rete torna.
 - **Stessa nota cambiata su due dispositivi:** restano tutte e due le versioni, e quella
   di qui ha l'etichetta «copia in conflitto». Una nota eliminata su un dispositivo ma
@@ -79,7 +82,7 @@ Cloudflare: di solito non si vede, a volte chiede di cliccare una casella. *Per 
   rientri; poi si riapre la finestra per entrare, e Google chiede quale account usare.
 - **Dove stanno i dati:** su [Supabase](https://supabase.com), in Europa (Francoforte).
   Ognuno può leggere solo i suoi appunti (vedi [supabase/README.md](supabase/README.md)).
-- **I tuoi dati:** nella finestra dell'account, «Scarica i miei dati» scarica tutto l'account
+- **I tuoi dati:** in *Impostazioni → Account*, «Scarica i miei dati» scarica tutto l'account
   in un file (che «Ripristina backup» sa rileggere) ed «Elimina account» lo cancella dal
   server per sempre. Come vengono trattati i dati lo spiega
   l'[informativa sulla privacy](https://glifo.page/privacy.html)
@@ -142,7 +145,7 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
   termini tecnici (iniettiva, jacobiano, bayesiano, eteroschedasticità…), i cognomi degli
   scienziati (Cauchy, Weierstrass, Schrödinger…) e le parole dell'informatica (array, thread,
   override…). Clic sulla parola sottolineata (o **Ctrl+.**) per le correzioni; le parole che
-  aggiungi al tuo dizionario si possono rivedere in *Impostazioni*. Funziona anche offline.
+  aggiungi al tuo dizionario si possono rivedere in *Impostazioni → Scrittura*. Funziona anche offline.
 
 **Pannello dei simboli**
 - **Anteprima della formula** sotto il cursore, aggiornata mentre scrivi: mostra già il
@@ -797,7 +800,7 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
   la vista Lavagna prende già tutto il posto del testo. Su iPad e iPhone la lavagna copre la
   finestra senza lo schermo intero del browser: lì Safari ne usciva mentre si scriveva, perché
   prendeva i tocchi della penna per una tastiera.
-- **Registro dei tocchi** (nelle impostazioni): serve a capire un problema su un dispositivo che
+- **Registro dei tocchi** (in *Impostazioni → Informazioni*, in fondo): serve a capire un problema su un dispositivo che
   non si ha sotto mano, come l'iPad con la penna. Acceso, annota quello che fanno penna e dita
   sulla lavagna, che cosa ne decide Glifo (per esempio «è la mano») e quello che fa il browser
   (selezione, fuoco, tastiera, schermo intero, pagina nascosta, errori), senza il testo delle note.
@@ -828,7 +831,7 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
   condivisione e account), da sfogliare con Indietro e Avanti; l'ultima ha «Inizia». Si riapre da «Come
   si usa» (il «?» in fondo alla barra laterale: quando si chiude il tutorial, un fumetto lo indica per
   qualche secondo), e da lì si arriva a tutte le scorciatoie.
-- **Italiano e inglese**: in *Impostazioni → Lingua*; la prima volta Glifo
+- **Italiano e inglese**: in *Impostazioni → Generale*; la prima volta Glifo
   prende la lingua del browser (chi aveva già gli appunti resta in italiano). Con l'account la lingua
   è la stessa su tutti i dispositivi, come il tema. In inglese c'è tutto: le schermate, i conti (con i
   numeri con il punto), i simboli (si cercano anche a parole inglesi), le tabelle (con i nomi dell'Excel
@@ -843,6 +846,11 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
   doppio clic tornano alla misura di partenza. Le misure restano su quel dispositivo.
 - Tema chiaro e scuro (nelle impostazioni), funziona su telefono e tablet, **installabile come
   app** e usabile offline.
+- **Impostazioni divise in sezioni**: Generale (lingua, tema, dimensione del testo), Scrittura (i `$`
+  automatici, il controllo ortografico, il dizionario), AI («Spiegami» e l'assistente con la propria
+  chiave), Account, Dati (backup e spazio occupato) e Informazioni (la versione, la guida, i commenti,
+  l'informativa e le licenze). A sinistra l'elenco, a destra la sezione; sul telefono una pagina per
+  sezione, con la freccia per tornare. Ogni cambio vale subito.
 
 ![Ricerca a parole](docs/ricerca.png)
 
@@ -897,7 +905,7 @@ indirizzi veri, è `node scripts/relocation-test.mjs`.
 
 La ricerca dei simboli è locale: funziona sempre, anche senza internet, ed è gratuita.
 L'assistente AI serve solo per le domande che la ricerca non capisce e usa una **tua chiave**,
-del servizio che scegli in **Impostazioni → Assistente AI**:
+del servizio che scegli in **Impostazioni → AI**, nel riquadro «Assistente AI»:
 
 - **Anthropic (Claude)**: crea una chiave su <https://console.anthropic.com/settings/keys>. Il
   modello predefinito è Claude Opus 5.5 (con ragionamento ridotto, per rispondere in fretta);
@@ -924,7 +932,7 @@ rispondere con lo schema chiesto ricevono la forma della risposta nelle istruzio
 
 Se pubblichi Glifo per altri studenti e non vuoi che ognuno usi la propria chiave, puoi
 mettere la chiave di Anthropic in un piccolo server "proxy" (per esempio un Cloudflare Worker)
-e indicarne l'indirizzo in **Impostazioni → Assistente AI → Avanzate**.
+e indicarne l'indirizzo in **Impostazioni → AI**, nelle avanzate dell'assistente.
 
 ## Spiegami (in prova)
 
@@ -963,10 +971,11 @@ colore sfumando: puoi
 chiudere il pannello e continuare a scrivere, e quando ha finito sul pulsante compare un pallino, come per i
 messaggi, che se ne va riaprendo il pannello.
 
-In **Impostazioni → Spiegazioni (prova)** si sceglie il modello (Qwen3 0.6B, il più leggero, circa 0,4 GB;
+In **Impostazioni → AI**, nel riquadro «Spiegazioni (prova)», si sceglie il modello (Qwen3 0.6B, il più leggero, circa 0,4 GB;
 1.7B, consigliato, circa 1 GB; 4B, il più bravo, circa 2,3 GB) e il tono (come il professore o più
 semplice). Il modello si scarica da Hugging Face la prima volta che premi Spiegami e poi resta nel
-browser: le spiegazioni funzionano anche offline; dalle impostazioni lo puoi togliere. Dentro
+browser: le spiegazioni funzionano anche offline; dalle impostazioni lo puoi togliere (anche da «Dati», che dice
+quanto pesa). Dentro
 claude.ai il modello non si può scaricare: lì Spiegami lo dice.
 
 ## Compatibilità con VS Code
@@ -1042,10 +1051,12 @@ src/
     lists.ts              elenchi con tutti i marcatori e rientri comodi nell'anteprima
     katex.ts              disegno delle formule, messaggi di errore in italiano
   ui/                     pannello dei simboli, anteprima, elenco appunti, finestre,
+                          le impostazioni divise in sezioni (settings.ts), le licenze (licenses.ts),
                           bordi da trascinare tra le sezioni (resize.ts), il simbolo ∮ (logo.ts),
                           il registro dei tocchi nelle impostazioni (touchLogPanel.ts), le frecce
                           ↑ ↓ di schemi e grafici (moveButtons.ts)
-  store/                  salvataggio nel browser, file .md, impostazioni, misure delle sezioni (layout.ts)
+  store/                  salvataggio nel browser, file .md, impostazioni, misure delle sezioni (layout.ts),
+                          quanto spazio occupa Glifo nel browser (usage.ts)
   ai/assistant.ts         assistente AI: Anthropic con l'SDK, gli altri servizi nella «lingua» di OpenAI
   ai/services.ts          i servizi per la propria chiave: Anthropic, Gemini, OpenRouter, Ollama, altri
   account/
@@ -1206,16 +1217,31 @@ tutte e due in tutte e due le lingue, e chi scrive nella nota usa quella della l
 
 ## Licenze
 
-Il controllo ortografico usa [Hunspell](https://github.com/hunspell/hunspell) (MPL 1.1 / GPL 2 /
-LGPL 2.1), il dizionario italiano di Andrea Pescetti e altri
-([GPL 3](public/licenze/dizionario-italiano.txt), dal pacchetto `dictionary-it`) e quello
-inglese di SCOWL ([MIT e BSD](public/licenze/dizionario-inglese.txt), dal pacchetto
-`dictionary-en`). Gli schemi usano [maxGraph](https://github.com/maxGraph/maxGraph)
-([Apache 2.0](public/licenze/maxgraph.txt)), la lavagna
-[perfect-freehand](https://github.com/steveruizok/perfect-freehand)
-([MIT](public/licenze/perfect-freehand.txt)), i file di Excel [fflate](https://github.com/101arrowz/fflate)
-([MIT](public/licenze/fflate.txt)), per lo zip. I testi delle licenze sono pubblicati anche insieme
-all'app, in `licenze/`.
+Glifo è costruito con questi programmi liberi; i testi delle licenze sono pubblicati insieme all'app, in
+`licenze/` (anche offline), e si aprono da *Impostazioni → Informazioni* (l'elenco è in
+`src/ui/licenses.ts`: `npm test` controlla che ci sia ogni libreria di `dependencies` e il testo della
+sua licenza).
+
+- l'editor: [CodeMirror](https://codemirror.net) e Lezer ([MIT](public/licenze/codemirror.txt));
+- le formule: [KaTeX](https://katex.org) ([MIT](public/licenze/katex.txt));
+- l'anteprima: [markdown-it](https://github.com/markdown-it/markdown-it) e markdown-it-footnote
+  ([MIT](public/licenze/markdown-it.txt)), con [DOMPurify](https://github.com/cure53/DOMPurify)
+  ([Apache 2.0 o MPL 2.0](public/licenze/dompurify.txt)) e [highlight.js](https://highlightjs.org)
+  ([BSD 3-Clause](public/licenze/highlight-js.txt));
+- gli schemi: [maxGraph](https://github.com/maxGraph/maxGraph) ([Apache 2.0](public/licenze/maxgraph.txt));
+- la lavagna: [perfect-freehand](https://github.com/steveruizok/perfect-freehand)
+  ([MIT](public/licenze/perfect-freehand.txt));
+- i file di Excel: [fflate](https://github.com/101arrowz/fflate) ([MIT](public/licenze/fflate.txt)), per lo zip;
+- il controllo ortografico: [Hunspell](https://github.com/hunspell/hunspell) (MPL 1.1 / GPL 2 / LGPL 2.1,
+  in WebAssembly con `@farscrl/hunspell-wasm`, [MIT](public/licenze/hunspell.txt)), il dizionario italiano
+  di Andrea Pescetti e altri ([GPL 3](public/licenze/dizionario-italiano.txt), dal pacchetto
+  `dictionary-it`) e quello inglese di SCOWL ([MIT e BSD](public/licenze/dizionario-inglese.txt), dal
+  pacchetto `dictionary-en`);
+- «Spiegami»: [WebLLM](https://github.com/mlc-ai/web-llm) ([Apache 2.0](public/licenze/web-llm.txt)) e i
+  modelli Qwen3 del Qwen Team di Alibaba Cloud ([Apache 2.0](public/licenze/qwen3.txt));
+- l'account: [Supabase](https://github.com/supabase/supabase-js) ([MIT](public/licenze/supabase.txt));
+- l'assistente AI: l'[SDK di Anthropic](https://github.com/anthropics/anthropic-sdk-typescript)
+  ([MIT](public/licenze/anthropic-sdk.txt)).
 
 ## Idee per il futuro
 

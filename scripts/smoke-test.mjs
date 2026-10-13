@@ -30,7 +30,16 @@ browser.newContext = async (options) => {
 }
 /** Una pagina come alla prima apertura di Glifo, con il tutorial. */
 const firstVisit = async (options) => (await plainContext({ locale: 'it-IT', ...options })).newPage()
-/** Il tema si cambia nelle impostazioni (in fondo alla barra laterale). */
+/**
+ * Le impostazioni (la rotella in fondo alla barra laterale), sulla sezione `section` se c'è («writing»,
+ * «ai», «account», «data», «about»): si aprono su «Generale».
+ */
+async function openSettings(page, section, label = 'Impostazioni') {
+  await page.locator(`.side-profile button[aria-label="${label}"]`).click()
+  if (section) await page.locator(`dialog.dialog-settings .settings-tab[data-section="${section}"]`).click()
+  return page.locator('dialog.dialog-settings')
+}
+/** Il tema si cambia nelle impostazioni (in fondo alla barra laterale), in «Generale». */
 async function chooseTheme(page, label) {
   await page.locator('.side-profile button[aria-label="Impostazioni"]').click()
   await page.locator('dialog .segmented label', { hasText: label }).click()
@@ -184,8 +193,8 @@ try {
   await page.keyboard.insertText('however ')
   await page.waitForTimeout(500)
   check((await misspelled()).length === 0, 'con italiano e inglese «however» va bene')
-  await page.locator('button[aria-label="Impostazioni"]').click()
-  const settingsDialog = page.locator('dialog.dialog-settings')
+  // Il controllo ortografico è nella sezione «Scrittura».
+  const settingsDialog = await openSettings(page, 'writing')
   await settingsDialog.locator('select').filter({ has: page.locator('option[value="it+en"]') }).selectOption('it')
   await page.waitForSelector('.cm-misspelled', { timeout: 10000 })
   check(JSON.stringify(await misspelled()) === '["however"]', `con «Solo italiano» «however» è sottolineato (${await misspelled()})`)
@@ -196,7 +205,46 @@ try {
   await page.waitForSelector('.cm-misspelled', { timeout: 10000 })
   check((await misspelled()).length === 1, 'riaccendendolo tornano')
   await settingsDialog.locator('select').filter({ has: page.locator('option[value="it+en"]') }).selectOption('it+en')
-  await settingsDialog.locator('.dialog-head .icon-button').click()
+  await settingsDialog.locator('.dialog-head .icon-button[aria-label="Chiudi"]').click()
+
+  // Le impostazioni divise in sezioni (GRAFICA.md, punto 3): a sinistra l'elenco, a destra la sezione
+  // scelta, che scorre da sola; in «Dati» lo spazio che Glifo occupa nel browser, in «Informazioni» la
+  // versione e le licenze.
+  {
+    const dialog = await openSettings(page, 'data')
+    await dialog.locator('.space-total').waitFor({ timeout: 10000 })
+    const sections = await dialog.evaluate((d) => {
+      const nav = d.querySelector('.settings-nav').getBoundingClientRect()
+      const pane = d.querySelector('.settings-pane').getBoundingClientRect()
+      return {
+        names: [...d.querySelectorAll('.settings-tab-name')].map((n) => n.textContent),
+        sideBySide: nav.right <= pane.left + 1 && Math.abs(nav.top - pane.top) < 2,
+        height: Math.round(d.getBoundingClientRect().height),
+        rows: [...d.querySelectorAll('.space-row')].map((r) => [r.querySelector('dt').textContent, r.querySelector('.space-size').textContent]),
+      }
+    })
+    const height = sections.height
+    await dialog.locator('.settings-tab[data-section="about"]').click()
+    const about = {
+      version: await dialog.locator('.about-version').textContent(),
+      licenses: await dialog.locator('.license-list a').count(),
+      height: Math.round((await dialog.boundingBox()).height),
+    }
+    const license = await page.request.get(new URL(await dialog.locator('.license-list a').first().getAttribute('href'), url).href)
+    await page.keyboard.press('Escape')
+    check(
+      sections.names.join() === 'Generale,Scrittura,AI,Account,Dati,Informazioni' &&
+        sections.sideBySide &&
+        sections.rows.length === 4 &&
+        sections.rows[0][0] === 'Appunti, cartelle e impostazioni' && /^\d+ kB$/.test(sections.rows[0][1]) &&
+        sections.rows[2].join() === 'Modelli di «Spiegami»,nessuno' &&
+        sections.rows[3][0].startsWith('In tutto') &&
+        /^Versione (locale|[0-9a-f]{7}) del \d{1,2} \w+ \d{4}\.$/.test(about.version) &&
+        about.licenses === 15 && license.ok() && (await license.text()).includes('MIT License') &&
+        about.height === height,
+      `le impostazioni a sezioni: l'elenco a sinistra, lo spazio in «Dati», la versione e le licenze in «Informazioni», e la finestra non cambia misura (${JSON.stringify({ sections, about })})`,
+    )
+  }
 
   // Elenchi di ogni tipo, uno dentro l'altro, scritti con Invio, Tab, Maiusc+Tab e Backspace
   await page.locator('.cm-content').click()
@@ -2638,7 +2686,7 @@ try {
     // backup» non raddoppia le note che ci sono già (fino al 9 ottobre 2026 le aggiungeva tutte con un
     // id nuovo): eliminata la nota con la lavagna, ripristinando torna lei, con il suo id e la sua
     // lavagna, e le altre restano una volta sola.
-    await lp.locator('.side-profile button[aria-label="Impostazioni"]').click()
+    await openSettings(lp, 'data')
     const [backupFile] = await Promise.all([lp.waitForEvent('download'), lp.locator('dialog button', { hasText: 'Scarica backup' }).click()])
     const backupData = JSON.parse(readFileSync(await backupFile.path(), 'utf8'))
     const backupBoards = (backupData.boards ?? []).map((b) => ({ note: b.note, strokes: b.strokes.length, points: typeof b.strokes[0]?.points }))
@@ -2656,7 +2704,7 @@ try {
     await lp.locator('dialog .btn-danger', { hasText: 'Elimina' }).click()
     await lp.waitForTimeout(300)
     const afterDelete = { notes: await lp.locator('.note-item').count(), strokes: (await savedStrokes(lp, otherNote)).length }
-    await lp.locator('.side-profile button[aria-label="Impostazioni"]').click()
+    await openSettings(lp, 'data')
     const [chooser] = await Promise.all([lp.waitForEvent('filechooser'), lp.locator('dialog button', { hasText: 'Ripristina backup' }).click()])
     await chooser.setFiles(await backupFile.path())
     const restoredToast = await lp.locator('.toast', { hasText: 'Ripristinato 1 appunto' }).textContent()
@@ -2735,7 +2783,8 @@ try {
     await rp.waitForSelector('.board-pane[data-loaded="true"]')
     const logDot = rp.locator('.board-button[aria-label="Registro dei tocchi"]')
     const dotBefore = await logDot.isVisible()
-    await rp.locator('.side-profile button[aria-label="Impostazioni"]').click()
+    // Il registro dei tocchi è in fondo alla sezione «Informazioni».
+    await openSettings(rp, 'about')
     await rp.locator('dialog .touch-log label.check').click()
     const settingsStatus = await rp.locator('dialog .touch-log-status').textContent()
     await rp.keyboard.press('Escape')
@@ -3446,6 +3495,38 @@ try {
     return r.bottom <= innerHeight + 1 && r.top > 0 && !!document.elementFromPoint(r.left + 20, r.top + r.height / 2)?.closest('.account-button')
   })
   check(drawer, 'sul telefono la barra laterale si apre sopra il testo, con l\'account in fondo')
+  // Sul telefono le impostazioni prendono lo schermo: l'elenco delle sezioni, poi una pagina per sezione
+  // con la freccia per tornare.
+  await phoneSide.locator('.side-profile button[aria-label="Impostazioni"]').tap()
+  const phoneSettings = phoneSide.locator('dialog.dialog-settings')
+  await phoneSettings.waitFor()
+  const settingsPage = () =>
+    phoneSettings.evaluate((d) => {
+      const visible = (s) => !!d.querySelector(s)?.getClientRects().length
+      const r = d.getBoundingClientRect()
+      return {
+        view: d.dataset.view,
+        full: Math.round(r.width) === innerWidth && Math.round(r.height) === innerHeight,
+        list: visible('.settings-nav'),
+        pane: visible('.settings-pane'),
+        back: visible('.settings-back'),
+        title: [...d.querySelectorAll('.dialog-head h2 > span')].filter((s) => s.getClientRects().length).map((s) => s.textContent).join(),
+        hints: [...d.querySelectorAll('.settings-tab-hint')].filter((s) => s.getClientRects().length).length,
+        wide: d.scrollWidth <= d.clientWidth,
+      }
+    })
+  const phoneList = await settingsPage()
+  await phoneSettings.locator('.settings-tab[data-section="account"]').tap()
+  const phoneAccount = await settingsPage()
+  await phoneSettings.locator('.settings-back').tap()
+  const phoneBack = await settingsPage()
+  await phoneSettings.locator('.dialog-head .icon-button[aria-label="Chiudi"]').tap()
+  check(
+    phoneList.view === 'list' && phoneList.full && phoneList.list && !phoneList.pane && !phoneList.back && phoneList.title === 'Impostazioni' && phoneList.hints === 6 &&
+      phoneAccount.view === 'section' && !phoneAccount.list && phoneAccount.pane && phoneAccount.back && phoneAccount.title === 'Account' && phoneAccount.wide &&
+      phoneBack.view === 'list' && phoneBack.list && !phoneBack.pane,
+    `sul telefono le impostazioni sono a tutto schermo, con l'elenco e una pagina per sezione con la freccia per tornare (${JSON.stringify({ phoneList, phoneAccount, phoneBack })})`,
+  )
   await phoneSide.close()
   // La prima volta si apre il tutorial: pagine con un video e il testo, Indietro e Avanti, alla
   // fine «Inizia»; poi non si apre più da solo, ma da «Come si usa»
@@ -3696,9 +3777,12 @@ try {
         }
       }
     }
-    // Le impostazioni.
-    await en.locator('.side-profile button[aria-label="Settings"]').click()
-    found.push(...italianIn('impostazioni', await en.locator('dialog[open]').innerText()))
+    // Le impostazioni, sezione per sezione.
+    const enSettings = await openSettings(en, null, 'Settings')
+    for (const tab of await enSettings.locator('.settings-tab').all()) {
+      await tab.click()
+      found.push(...italianIn(`impostazioni, ${await tab.getAttribute('data-section')}`, await enSettings.innerText()))
+    }
     await en.keyboard.press('Escape')
     check(
       !found.length && enPreview.includes('1.414213') && !enPreview.includes('1,414213') && enSymbols.toLowerCase().includes('integral'),
@@ -3750,8 +3834,8 @@ try {
       inserted.length === 2 && inserted[0].startsWith('1. Porto fuori') && inserted[1].startsWith('2. Sostituisco') && wrongInNote === 0,
       `«Inserisci nella nota» mette i passaggi dopo la formula, e la nota li controlla (${JSON.stringify(inserted)})`,
     )
-    // Le impostazioni: il modello nel browser e il tono.
-    await ex.locator('.side-profile button[aria-label="Impostazioni"]').click()
+    // Le impostazioni, nella sezione «AI»: il modello nel browser e il tono.
+    await openSettings(ex, 'ai')
     const settings = ex.locator('dialog fieldset.explain-settings')
     await settings.waitFor()
     const models = await settings.locator('#local-model option').allInnerTexts()

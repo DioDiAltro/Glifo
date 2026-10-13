@@ -157,3 +157,21 @@ describe('lavagna: il salvataggio in IndexedDB', () => {
     expect(fromRecord(null)).toBeNull()
   })
 })
+
+describe('lavagna: quanto occupano (Impostazioni → Dati)', () => {
+  it('i punti a 4 byte l\'uno, più i nomi: in IndexedDB e in memoria lo stesso conto', async () => {
+    const boards = storeFor()
+    expect(await boards.bytes()).toBe(0)
+    await boards.change('n1', { put: [stroke('a'), stroke('b')] })
+    await boards.change('n2', { put: [stroke('c', { points: [1, 2, 0.5] })] })
+    // Due tratti di 6 numeri e uno di 3: (24 + 2 + 1 + 3 + 24) × 2 + (12 + 2 + 1 + 3 + 24).
+    expect(await boards.bytes()).toBe(150)
+    const memory = new BoardStore(async () => new MemoryBoards())
+    opened.push(memory)
+    await memory.change('n1', { put: [stroke('a'), stroke('b')] })
+    await memory.change('n2', { put: [stroke('c', { points: [1, 2, 0.5] })] })
+    expect(await memory.bytes()).toBe(150)
+    await boards.remove(['n1'])
+    expect(await boards.bytes()).toBe(42)
+  })
+})

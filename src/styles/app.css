@@ -2766,6 +2766,278 @@ kbd {
   display: none;
 }
 
+/* ——— Le impostazioni (src/ui/settings.ts): a sinistra l'elenco delle sezioni, a destra quella scelta,
+   che scorre da sola. Sotto i 600 px, come sul telefono, una pagina per volta: l'elenco
+   (`data-view='list'`) o la sezione, con la freccia per tornare (`data-view='section'`). ——— */
+
+.dialog-settings {
+  width: min(860px, calc(100vw - 32px));
+  height: min(680px, calc(100dvh - 48px));
+}
+
+.dialog-settings[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.dialog-settings .dialog-head {
+  justify-content: flex-start;
+  gap: 4px;
+}
+
+.dialog-settings .dialog-head h2 {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-back,
+.settings-subtitle {
+  display: none;
+}
+
+.dialog-settings .dialog-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  padding: 0;
+}
+
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 10px;
+  overflow-y: auto;
+  background: var(--surface-2);
+  border-right: 1px solid var(--border);
+  border-bottom-left-radius: 16px;
+}
+
+/* Come gli appunti nella barra laterale: quella scelta è bianca, con il nome in indaco. */
+.settings-tab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.settings-tab svg {
+  flex: none;
+  color: var(--muted);
+}
+
+.settings-tab:hover {
+  background: var(--frame-hover);
+}
+
+.settings-tab[aria-selected='true'] {
+  background: var(--frame-active);
+  color: var(--accent-text);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(20, 24, 40, 0.08);
+}
+
+.settings-tab[aria-selected='true'] svg {
+  color: var(--accent);
+}
+
+.settings-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.settings-tab-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.settings-tab-hint,
+.settings-tab-arrow {
+  display: none;
+}
+
+.settings-pane {
+  min-width: 0;
+  overflow-y: auto;
+  padding: 0 24px 24px;
+}
+
+.settings-heading {
+  margin: 18px 0 8px;
+  font-size: 18px;
+  color: var(--heading);
+}
+
+/* Il primo riquadro sta subito sotto il nome della sezione, senza la riga. */
+.settings-heading + fieldset {
+  margin-top: 4px;
+  border-top: 0;
+}
+
+/* «Spazio in questo browser», nella sezione «Dati». */
+.space-list {
+  margin: 8px 0 6px;
+}
+
+.space-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.space-row dt {
+  flex: 1;
+  min-width: 0;
+}
+
+.space-row dd {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+}
+
+.space-size {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.space-total {
+  border-bottom: 0;
+  font-weight: 600;
+}
+
+.space-total .space-size {
+  color: var(--text);
+}
+
+.space-problem {
+  color: var(--danger);
+}
+
+/* «Informazioni». */
+.about-version {
+  margin: 8px 0 4px;
+}
+
+.license-list {
+  margin: 8px 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+@media (max-width: 600px) {
+  .dialog-settings {
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .dialog-settings .dialog-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dialog-settings[data-view='list'] .settings-pane,
+  .dialog-settings[data-view='section'] .settings-nav {
+    display: none;
+  }
+
+  .dialog-settings[data-view='section'] .settings-back {
+    display: inline-flex;
+  }
+
+  .dialog-settings[data-view='section'] .settings-title {
+    display: none;
+  }
+
+  .dialog-settings[data-view='section'] .settings-subtitle {
+    display: inline;
+  }
+
+  .settings-nav {
+    gap: 0;
+    padding: 4px 16px 16px;
+    background: none;
+    border-right: 0;
+    border-radius: 0;
+  }
+
+  .settings-tab {
+    min-height: 58px;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    font-size: 15px;
+  }
+
+  .settings-tab:hover {
+    background: none;
+  }
+
+  /* Nell'elenco del telefono nessuna sezione è accesa: si apre toccandola. */
+  .settings-tab[aria-selected='true'] {
+    background: none;
+    box-shadow: none;
+    color: var(--text);
+    font-weight: inherit;
+  }
+
+  .settings-tab[aria-selected='true'] svg {
+    color: var(--muted);
+  }
+
+  .settings-tab-name,
+  .settings-tab-hint {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .settings-tab-hint {
+    display: block;
+    color: var(--muted);
+    font-size: 12.5px;
+  }
+
+  .settings-tab-arrow {
+    display: inline-flex;
+    margin-left: auto;
+    color: var(--muted);
+  }
+
+  .settings-pane {
+    padding: 10px 16px 24px;
+  }
+
+  .settings-heading {
+    display: none;
+  }
+}
+
 .input-row {
   display: flex;
   gap: 6px;
@@ -3313,8 +3585,7 @@ kbd {
   }
 }
 
-.dialog-login,
-.dialog-account {
+.dialog-login {
   width: min(440px, calc(100vw - 32px));
 }
 

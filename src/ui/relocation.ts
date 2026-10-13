@@ -59,8 +59,8 @@ const T = texts({
     `Opens ${host} and copies this browser's notes, folders, dictionary and whiteboards there. If it doesn't work (for example from the app installed on your phone), use the backup below.`,
   ],
   backupHelp: (host: string) => [
-    `Un file con tutti i tuoi appunti, da aprire su ${host} con «Ripristina backup» (Impostazioni → I tuoi dati).`,
-    `A file with all your notes, to open on ${host} with “Restore backup” (Settings → Your data).`,
+    `Un file con tutti i tuoi appunti, da aprire su ${host} con «Ripristina backup» (Impostazioni → Dati).`,
+    `A file with all your notes, to open on ${host} with “Restore backup” (Settings → Data).`,
   ],
   accountHelp: (host: string) => [
     `Con l'account: su ${host} entra con la stessa email o con Google e ritrovi le note. Le lavagne invece sono solo in questo browser: portale con il primo pulsante.`,

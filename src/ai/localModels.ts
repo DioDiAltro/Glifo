@@ -53,26 +53,77 @@ export function modelUrl(webllm: string): string {
   return `https://huggingface.co/mlc-ai/${webllm}/resolve/main/`
 }
 
+/** Un modello che è (anche solo in parte) in questo browser, con quanto pesa: Impostazioni → Dati. */
+export interface DownloadedModel {
+  /** Il nome nelle impostazioni (`LocalModel.id`) e quello breve. */
+  id: string
+  name: string
+  /** I byte dei pezzi già scaricati. */
+  bytes: number
+  /** Ci sono tutti i pezzi: le spiegazioni funzionano anche offline. */
+  complete: boolean
+}
+
 /**
- * Il modello è già in questo browser? Come fa WebLLM (`hasModelInCache`): c'è l'elenco dei pezzi,
- * tensor-cache.json, e ci sono tutti i pezzi. Senza caricare WebLLM: serve alle impostazioni.
+ * Quanto c'è di un modello (le due varianti, a 16 e a 32 bit) nella Cache Storage di WebLLM, come
+ * guarda WebLLM (`hasModelInCache`): l'elenco dei pezzi, tensor-cache.json, dice quali sono e quanto
+ * pesa ognuno (`nbytes`), così non si legge niente di grosso. `null`: del modello non c'è niente.
+ */
+async function modelInCache(cache: Cache, id: string): Promise<{ bytes: number; complete: boolean } | null> {
+  let keys: Set<string> | null = null
+  let any = false
+  let total = 0
+  let complete = false
+  for (const f16 of [true, false]) {
+    const base = modelUrl(webllmId(id, f16))
+    const list = await cache.match(new URL('tensor-cache.json', base).href)
+    if (!list) continue
+    const records = ((await list.json()) as { records?: { dataPath: string; nbytes?: number }[] }).records ?? []
+    any = true
+    keys ??= new Set((await cache.keys()).map((r) => r.url))
+    let here = 0
+    for (const record of records) {
+      const url = new URL(record.dataPath, base).href
+      if (!keys.has(url)) continue
+      here++
+      // Senza `nbytes` (un elenco vecchio) vale quello che dice il file salvato.
+      total += record.nbytes ?? (Number((await cache.match(url))?.headers?.get('content-length')) || 0)
+    }
+    if (records.length > 0 && here === records.length) complete = true
+  }
+  return any ? { bytes: total, complete } : null
+}
+
+/**
+ * Il modello è già in questo browser? C'è l'elenco dei pezzi e ci sono tutti. Senza caricare WebLLM:
+ * serve alle impostazioni.
  */
 export async function modelInBrowser(id: string): Promise<boolean> {
   if (typeof caches === 'undefined') return false
   try {
-    const cache = await caches.open('webllm/model')
-    for (const f16 of [true, false]) {
-      const base = modelUrl(webllmId(id, f16))
-      const list = await cache.match(new URL('tensor-cache.json', base).href)
-      if (!list) continue
-      const records = ((await list.json()) as { records?: { dataPath: string }[] }).records ?? []
-      const keys = new Set((await cache.keys()).map((r) => r.url))
-      if (records.length && records.every((r) => keys.has(new URL(r.dataPath, base).href))) return true
-    }
+    return (await modelInCache(await caches.open('webllm/model'), id))?.complete ?? false
   } catch {
     // Cache Storage non disponibile (pagina privata, permessi): come se non ci fosse.
+    return false
   }
-  return false
+}
+
+/** I modelli di «Spiegami» in questo browser, anche quelli scaricati a metà, con quanto pesano. */
+export async function modelsInBrowser(): Promise<DownloadedModel[]> {
+  if (typeof caches === 'undefined') return []
+  try {
+    // `open` creerebbe la cache vuota: se WebLLM non l'ha mai aperta, non c'è niente.
+    if (typeof caches.has === 'function' && !(await caches.has('webllm/model'))) return []
+    const cache = await caches.open('webllm/model')
+    const found: DownloadedModel[] = []
+    for (const model of LOCAL_MODELS) {
+      const here = await modelInCache(cache, model.id)
+      if (here) found.push({ id: model.id, name: model.name, ...here })
+    }
+    return found
+  } catch {
+    return []
+  }
 }
 
 // ——— I messaggi tra la pagina (src/ai/local.ts) e il worker (src/ai/llmWorker.ts) ———

@@ -40,6 +40,8 @@ export interface BoardBackend {
   notes(): Promise<string[]>
   /** Quanti tratti ha la lavagna di una nota. */
   count(note: string): Promise<number>
+  /** Quanto occupano tutte le lavagne, più o meno, in byte (Impostazioni → Dati). */
+  bytes(): Promise<number>
 }
 
 /** Un tratto com'è salvato: con la nota, e i punti in un Float32Array (metà spazio). */
@@ -55,6 +57,11 @@ interface StrokeRecord {
   highlight?: boolean
   /** Solo per le figure precise. */
   shape?: boolean
+}
+
+/** Lo spazio di un tratto salvato, più o meno: i punti (4 byte l'uno, in un Float32Array), i nomi e i numeri. */
+export function recordBytes(r: { note: string; id: string; color: string; points: ArrayLike<number> }): number {
+  return 4 * r.points.length + r.note.length + r.id.length + r.color.length + 24
 }
 
 export function toRecord(note: string, s: Stroke): StrokeRecord {
@@ -218,6 +225,21 @@ export class IdbBoards implements BoardBackend {
   count(note: string): Promise<number> {
     return request(this.db.transaction(STROKES, 'readonly').objectStore(STROKES).count(ofNote(note)))
   }
+
+  async bytes(): Promise<number> {
+    let total = 0
+    await new Promise<void>((resolve, reject) => {
+      const req = this.db.transaction(STROKES, 'readonly').objectStore(STROKES).openCursor()
+      req.onerror = () => reject(req.error)
+      req.onsuccess = () => {
+        const cursor = req.result
+        if (!cursor) return resolve()
+        total += recordBytes(cursor.value as StrokeRecord)
+        cursor.continue()
+      }
+    })
+    return total
+  }
 }
 
 // ——— In memoria, se IndexedDB non c'è ———
@@ -270,6 +292,12 @@ export class MemoryBoards implements BoardBackend {
 
   async count(note: string): Promise<number> {
     return this.strokes.get(note)?.size ?? 0
+  }
+
+  async bytes(): Promise<number> {
+    let total = 0
+    for (const [note, map] of this.strokes) for (const s of map.values()) total += recordBytes({ note, id: s.id, color: s.color, points: s.points })
+    return total
   }
 }
 
@@ -362,6 +390,11 @@ export class BoardStore {
   async copy(from: string, to: string): Promise<void> {
     await (await this.backend).transfer(from, to, true)
     this.told([to])
+  }
+
+  /** Quanto occupano le lavagne di questo browser, più o meno, in byte. */
+  async bytes(): Promise<number> {
+    return (await this.backend).bytes()
   }
 
   /** Quante di queste note hanno qualcosa scritto sulla lavagna. */

@@ -96,7 +96,10 @@ punto 8: Glifo tutto anche in inglese (le schermate, i conti, i simboli, le tabe
 schemi, l'AI, le parole delle note, i numeri con il punto, l'informativa, il tutorial rifatto con 11
 pagine e i video nelle due lingue; la lingua va con l'account, come il tema; lo studente: «non puoi
 tradurre tutto ora e poi mettiamo tutto online?») e il pulsante ✨ con il contorno sfumato (variante B,
-scelta dallo studente). Lo studente, il 13 ottobre 2026: «quello che hai fatto fin ora va bene».
+scelta dallo studente). Lo studente, il 13 ottobre 2026: «quello che hai fatto fin ora va bene». Il punto 3,
+le impostazioni divise in sezioni (Generale, Scrittura, AI, Account, Dati, Informazioni; l'account è la
+sezione «Account», aperta dal pulsante dell'account; in «Dati» lo spazio occupato, con i modelli di
+«Spiegami»), è fatto sul ramo `prova` il 13 ottobre 2026: aspetta il «va bene» dello studente.
 
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 

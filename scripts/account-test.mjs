@@ -419,8 +419,21 @@ try {
   // Una lavagna scritta sta solo in questo browser, non nell'account: uscendo Glifo lo dice, e la
   // toglie insieme alle note.
   const drawnNote = await drawOnBoard(pc.page)
+  // Il pulsante dell'account apre le impostazioni sulla sezione «Account» (GRAFICA.md, punto 3).
   await pc.page.locator('.account-button').click()
-  await pc.page.locator('dialog.dialog-account button', { hasText: 'Esci dall\'account' }).click()
+  const accountSettings = pc.page.locator('dialog.dialog-settings[open]')
+  await accountSettings.waitFor()
+  const accountShown = await accountSettings.evaluate((d) => ({
+    section: d.dataset.section,
+    selected: d.querySelector('.settings-tab[aria-selected="true"]')?.dataset.section,
+    hint: d.querySelector('#settings-hint-account')?.textContent,
+    email: d.querySelector('#settings-panel-account .account-email')?.textContent,
+  }))
+  check(
+    accountShown.section === 'account' && accountShown.selected === 'account' && accountShown.hint === EMAIL && accountShown.email === `Sei entrato come ${EMAIL}.`,
+    `il pulsante dell'account apre le impostazioni su «Account», con chi è entrato (${JSON.stringify(accountShown)})`,
+  )
+  await accountSettings.locator('button', { hasText: 'Esci dall\'account' }).click()
   const boardWarning = pc.page.locator('dialog.dialog-confirm')
   await boardWarning.waitFor()
   const warningText = await boardWarning.locator('.confirm-message').textContent()
@@ -458,7 +471,7 @@ try {
   await pc.page.waitForTimeout(3500)
   await pc.page.locator('.account-button').click()
   const outAgain = tab.waitForEvent('load')
-  await pc.page.locator('dialog.dialog-account button', { hasText: 'Esci dall\'account' }).click()
+  await pc.page.locator('dialog.dialog-settings button', { hasText: 'Esci dall\'account' }).click()
   await outAgain
   await tab.waitForSelector('.cm-editor')
   check((await accountState(tab)).includes('is-guest'), 'uscendo da una scheda esce anche l\'altra')
@@ -596,13 +609,13 @@ try {
   fake.failPush(true)
   await typeAtEnd(google.page, ' — modifica solo dell\'altro account')
   await google.page.waitForTimeout(3500)
-  const accountWindow = google.page.locator('dialog.dialog-account')
+  const accountWindow = google.page.locator('dialog.dialog-settings')
   // Senza rete non si cambia account: non si potrebbe entrare nell'altro.
   await google.context.setOffline(true)
   await google.page.locator('.account-button').click()
   check(
     (await accountWindow.locator('.button-row button').allInnerTexts()).join('|').includes('Cambia account|Esci dall\'account'),
-    'nella finestra dell\'account, accanto a «Esci dall\'account» c\'è «Cambia account»',
+    'nella sezione «Account» delle impostazioni, accanto a «Esci dall\'account» c\'è «Cambia account»',
   )
   await accountWindow.locator('button', { hasText: 'Cambia account' }).click()
   check(
@@ -824,7 +837,7 @@ try {
   // ——— I tuoi dati: scaricarli, poi eliminare l'account ———
   const deletedId = fake.userId(EMAIL)
   await portatile.page.locator('.account-button').click()
-  const accountDialog = portatile.page.locator('dialog.dialog-account')
+  const accountDialog = portatile.page.locator('dialog.dialog-settings')
   const downloading = portatile.page.waitForEvent('download')
   await accountDialog.locator('button', { hasText: 'Scarica i miei dati' }).click()
   const file = await downloading
