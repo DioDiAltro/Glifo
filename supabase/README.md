@@ -178,26 +178,12 @@ L'email per entrare:
   tutte le lunghezze che Supabase permette, e lo controlla con
   `verifyOtp({ email, token, type: 'email' })`.
 
-I modelli in italiano (Authentication → Emails → Templates), messi dallo studente il 9 ottobre
-2026: l'email arriva in italiano con il codice. Le email predefinite sono in
-inglese («Confirm your email address»): si sostituiscono oggetto e testo di **Confirm signup**
-(chi entra per la prima volta) e di **Magic Link** (chi ha già l'account). Oggetto di tutti e
-due: `Il tuo accesso a Glifo`. Testo di **Magic Link**:
-
-```html
-<h2>Entra in Glifo</h2>
-<p>Se stai leggendo questa email nel browser in cui usi Glifo, premi qui:</p>
-<p><a href="{{ .ConfirmationURL }}">Entra in Glifo</a></p>
-<p>Se la leggi altrove, per esempio sul telefono, scrivi questo codice nella finestra di Glifo:</p>
-<p style="font-size:28px;font-weight:bold;letter-spacing:4px">{{ .Token }}</p>
-<p>Il link e il codice valgono una volta sola. Se non hai chiesto tu di entrare in Glifo, ignora questa email.</p>
-```
-
-Per **Confirm signup** lo stesso testo, con il titolo `<h2>Ti diamo il benvenuto in Glifo</h2>`.
-
-**Con Glifo anche in inglese** (ottobre 2026) l'email è in tutte e due le lingue, perché Supabase
-manda lo stesso modello a tutti: prima l'italiano, poi l'inglese, con un solo codice. Da mettere
-nei due modelli (lo fa lo studente: da qui i modelli non si cambiano). Oggetto di tutti e due:
+I modelli (Authentication → Emails → Templates) li mette lo studente: da qui non si cambiano. Le
+email predefinite sono in inglese («Confirm your email address»): si sostituiscono oggetto e testo di
+**Confirm signup** (chi entra per la prima volta) e di **Magic Link** (chi ha già l'account). Il 9
+ottobre 2026 lo studente ha messo i modelli in italiano, con il codice; il 13 ottobre 2026, **con Glifo
+anche in inglese**, quelli in tutte e due le lingue, perché Supabase manda lo stesso modello a tutti:
+prima l'italiano, poi l'inglese, con un solo codice. Oggetto di tutti e due:
 `Il tuo accesso a Glifo · Your Glifo sign-in`. Testo di **Magic Link**:
 
 ```html

@@ -96,7 +96,7 @@ punto 8: Glifo tutto anche in inglese (le schermate, i conti, i simboli, le tabe
 schemi, l'AI, le parole delle note, i numeri con il punto, l'informativa, il tutorial rifatto con 11
 pagine e i video nelle due lingue; la lingua va con l'account, come il tema; lo studente: «non puoi
 tradurre tutto ora e poi mettiamo tutto online?») e il pulsante ✨ con il contorno sfumato (variante B,
-scelta dallo studente).
+scelta dallo studente). Lo studente, il 13 ottobre 2026: «quello che hai fatto fin ora va bene».
 
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
@@ -756,6 +756,8 @@ che si scrive».
 - Interfaccia anche in inglese: fatta il 12 ottobre 2026 (GRAFICA.md, punto 6).
 
 ### Estensioni create da chi usa Glifo (idea dello studente, 10 ottobre 2026)
+
+**Per ora si aspetta:** lo studente, il 13 ottobre 2026, «aspetta con le estensioni per ora».
 
 **Cosa:** come in VS Code e in Obsidian, chi usa Glifo si crea quello che gli serve, come vuole lui,
 e può condividerlo con gli altri. Lo studente: le estensioni fatte dagli utenti si pubblicano solo

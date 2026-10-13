@@ -140,9 +140,6 @@ documentazione, non codice: la regola di delegare all'esploratore vale per il co
 
 Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui quando sono fatte):
 
-- Con Glifo anche in inglese (dal 12 ottobre 2026), mettere in Supabase l'email per entrare in tutte e due
-  le lingue: Authentication → Emails → Templates, **Magic Link** e **Confirm signup**, con l'oggetto e il
-  testo scritti in supabase/README.md («Con Glifo anche in inglese»). Da qui i modelli non si cambiano.
 - Domenica 18 ottobre 2026, il giorno del trasloco su `glifo.page`: in Supabase (Authentication → URL
   Configuration) cambiare il **Site URL** in `https://glifo.page/` («Trasloco» in ROADMAP.md, passo 4).
   Da lunedì 12 il vecchio sito mostra l'avviso: lo studente può scrivere a chi usa Glifo come portare gli

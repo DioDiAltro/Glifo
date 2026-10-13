@@ -18,9 +18,9 @@ quando i punti sono tutti fatti si cancella, insieme alla voce «La grafica» di
 | 3 | Le impostazioni divise in sezioni | da decidere |
 | 4 | Più modelli per «Spiegami» | da decidere |
 | 5 | A cosa serve la chiave dell'AI | da decidere |
-| 6 | Glifo anche in inglese | fatto: tutto tradotto, anche le parole delle note, i numeri, l'AI e l'informativa; sul sito vero dal 12 ottobre 2026 |
+| 6 | Glifo anche in inglese | fatto: tutto tradotto, anche le parole delle note, i numeri, l'AI e l'informativa; sul sito vero dal 12 ottobre 2026; lo studente: «va bene» |
 | 7 | Via il registro dei tocchi | deciso: si toglie (manca una risposta) |
-| 8 | Il pulsante ✨ con il contorno | deciso: variante B, fatta sul ramo `prova` |
+| 8 | Il pulsante ✨ con il contorno | fatto: variante B, sul sito vero dal 12 ottobre 2026; lo studente: «va bene» |
 
 ## 1. «Cambia account»
 
@@ -417,12 +417,14 @@ poi mettiamo tutto online?». Fatto lo stesso giorno, con le tappe 2-6:
   inglese; i teoremi si riconoscono anche scritti in inglese (Theorem, Definition…);
 - **alla fine** (tappa 6): l'informativa in inglese nella stessa pagina (si apre nella lingua di Glifo), i
   video del tutorial in inglese, la nota di benvenuto con ```` ```graph ````, il testo dell'email per
-  entrare in tutte e due le lingue (da mettere in Supabase: vedi supabase/README.md), la descrizione
+  entrare in tutte e due le lingue (messo in Supabase dallo studente il 13 ottobre: vedi supabase/README.md), la descrizione
   dell'app installata in tutte e due le lingue.
 
 Una prova nel browser apre Glifo in inglese con una nota scritta con le parole inglesi e controlla che
 nell'anteprima, nel pannello dei simboli, negli editor, nel pannello ✨ e nelle impostazioni non si veda
 italiano.
+
+Lo studente, 13 ottobre 2026, con Glifo in inglese sul sito vero: «quello che hai fatto fin ora va bene».
 
 ## 7. Via il registro dei tocchi
 
@@ -498,6 +500,9 @@ la misura non cambia); mentre l'AI lavora i colori del contorno girano (l'angolo
 registrato con `@property`; dove il browser non lo conosce il contorno resta fermo), dentro c'è la luce
 dello stesso neon e l'icona sfuma come prima. Con «riduci animazioni» il contorno resta sfumato e fermo,
 con la luce viola. «Simboli» resta con il contorno indaco.
+
+Sul sito vero dal 12 ottobre 2026, insieme al punto 6; lo studente, il 13: «quello che hai fatto fin ora va
+bene».
 
 ## Gli abbonamenti, in tutto questo
 
