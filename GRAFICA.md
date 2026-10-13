@@ -15,7 +15,7 @@ quando i punti sono tutti fatti si cancella, insieme alla voce «La grafica» di
 |---|---|---|
 | 1 | «Cambia account» | fatto: sul sito dal 12 ottobre; lo studente: «va bene» |
 | 2 | La pagina dei commenti, tipo FAQ | da decidere |
-| 3 | Le impostazioni divise in sezioni | fatto sul ramo `prova` il 13 ottobre 2026: da vedere nelle foto e sul sito di prova |
+| 3 | Le impostazioni divise in sezioni | fatto: sul sito dal 13 ottobre 2026; lo studente: «va bene» |
 | 4 | Più modelli per «Spiegami» | da decidere |
 | 5 | A cosa serve la chiave dell'AI | da decidere |
 | 6 | Glifo anche in inglese | fatto: tutto tradotto, anche le parole delle note, i numeri, l'AI e l'informativa; sul sito vero dal 12 ottobre 2026; lo studente: «va bene» |
@@ -242,6 +242,9 @@ I video del tutorial non cambiano: nessuno mostra la finestra delle impostazioni
 della barra laterale è lo stesso. Le foto (computer e telefono, tema chiaro e scuro) sono nella chat; sul
 sito di prova https://glifo-prova.pages.dev si prova tutto tranne la sezione «Account» con un account dentro
 (lì l'account è spento): quella si vede nelle foto, fatte con il Supabase finto delle prove.
+
+Lo studente, 13 ottobre 2026, viste le foto: «va bene, portalo sul sito vero». Sul sito dal 13 ottobre
+2026 (glifo.page e il vecchio indirizzo), con l'account come sezione delle impostazioni (una finestra sola).
 
 ## 4. Più modelli per «Spiegami»
 
