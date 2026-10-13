@@ -254,7 +254,7 @@ export async function createFakeSupabase() {
         return reply(err.code === '42501' ? 401 : 400, { code: err.code ?? 'P0001', message: err.message, details: err.detail ?? null, hint: err.hint ?? null })
       }
     }
-    // La pagina «Commenti» (src/ui/comments.ts): si leggono con i permessi di chi chiede, così valgono
+    // I commenti della pagina faq.html (src/ui/comments.ts): si leggono con i permessi di chi chiede, così valgono
     // le colonne concesse e la regola dei soli visibili. Di PostgREST solo select, order e limit.
     if (path === '/rest/v1/feedback' && request.method() === 'GET') {
       const userId = userIdFrom(request.headers().authorization ?? '')

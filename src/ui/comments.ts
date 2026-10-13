@@ -1,15 +1,15 @@
 /**
- * La pagina «Commenti» (8 ottobre 2026), dal fumetto in fondo alla barra laterale: quello che chi
- * prova Glifo ha scritto e ha scelto di far vedere a tutti, diviso in problemi, idee e altro, così
- * prima di scrivere si guarda se qualcuno l'ha già detto. Si legge dalla tabella `feedback` di
- * Supabase con la sola chiave pubblica, come le note condivise: il database dà solo i commenti
- * visibili e solo tipo, nome, testo, data e la risposta di chi fa Glifo (migrazione «commenti
- * pubblici»), mai l'email, il sito, la versione o il browser. «Scrivi un commento» apre la finestra
- * di feedback.ts; dentro claude.ai i commenti non si leggono e non partono.
+ * I commenti (8 ottobre 2026), nella pagina «Domande frequenti e commenti» (faq.html, src/ui/faqPage.ts,
+ * dal 13 ottobre 2026: GRAFICA.md, punto 2): quello che chi prova Glifo ha scritto e ha scelto di far
+ * vedere a tutti, diviso in problemi, idee e altro, così prima di scrivere si guarda se qualcuno l'ha già
+ * detto. Si legge dalla tabella `feedback` di Supabase con la sola chiave pubblica, come le note
+ * condivise: il database dà solo i commenti visibili e solo tipo, nome, testo, data e la risposta di chi
+ * fa Glifo (migrazione «commenti pubblici»), mai l'email, il sito, la versione o il browser. «Scrivi un
+ * commento» apre la finestra di feedback.ts, la stessa del fumetto in fondo alla barra laterale; dentro
+ * claude.ai i commenti non si leggono e non partono.
  */
 import { SUPABASE_KEY, SUPABASE_URL } from '../account/config'
 import { dateLocale, texts } from '../i18n'
-import { dialogShell } from './dialogs'
 import { h } from './dom'
 import { openFeedbackDialog, type FeedbackDeps, type FeedbackKind } from './feedback'
 
@@ -39,13 +39,15 @@ const T = texts({
   // `empty`: la frase della scheda vuota («Ancora niente, qui.»).
   emptyTab: (empty: string) => [`${empty} Se hai qualcosa da dire, scrivilo tu.`, `${empty} If you have something to say, be the first to write it.`],
   latest: (n: number) => [`Qui ci sono i ${n} commenti più recenti.`, `These are the ${n} most recent comments.`],
-  title: ['Commenti', 'Feedback'],
   intro: [
     'Problemi, idee e altro da chi prova Glifo: guarda se qualcuno l\'ha già scritto, se no scrivilo tu.',
     'Problems, ideas and more from people trying Glifo: see if someone has already written it, and if not, write it yourself.',
   ],
-  close: ['Chiudi', 'Close'],
   write: ['Scrivi un commento', 'Write a comment'],
+  inClaude: [
+    'Dentro claude.ai i commenti non si vedono: aprili dal sito di Glifo.',
+    'Comments can\'t be seen inside claude.ai: open them from the Glifo website.',
+  ],
 })
 
 /** Un commento come lo vede chiunque nella pagina. */
@@ -72,6 +74,11 @@ const KINDS = new Set<unknown>(TABS.map((tab) => tab.kind))
 
 /** Perché i commenti non si vedono, già detto per la pagina. */
 export class CommentsError extends Error {}
+
+/** Dentro claude.ai: perché i commenti non si vedono, al posto dell'elenco. */
+export function commentsOffInClaude(): string {
+  return T.inClaude
+}
 
 function isComment(row: unknown): row is PublicComment {
   if (!row || typeof row !== 'object') return false
@@ -151,7 +158,11 @@ export interface CommentsDeps {
 /** La scheda aperta l'ultima volta, finché la pagina resta aperta. */
 let lastTab: FeedbackKind = 'problema'
 
-export function openCommentsDialog(deps: CommentsDeps): HTMLDialogElement {
+/**
+ * I commenti, da mettere nella pagina: in cima le schede (con quanti sono) e «Scrivi un commento», sotto
+ * l'elenco della scheda aperta. Si caricano subito.
+ */
+export function commentsView(deps: CommentsDeps): HTMLElement {
   const load = deps.load ?? (() => loadComments())
   let comments: PublicComment[] | null = null
   let state: { text: string; retry?: boolean } | null = null
@@ -236,25 +247,21 @@ export function openCommentsDialog(deps: CommentsDeps): HTMLDialogElement {
     })
   }
 
-  const dialog = dialogShell(
-    T.title,
-    [
-      h('p', { class: 'comments-intro' }, T.intro),
+  const view = h(
+    'div',
+    { class: 'comments-view' },
+    h('p', { class: 'comments-intro' }, T.intro),
+    h(
+      'div',
+      { class: 'comments-bar' },
       tabs,
-      body,
-      h(
-        'div',
-        { class: 'dialog-actions' },
-        h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => dialog.close() } }, T.close),
-        h('button', { class: 'btn btn-primary comments-write', attrs: { type: 'button' }, on: { click: write } }, T.write),
-      ),
-    ],
-    'dialog-comments',
+      h('button', { class: 'btn btn-primary comments-write', attrs: { type: 'button' }, on: { click: write } }, T.write),
+    ),
+    body,
   )
   if (deps.off) {
     state = { text: deps.off }
     render()
   } else refresh()
-  dialog.showModal()
-  return dialog
+  return view
 }

@@ -62,8 +62,8 @@ const T = texts({
   ],
   condividiTitle: ['Condividere e ritrovare gli appunti', 'Share and sync your notes'],
   condividiText: [
-    'Con l\'account ritrovi gli appunti su ogni dispositivo, e «Condividi», in fondo alla barra laterale, crea un link alla nota: chi lo apre la legge anche senza Glifo. Da lì la stampi o la salvi in PDF, anche senza account. Nel fumetto leggi i commenti di chi prova Glifo e scrivi il tuo.',
-    'With an account you find your notes on every device, and “Share”, at the bottom of the sidebar, creates a link to the note: anyone can read it, even without Glifo. From there you can print it or save it as a PDF, even without an account. In the speech bubble you read feedback from people trying Glifo and write yours.',
+    'Con l\'account ritrovi gli appunti su ogni dispositivo, e «Condividi», in fondo alla barra laterale, crea un link alla nota: chi lo apre la legge anche senza Glifo. Da lì la stampi o la salvi in PDF, anche senza account. Con il fumetto scrivi un commento, e lì trovi le domande frequenti.',
+    'With an account you find your notes on every device, and “Share”, at the bottom of the sidebar, creates a link to the note: anyone can read it, even without Glifo. From there you can print it or save it as a PDF, even without an account. With the speech bubble you write a comment, and there you find the FAQ.',
   ],
   offline: ['Il video si vede con la connessione.', 'The video needs a connection.'],
   page: (n: number, title: string) => [`Pagina ${n}: ${title}`, `Page ${n}: ${title}`],

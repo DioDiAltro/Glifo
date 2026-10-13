@@ -107,17 +107,26 @@ da copiare con **Copia link** e mandare a chi vuoi. Serve l'account; chi riceve 
 - Il link apre una pagina di Glifo (`nota.html`) che non mostra chi l'ha condivisa. Il codice
   nel link è casuale e non si indovina.
 
-### Commenti
+### Domande frequenti e commenti
 
-Il **fumetto** in fondo alla barra laterale, accanto all'account, apre la pagina **Commenti**: quello
-che chi prova Glifo ha scritto, diviso in **Problemi**, **Idee** e **Altro** (con quanti sono), con il
-nome (o «Anonimo»), la data e la risposta di chi fa Glifo, se c'è. Prima di scrivere si guarda se
-qualcuno l'ha già detto. **Scrivi un commento** apre una finestra in cui scegliere il tipo (parte da
-quello della scheda aperta), scrivere il messaggio e, se vuoi, il tuo nome e la tua email per una
-risposta. Con la spunta «Fallo vedere a tutti» (c'è già) il commento compare nella pagina; senza, lo
-legge solo chi fa Glifo. L'email non si vede mai. Serve la connessione, non l'account. Con il
-messaggio arrivano anche la versione di Glifo e il browser, per capire i problemi; mai le note. Se non
-parte, il testo resta lì finché non riprovi, anche chiudendo la finestra.
+Il **fumetto** in fondo alla barra laterale, accanto all'account, apre **Scrivi un commento**: si sceglie
+il tipo (un problema, un'idea o altro), si scrive il messaggio e, se vuoi, il tuo nome e la tua email per
+una risposta. In cima c'è il link alla pagina **Domande frequenti e commenti** (`faq.html`, su glifo.page
+anche [glifo.page/faq](https://glifo.page/faq)), che si apre anche da *Impostazioni → Informazioni*:
+
+- in cima le **domande frequenti**, divise per argomento (gli appunti, usare Glifo, l'AI, l'account): si
+  vede la domanda e con un clic si apre la risposta. Ogni domanda ha il suo indirizzo (per esempio
+  `glifo.page/faq#offline`, con «Copia il link»), da mandare a chi chiede una cosa già spiegata. Si
+  leggono anche offline;
+- sotto, i **commenti**: quello che chi prova Glifo ha scritto, diviso in **Problemi**, **Idee** e
+  **Altro** (con quanti sono), con il nome (o «Anonimo»), la data e la risposta di chi fa Glifo, se c'è,
+  e di nuovo «Scrivi un commento» (parte dal tipo della scheda aperta).
+
+La pagina si manda a chiunque con il link, non carica l'editor e per ora non va nei motori di ricerca.
+Con la spunta «Fallo vedere a tutti» (c'è già) il commento compare nella pagina; senza, lo legge solo chi
+fa Glifo; dal sito di prova i commenti partono sempre privati. L'email non si vede mai. Serve la
+connessione, non l'account. Con il messaggio arrivano anche la versione di Glifo e il browser, per capire
+i problemi; mai le note. Se non parte, il testo resta lì finché non riprovi, anche chiudendo la finestra.
 
 Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: progetto `glifo` →
 **Table Editor** → `feedback`. Lì risponde e nasconde un commento dalla pagina (vedi
@@ -816,8 +825,8 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
 - Stampa / PDF dell'anteprima (da «Condividi»), backup di tutti gli appunti (con le lavagne).
 - Niente barra in alto, come nell'app di Claude: a sinistra la **barra laterale**, che si apre e
   si chiude con il logo in alto a sinistra (come in Gemini); sotto il logo subito gli appunti, in
-  fondo una riga con «Apri .md», «Salva .md» e l'icona di «Condividi», poi l'account, il fumetto dei
-  **Commenti**, «Come si usa» e le impostazioni (lì c'è anche il tema). Sopra il testo una riga sola: a sinistra i pulsanti per
+  fondo una riga con «Apri .md», «Salva .md» e l'icona di «Condividi», poi l'account, il fumetto per
+  **scrivere un commento**, «Come si usa» e le impostazioni (lì c'è anche il tema). Sopra il testo una riga sola: a sinistra i pulsanti per
   formattare, al centro le viste (Editor, Diviso, Anteprima, Lavagna), a destra quelli per inserire e i
   **Simboli**, vicino al loro pannello.
 - **Tutorial** la prima volta che si entra: undici pagine, ognuna con un video e poche righe (scrivere,
@@ -842,8 +851,8 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
   app** e usabile offline.
 - **Impostazioni divise in sezioni**: Generale (lingua, tema, dimensione del testo), Scrittura (i `$`
   automatici, il controllo ortografico, il dizionario), AI («Spiegami» e l'assistente con la propria
-  chiave), Account, Dati (backup e spazio occupato) e Informazioni (la versione, la guida, i commenti,
-  l'informativa e le licenze). A sinistra l'elenco, a destra la sezione; sul telefono una pagina per
+  chiave), Account, Dati (backup e spazio occupato) e Informazioni (la versione, la guida, le domande
+  frequenti e i commenti, l'informativa e le licenze). A sinistra l'elenco, a destra la sezione; sul telefono una pagina per
   sezione, con la freccia per tornare. Ogni cambio vale subito.
 
 ![Ricerca a parole](docs/ricerca.png)
@@ -1047,7 +1056,8 @@ src/
   ui/                     pannello dei simboli, anteprima, elenco appunti, finestre,
                           le impostazioni divise in sezioni (settings.ts), le licenze (licenses.ts),
                           bordi da trascinare tra le sezioni (resize.ts), il simbolo ∮ (logo.ts),
-                          le frecce ↑ ↓ di schemi e grafici (moveButtons.ts)
+                          le frecce ↑ ↓ di schemi e grafici (moveButtons.ts), le domande frequenti
+                          (faq.ts) e la loro pagina con i commenti (faqPage.ts, comments.ts, feedback.ts)
   store/                  salvataggio nel browser, file .md, impostazioni, misure delle sezioni (layout.ts),
                           quanto spazio occupa Glifo nel browser (usage.ts)
   ai/assistant.ts         assistente AI: Anthropic con l'SDK, gli altri servizi nella «lingua» di OpenAI
@@ -1159,6 +1169,7 @@ src/
   host.ts                 integrazione facoltativa con claude.ai (per la demo pubblicata lì)
 privacy.html              l'informativa sulla privacy (una seconda pagina, fuori dall'app)
 nota.html                 la pagina delle note condivise con un link (src/share/page.ts)
+faq.html                  la pagina delle domande frequenti e dei commenti (src/ui/faqPage.ts)
 tests/                    test automatici (Vitest), anche del database con le vere migrazioni (PGlite)
 scripts/smoke-test.mjs    prova nel browser del flusso principale
 scripts/account-test.mjs  prova nel browser dell'account, con un Supabase finto (fake-supabase.mjs)

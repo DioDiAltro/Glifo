@@ -53,6 +53,8 @@ function serve(prefix) {
     if (!path.startsWith(prefix)) return route.fulfill({ status: 404, body: 'non trovato' })
     path = path.slice(prefix.length)
     if (!path || path.endsWith('/')) path += 'index.html'
+    // Come i due siti veri: /faq dà faq.html.
+    if (!extname(path) && existsSync(join(out, `${path}.html`))) path += '.html'
     const file = join(out, path)
     if (!existsSync(file) || statSync(file).isDirectory()) return route.fulfill({ status: 404, body: 'non trovato' })
     return route.fulfill({ status: 200, body: readFileSync(file), contentType: TYPES[extname(file)] ?? 'application/octet-stream' })
@@ -274,6 +276,15 @@ const ids = { OLD, ID_A, ID_B, ID_ACCOUNT, USER }
   await old.waitForURL(`${NEW}/nota.html#AbCdEfGhIjKlMnOpQrStUv`, { timeout: 10000 }).then(
     () => check(true, 'dopo il trasloco i link condivisi vanno su glifo.page'),
     () => check(false, `dopo il trasloco i link condivisi vanno su glifo.page (è ${old.url()})`),
+  )
+  // Anche le domande frequenti (GRAFICA.md, punto 2), con la domanda dell'indirizzo aperta.
+  await old.goto(`${OLD}/Glifo/faq.html#offline`)
+  await old.waitForURL(`${NEW}/faq#offline`, { timeout: 10000 }).then(
+    async () => {
+      const opened = await old.locator('#offline[open]').waitFor({ timeout: 10000 }).then(() => true, () => false)
+      check(opened, 'dopo il trasloco le domande frequenti vanno su glifo.page/faq, con la domanda aperta')
+    },
+    () => check(false, `dopo il trasloco le domande frequenti vanno su glifo.page/faq (è ${old.url()})`),
   )
   await context.close()
 }

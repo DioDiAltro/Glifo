@@ -17,7 +17,7 @@ import { accountSection, guestAccountSection, type AccountSectionDeps } from './
 import { dialogShell } from './dialogs'
 import { ICONS, h, icon } from './dom'
 import { LICENSES } from './licenses'
-import { privacyLink } from './links'
+import { FAQ_URL, privacyLink } from './links'
 
 /** La versione di Glifo: il commit pubblicato e quando è stato costruito (vedi vite.config.ts). */
 declare const __GLIFO_VERSION__: string
@@ -39,7 +39,7 @@ const T = texts({
   data: ['Dati', 'Data'],
   dataHint: ['Il backup e lo spazio in questo browser', 'Backup and space in this browser'],
   about: ['Informazioni', 'About'],
-  aboutHint: ['Versione, guida, commenti e licenze', 'Version, guide, feedback and licenses'],
+  aboutHint: ['Versione, guida, domande frequenti e licenze', 'Version, guide, FAQ and licenses'],
 
   // Generale
   language: ['Lingua', 'Language'],
@@ -174,11 +174,12 @@ const T = texts({
   version: (commit: string, date: string) => [`Versione ${commit} del ${date}.`, `Version ${commit}, ${date}.`],
   localVersion: (date: string) => [`Versione locale del ${date}.`, `Local build, ${date}.`],
   aboutHelp: [
-    'Il tutorial con tutte le scorciatoie, e i commenti di chi usa Glifo: leggili o scrivine uno, per un problema o un\'idea.',
-    'The tutorial with all the shortcuts, and feedback from people who use Glifo: read it, or write your own about a problem or an idea.',
+    'Il tutorial con tutte le scorciatoie, poi le domande frequenti e i commenti di chi usa Glifo, in una pagina a parte. Per un problema o un\'idea, scrivi un commento.',
+    'The tutorial with all the shortcuts, then the FAQ and feedback from people who use Glifo, on a separate page. For a problem or an idea, write a comment.',
   ],
   howToUse: ['Come si usa', 'How to use'],
-  comments: ['Commenti', 'Feedback'],
+  faq: ['Domande frequenti e commenti', 'FAQ and feedback'],
+  writeComment: ['Scrivi un commento', 'Write a comment'],
   privacyAndLicenses: ['Privacy e licenze', 'Privacy and licenses'],
   licenses: (n: number) => [`I ${n} programmi liberi su cui è costruito Glifo`, `The ${n} free software projects Glifo is built on`],
   licenseOf: (name: string) => [`licenza ${name}`, `${name} license`],
@@ -201,9 +202,9 @@ export interface SettingsDialogDeps {
   account?: AccountSectionDeps | null
   /** «Accedi»: la finestra per entrare (dove l'account è spento, quella che dice perché non si entra). */
   onSignIn?(): void
-  /** «Come si usa» e i «Commenti», dalla sezione «Informazioni». */
+  /** «Come si usa» e «Scrivi un commento», dalla sezione «Informazioni». */
   onGuide?(): void
-  onComments?(): void
+  onFeedback?(): void
   /** Quanto occupano le lavagne (src/board/store.ts), per la sezione «Dati». */
   boardsBytes?(): Promise<number>
 }
@@ -840,7 +841,7 @@ function versionText(version: string): string {
   return commit === 'locale' ? T.localVersion(date) : T.version(commit, date)
 }
 
-/** «Informazioni»: la versione, la guida e i commenti, l'informativa, le licenze. */
+/** «Informazioni»: la versione, la guida, le domande frequenti e i commenti, l'informativa, le licenze. */
 function aboutSection(deps: SettingsDialogDeps): HTMLElement[] {
   return [
     h(
@@ -853,7 +854,9 @@ function aboutSection(deps: SettingsDialogDeps): HTMLElement[] {
         'div',
         { class: 'button-row' },
         h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => deps.onGuide?.() } }, icon(ICONS.help, 15), T.howToUse),
-        h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => deps.onComments?.() } }, icon(ICONS.message, 15), T.comments),
+        // Le domande frequenti e i commenti sono una pagina a parte (faq.html), come l'informativa.
+        h('a', { class: 'btn', attrs: { href: FAQ_URL, target: '_blank', rel: 'noopener' } }, icon(ICONS.info, 15), T.faq),
+        h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => deps.onFeedback?.() } }, icon(ICONS.message, 15), T.writeComment),
       ),
     ),
     h(

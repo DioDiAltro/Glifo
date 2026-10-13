@@ -135,28 +135,37 @@ try {
   await pc.page.keyboard.type('Appunti di prova')
   await typeAtEnd(pc.page, 'scritti prima di accedere')
 
-  // La pagina «Commenti» (8 ottobre 2026), anche senza account: il fumetto in fondo alla barra laterale
-  // apre i commenti che chi scrive ha fatto vedere a tutti, divisi in problemi, idee e altro, letti con le
-  // regole vere del database (solo i visibili, mai l'email). Lì «Scrivi un commento» manda il messaggio
-  // nella tabella feedback con il nome, il sito, la versione di Glifo e il browser; senza rete non parte e
-  // il testo resta. Chi fa Glifo risponde e nasconde dalla dashboard.
+  // I commenti (8 ottobre 2026), anche senza account. Dal 13 ottobre (GRAFICA.md, punto 2) il fumetto in
+  // fondo alla barra laterale apre subito «Scrivi un commento», con in cima il link alla pagina «Domande
+  // frequenti e commenti» (faq.html): lì le domande frequenti e i commenti che chi scrive ha fatto vedere a
+  // tutti, divisi in problemi, idee e altro, letti con le regole vere del database (solo i visibili, mai
+  // l'email). Il messaggio va nella tabella feedback con il nome, il sito, la versione di Glifo e il
+  // browser; senza rete non parte e il testo resta. Chi fa Glifo risponde e nasconde dalla dashboard.
   const hourAgo = (hours) => new Date(Date.now() - hours * 3_600_000).toISOString()
   await fake.addFeedback({ kind: 'problema', message: 'La lavagna si chiudeva da sola', author: 'Anna', email: 'anna@example.com', visible: true, site: 'online', reply: 'Sistemato, grazie!', created_at: hourAgo(26) })
   await fake.addFeedback({ kind: 'idea', message: 'Le formule anche nei titoli', visible: true, site: 'prova', created_at: hourAgo(3) })
   await fake.addFeedback({ kind: 'problema', message: 'Questo lo legge solo chi fa Glifo', email: 'bruno@example.com', visible: false, site: 'online', created_at: hourAgo(2) })
   const commentReads = []
-  pc.page.on('request', (r) => {
+  pc.context.on('request', (r) => {
     if (r.method() === 'GET' && r.url().includes('/rest/v1/feedback')) commentReads.push(new URL(r.url()).searchParams.get('select'))
   })
   const noNetwork = (route) => route.abort('internetdisconnected')
-  // Senza rete la richiesta non arriva (il Supabase finto, collegato con route, risponderebbe anche offline).
-  await pc.page.route('**/rest/v1/feedback*', noNetwork)
-  await pc.page.locator('.side-profile button[aria-label="Commenti"]').click()
-  // Solo la finestra aperta: chiusa, se ne va al giro dopo.
-  const comments = pc.page.locator('dialog.dialog-comments[open]')
+  await pc.page.locator('.side-profile button[aria-label="Scrivi un commento"]').click()
+  const bubbleDialog = pc.page.locator('dialog.dialog-feedback')
+  const faqLine = await bubbleDialog.locator('.feedback-faq').innerText()
+  const faqLink = bubbleDialog.locator('.feedback-faq a')
+  const faqTarget = await faqLink.getAttribute('target')
+  // Senza rete la richiesta non arriva (il Supabase finto, collegato con route, risponderebbe anche offline):
+  // sul contesto, così vale anche per la scheda nuova che apre il link.
+  await pc.context.route('**/rest/v1/feedback*', noNetwork)
+  const [faq] = await Promise.all([pc.page.waitForEvent('popup'), faqLink.click()])
+  const faqErrors = []
+  faq.on('pageerror', (e) => faqErrors.push(e.message))
+  await faq.waitForSelector('.faq-item')
+  const comments = faq.locator('#commenti')
   await comments.locator('.comments-body button', { hasText: 'Riprova' }).waitFor()
   const commentsOffline = await comments.locator('.comments-state').innerText()
-  await pc.page.unroute('**/rest/v1/feedback*', noNetwork)
+  await pc.context.unroute('**/rest/v1/feedback*', noNetwork)
   await comments.locator('.comments-body button', { hasText: 'Riprova' }).click()
   await comments.locator('.comments-tabs label', { hasText: 'Problemi' }).click()
   await comments.locator('.comment').first().waitFor()
@@ -167,7 +176,31 @@ try {
   const ideasShown = await comments.locator('.comment-author').allInnerTexts()
   // Quello che chiede la pagina; poi l'email di chi scrive non si legge nemmeno chiedendola apposta.
   const appReads = [...commentReads]
-  const emailRead = await pc.page.evaluate(async (base) => (await fetch(`${base}/rest/v1/feedback?select=email`)).status, 'https://fgsuonetdmcgojbvrsxi.supabase.co')
+  const emailRead = await faq.evaluate(async (base) => (await fetch(`${base}/rest/v1/feedback?select=email`)).status, 'https://fgsuonetdmcgojbvrsxi.supabase.co')
+  // La pagina: fuori dai motori di ricerca, le domande chiuse; l'indirizzo con una domanda la apre.
+  const faqPageInfo = await faq.evaluate(() => ({
+    path: location.pathname,
+    robots: document.querySelector('meta[name="robots"]')?.getAttribute('content'),
+    title: document.querySelector('.shared-title')?.textContent,
+    questions: document.querySelectorAll('details.faq-item').length,
+    open: document.querySelectorAll('details.faq-item[open]').length,
+  }))
+  await faq.evaluate(() => (location.hash = '#cestino'))
+  const fromHash = await waitFor(faq, () => document.querySelector('#cestino')?.open === true && document.querySelector('#cestino').classList.contains('is-target'))
+  await faq.locator('#offline summary').click()
+  const hashOnOpen = await waitFor(faq, () => location.hash === '#offline')
+  check(
+    faqLine === 'Prima di scrivere, guarda se la risposta c\'è già: Domande frequenti e commenti.' &&
+      faqTarget === '_blank' &&
+      faqPageInfo.path.endsWith('/faq.html') &&
+      faqPageInfo.robots === 'noindex' &&
+      faqPageInfo.title === 'Domande frequenti e commenti' &&
+      faqPageInfo.questions >= 12 &&
+      faqPageInfo.open === 0 &&
+      fromHash &&
+      hashOnOpen,
+    `il fumetto apre «Scrivi un commento» con il link alle domande frequenti, che si aprono in una scheda nuova: fuori dai motori di ricerca, le domande chiuse, l'indirizzo con una domanda la apre e aprendone una l'indirizzo la dice (${JSON.stringify({ faqLine, faqTarget, faqPageInfo, fromHash, hashOnOpen })})`,
+  )
   check(
     commentsOffline === 'Non riesco a caricare i commenti: controlla la connessione e riprova.' &&
       tabsShown.join('|') === 'Problemi1|Idee1|Altro0' &&
@@ -180,32 +213,35 @@ try {
       emailRead === 401 &&
       appReads.length > 0 &&
       appReads.every((select) => select === 'id,created_at,kind,author,message,reply'),
-    `«Commenti»: senza rete lo dice e «Riprova» li carica; si vedono solo quelli visibili, divisi per tipo, con il nome (o «Anonimo») e la risposta; l'email non si legge (${JSON.stringify({ commentsOffline, tabsShown, problemsShown, replyShown, ideasShown, emailRead, appReads })})`,
+    `i commenti nella pagina: senza rete lo dice e «Riprova» li carica; si vedono solo quelli visibili, divisi per tipo, con il nome (o «Anonimo») e la risposta; l'email non si legge (${JSON.stringify({ commentsOffline, tabsShown, problemsShown, replyShown, ideasShown, emailRead, appReads })})`,
   )
 
   await comments.locator('.comments-tabs label', { hasText: 'Problemi' }).click()
   await comments.locator('.comments-write').click()
-  const feedback = pc.page.locator('dialog.dialog-feedback')
+  const feedback = faq.locator('dialog.dialog-feedback')
   const kindFromTab = await feedback.locator('input[value="problema"]').isChecked()
+  // Nella pagina le domande frequenti ci sono già: il link in cima è solo dal fumetto.
+  const faqLineInPage = await feedback.locator('.feedback-faq').count()
   await feedback.locator('textarea.feedback-message').fill('L\'editor delle tabelle non si apriva')
   await feedback.locator('input[autocomplete="nickname"]').fill('Studente')
   await feedback.locator('input[type=email]').fill(EMAIL)
-  await pc.page.route('**/rest/v1/feedback*', noNetwork)
+  await faq.route('**/rest/v1/feedback*', noNetwork)
   await feedback.locator('button[type=submit]').click()
   await feedback.locator('.prompt-error:not([hidden])').waitFor()
   const offlineError = await feedback.locator('.prompt-error').innerText()
   const keptText = await feedback.locator('textarea.feedback-message').inputValue()
-  await pc.page.unroute('**/rest/v1/feedback*', noNetwork)
+  await faq.unroute('**/rest/v1/feedback*', noNetwork)
   await feedback.locator('button[type=submit]').click()
   await feedback.waitFor({ state: 'detached' })
   const feedbackSent = await poll(async () => (await fake.feedback()).length === 4)
   const feedbackRow = (await fake.feedback()).find((row) => row.author === 'Studente')
-  const thanks = await pc.page.locator('.toast').last().innerText()
-  // Mandato a tutti: la pagina si aggiorna e il commento è il primo dei problemi.
-  const listed = await waitFor(pc.page, () => document.querySelectorAll('dialog.dialog-comments[open] .comment').length === 2)
+  const thanks = await faq.locator('.toast').last().innerText()
+  // Mandato a tutti: l'elenco si aggiorna e il commento è il primo dei problemi.
+  const listed = await waitFor(faq, () => document.querySelectorAll('#commenti .comment').length === 2)
   const firstProblem = await comments.locator('.comment').first().innerText()
   check(
     kindFromTab &&
+      faqLineInPage === 0 &&
       offlineError.startsWith('Senza connessione il messaggio non parte') &&
       keptText === 'L\'editor delle tabelle non si apriva' &&
       feedbackSent &&
@@ -220,7 +256,7 @@ try {
       listed &&
       firstProblem.startsWith('Studente') &&
       firstProblem.includes('oggi alle'),
-    `«Scrivi un commento»: parte dalla scheda aperta; senza rete non parte e il testo resta; poi arriva nella tabella con il tipo, il nome, l'email, il sito, la versione e il browser, e si vede subito nella pagina (${JSON.stringify({ kindFromTab, offlineError, feedbackRow, thanks, listed, firstProblem })})`,
+    `«Scrivi un commento» nella pagina: parte dalla scheda aperta; senza rete non parte e il testo resta; poi arriva nella tabella con il tipo, il nome, l'email, il sito, la versione e il browser, e si vede subito (${JSON.stringify({ kindFromTab, faqLineInPage, offlineError, feedbackRow, thanks, listed, firstProblem })})`,
   )
 
   // Un commento solo per chi fa Glifo: arriva, ma la pagina non lo mostra.
@@ -232,24 +268,37 @@ try {
   await feedback.waitFor({ state: 'detached' })
   const privateSent = await poll(async () => (await fake.feedback()).length === 5)
   const privateRow = (await fake.feedback()).find((row) => row.message.startsWith('Vorrei usarlo a scuola'))
-  // Chi fa Glifo nasconde un commento dalla dashboard: riaprendo la pagina non c'è più.
+  // Dal fumetto di Glifo, nella sua scheda: la finestra aperta prima manda anche lei.
+  await bubbleDialog.locator('textarea.feedback-message').fill('Bello scrivere le formule')
+  await bubbleDialog.locator('button[type=submit]').click()
+  await bubbleDialog.waitFor({ state: 'detached' })
+  const bubbleSent = await poll(async () => (await fake.feedback()).length === 6)
+  const bubbleRow = (await fake.feedback()).find((row) => row.message === 'Bello scrivere le formule')
+  // Chi fa Glifo nasconde un commento dalla dashboard: ricaricando la pagina non c'è più.
   await fake.updateFeedback('La lavagna si chiudeva da sola', { visible: false })
-  await comments.locator('.dialog-actions button', { hasText: 'Chiudi' }).click()
-  await pc.page.locator('.side-profile button[aria-label="Commenti"]').click()
-  await waitFor(pc.page, () => {
-    const count = document.querySelector('dialog.dialog-comments[open] .comments-count')
+  await faq.reload()
+  await waitFor(faq, () => {
+    const count = document.querySelector('#commenti .comments-count')
     return !!count && count.textContent !== ''
   })
+  await comments.locator('.comments-tabs label', { hasText: 'Problemi' }).click()
+  const tabsAfter = await comments.locator('.comments-tabs label').allInnerTexts()
   const problemsAfter = await comments.locator('.comment').allInnerTexts()
-  await comments.locator('.dialog-actions button', { hasText: 'Chiudi' }).click()
+  await faq.close()
   check(
     nameKept === 'Studente' &&
       privateSent &&
       privateRow?.visible === false &&
       privateRow.author === 'Studente' &&
+      bubbleSent &&
+      bubbleRow?.kind === 'altro' &&
+      bubbleRow.visible === true &&
+      bubbleRow.site === 'online' &&
+      tabsAfter.join('|') === 'Problemi1|Idee1|Altro1' &&
       problemsAfter.length === 1 &&
-      problemsAfter[0].includes('L\'editor delle tabelle non si apriva'),
-    `un commento solo per chi fa Glifo arriva ma non si vede; uno nascosto dalla dashboard sparisce dalla pagina (${JSON.stringify({ nameKept, privateRow, problemsAfter })})`,
+      problemsAfter[0].includes('L\'editor delle tabelle non si apriva') &&
+      faqErrors.length === 0,
+    `un commento solo per chi fa Glifo arriva ma non si vede; quello dal fumetto arriva anche lui; uno nascosto dalla dashboard sparisce dalla pagina (${JSON.stringify({ nameKept, privateRow, bubbleRow, tabsAfter, problemsAfter, faqErrors })})`,
   )
 
   // Il controllo anti-robot (Turnstile, 9 ottobre 2026): prima dell'email Glifo chiede un token a

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SUPABASE_KEY, SUPABASE_URL } from '../src/account/config'
-import { commentDate, COMMENTS_MAX, CommentsError, loadComments, openCommentsDialog, PUBLIC_COLUMNS, type PublicComment } from '../src/ui/comments'
+import { commentDate, COMMENTS_MAX, CommentsError, commentsOffInClaude, commentsView, loadComments, PUBLIC_COLUMNS, type PublicComment } from '../src/ui/comments'
 import type { FeedbackKind, FeedbackRow } from '../src/ui/feedback'
 
 // jsdom non ha le finestre modali.
@@ -71,30 +71,37 @@ describe('la data dei commenti', () => {
   })
 })
 
-describe('la pagina «Commenti»', () => {
+describe('i commenti nella pagina «Domande frequenti e commenti»', () => {
   const list = [
     comment({ author: 'Anna', message: 'L\'editor delle tabelle non si apre', reply: 'Sistemato, grazie!' }),
     comment({ message: 'La lavagna\nsi chiude', created_at: new Date(2026, 9, 7, 9, 5).toISOString() }),
     comment({ kind: 'idea', author: 'Bruno', message: 'I grafici 3D anche nelle tabelle' }),
   ]
-  const feedback = { site: 'prova' as const, version: 'd2f8055' }
-  const choose = (dialog: HTMLDialogElement, kind: FeedbackKind) => {
-    const input = dialog.querySelector<HTMLInputElement>(`input[name="comments-tab"][value="${kind}"]`)!
+  const feedback = { site: 'online' as const, version: 'd2f8055' }
+  /** La vista nella pagina (faqPage.ts la mette nella sezione dei commenti). */
+  const mount = (deps: Parameters<typeof commentsView>[0]) => {
+    const view = commentsView(deps)
+    document.body.append(view)
+    return view
+  }
+  const choose = (view: HTMLElement, kind: FeedbackKind) => {
+    const input = view.querySelector<HTMLInputElement>(`input[name="comments-tab"][value="${kind}"]`)!
     input.checked = true
     input.dispatchEvent(new Event('change'))
   }
-  const tabs = (dialog: HTMLDialogElement) => [...dialog.querySelectorAll('.comments-tabs label')].map((l) => l.textContent)
-  const state = (dialog: HTMLDialogElement) => dialog.querySelector('.comments-state')?.textContent ?? null
-  const loaded = (dialog: HTMLDialogElement) => vi.waitFor(() => expect(tabs(dialog)[0]).toMatch(/\d$/))
+  const tabs = (view: HTMLElement) => [...view.querySelectorAll('.comments-tabs label')].map((l) => l.textContent)
+  const state = (view: HTMLElement) => view.querySelector('.comments-state')?.textContent ?? null
+  const loaded = (view: HTMLElement) => vi.waitFor(() => expect(tabs(view)[0]).toMatch(/\d$/))
+  const writeDialog = () => [...document.querySelectorAll('dialog')].at(-1)!
 
   it('divide i commenti in problemi, idee e altro, con il nome, la data e la risposta', async () => {
-    const dialog = openCommentsDialog({ feedback, load: async () => list, now: () => now })
-    expect(dialog.querySelector('h2')?.textContent).toBe('Commenti')
-    expect(state(dialog)).toBe('Carico i commenti…')
-    await loaded(dialog)
-    expect(tabs(dialog)).toEqual(['Problemi2', 'Idee1', 'Altro0'])
-    choose(dialog, 'problema')
-    const [first, second] = dialog.querySelectorAll('.comment')
+    const view = mount({ feedback, load: async () => list, now: () => now })
+    expect(view.querySelector('.comments-intro')?.textContent).toBe('Problemi, idee e altro da chi prova Glifo: guarda se qualcuno l\'ha già scritto, se no scrivilo tu.')
+    expect(state(view)).toBe('Carico i commenti…')
+    await loaded(view)
+    expect(tabs(view)).toEqual(['Problemi2', 'Idee1', 'Altro0'])
+    choose(view, 'problema')
+    const [first, second] = view.querySelectorAll('.comment')
     expect(first.querySelector('.comment-author')?.textContent).toBe('Anna')
     expect(first.querySelector('time')?.textContent).toBe('oggi alle 17:29')
     expect(first.querySelector('.comment-text')?.textContent).toBe('L\'editor delle tabelle non si apre')
@@ -103,27 +110,24 @@ describe('la pagina «Commenti»', () => {
     expect(second.querySelector('time')?.textContent).toBe('ieri alle 9:05')
     expect(second.querySelector('.comment-text')?.textContent).toBe('La lavagna\nsi chiude')
     expect(second.querySelector('.comment-reply')).toBeNull()
-    choose(dialog, 'idea')
-    expect([...dialog.querySelectorAll('.comment-author')].map((a) => a.textContent)).toEqual(['Bruno'])
-    choose(dialog, 'altro')
-    expect(dialog.querySelector('.comment')).toBeNull()
-    expect(state(dialog)).toBe('Ancora niente, qui. Se hai qualcosa da dire, scrivilo tu.')
-    dialog.close()
-    // La scheda resta quella dell'ultima volta.
-    const again = openCommentsDialog({ feedback, load: async () => list, now: () => now })
+    choose(view, 'idea')
+    expect([...view.querySelectorAll('.comment-author')].map((a) => a.textContent)).toEqual(['Bruno'])
+    choose(view, 'altro')
+    expect(view.querySelector('.comment')).toBeNull()
+    expect(state(view)).toBe('Ancora niente, qui. Se hai qualcosa da dire, scrivilo tu.')
+    // La scheda resta quella dell'ultima volta, finché la pagina è aperta.
+    const again = mount({ feedback, load: async () => list, now: () => now })
     expect(again.querySelector<HTMLInputElement>('input[value="altro"]')!.checked).toBe(true)
-    again.close()
   })
 
   it('quello che scrivono resta testo: niente HTML', async () => {
     const load = async () => [comment({ author: '<b>Anna</b>', message: '<img src=x onerror="alert(1)">', reply: '<script>x</script>' })]
-    const dialog = openCommentsDialog({ feedback, load, now: () => now })
-    choose(dialog, 'problema')
-    await vi.waitFor(() => expect(dialog.querySelector('.comment')).not.toBeNull())
-    expect(dialog.querySelector('.comment b, .comment img, .comment script')).toBeNull()
-    expect(dialog.querySelector('.comment-author')?.textContent).toBe('<b>Anna</b>')
-    expect(dialog.querySelector('.comment-text')?.textContent).toBe('<img src=x onerror="alert(1)">')
-    dialog.close()
+    const view = mount({ feedback, load, now: () => now })
+    choose(view, 'problema')
+    await vi.waitFor(() => expect(view.querySelector('.comment')).not.toBeNull())
+    expect(view.querySelector('.comment b, .comment img, .comment script')).toBeNull()
+    expect(view.querySelector('.comment-author')?.textContent).toBe('<b>Anna</b>')
+    expect(view.querySelector('.comment-text')?.textContent).toBe('<img src=x onerror="alert(1)">')
   })
 
   it('senza rete lo dice e «Riprova» li carica', async () => {
@@ -131,47 +135,45 @@ describe('la pagina «Commenti»', () => {
       .fn<() => Promise<PublicComment[]>>()
       .mockRejectedValueOnce(new CommentsError('Senza connessione i commenti non si vedono: riprova quando sei di nuovo in rete.'))
       .mockResolvedValueOnce(list)
-    const dialog = openCommentsDialog({ feedback, load, now: () => now })
-    await vi.waitFor(() => expect(state(dialog)).toContain('Senza connessione'))
-    expect(tabs(dialog)).toEqual(['Problemi', 'Idee', 'Altro'])
-    const retry = [...dialog.querySelectorAll<HTMLButtonElement>('.comments-body button')].find((b) => b.textContent === 'Riprova')!
+    const view = mount({ feedback, load, now: () => now })
+    await vi.waitFor(() => expect(state(view)).toContain('Senza connessione'))
+    expect(tabs(view)).toEqual(['Problemi', 'Idee', 'Altro'])
+    const retry = [...view.querySelectorAll<HTMLButtonElement>('.comments-body button')].find((b) => b.textContent === 'Riprova')!
     retry.click()
-    await loaded(dialog)
+    await loaded(view)
     expect(load).toHaveBeenCalledTimes(2)
-    expect(dialog.querySelector('.comments-body button')).toBeNull()
-    dialog.close()
+    expect(view.querySelector('.comments-body button')).toBeNull()
   })
 
-  it('«Scrivi un commento» parte dalla scheda aperta; mandato a tutti, la pagina si aggiorna', async () => {
+  it('«Scrivi un commento» parte dalla scheda aperta, senza il link alla pagina; mandato a tutti, l\'elenco si aggiorna', async () => {
     const load = vi.fn(async () => list)
     const send = vi.fn(async (_row: FeedbackRow) => {})
-    const dialog = openCommentsDialog({ feedback: { ...feedback, send }, load, now: () => now })
-    await loaded(dialog)
-    choose(dialog, 'idea')
-    dialog.querySelector<HTMLButtonElement>('.comments-write')!.click()
-    const write = [...document.querySelectorAll('dialog')].at(-1)!
-    expect(write).not.toBe(dialog)
+    const view = mount({ feedback: { ...feedback, send }, load, now: () => now })
+    await loaded(view)
+    choose(view, 'idea')
+    view.querySelector<HTMLButtonElement>('.comments-write')!.click()
+    const write = writeDialog()
     expect(write.querySelector('h2')?.textContent).toBe('Scrivi un commento')
     expect(write.querySelector<HTMLInputElement>('input[value="idea"]')!.checked).toBe(true)
+    // Nella pagina le domande frequenti ci sono già: il link in cima è solo dal fumetto di Glifo.
+    expect(write.querySelector('.feedback-faq')).toBeNull()
     const text = write.querySelector('textarea')!
     text.value = 'Le formule anche nei titoli'
     text.dispatchEvent(new Event('input'))
     write.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }))
     await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(2))
-    expect(send.mock.calls[0][0]).toMatchObject({ kind: 'idea', message: 'Le formule anche nei titoli', visible: true })
+    expect(send.mock.calls[0][0]).toMatchObject({ kind: 'idea', message: 'Le formule anche nei titoli', visible: true, site: 'online' })
     expect(write.open).toBe(false)
-    expect(dialog.open).toBe(true)
-    expect(dialog.querySelector<HTMLInputElement>('input[value="idea"]')!.checked).toBe(true)
-    dialog.close()
+    expect(view.querySelector<HTMLInputElement>('input[value="idea"]')!.checked).toBe(true)
   })
 
-  it('un commento solo per chi fa Glifo non ricarica la pagina', async () => {
+  it('un commento solo per chi fa Glifo non ricarica l\'elenco', async () => {
     const load = vi.fn(async () => list)
     const send = vi.fn(async (_row: FeedbackRow) => {})
-    const dialog = openCommentsDialog({ feedback: { ...feedback, send }, load, now: () => now })
-    await loaded(dialog)
-    dialog.querySelector<HTMLButtonElement>('.comments-write')!.click()
-    const write = [...document.querySelectorAll('dialog')].at(-1)!
+    const view = mount({ feedback: { ...feedback, send }, load, now: () => now })
+    await loaded(view)
+    view.querySelector<HTMLButtonElement>('.comments-write')!.click()
+    const write = writeDialog()
     const text = write.querySelector('textarea')!
     text.value = 'Solo per te'
     text.dispatchEvent(new Event('input'))
@@ -182,22 +184,35 @@ describe('la pagina «Commenti»', () => {
     await vi.waitFor(() => expect(write.open).toBe(false))
     expect(send.mock.calls[0][0]).toMatchObject({ message: 'Solo per te', visible: false })
     expect(load).toHaveBeenCalledOnce()
-    dialog.close()
+  })
+
+  it('dal sito di prova il commento parte privato e l\'elenco non si ricarica', async () => {
+    const load = vi.fn(async () => list)
+    const send = vi.fn(async (_row: FeedbackRow) => {})
+    const view = mount({ feedback: { site: 'prova', version: 'd2f8055', send }, load, now: () => now })
+    await loaded(view)
+    view.querySelector<HTMLButtonElement>('.comments-write')!.click()
+    const write = writeDialog()
+    const text = write.querySelector('textarea')!
+    text.value = 'Una prova'
+    text.dispatchEvent(new Event('input'))
+    write.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }))
+    await vi.waitFor(() => expect(write.open).toBe(false))
+    expect(send.mock.calls[0][0]).toMatchObject({ message: 'Una prova', visible: false, site: 'prova' })
+    expect(load).toHaveBeenCalledOnce()
   })
 
   it('dentro claude.ai non carica niente e lo dice', () => {
     const load = vi.fn(async () => list)
-    const dialog = openCommentsDialog({
-      off: 'Dentro claude.ai i commenti non si vedono: aprili dal sito di Glifo.',
+    const view = mount({
+      off: commentsOffInClaude(),
       feedback: { site: 'claude', version: 'locale', off: 'Dentro claude.ai i messaggi non partono: mandalo dal sito di Glifo.' },
       load,
     })
     expect(load).not.toHaveBeenCalled()
-    expect(state(dialog)).toBe('Dentro claude.ai i commenti non si vedono: aprili dal sito di Glifo.')
-    expect(dialog.querySelector('.comments-body button')).toBeNull()
-    dialog.querySelector<HTMLButtonElement>('.comments-write')!.click()
-    const write = [...document.querySelectorAll('dialog')].at(-1)!
-    expect(write.querySelector('.feedback-off')?.textContent).toContain('claude.ai')
-    dialog.close()
+    expect(state(view)).toBe('Dentro claude.ai i commenti non si vedono: aprili dal sito di Glifo.')
+    expect(view.querySelector('.comments-body button')).toBeNull()
+    view.querySelector<HTMLButtonElement>('.comments-write')!.click()
+    expect(writeDialog().querySelector('.feedback-off')?.textContent).toContain('claude.ai')
   })
 })

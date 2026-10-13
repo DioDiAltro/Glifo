@@ -44,7 +44,7 @@ import { ICONS, h, icon } from './ui/dom'
 import { confirmDialog, openHelpDialog, promptDialog } from './ui/dialogs'
 import { openSettingsDialog, type SettingsSection } from './ui/settings'
 import { aiActivity } from './ui/aiActivity'
-import { openCommentsDialog } from './ui/comments'
+import { feedbackOffInClaude, openFeedbackDialog } from './ui/feedback'
 import { inClaudeViewer } from './host'
 import { byLang, lang, texts } from './i18n'
 import { accountOffMessage, type Site } from './site'
@@ -154,10 +154,10 @@ const T = texts({
   share: ['Condividi', 'Share'],
   howToUse: ['Come si usa', 'How to use'],
   feedbackHint: [
-    'Commenti: leggi quelli di chi prova Glifo e scrivi il tuo',
-    'Feedback: read comments from people trying Glifo and write your own',
+    'Scrivi un commento: un problema, un\'idea o altro',
+    'Write a comment: a problem, an idea or something else',
   ],
-  feedback: ['Commenti', 'Feedback'],
+  feedback: ['Scrivi un commento', 'Write a comment'],
   settings: ['Impostazioni', 'Settings'],
   clearBoardTitle: ['Pulire la lavagna?', 'Clear the whiteboard?'],
   clearBoardMessage: [
@@ -184,14 +184,6 @@ const T = texts({
   recovered: (count: number) => [
     count === 1 ? 'Recuperato un appunto che non compariva nell\'elenco' : `Recuperati ${count} appunti che non comparivano nell'elenco`,
     count === 1 ? 'Recovered a note that wasn\'t showing in the list' : `Recovered ${count} notes that weren't showing in the list`,
-  ],
-  commentsOff: [
-    'Dentro claude.ai i commenti non si vedono: aprili dal sito di Glifo.',
-    'Comments can\'t be seen inside claude.ai: open them from the Glifo website.',
-  ],
-  feedbackOff: [
-    'Dentro claude.ai i messaggi non partono: mandalo dal sito di Glifo.',
-    'Messages can\'t be sent from inside claude.ai: send yours from the Glifo website.',
   ],
   storageFull: [
     'Spazio del browser esaurito: salva la nota come file .md per non perderla.',
@@ -479,8 +471,8 @@ const shareButton = h(
   icon(ICONS.share, 15),
 )
 
-// In fondo, come nell'app di Claude: l'account, poi i «Commenti», «Come si usa» e le impostazioni
-// (anche il tema). I commenti stanno qui, lontano dagli strumenti della nota.
+// In fondo, come nell'app di Claude: l'account, poi il fumetto per scrivere un commento, «Come si usa»
+// e le impostazioni (anche il tema). I commenti stanno qui, lontano dagli strumenti della nota.
 const helpButton = h(
   'button',
   { class: 'icon-button side-help', title: T.howToUse, attrs: { type: 'button', 'aria-label': T.howToUse }, on: { click: () => openGuide() } },
@@ -492,7 +484,7 @@ const feedbackButton = h(
     class: 'icon-button side-feedback',
     title: T.feedbackHint,
     attrs: { type: 'button', 'aria-label': T.feedback },
-    on: { click: () => openComments() },
+    on: { click: () => openFeedback() },
   },
   icon(ICONS.message),
 )
@@ -867,16 +859,17 @@ function openGuide(first = false): void {
   })
 }
 
-/** La pagina «Commenti» (src/ui/comments.ts): dentro claude.ai non si leggono e non partono. */
-function openComments(): void {
+/**
+ * «Scrivi un commento» (src/ui/feedback.ts), con in cima il link alla pagina delle domande frequenti e dei
+ * commenti (faq.html, GRAFICA.md punto 2): dentro claude.ai i messaggi non partono.
+ */
+function openFeedback(): void {
   const inClaude = __GLIFO_SITE__ === 'claude' || inClaudeViewer()
-  openCommentsDialog({
-    off: inClaude ? T.commentsOff : undefined,
-    feedback: {
-      site: inClaude ? 'claude' : __GLIFO_SITE__,
-      version: __GLIFO_VERSION__,
-      off: inClaude ? T.feedbackOff : undefined,
-    },
+  openFeedbackDialog({
+    site: inClaude ? 'claude' : __GLIFO_SITE__,
+    version: __GLIFO_VERSION__,
+    off: inClaude ? feedbackOffInClaude() : undefined,
+    faq: true,
   })
 }
 
@@ -901,7 +894,7 @@ function openSettings(section?: SettingsSection): void {
       account: accountDeps(),
       onSignIn: () => openAccount(),
       onGuide: () => openGuide(),
-      onComments: () => openComments(),
+      onFeedback: () => openFeedback(),
       boardsBytes: () => boards.bytes(),
     },
     section,

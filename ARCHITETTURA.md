@@ -84,11 +84,11 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   alto: la barra laterale è l'elenco degli appunti (`notesPanel.ts`) con sopra il logo (niente
   titolo della nota) e in fondo la riga `foot` con «Apri .md» e «Salva .md» (icona e testo, larghi
   uguali) e l'icona di «Condividi», senza spazi vuoti (la stampa è nella finestra «Condividi»), poi
-  l'account, il fumetto dei «Commenti» (`comments.ts`: la pagina con i commenti visibili divisi in
-  problemi, idee e altro, letti dalla tabella `feedback` di Supabase con la sola chiave pubblica,
-  senza il client, e solo le colonne che il database dà a tutti; da lì «Scrivi un commento» apre
-  `feedback.ts`, sopra la pagina: tipo, testo, nome ed email facoltativi e la spunta per farlo vedere,
-  e il testo resta finché non parte; dentro claude.ai non si leggono e non partono), «Come si usa» e
+  l'account, il fumetto che apre «Scrivi un commento» (`feedback.ts`, dal 13 ottobre 2026, GRAFICA.md
+  punto 2: tipo, testo, nome ed email facoltativi e la spunta per farlo vedere, che dal sito di prova
+  non c'è perché lì i commenti partono sempre privati; il testo resta finché non parte; in cima il link
+  alla pagina «Domande frequenti e commenti», `faq.html`, che non c'è dentro claude.ai, dove i messaggi
+  non partono), «Come si usa» e
   le impostazioni (`sidebarTop`, `shareButton` e `sidebarBottom` in `main.ts`; il tema si cambia
   solo nelle impostazioni; con tre pulsanti sono larghi 30 px, così sotto «Accedi» si legge tutto). Lo stato del salvataggio non si vede: è in `data-save` sulla pagina,
   per le prove nel browser. Il logo apre e chiude la
@@ -109,7 +109,8 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   Generale (lingua, per prima, poi tema e dimensione del testo), Scrittura (i `$` automatici, il controllo
   ortografico, il dizionario), AI (prima «Spiegazioni», `explainFieldset`, poi l'assistente con la chiave,
   `aiFieldset`), Account, Dati (backup e «Spazio in questo browser») e Informazioni (la versione da
-  `__GLIFO_VERSION__`, «Come si usa» e «Commenti», che si aprono sopra, l'informativa, le licenze di
+  `__GLIFO_VERSION__`, «Come si usa» e «Scrivi un commento», che si aprono sopra, «Domande frequenti e
+  commenti», che apre `faq.html` in una scheda nuova, l'informativa, le licenze di
   `licenses.ts` con i testi in `public/licenze/`, precaricati per l'offline): a sinistra l'elenco
   (`role="tablist"`, verticale, le frecce scorrono e aprono), a destra la sezione, che scorre da sola in
   una finestra di altezza fissa. Sotto i 600 px (`PHONE`, lo stesso numero
@@ -564,10 +565,23 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   conosce, le lavagne sulle note che ci sono) e risponde; postMessage solo tra `OLD_ORIGIN` e
   `NEW_ORIGIN`, controllando sempre l'altra finestra. Poi la pagina si ricarica e dice cosa è arrivato
   (`showRelocationDone`). «Scarica il backup» scarica lo stesso pacco, che «Ripristina backup»
-  riconosce (`isRelocationPackage`). Dal giorno del trasloco `nota.html` del vecchio indirizzo manda al
-  nuovo. La prova nel browser con i due indirizzi veri è `scripts/relocation-test.mjs`.
-- `privacy.html` e `nota.html`: l'informativa sulla privacy e la pagina delle note condivise, altre
-  due pagine della build (vedi `vite.config.ts`); l'informativa è collegata da `src/ui/links.ts`.
+  riconosce (`isRelocationPackage`). Dal giorno del trasloco `nota.html` e `faq.html` del vecchio
+  indirizzo mandano al nuovo. La prova nel browser con i due indirizzi veri è `scripts/relocation-test.mjs`.
+- `privacy.html`, `nota.html` e `faq.html`: l'informativa sulla privacy, la pagina delle note condivise e
+  quella delle domande frequenti e dei commenti, altre tre pagine della build (vedi `vite.config.ts`, che
+  il service worker tiene per l'offline); informativa e domande frequenti sono collegate da
+  `src/ui/links.ts` (`PRIVACY_URL`, `FAQ_URL`). La pagina «Domande frequenti e commenti» (GRAFICA.md,
+  punto 2, 13 ottobre 2026; su glifo.page anche glifo.page/faq) è `src/ui/faqPage.ts`: la barra in cima e
+  il fondo di `nota.html` (le classi `shared-*`), la lingua e il tema di Glifo, `noindex` (ci sono i nomi
+  di chi scrive). In cima le domande frequenti (`faq.ts`: `faqGroups`, le domande per argomento, scritte
+  intere nelle due lingue con `byLang`, ognuna con un `id` uguale nelle due lingue, che è il suo
+  indirizzo, `faq.html#offline`: lo apre `openFromHash`, e aprendo una domanda l'indirizzo la dice, con
+  «Copia il link»), poi i commenti (`commentsView` di `comments.ts`: i commenti visibili divisi in
+  problemi, idee e altro, letti dalla tabella `feedback` di Supabase con la sola chiave pubblica, senza il
+  client, e solo le colonne che il database dà a tutti, e «Scrivi un commento», che parte dalla scheda
+  aperta e, mandato un commento visibile, ricarica l'elenco), in `#commenti`. Le risposte dicono come
+  funziona Glifo oggi: se cambia, si cambiano anche loro (le prove `tests/faq.test.ts` e
+  `tests/faqEn.test.ts` controllano indirizzi, collegamenti tra le domande e nomi dei pulsanti inglesi).
 - `supabase/`: il database degli account (progetto Supabase `glifo`, Francoforte, piano
   gratuito): tabelle e regole di accesso in `migrations/`, test in `tests/`. Il README spiega
   indirizzo, chiave pubblica, sincronizzazione (`sync_pull`/`sync_push`) e come si cambia.

@@ -1,19 +1,21 @@
 /**
- * «Scrivi un commento» (8 ottobre 2026): chi prova Glifo scrive un problema, un'idea o altro dalla
- * pagina «Commenti» (comments.ts), che si apre dal fumetto in fondo alla barra laterale (non dalla
- * barra sopra il testo, dove ci sono gli strumenti della nota). Il messaggio va nella tabella
- * `feedback` di Supabase con la sola chiave pubblica, senza il client e senza l'accesso, come la
- * lettura delle note condivise; chi fa Glifo li legge tutti nella dashboard (supabase/README.md,
- * «Commenti»). Chi scrive sceglie se farlo vedere a tutti nella pagina, con un nome se vuole; l'email
- * non si vede mai. Con il messaggio vanno il sito, la versione di Glifo e il browser con la misura
- * della finestra; mai le note. Quello che si scrive resta finché non parte, anche chiudendo la finestra.
+ * «Scrivi un commento» (8 ottobre 2026): chi prova Glifo scrive un problema, un'idea o altro. La finestra
+ * si apre dal fumetto in fondo alla barra laterale (non dalla barra sopra il testo, dove ci sono gli
+ * strumenti della nota), con in cima il link alla pagina «Domande frequenti e commenti» (faq.html), e da
+ * quella pagina (comments.ts). Il messaggio va nella tabella `feedback` di Supabase con la sola chiave
+ * pubblica, senza il client e senza l'accesso, come la lettura delle note condivise; chi fa Glifo li
+ * legge tutti nella dashboard (supabase/README.md, «Commenti»). Chi scrive sceglie se farlo vedere a
+ * tutti nella pagina, con un nome se vuole; l'email non si vede mai. Dal sito di prova partono sempre
+ * privati: il database è quello vero, e una prova non deve comparire su glifo.page. Con il messaggio
+ * vanno il sito, la versione di Glifo e il browser con la misura della finestra; mai le note. Quello che
+ * si scrive resta finché non parte, anche chiudendo la finestra.
  */
 import { SUPABASE_KEY, SUPABASE_URL } from '../account/config'
 import { rich, texts } from '../i18n'
 import type { Site } from '../site'
 import { dialogShell } from './dialogs'
 import { h } from './dom'
-import { privacyLink } from './links'
+import { faqLink, privacyLink } from './links'
 import { toast } from './toast'
 
 const T = texts({
@@ -39,18 +41,31 @@ const T = texts({
   thanks: ['Grazie! Il messaggio è arrivato.', 'Thanks! Your message was received.'],
   intro: [
     'Un problema, un\'idea, una cosa che ti è piaciuta: il messaggio arriva a chi fa Glifo e, se vuoi, si vede nella pagina dei commenti.',
-    'A problem, an idea, something you liked: your message goes to the Glifo team and, if you want, it shows up on the Feedback page.',
+    'A problem, an idea, something you liked: your message goes to the Glifo team and, if you want, it shows up on the feedback page.',
   ],
   message: ['Il messaggio', 'Message'],
   name: ['Il tuo nome (facoltativo)', 'Your name (optional)'],
   email: ['La tua email, se vuoi una risposta (facoltativa)', 'Your email, if you want a reply (optional)'],
-  visible: ['Fallo vedere a tutti nella pagina dei commenti', 'Show it to everyone on the Feedback page'],
+  visible: ['Fallo vedere a tutti nella pagina dei commenti', 'Show it to everyone on the feedback page'],
   help: [
     'Nella pagina dei commenti si vedono il messaggio, il nome e la data; l\'email la legge solo chi fa Glifo. Con il messaggio arrivano anche la versione di Glifo e il browser, per capire i problemi: mai le tue note. Come trattiamo i tuoi dati: {privacy}.',
-    'The Feedback page shows your message, your name and the date; only the Glifo team reads your email. Along with your message we also receive the Glifo version and your browser, to help understand problems: never your notes. How we handle your data: {privacy}.',
+    'The feedback page shows your message, your name and the date; only the Glifo team reads your email. Along with your message we also receive the Glifo version and your browser, to help understand problems: never your notes. How we handle your data: {privacy}.',
   ],
   cancel: ['Annulla', 'Cancel'],
   title: ['Scrivi un commento', 'Write a comment'],
+  // `faq`: il link alla pagina «Domande frequenti e commenti».
+  checkFaq: [
+    'Prima di scrivere, guarda se la risposta c\'è già: {faq}.',
+    'Before writing, see whether the answer is already there: {faq}.',
+  ],
+  testSite: [
+    'Dal sito di prova i commenti partono sempre privati: li legge solo chi fa Glifo e nella pagina non si vedono.',
+    'From the test site, comments are always sent privately: only the Glifo team reads them, and they don\'t appear on the page.',
+  ],
+  inClaude: [
+    'Dentro claude.ai i messaggi non partono: mandalo dal sito di Glifo.',
+    'Messages can\'t be sent from inside claude.ai: send yours from the Glifo website.',
+  ],
 })
 
 export type FeedbackKind = 'problema' | 'idea' | 'altro'
@@ -62,7 +77,7 @@ export interface FeedbackRow {
   /** Il nome che si vede con il commento; senza, «Anonimo». */
   author: string | null
   email: string | null
-  /** Si vede nella pagina «Commenti»; se no lo legge solo chi fa Glifo. */
+  /** Si vede nella pagina «Domande frequenti e commenti»; se no lo legge solo chi fa Glifo. */
   visible: boolean
   site: Site
   version: string
@@ -101,7 +116,8 @@ export function feedbackRow(
     message,
     author: author || null,
     email: email || null,
-    visible: input.visible,
+    // Dal sito di prova mai pubblico: il database è quello vero, e la pagina dei commenti è una sola.
+    visible: info.site === 'prova' ? false : input.visible,
     site: info.site,
     version: info.version.slice(0, 64),
     browser: info.browser.slice(0, 512),
@@ -115,6 +131,11 @@ export function browserInfo(): string {
 
 /** Perché il commento non è partito, già detto per la finestra. */
 export class FeedbackError extends Error {}
+
+/** Dentro claude.ai: perché il messaggio non parte, al posto di «Manda». */
+export function feedbackOffInClaude(): string {
+  return T.inClaude
+}
 
 /** Manda il commento: finisce quando è arrivato, se no lancia un `FeedbackError`. */
 export async function sendFeedback(row: FeedbackRow, fetchImpl: typeof fetch = (...args) => fetch(...args)): Promise<void> {
@@ -141,8 +162,10 @@ export interface FeedbackDeps {
   version: string
   /** Dove i messaggi non partono (dentro claude.ai): il motivo, al posto di «Manda». */
   off?: string
-  /** Il tipo già scelto (la scheda aperta nella pagina «Commenti»), se non c'è un testo a metà. */
+  /** Il tipo già scelto (la scheda aperta nella pagina dei commenti), se non c'è un testo a metà. */
   kind?: FeedbackKind
+  /** In cima il link alle domande frequenti: dal fumetto di Glifo (nella pagina ci sono già). */
+  faq?: boolean
   /** Quando il commento è arrivato. */
   onSent?: (row: FeedbackRow) => void
   /** Per le prove. */
@@ -206,6 +229,7 @@ export function openFeedbackDialog(deps: FeedbackDeps): HTMLDialogElement {
     attrs: { type: 'checkbox', checked: draft.visible },
     on: { change: () => (draft.visible = visible.checked) },
   })
+  const testSite = deps.site === 'prova'
   const error = h('p', { class: 'prompt-error', attrs: { role: 'alert', hidden: true } })
   const submit = h('button', { class: 'btn btn-primary', attrs: { type: 'submit', disabled: !!deps.off } }, T.send)
   const showError = (text: string) => {
@@ -245,12 +269,15 @@ export function openFeedbackDialog(deps: FeedbackDeps): HTMLDialogElement {
         },
       },
     },
+    deps.faq && !deps.off ? h('p', { class: 'feedback-faq' }, ...rich(T.checkFaq, { faq: faqLink() })) : null,
     h('p', { class: 'feedback-intro' }, T.intro),
     kinds,
     h('label', { class: 'prompt-label' }, h('span', {}, T.message), message),
     h('label', { class: 'prompt-label' }, h('span', {}, T.name), author),
     h('label', { class: 'prompt-label' }, h('span', {}, T.email), email),
-    h('label', { class: 'check feedback-visible' }, visible, h('span', {}, T.visible)),
+    testSite
+      ? h('p', { class: 'feedback-test-site' }, T.testSite)
+      : h('label', { class: 'check feedback-visible' }, visible, h('span', {}, T.visible)),
     h('p', { class: 'field-help' }, ...rich(T.help, { privacy: privacyLink() })),
     deps.off ? h('p', { class: 'feedback-off' }, deps.off) : null,
     error,

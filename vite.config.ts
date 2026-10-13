@@ -33,9 +33,10 @@ export default defineConfig({
     target: 'es2022',
     chunkSizeWarningLimit: 1500,
     rollupOptions: {
-      // Tre pagine: l'app, l'informativa sulla privacy (che si legge anche senza aprire l'app) e
-      // la pagina delle note condivise con un link (src/share/page.ts).
-      input: { main: 'index.html', privacy: 'privacy.html', nota: 'nota.html' },
+      // Quattro pagine: l'app, l'informativa sulla privacy (che si legge anche senza aprire l'app), la
+      // pagina delle note condivise con un link (src/share/page.ts) e quella delle domande frequenti e
+      // dei commenti (src/ui/faqPage.ts, su glifo.page anche glifo.page/faq).
+      input: { main: 'index.html', privacy: 'privacy.html', nota: 'nota.html', faq: 'faq.html' },
       // maxGraph (gli schemi) usa eval solo per cose che Glifo tiene spente: stili scritti come
       // codice (GraphView.allowEval è false), forme e menu letti da XML. Quell'avviso si nasconde.
       onLog(level, log, handler) {

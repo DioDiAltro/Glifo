@@ -289,16 +289,20 @@ describe('la sezione «Dati»', () => {
 })
 
 describe('la sezione «Informazioni»', () => {
-  it('la versione, la guida e i commenti (sopra le impostazioni, che restano aperte), l\'informativa e le licenze', () => {
+  it('la versione, la guida, le domande frequenti e i commenti (sopra le impostazioni, che restano aperte), l\'informativa e le licenze', () => {
     const onGuide = vi.fn()
-    const onComments = vi.fn()
-    const { dialog, panel, button } = open({ onGuide, onComments }, 'about')
+    const onFeedback = vi.fn()
+    const { dialog, panel, button } = open({ onGuide, onFeedback }, 'about')
     expect(panel('about').querySelector('.about-version')?.textContent).toMatch(/^Versione (locale|[0-9a-f]{7}) del \d{1,2} [a-z]+ \d{4}\.$/)
     button('about', 'Come si usa').click()
-    button('about', 'Commenti').click()
+    button('about', 'Scrivi un commento').click()
     expect(onGuide).toHaveBeenCalledTimes(1)
-    expect(onComments).toHaveBeenCalledTimes(1)
+    expect(onFeedback).toHaveBeenCalledTimes(1)
     expect(dialog.open).toBe(true)
+    // Le domande frequenti e i commenti sono una pagina a parte, in una scheda nuova (GRAFICA.md, punto 2).
+    const faq = panel('about').querySelector<HTMLAnchorElement>('a[href="faq.html"]')!
+    expect(faq.textContent).toBe('Domande frequenti e commenti')
+    expect(faq.target).toBe('_blank')
     expect(panel('about').querySelector('a[href="privacy.html"]')).not.toBeNull()
     expect(panel('about').querySelector('summary')?.textContent).toBe(`I ${LICENSES.length} programmi liberi su cui è costruito Glifo`)
     const links = [...panel('about').querySelectorAll<HTMLAnchorElement>('.license-list a')]

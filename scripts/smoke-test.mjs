@@ -4108,21 +4108,18 @@ try {
   await viewer.locator('.share-button').click()
   // Dentro claude.ai la stampa non c'è
   const viewerPrint = await viewer.locator('dialog.dialog-share .share-print').count()
-  // I «Commenti»: dentro claude.ai non si leggono e non partono, e la pagina e la finestra lo dicono.
+  // Il fumetto dei commenti: dentro claude.ai i messaggi non partono, e la finestra lo dice (senza il link
+  // alle domande frequenti, che lì non si aprono).
   await viewer.keyboard.press('Escape')
-  await viewer.locator('.side-profile button[aria-label="Commenti"]').click()
-  const viewerComments = viewer.locator('dialog.dialog-comments')
-  const viewerCommentsOff = await viewerComments.locator('.comments-state').innerText()
-  await viewerComments.locator('.comments-write').click()
+  await viewer.locator('.side-profile button[aria-label="Scrivi un commento"]').click()
   const viewerFeedback = viewer.locator('dialog.dialog-feedback')
   await viewerFeedback.locator('textarea.feedback-message').fill('Prova da claude.ai')
   const viewerFeedbackOff = {
-    page: viewerCommentsOff,
+    faq: await viewerFeedback.locator('.feedback-faq').count(),
     note: await viewerFeedback.locator('.feedback-off').innerText(),
     disabled: await viewerFeedback.locator('button[type=submit]').isDisabled(),
   }
   await viewerFeedback.locator('button', { hasText: 'Annulla' }).click()
-  await viewerComments.locator('.dialog-actions button', { hasText: 'Chiudi' }).click()
   await viewer.locator('.share-button').click()
   await viewer.locator('dialog.dialog-share .btn-primary', { hasText: 'Accedi' }).click()
   const login = viewer.locator('dialog.dialog-login')
@@ -4137,7 +4134,7 @@ try {
     viewerButtons &&
       viewerPrint === 0 &&
       offMessage.includes('accesso è spento') &&
-      viewerFeedbackOff.page.includes('claude.ai') &&
+      viewerFeedbackOff.faq === 0 &&
       viewerFeedbackOff.note.includes('claude.ai') &&
       viewerFeedbackOff.disabled &&
       stillEmail &&

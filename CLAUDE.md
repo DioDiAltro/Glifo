@@ -86,7 +86,7 @@ documentazione, non codice: la regola di delegare all'esploratore vale per il co
 - `src/lists/`: i marcatori degli elenchi (`markers.ts`), usati da editor e anteprima.
 - `src/spell/`: controllo ortografico (Hunspell in WebAssembly in un worker).
 - `src/render/`: KaTeX e anteprima Markdown; i conti per spostare schemi e grafici con le frecce ↑ ↓.
-- `src/ui/`: interfaccia: barra laterale, pulsanti volanti, barra di formattazione, anteprima, tutorial, la pagina «Commenti», le impostazioni divise in sezioni (`settings.ts`, con dentro l'account).
+- `src/ui/`: interfaccia: barra laterale, pulsanti volanti, barra di formattazione, anteprima, tutorial, la finestra per scrivere un commento e la pagina «Domande frequenti e commenti» (`faq.ts`, `faqPage.ts`), le impostazioni divise in sezioni (`settings.ts`, con dentro l'account).
 - `src/store/`: note, cartelle, impostazioni e misure delle sezioni nel browser (chiavi `glifo.*`), e quanto spazio occupano.
 - `src/schema/`: schemi stile draw.io con maxGraph: editor a tutto schermo, corsie dei processi, file .md, codice SQL.
 - `src/spreadsheet/`: le tabelle con le formule come Excel (blocchi ```tabella), con il loro editor e i file .xlsx e .csv.
@@ -100,7 +100,7 @@ documentazione, non codice: la regola di delegare all'esploratore vale per il co
 - `src/share/`: le note condivise con un link (`nota.html#codice`).
 - `src/relocation.ts` e `src/ui/relocation.ts`: il trasloco su glifo.page (avviso e pagina finale sul
   vecchio sito, «Porta i miei appunti nel nuovo Glifo»).
-- `privacy.html` e `nota.html`: l'informativa sulla privacy e la pagina delle note condivise.
+- `privacy.html`, `nota.html` e `faq.html`: l'informativa sulla privacy, la pagina delle note condivise e quella delle domande frequenti e dei commenti.
 - `supabase/`: il database degli account: migrazioni, regole di accesso e test.
 
 ### Attenzione a
@@ -152,8 +152,9 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
   mette a rispondere: l'8 ottobre 2026 ha usato il 4B e ha detto «ora funziona tutto», e «Spiegami» con
   il pannello ✨ è andato sul sito vero. Le prove nuove si fanno ancora sul sito di prova
   https://glifo-prova.pages.dev (Cloudflare Pages, dal ramo `prova`; lì l'account è spento).
-- Leggere ogni tanto i commenti di chi prova Glifo (il fumetto in fondo alla barra laterale apre la
-  pagina «Commenti», online dall'8 ottobre 2026): dashboard di Supabase → progetto `glifo` →
+- Leggere ogni tanto i commenti di chi prova Glifo (online dall'8 ottobre 2026; si leggono nella pagina
+  «Domande frequenti e commenti», glifo.page/faq, a cui porta il fumetto in fondo alla barra laterale):
+  dashboard di Supabase → progetto `glifo` →
   Table Editor → `feedback`, dove ci sono anche quelli privati. Lì si risponde (colonna `reply`: si
   vede sotto il commento), si nasconde dalla pagina un commento che non va (`visible` → false) e si
   cancellano quelli che non servono più; oppure lo si chiede a Claude.

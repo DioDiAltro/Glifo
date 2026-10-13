@@ -119,9 +119,10 @@ di chi chiama. I test sono in `tests/condivisione.test.sql`.
 
 ## Commenti di chi prova Glifo
 
-Il fumetto in fondo alla barra laterale apre la pagina «Commenti» (`src/ui/comments.ts`): i commenti
-che chi scrive ha fatto vedere a tutti, divisi in problemi, idee e altro. Da lì «Scrivi un commento»
-(`src/ui/feedback.ts`) manda un problema, un'idea o altro, anche senza account. Tutto passa dalla
+Il fumetto in fondo alla barra laterale apre «Scrivi un commento» (`src/ui/feedback.ts`), che manda un
+problema, un'idea o altro, anche senza account (dal sito di prova sempre privato). I commenti che chi
+scrive ha fatto vedere a tutti, divisi in problemi, idee e altro, sono nella pagina «Domande frequenti e
+commenti» (`faq.html`, `src/ui/comments.ts`), da dove si scrive anche. Tutto passa dalla
 tabella `feedback` (migrazioni «commenti» e «commenti pubblici»), con la sola chiave pubblica, senza
 l'accesso:
 

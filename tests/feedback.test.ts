@@ -48,6 +48,11 @@ describe('il commento da mandare', () => {
     expect(feedbackRow({ ...input, email: 'anna esempio.it' }, info)).toMatchObject({ field: 'email' })
   })
 
+  it('dal sito di prova mai pubblico: il database è quello vero (GRAFICA.md, punto 2)', () => {
+    expect(feedbackRow(input, { ...info, site: 'prova' })).toMatchObject({ visible: false, site: 'prova' })
+    expect(feedbackRow(input, info)).toMatchObject({ visible: true, site: 'online' })
+  })
+
   it('versione e browser non superano i limiti del database', () => {
     const long = feedbackRow(input, { site: 'prova', version: 'v'.repeat(80), browser: 'b'.repeat(600) }) as FeedbackRow
     expect(long.version).toHaveLength(64)
@@ -102,7 +107,7 @@ describe('la finestra «Scrivi un commento»', () => {
   it('manda il tipo, il testo, il nome, l\'email, se si vede e da dove arriva, poi ringrazia', async () => {
     const send = vi.fn(async () => {})
     const onSent = vi.fn()
-    const dialog = openFeedbackDialog({ site: 'prova', version: 'd2f8055', send, onSent })
+    const dialog = openFeedbackDialog({ site: 'online', version: 'd2f8055', send, onSent })
     expect(dialog.querySelector('h2')?.textContent).toBe('Scrivi un commento')
     expect(visible(dialog).checked).toBe(true)
     submit(dialog)
@@ -116,14 +121,14 @@ describe('la finestra «Scrivi un commento»', () => {
     submit(dialog)
     expect(send).toHaveBeenCalledOnce()
     const sent = (send.mock.calls[0] as unknown as [FeedbackRow])[0]
-    expect(sent).toMatchObject({ kind: 'idea', message: 'I grafici anche nelle tabelle', author: 'Anna', email: 'anna@esempio.it', visible: true, site: 'prova', version: 'd2f8055' })
+    expect(sent).toMatchObject({ kind: 'idea', message: 'I grafici anche nelle tabelle', author: 'Anna', email: 'anna@esempio.it', visible: true, site: 'online', version: 'd2f8055' })
     expect(sent.browser).toMatch(/· finestra \d+×\d+$/)
     expect(dialog.querySelector<HTMLButtonElement>('button[type="submit"]')!.textContent).toBe('Mando…')
     await vi.waitFor(() => expect(dialog.open).toBe(false))
     expect(document.querySelector('.toast')?.textContent).toBe('Grazie! Il messaggio è arrivato.')
     expect(onSent).toHaveBeenCalledWith(sent)
     // Mandato, il testo se ne va; nome ed email restano per il prossimo.
-    const next = openFeedbackDialog({ site: 'prova', version: 'd2f8055', send })
+    const next = openFeedbackDialog({ site: 'online', version: 'd2f8055', send })
     expect(next.querySelector('textarea')!.value).toBe('')
     expect(next.querySelector<HTMLInputElement>('input[value="altro"]')!.checked).toBe(true)
     expect(next.querySelector<HTMLInputElement>('input[autocomplete="nickname"]')!.value).toBe('Anna')
@@ -177,6 +182,36 @@ describe('la finestra «Scrivi un commento»', () => {
     const again = openFeedbackDialog({ site: 'online', version: 'd2f8055', send })
     expect(again.querySelector('textarea')!.value).toBe('La lavagna si chiude da sola')
     again.close()
+  })
+
+  it('dal fumetto, in cima il link alle domande frequenti, in una scheda nuova', () => {
+    const dialog = openFeedbackDialog({ site: 'online', version: 'd2f8055', faq: true })
+    const faq = dialog.querySelector('.feedback-faq')!
+    expect(faq.textContent).toBe('Prima di scrivere, guarda se la risposta c\'è già: Domande frequenti e commenti.')
+    const link = faq.querySelector<HTMLAnchorElement>('a')!
+    expect(link.getAttribute('href')).toBe('faq.html')
+    expect(link.target).toBe('_blank')
+    dialog.close()
+    // Dalla pagina delle domande frequenti, e dentro claude.ai, il link non c'è.
+    const fromPage = openFeedbackDialog({ site: 'online', version: 'd2f8055' })
+    expect(fromPage.querySelector('.feedback-faq')).toBeNull()
+    fromPage.close()
+    const inClaude = openFeedbackDialog({ site: 'claude', version: 'locale', off: 'Dentro claude.ai i messaggi non partono.', faq: true })
+    expect(inClaude.querySelector('.feedback-faq')).toBeNull()
+    inClaude.close()
+  })
+
+  it('dal sito di prova il commento parte privato, e la finestra lo dice al posto della spunta', async () => {
+    const send = vi.fn(async () => {})
+    const dialog = openFeedbackDialog({ site: 'prova', version: 'd2f8055', send })
+    expect(dialog.querySelector('.feedback-visible')).toBeNull()
+    expect(dialog.querySelector('.feedback-test-site')?.textContent).toBe(
+      'Dal sito di prova i commenti partono sempre privati: li legge solo chi fa Glifo e nella pagina non si vedono.',
+    )
+    fill(dialog, 'Una prova')
+    submit(dialog)
+    expect(send.mock.calls[0]).toEqual([expect.objectContaining({ message: 'Una prova', visible: false, site: 'prova' })])
+    await vi.waitFor(() => expect(dialog.open).toBe(false))
   })
 
   it('dentro claude.ai non parte niente, e lo dice', () => {

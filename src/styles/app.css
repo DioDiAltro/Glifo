@@ -2925,6 +2925,11 @@ kbd {
   margin: 8px 0 4px;
 }
 
+/* «Domande frequenti e commenti» è un link (apre faq.html) fatto come i pulsanti accanto. */
+.about-settings a.btn {
+  text-decoration: none;
+}
+
 .license-list {
   margin: 8px 0;
   padding-left: 18px;
@@ -3126,9 +3131,24 @@ kbd {
   font-size: 13px;
 }
 
-/* «Scrivi un commento» (src/ui/feedback.ts), dalla pagina «Commenti». */
+/* «Scrivi un commento» (src/ui/feedback.ts), dal fumetto in fondo alla barra laterale e dalla pagina
+   «Domande frequenti e commenti» (faq.html). */
 .dialog-feedback {
   width: min(480px, calc(100vw - 32px));
+}
+
+/* Dal fumetto: in cima il link alle domande frequenti, prima di scrivere. */
+.feedback-faq {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  font-size: 13.5px;
+}
+
+.feedback-faq a {
+  color: var(--accent-text);
+  font-weight: 600;
 }
 
 .feedback-intro {
@@ -3152,7 +3172,8 @@ kbd {
   margin: 0;
 }
 
-.feedback-off {
+.feedback-off,
+.feedback-test-site {
   margin: 0;
   padding: 8px 10px;
   border-radius: 8px;
@@ -3164,31 +3185,28 @@ kbd {
   margin: 0;
 }
 
-/* La pagina «Commenti» (src/ui/comments.ts), dal fumetto in fondo alla barra laterale: le schede e i
-   pulsanti restano fermi, scorre solo l'elenco. */
-.dialog-comments {
-  width: min(640px, calc(100vw - 32px));
-}
-
-.dialog-comments[open] {
+/* I commenti (src/ui/comments.ts) nella pagina «Domande frequenti e commenti» (faq.html): le schede con
+   «Scrivi un commento» accanto (sotto, sul telefono), poi l'elenco, che scorre con la pagina. */
+.comments-view {
   display: flex;
   flex-direction: column;
-}
-
-.dialog-comments .dialog-body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-height: 0;
+  gap: 12px;
 }
 
 .comments-intro {
-  margin: 4px 0 0;
+  margin: 0;
   color: var(--muted);
 }
 
+.comments-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .comments-tabs {
-  align-self: flex-start;
   margin: 0;
 }
 
@@ -3216,10 +3234,7 @@ kbd {
 }
 
 .comments-body {
-  flex: 1 1 auto;
   min-height: 120px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
 }
 
 .comments-list {
@@ -6480,9 +6495,11 @@ kbd {
   flex: 1;
 }
 
-/* ——— La pagina di una nota condivisa (nota.html, src/share/page.ts) ——— */
+/* ——— La pagina di una nota condivisa (nota.html, src/share/page.ts) ———
+   La barra in cima e il fondo servono anche alla pagina delle domande frequenti (faq.html, più sotto). */
 
-body.shared-page {
+body.shared-page,
+body.faq-page {
   height: auto;
   min-height: 100%;
   overflow: auto;
@@ -6614,6 +6631,166 @@ body.shared-page {
   .shared-actions,
   .shared-foot {
     display: none;
+  }
+}
+
+/* ——— Domande frequenti e commenti (faq.html, src/ui/faqPage.ts) ———
+   Una colonna, come l'informativa: in cima le domande, che si aprono con un clic, poi i commenti. */
+
+.faq-main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 28px 24px 48px;
+}
+
+.faq-section + .faq-section {
+  margin-top: 40px;
+}
+
+.faq-section h2 {
+  margin: 0 0 6px;
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+.faq-intro {
+  margin: 0;
+  color: var(--muted);
+}
+
+.faq-intro a,
+.faq-answer a {
+  color: var(--link);
+}
+
+.faq-group h3 {
+  margin: 24px 0 8px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* La barra in cima resta ferma: una domanda aperta dall'indirizzo non le finisce sotto. */
+.faq-item,
+.faq-comments {
+  scroll-margin-top: calc(var(--topbar-h) + 16px);
+}
+
+.faq-item {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+/* La domanda dell'indirizzo (faq.html#offline), arrivando da un link. */
+.faq-item.is-target {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.faq-question {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 11px;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.faq-question::-webkit-details-marker {
+  display: none;
+}
+
+.faq-question:hover {
+  background: var(--surface-2);
+}
+
+.faq-item[open] > .faq-question {
+  border-radius: 11px 11px 0 0;
+}
+
+.faq-question svg {
+  flex: none;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+
+.faq-item[open] > .faq-question svg {
+  transform: rotate(180deg);
+}
+
+.faq-answer {
+  padding: 4px 14px 12px;
+  line-height: 1.55;
+}
+
+.faq-answer p,
+.faq-answer ul {
+  margin: 0 0 8px;
+}
+
+.faq-answer ul {
+  padding-left: 20px;
+}
+
+.faq-answer li + li {
+  margin-top: 4px;
+}
+
+.faq-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.faq-copy:hover {
+  color: var(--accent-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faq-question svg {
+    transition: none;
+  }
+}
+
+/* Il fondo della pagina è largo come la colonna delle domande. */
+.faq-page .shared-foot {
+  max-width: 760px;
+  padding-right: 24px;
+  padding-left: 24px;
+}
+
+@media (max-width: 640px) {
+  .faq-main {
+    padding: 20px 16px 40px;
+  }
+
+  .faq-page .shared-foot {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  /* Sul telefono il titolo va su una seconda riga: la barra in cima è più alta. */
+  .faq-item,
+  .faq-comments {
+    scroll-margin-top: 104px;
   }
 }
 

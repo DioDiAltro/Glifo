@@ -14,7 +14,7 @@ quando i punti sono tutti fatti si cancella, insieme alla voce «La grafica» di
 | Punto | Cosa | Stato |
 |---|---|---|
 | 1 | «Cambia account» | fatto: sul sito dal 12 ottobre; lo studente: «va bene» |
-| 2 | La pagina dei commenti, tipo FAQ | da decidere |
+| 2 | La pagina dei commenti, tipo FAQ | sul ramo `prova` dal 13 ottobre 2026: lo studente deve dire se lo convince |
 | 3 | Le impostazioni divise in sezioni | fatto: sul sito dal 13 ottobre 2026; lo studente: «va bene» |
 | 4 | Più modelli per «Spiegami» | da decidere |
 | 5 | A cosa serve la chiave dell'AI | da decidere |
@@ -152,7 +152,36 @@ nella pagina) e `src/ui/feedback.ts`; `openComments` in `src/main.ts`; le pagine
 `vite.config.ts` (oggi `index.html`, `privacy.html` e `nota.html`); il collegamento come
 `PRIVACY_URL` in `src/ui/links.ts`.
 
-**Risposte e decisioni.** —
+**Risposte e decisioni.** Il 13 ottobre 2026 Claude ha aggiornato la proposta (nel frattempo i commenti
+si aprivano anche da Impostazioni → Informazioni e tutto era in due lingue): la pagina con le domande
+frequenti e i commenti, il fumetto che apre subito la finestra per scrivere, 14 domande frequenti
+proposte da Claude, la pagina fuori da Google, l'indirizzo glifo.page/faq invece di /commenti (si capisce
+anche in inglese), «Glifo è gratis?» lasciata fuori finché non si decidono i piani, e dal sito di prova i
+commenti sempre privati (il database è quello vero). Lo studente: «fai faq, però dobbiamo prima capire
+perché forse non mi convince molto. Falla e mettila su prova, poi ti dico». Fatto sul ramo `prova` il 13
+ottobre 2026, con le scelte che Claude consigliava:
+
+- **la pagina** `faq.html` (su glifo.page anche glifo.page/faq), come l'informativa: in cima la barra con
+  il logo e «Apri Glifo», la lingua e il tema di Glifo, fuori dai motori di ricerca (`noindex`); il
+  service worker la tiene per l'offline e non carica l'editor;
+- **le domande frequenti** in cima: 14, in quattro argomenti (gli appunti, usare Glifo, l'AI, l'account),
+  in italiano e in inglese. Si vede la domanda e con un clic si apre la risposta; ogni domanda ha il suo
+  indirizzo (`faq.html#offline`), che va nella barra quando la si apre, e «Copia il link»; un indirizzo
+  con una domanda la apre e la segna;
+- **i commenti** sotto, come nella finestra di prima: le schede Problemi, Idee e Altro con quanti sono, i
+  commenti con le risposte e, accanto alle schede, «Scrivi un commento»;
+- **in Glifo** il fumetto apre subito «Scrivi un commento», con in cima «Prima di scrivere, guarda se la
+  risposta c'è già: Domande frequenti e commenti» (il link apre la pagina in una scheda nuova; dentro
+  claude.ai non c'è). In Impostazioni → Informazioni, al posto di «Commenti», ci sono «Domande frequenti e
+  commenti» e «Scrivi un commento». La finestra con la lista dei commenti non c'è più;
+- **dal sito di prova** i commenti partono sempre privati: al posto della spunta «Fallo vedere a tutti» la
+  finestra lo dice. Si leggono nella dashboard (colonna `site` = `prova`) e si cancellano;
+- **dal 18 ottobre** la pagina sul vecchio indirizzo manda a glifo.page/faq, con la stessa domanda;
+- l'informativa (italiano e inglese) dice della pagina nuova, che non va nei motori di ricerca, e dei
+  commenti privati dal sito di prova; il tutorial «Condividere e ritrovare gli appunti» dice del fumetto
+  nuovo (il video resta: passa solo sopra il fumetto).
+
+Sul sito di prova la pagina è https://glifo-prova.pages.dev/faq (i commenti lì sono quelli veri).
 
 ## 3. Le impostazioni divise in sezioni
 

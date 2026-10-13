@@ -101,7 +101,11 @@ le impostazioni divise in sezioni (Generale, Scrittura, AI, Account, Dati, Infor
 sezione «Account», aperta dal pulsante dell'account; in «Dati» lo spazio occupato, con i modelli di
 «Spiegami»), è sul sito dal 13 ottobre 2026: lo studente, viste le foto, «va bene, portalo sul sito
 vero». Il punto 7, via il registro dei tocchi (dalle impostazioni, dalla lavagna e dal codice), è sul
-sito dal 13 ottobre 2026: lo studente, viste le foto, «va bene, portalo sul sito vero».
+sito dal 13 ottobre 2026: lo studente, viste le foto, «va bene, portalo sul sito vero». Il punto 2, la
+pagina «Domande frequenti e commenti» (faq.html, glifo.page/faq: 14 domande frequenti per argomento, poi i
+commenti; il fumetto apre subito la finestra per scrivere, con il link alla pagina), è sul ramo `prova`
+dal 13 ottobre 2026: lo studente, «fai faq, però dobbiamo prima capire perché forse non mi convince
+molto; falla e mettila su prova, poi ti dico».
 
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
@@ -300,6 +304,11 @@ lo studente). A tutti il database dà solo i commenti visibili, e solo tipo, nom
 risposta (migrazione «commenti pubblici»); quelli arrivati prima restano privati. Lo studente risponde
 (`reply`) e nasconde (`visible`) dalla dashboard. Informativa aggiornata. Vista sul sito di prova, lo
 studente ha detto «va bene» ed è andata sul sito vero con il pulsante ✨ nuovo.
+
+**Domande frequenti e commenti (sul ramo `prova` dal 13 ottobre 2026, GRAFICA.md punto 2).** I commenti
+passano in una pagina a parte, `faq.html` (glifo.page/faq), con in cima le domande frequenti; il fumetto
+apre subito la finestra per scrivere, con il link alla pagina. Dal sito di prova i commenti partono
+sempre privati.
 
 Idee per dopo:
 - rispondere e nascondere i commenti da Glifo, con l'account di chi lo fa, invece che dalla dashboard;
