@@ -557,8 +557,9 @@ volte. Il difetto era nel motore delle formule, anche nelle note: `\frac{d}{dx}(
 derivata di tutto il prodotto. Corretto: con una parentesi subito dopo la derivata (`\frac{d}{dx}`,
 `\frac{\partial}{\partial x}`, `\partial_x`) si deriva solo la parentesi, con il suo esponente
 (`tests/check.test.ts`, `tests/explain.test.ts`, `tests/vectorcalc.test.ts`). Nessuna nota d'esempio cambia
-significato. Senza parentesi (`\frac{d}{dx} x^2 \sin x`) si deriva ancora tutto il prodotto: da decidere con lo
-studente se resta così.
+significato. Senza parentesi (`\frac{d}{dx} x^2 \sin x`) si deriva ancora tutto il prodotto, e resta così: lo
+studente, 14 ottobre 2026, «Io penso sia meglio fare d/dx (x+2x) * x. Quello che sta nella parentesi è da fare
+la derivata, poi moltiplichi» (`\frac{d}{dx}(x+2x) \cdot x` dà 3x, nei test).
 
 Da fare:
 - provarlo davvero su un computer con WebGPU (Chrome o Edge), su esercizi veri, e scegliere il modello
