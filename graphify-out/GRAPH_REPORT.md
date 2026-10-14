@@ -1,17 +1,17 @@
 # Graph Report - Glifo  (2026-10-14)
 
 ## Corpus Check
-- 346 files · ~724,428 words
+- 346 files · ~724,528 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 6 file(s) not represented in the graph (top: (none) 5, .css 1)
 
 ## Summary
-- 5560 nodes · 20330 edges · 168 communities (126 shown, 42 thin omitted)
-- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 683 edges (avg confidence: 0.89)
+- 5560 nodes · 20327 edges · 170 communities (128 shown, 42 thin omitted)
+- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 684 edges (avg confidence: 0.89)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `88694caf`
+- Built from commit: `27d8cc49`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -23,7 +23,7 @@
 - sync.ts
 - spec.ts
 - BoardStore
-- num
+- primitive.ts
 - graph/preview.ts
 - Dove sono le cose
 - distributions.ts
@@ -120,7 +120,7 @@
 - spellcheck
 - supabase.ts
 - probability.ts
-- tidy
+- conics.ts
 - dictionaries.ts
 - data/calculus.ts
 - Le spiegazioni, come funzionano
@@ -150,9 +150,11 @@
 - laplace.ts
 - La lavagna
 - SpellClient
+- num
+- Distribution
 
 ## God Nodes (most connected - your core abstractions)
-1. `Dove sono le cose` - 325 edges
+1. `Dove sono le cose` - 326 edges
 2. `MathError` - 151 edges
 3. `Sheet` - 147 edges
 4. `num()` - 145 edges
@@ -181,7 +183,7 @@
 - 4-file cycle: `src/math/evaluate.ts -> src/math/limits.ts -> src/math/format.ts -> src/math/exact.ts -> src/math/evaluate.ts`
 - 5-file cycle: `src/math/complex.ts -> src/math/format.ts -> src/math/exact.ts -> src/math/evaluate.ts -> src/math/limits.ts -> src/math/complex.ts`
 
-## Communities (168 total, 42 thin omitted)
+## Communities (170 total, 42 thin omitted)
 
 ### Community 0 - "licenses.ts"
 Cohesion: 0.32
@@ -205,15 +207,15 @@ Nodes (31): AccountSync, withLock(), Account, EMPTY_STATE, FolderChange, FolderR
 
 ### Community 5 - "spec.ts"
 Cohesion: 0.04
-Nodes (101): conicItems(), isConicLine(), quadricEquation(), T, fourierItems(), isFourierLine(), T, isNumericalLine() (+93 more)
+Nodes (104): conicItems(), isConicLine(), quadricEquation(), T, fourierItems(), isFourierLine(), T, isComplexLine() (+96 more)
 
 ### Community 6 - "BoardStore"
 Cohesion: 0.07
 Nodes (16): BoardStore, MemoryBoards, applyAccountChange(), backup(), signOutAccount(), BackupNote, backupNotes(), restoreBackup() (+8 more)
 
-### Community 7 - "num"
-Cohesion: 0.13
-Nodes (90): atIntegers(), signsUp(), symbolicCoefficient(), hyperbolicToExp(), polyEx(), constantParticular(), exp(), homogeneousGroups() (+82 more)
+### Community 7 - "primitive.ts"
+Cohesion: 0.16
+Nodes (57): algebraic(), bigGcd(), byParts(), candidates(), canon(), combineLogs(), compareKeys(), exponentials() (+49 more)
 
 ### Community 8 - "graph/preview.ts"
 Cohesion: 0.06
@@ -224,8 +226,8 @@ Cohesion: 0.05
 Nodes (87): 1. A cosa serve l'AI dei modelli di frontiera, Dove sono le cose, Glifo – architettura, allNames(), answerFollowUp(), bareResult(), chained(), chatContext (+79 more)
 
 ### Community 10 - "distributions.ts"
-Cohesion: 0.14
-Nodes (30): choose(), continuousQuantile(), decimals(), discreteQuantile(), expSumValue(), factorialBig(), FAMILIES, integerParam() (+22 more)
+Cohesion: 0.16
+Nodes (29): choose(), continuousQuantile(), decimals(), expSumValue(), factorialBig(), FAMILIES, integerParam(), invalid() (+21 more)
 
 ### Community 11 - "src/relocation.ts"
 Cohesion: 0.05
@@ -252,8 +254,8 @@ Cohesion: 0.08
 Nodes (3): SheetEditor, CellRange, cloneSheet()
 
 ### Community 17 - "Rational"
-Cohesion: 0.10
-Nodes (20): bigGcd(), binomExact(), conditionExact(), evaluateExact(), ExactFunction, ExactRandom, exactRoot(), factorialExact() (+12 more)
+Cohesion: 0.09
+Nodes (24): expSum, bigGcd(), binomExact(), conditionExact(), evaluateExact(), ExactFunction, ExactRandom, exactRoot() (+16 more)
 
 ### Community 18 - "numerical.ts"
 Cohesion: 0.05
@@ -321,7 +323,7 @@ Nodes (19): numberText(), isTestLine(), number(), T, testItems(), endTex(), clas
 
 ### Community 36 - "complex.ts"
 Cohesion: 0.04
-Nodes (108): COMPLEX_FUNCTIONS, farthest(), gaussItem(), GaussLine, hasExponential(), inZ(), isComplexLine(), isComplexValue() (+100 more)
+Nodes (105): COMPLEX_FUNCTIONS, farthest(), gaussItem(), GaussLine, hasExponential(), inZ(), isInequality(), onlyComplex() (+97 more)
 
 ### Community 37 - "namesIn"
 Cohesion: 0.09
@@ -348,8 +350,8 @@ Cohesion: 0.07
 Nodes (40): @mlc-ai/web-llm, chat(), GlifoError, Gpu, load(), post(), remove(), scope (+32 more)
 
 ### Community 43 - "inference.ts"
-Cohesion: 0.13
-Nodes (29): between(), chiSquareTest(), confidence(), confidenceShown(), decimals(), Given, hypothesisTest(), InferenceContext (+21 more)
+Cohesion: 0.14
+Nodes (27): between(), chiSquareTest(), confidence(), confidenceShown(), decimals(), Given, hypothesisTest(), InferenceContext (+19 more)
 
 ### Community 44 - "functions.ts"
 Cohesion: 0.08
@@ -392,7 +394,7 @@ Cohesion: 0.19
 Nodes (19): monthOf(), MONTHS, MONTHS_EN, parseDate(), planBlock, PlanKind, planRange(), T (+11 more)
 
 ### Community 54 - "linsys.ts"
-Cohesion: 0.11
+Cohesion: 0.10
 Nodes (51): choices(), gcd(), isStandardUnknown(), linearSystem(), matrixEquation(), matrixSystem(), minorsGcd(), ONE (+43 more)
 
 ### Community 55 - "evaluateExactComplex"
@@ -432,8 +434,8 @@ Cohesion: 0.08
 Nodes (57): sheetSummary(), tablesNote(), ChartTable, currentCall(), Editing, MenuEntry, Move, openSheetEditor() (+49 more)
 
 ### Community 65 - "odesolve.ts"
-Cohesion: 0.07
-Nodes (73): Piece, addWave(), arrange(), bernoulliFamily(), cauchy(), characteristicRoots(), compiled(), Condition (+65 more)
+Cohesion: 0.08
+Nodes (68): Piece, linearIn(), addWave(), arrange(), cauchy(), compiled(), Condition, constantNames() (+60 more)
 
 ### Community 66 - "sheet.ts"
 Cohesion: 0.08
@@ -469,7 +471,7 @@ Nodes (14): staticGraphSvg(), chooseWindow(), chooseBox(), DrawOptions, graphSvg
 
 ### Community 74 - "symbolic.ts"
 Cohesion: 0.06
-Nodes (77): fnLabel(), freeLetters(), linearParts(), satisfies(), valueAt(), wronskianAt(), primitive(), verified() (+69 more)
+Nodes (67): fnLabel(), primitive(), verified(), linearCells(), assumePositive(), atValues(), combine(), commonMonomial() (+59 more)
 
 ### Community 75 - "texts"
 Cohesion: 0.05
@@ -572,12 +574,12 @@ Cohesion: 0.10
 Nodes (41): @supabase/supabase-js, AUTH_STORAGE_KEY, accountError, appUrl(), call(), currentSession(), deleteAccount(), emailLinkToken() (+33 more)
 
 ### Community 118 - "probability.ts"
-Cohesion: 0.08
-Nodes (37): addExp(), Distribution, End, exactIntervalProbability(), expSum, Family, integerRange(), intervalProbability() (+29 more)
+Cohesion: 0.13
+Nodes (24): End, Family, ExactScope, rejection(), fractionNear(), ALL, complement(), endAt() (+16 more)
 
-### Community 119 - "tidy"
-Cohesion: 0.11
-Nodes (53): at(), centralCanonical(), Coefficients, coneCanonical(), conicOf(), det2(), det3(), determinant() (+45 more)
+### Community 119 - "conics.ts"
+Cohesion: 0.19
+Nodes (28): at(), centralCanonical(), Coefficients, coneCanonical(), conicOf(), det2(), det3(), determinant() (+20 more)
 
 ### Community 120 - "dictionaries.ts"
 Cohesion: 0.25
@@ -680,29 +682,37 @@ Cohesion: 0.29
 Nodes (3): BoardOptions, appleTouch(), UA
 
 ### Community 163 - "laplace.ts"
-Cohesion: 0.14
-Nodes (33): factoredPolynomial(), oneFraction(), beyondPoles(), compiled(), E, exp(), fractionShown(), HALF (+25 more)
+Cohesion: 0.10
+Nodes (50): factoredPolynomial(), numShown(), polyShown(), absOf(), boundsOf(), close(), definite(), fourierProblem (+42 more)
 
 ### Community 166 - "La lavagna"
 Cohesion: 0.40
 Nodes (5): Deciso (5 ottobre 2026), Dopo, L'idea dello studente (5 ottobre 2026), La lavagna, La lavagna base (fatta e pubblicata il 5 ottobre 2026)
 
+### Community 168 - "num"
+Cohesion: 0.14
+Nodes (56): atIntegers(), withoutAbs(), exp(), hyperbolicToExp(), inverseRational(), sqrtEx(), termTransform(), polyEx() (+48 more)
+
+### Community 169 - "Distribution"
+Cohesion: 0.15
+Nodes (11): addExp(), discreteQuantile(), Distribution, exactIntervalProbability(), integerRange(), intervalProbability(), subtractExp(), pValue() (+3 more)
+
 ## Knowledge Gaps
 - **873 isolated node(s):** `Condividere una nota con un link`, `Domande frequenti e commenti`, `Provarlo sul tuo computer`, `Assistente AI`, `Spiegami (in prova)` (+868 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1194 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1195 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **42 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `texts` connect `texts` to `licenses.ts`, `parse.ts`, `main.ts`, `math/evaluate.ts`, `spec.ts`, `BoardStore`, `graph/preview.ts`, `Dove sono le cose`, `distributions.ts`, `src/relocation.ts`, `svg.ts`, `plan.ts`, `schema/templates.ts`, `feedback.ts`, `xlsx.ts`, `siteUpdate.ts`, `numerical.ts`, `arithmetic.ts`, `index.ts`, `schema/editor.ts`, `ink.ts`, `ui/preview.ts`, `aiPanel.ts`, `several.ts`, `gantt.ts`, `toLatex`, `toolbar.ts`, `assistant.ts`, `logic.ts`, `usesDecimalComma`, `complex.ts`, `namesIn`, `resize.ts`, `graphNote.test.ts`, `localModels.ts`, `inference.ts`, `functions.ts`, `MathError`, `spreadsheet/format.ts`, `editor/lists.ts`, `sidePanel.ts`, `noteWordsGraph.test.ts`, `linsys.ts`, `sql.ts`, `finite.ts`, `spreadsheetEn.test.ts`, `spreadsheet/editor.ts`, `odesolve.ts`, `sheet.ts`, `schemaEn.test.ts`, `symbolic.ts`, `ui/relocation.ts`, `topics.ts`, `files.ts`, `schemaBlocks.ts`, `FoldersStore`, `schemaTools.test.ts`, `graph/file.ts`, `spellcheck.ts`, `i18n.ts`, `supabase.ts`, `probability.ts`, `tidy`, `board.ts`, `page.ts`?**
-  _High betweenness centrality (0.145) - this node is a cross-community bridge._
-- **Why does `Dove sono le cose` connect `Dove sono le cose` to `parse.ts`, `main.ts`, `math/evaluate.ts`, `spec.ts`, `BoardStore`, `num`, `Board`, `graph/preview.ts`, `src/relocation.ts`, `svg.ts`, `plan.ts`, `SchemaEditor`, `markdown.ts`, `feedback.ts`, `Rational`, `smoke-test.mjs`, `arithmetic.ts`, `numerical.ts`, `xlsx.ts`, `schema/editor.ts`, `SheetEditor`, `ExplainPanel`, `Parser`, `ink.ts`, `ui/preview.ts`, `aiPanel.ts`, `several.ts`, `gantt.ts`, `toLatex`, `toolbar.ts`, `assistant.ts`, `logic.ts`, `usesDecimalComma`, `complex.ts`, `namesIn`, `view3d.ts`, `graphNote.test.ts`, `localModels.ts`, `inference.ts`, `functions.ts`, `MathError`, `.render`, `schema/shapes.ts`, `board/shapes.ts`, `sidePanel.ts`, `noteWordsGraph.test.ts`, `linsys.ts`, `evaluateExactComplex`, `finite.ts`, `spreadsheetEn.test.ts`, `siteUpdate.ts`, `spreadsheet/editor.ts`, `.constructor`, `odesolve.ts`, `sheet.ts`, `blockMove.ts`, `Pt`, `symbolic.ts`, `texts`, `tutorial.mjs`, `topics.ts`, `schemaBlocks.ts`, `schemaTools.test.ts`, `graph/file.ts`, `i18n.ts`, `graph.ts`, `supabase.ts`, `tidy`, `board.ts`, `Sheet`?**
-  _High betweenness centrality (0.127) - this node is a cross-community bridge._
-- **Why does `vitest` connect `i18n.ts` to `licenses.ts`, `parse.ts`, `spec.ts`, `BoardStore`, `num`, `Dove sono le cose`, `distributions.ts`, `src/relocation.ts`, `svg.ts`, `plan.ts`, `siteUpdate.ts`, `feedback.ts`, `captcha.ts`, `markdown.ts`, `numerical.ts`, `xlsx.ts`, `store.ts`, `ink.ts`, `ui/preview.ts`, `database.ts`, `gantt.ts`, `mathEn2.test.ts`, `assistant.ts`, `BoardOptions`, `complex.ts`, `translations.test.ts`, `resize.ts`, `view3d.ts`, `graphNote.test.ts`, `localModels.ts`, `MathError`, `board/shapes.ts`, `editor/lists.ts`, `sidePanel.ts`, `noteWordsGraph.test.ts`, `sql.ts`, `spreadsheetEn.test.ts`, `spreadsheet/editor.ts`, `schemaEn.test.ts`, `blockMove.ts`, `picture.ts`, `texts`, `package.json`, `ui/relocation.ts`, `schemaBlocks.ts`, `FoldersStore`, `symbolsEn.test.ts`, `schemaTools.test.ts`, `graph/file.ts`, `suggest.ts`, `spellcheck.ts`, `supabase.ts`, `board.ts`, `Sheet`, `page.ts`?**
-  _High betweenness centrality (0.074) - this node is a cross-community bridge._
-- **Are the 324 inferred relationships involving `Dove sono le cose` (e.g. with `fakeLlmWorker()` and `tutorialModel()`) actually correct?**
-  _`Dove sono le cose` has 324 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `texts` connect `texts` to `licenses.ts`, `parse.ts`, `main.ts`, `math/evaluate.ts`, `spec.ts`, `BoardStore`, `graph/preview.ts`, `Dove sono le cose`, `distributions.ts`, `src/relocation.ts`, `svg.ts`, `plan.ts`, `schema/templates.ts`, `feedback.ts`, `xlsx.ts`, `siteUpdate.ts`, `numerical.ts`, `arithmetic.ts`, `index.ts`, `schema/editor.ts`, `ink.ts`, `ui/preview.ts`, `aiPanel.ts`, `several.ts`, `gantt.ts`, `toLatex`, `toolbar.ts`, `assistant.ts`, `logic.ts`, `usesDecimalComma`, `complex.ts`, `namesIn`, `laplace.ts`, `resize.ts`, `graphNote.test.ts`, `localModels.ts`, `inference.ts`, `functions.ts`, `MathError`, `spreadsheet/format.ts`, `editor/lists.ts`, `sidePanel.ts`, `noteWordsGraph.test.ts`, `linsys.ts`, `sql.ts`, `finite.ts`, `spreadsheetEn.test.ts`, `spreadsheet/editor.ts`, `odesolve.ts`, `sheet.ts`, `schemaEn.test.ts`, `symbolic.ts`, `ui/relocation.ts`, `topics.ts`, `files.ts`, `schemaBlocks.ts`, `FoldersStore`, `schemaTools.test.ts`, `graph/file.ts`, `spellcheck.ts`, `i18n.ts`, `supabase.ts`, `probability.ts`, `conics.ts`, `board.ts`, `page.ts`?**
+  _High betweenness centrality (0.139) - this node is a cross-community bridge._
+- **Why does `Dove sono le cose` connect `Dove sono le cose` to `parse.ts`, `main.ts`, `math/evaluate.ts`, `spec.ts`, `BoardStore`, `primitive.ts`, `Board`, `graph/preview.ts`, `src/relocation.ts`, `svg.ts`, `plan.ts`, `SchemaEditor`, `markdown.ts`, `feedback.ts`, `Rational`, `smoke-test.mjs`, `arithmetic.ts`, `numerical.ts`, `xlsx.ts`, `schema/editor.ts`, `SheetEditor`, `ExplainPanel`, `Parser`, `ink.ts`, `ui/preview.ts`, `aiPanel.ts`, `several.ts`, `gantt.ts`, `toLatex`, `toolbar.ts`, `assistant.ts`, `logic.ts`, `usesDecimalComma`, `complex.ts`, `namesIn`, `laplace.ts`, `view3d.ts`, `graphNote.test.ts`, `localModels.ts`, `inference.ts`, `num`, `MathError`, `functions.ts`, `.render`, `schema/shapes.ts`, `board/shapes.ts`, `sidePanel.ts`, `noteWordsGraph.test.ts`, `linsys.ts`, `evaluateExactComplex`, `finite.ts`, `spreadsheetEn.test.ts`, `siteUpdate.ts`, `spreadsheet/editor.ts`, `.constructor`, `odesolve.ts`, `sheet.ts`, `blockMove.ts`, `Pt`, `symbolic.ts`, `texts`, `tutorial.mjs`, `topics.ts`, `schemaBlocks.ts`, `schemaTools.test.ts`, `graph/file.ts`, `i18n.ts`, `graph.ts`, `supabase.ts`, `board.ts`, `Sheet`?**
+  _High betweenness centrality (0.104) - this node is a cross-community bridge._
+- **Why does `vitest` connect `i18n.ts` to `licenses.ts`, `parse.ts`, `spec.ts`, `BoardStore`, `Dove sono le cose`, `distributions.ts`, `src/relocation.ts`, `svg.ts`, `plan.ts`, `siteUpdate.ts`, `feedback.ts`, `captcha.ts`, `markdown.ts`, `numerical.ts`, `xlsx.ts`, `store.ts`, `ink.ts`, `ui/preview.ts`, `database.ts`, `gantt.ts`, `mathEn2.test.ts`, `assistant.ts`, `BoardOptions`, `complex.ts`, `translations.test.ts`, `resize.ts`, `view3d.ts`, `graphNote.test.ts`, `localModels.ts`, `num`, `MathError`, `board/shapes.ts`, `editor/lists.ts`, `sidePanel.ts`, `noteWordsGraph.test.ts`, `linsys.ts`, `sql.ts`, `spreadsheetEn.test.ts`, `spreadsheet/editor.ts`, `schemaEn.test.ts`, `blockMove.ts`, `picture.ts`, `texts`, `package.json`, `ui/relocation.ts`, `schemaBlocks.ts`, `FoldersStore`, `symbolsEn.test.ts`, `schemaTools.test.ts`, `graph/file.ts`, `suggest.ts`, `spellcheck.ts`, `supabase.ts`, `board.ts`, `Sheet`, `page.ts`?**
+  _High betweenness centrality (0.069) - this node is a cross-community bridge._
+- **Are the 325 inferred relationships involving `Dove sono le cose` (e.g. with `fakeLlmWorker()` and `tutorialModel()`) actually correct?**
+  _`Dove sono le cose` has 325 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `Condividere una nota con un link`, `Domande frequenti e commenti`, `Provarlo sul tuo computer` to the rest of the system?**
   _873 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `parse.ts` be split into smaller, more focused modules?**
