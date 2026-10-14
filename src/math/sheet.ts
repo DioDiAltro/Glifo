@@ -114,6 +114,8 @@ export interface EqualityCheck {
   rounded?: boolean
   /** Quando è sbagliata: il valore giusto, scritto come i risultati. */
   value?: FormattedResult
+  /** In una formula su più righe (separate da \\), quando è sbagliata: la riga, da 1. */
+  line?: number
 }
 
 /** Quello che Glifo dice di una formula: il risultato dopo «=» (o ⇒) e il controllo dell'uguaglianza scritta. */
@@ -177,22 +179,30 @@ function parseCached(src: string): MathNode | null {
 }
 
 /**
- * Divide una formula dove ci sono più definizioni (`a = 2, \quad b = 3`): alle virgole e ai punti
- * e virgola fuori dalle parentesi (non a quelle tra due cifre, che sono decimali) e a \quad.
+ * Divide una formula dove ci sono più definizioni (`a = 2, \quad b = 3`) o più righe
+ * (`6^3 = 216 \\ 216 \cdot 2 =`): alle virgole e ai punti e virgola fuori dalle parentesi e da
+ * \begin…\end (non a quelle tra due cifre, che sono decimali), a \quad e agli a capo \\.
  */
 export function splitPieces(tex: string): string[] {
-  const pieces: string[] = []
+  return piecesWithLines(tex).map((p) => p.text)
+}
+
+/** Come `splitPieces`, con la riga di ogni pezzo (da 1; le righe sono separate da \\). */
+function piecesWithLines(tex: string): { text: string; line: number }[] {
+  const pieces: { text: string; line: number }[] = []
   let depth = 0
   let start = 0
+  let line = 1
   for (let i = 0; i < tex.length; i++) {
     const c = tex[i]
     if (c === '\\') {
-      const m = /^\\(q?quad\b|[{}]|langle\b|rangle\b)/.exec(tex.slice(i))
-      if (m?.[1] === '{' || m?.[1] === 'langle') depth++
-      else if (m?.[1] === '}' || m?.[1] === 'rangle') depth--
+      const m = /^\\(q?quad\b|[{}]|langle\b|rangle\b|begin\b|end\b|\\(?:\[[^\]]*\])?)/.exec(tex.slice(i))
+      if (m?.[1] === '{' || m?.[1] === 'langle' || m?.[1] === 'begin') depth++
+      else if (m?.[1] === '}' || m?.[1] === 'rangle' || m?.[1] === 'end') depth--
       else if (m && depth === 0) {
-        pieces.push(tex.slice(start, i))
+        pieces.push({ text: tex.slice(start, i), line })
         start = i + m[0].length
+        if (m[1].startsWith('\\')) line++
       }
       i += m ? m[0].length - 1 : 1
       continue
@@ -200,12 +210,12 @@ export function splitPieces(tex: string): string[] {
     if (c === '(' || c === '[' || c === '{' || c === '⟨') depth++
     else if (c === ')' || c === ']' || c === '}' || c === '⟩') depth--
     else if (depth === 0 && (c === ';' || (c === ',' && !(/\d/.test(tex[i - 1] ?? '') && /\d/.test(tex[i + 1] ?? ''))))) {
-      pieces.push(tex.slice(start, i))
+      pieces.push({ text: tex.slice(start, i), line })
       start = i + 1
     }
   }
-  pieces.push(tex.slice(start))
-  return pieces.filter((p) => p.trim())
+  pieces.push({ text: tex.slice(start), line })
+  return pieces.filter((p) => p.text.trim())
 }
 
 /** Le parti di una catena a = b = c, divise agli uguali fuori dalle parentesi. */
@@ -602,10 +612,13 @@ export class Sheet {
     let check: EqualityCheck | null = null
     try {
       const request = calculationRequest(tex)
-      const pieces = splitPieces(request ?? tex)
-      const last = request === null ? null : pieces.pop() ?? null
-      for (const piece of pieces) {
-        const found = this.defineOrCheck(piece)
+      const pieces = piecesWithLines(request ?? tex)
+      // 6^3 = 216 \\ 324 - 216 = 216 \\ 216 \cdot 2 =: ogni riga è una formula, il ✗ dice quale.
+      const lines = pieces.length ? pieces[pieces.length - 1].line : 1
+      const last = request === null ? null : pieces.pop()?.text ?? null
+      for (const { text, line } of pieces) {
+        let found = this.defineOrCheck(text)
+        if (found && !found.ok && lines > 1) found = { ...found, line }
         // Con più uguaglianze (f(1) = 2, \quad f(2) = 5) conta la prima sbagliata.
         if (found && (!check || (check.ok && (!found.ok || found.rounded)))) check = found
       }

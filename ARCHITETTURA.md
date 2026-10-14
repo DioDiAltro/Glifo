@@ -311,10 +311,12 @@ finita il 14 ottobre 2026, il file non c'è più e si legge nella storia del rep
   mettono al posto del nome (`inline`); `U \cap W` è un prodotto con `cap`, `U^\perp` un esponente `⊥`,
   `sheet.ts` è il
   «foglio» della nota: le formule dall'alto in basso, `$a = 2$` e `$f(x) = …$` definiscono, una formula
-  che finisce con `=` ha il risultato (nell'editor `src/editor/calcResults.ts`, Tab lo scrive;
-  nell'anteprima colorato, classe `calc-result`). Con il risultato scritto
-  (`$\int_0^1 x^2 \, dx = \frac{1}{3}$`) c'è il controllo (`Sheet.read`, `check`): la domanda è la prima
-  parte che si sa calcolare (`resultOf`), le altre valgono quanto lei (con le lettere per tre scelte di
+  si divide in pezzi alle virgole, a `\quad` e agli a capo `\\` fuori dalle parentesi e da `\begin…\end`
+  (`splitPieces`; dal 14 ottobre 2026 anche `\\`, e le virgole di una funzione a pezzi restano dentro; con più
+  righe il ✗ dice quale, `EqualityCheck.line`), una formula che finisce con `=` ha il risultato
+  (nell'editor `src/editor/calcResults.ts`, Tab lo scrive; nell'anteprima colorato, classe `calc-result`).
+  Con il risultato scritto (`$\int_0^1 x^2 \, dx = \frac{1}{3}$`) c'è il controllo (`Sheet.read`, `check`):
+  la domanda è la prima parte che si sa calcolare (`resultOf`), le altre valgono quanto lei (con le lettere per tre scelte di
   numeri, i decimali arrotondati o troncati con `writtenSlack`, la primitiva tra gli estremi
   `\left[…\right]_a^b` con `bracketValue`); definizioni, equazioni e formule con ⇒ no. Una parte senza un
   valore (1/0, 0/0: in JavaScript ∞ e NaN) non si giudica, né ✓ né ✗ (`sameAs`, `sameScalar`, `same`; il 7

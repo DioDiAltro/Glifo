@@ -189,6 +189,18 @@ describe('il controllo delle uguaglianze scritte (✓/✗)', () => {
     expect(check(r`\frac{d}{dx} x^2 \sin x = 2x \sin x + x^2 \cos x`)).toBe('✓')
   })
 
+  it('le righe separate da \\\\ si controllano una per una (14 ottobre 2026)', () => {
+    // La formula dello studente: la seconda riga è sbagliata (324 − 216 fa 108).
+    expect(check(r`6^3 = 216 \\ 324 - 216 = 216 \\ 216 * 2 =`)).toBe('✗ 108')
+    expect(check(r`6^3 = 216 \\ 324 - 216 = 108 \\ 216 * 2 =`)).toBe('✓')
+    expect(check(r`6^3 = 216 \\ 324 - 216 = 108`)).toBe('✓')
+    expect(check(r`6^3 = 215 \\ 324 - 216 = 108`)).toBe('✗ 216')
+    // Il ✗ dice la riga sbagliata; in una riga sola no.
+    expect(new Sheet().read(r`6^3 = 216 \\ 324 - 216 = 216 \\ 216 * 2 =`).check).toMatchObject({ ok: false, line: 2 })
+    expect(new Sheet().read(r`6^3 = 215 \\ 324 - 216 = 108`).check).toMatchObject({ ok: false, line: 1 })
+    expect(new Sheet().read('2 + 2 = 5').check).toEqual({ ok: false, value: { tex: '4', text: '4' } })
+  })
+
   it('limiti, serie e infiniti', () => {
     expect(check(r`\lim_{x \to 0} \frac{\sin x}{x} = 1`)).toBe('✓')
     expect(check(r`\lim_{x \to 0} \frac{\sin x}{x} = 0`)).toBe('✗ 1')

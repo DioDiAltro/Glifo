@@ -193,7 +193,10 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
   file .md.
 - Le formule si leggono dall'alto in basso: `$a = 2$` e `$f(x) = x^2 - a$` valgono per quelle sotto,
   e `$f(3) =$` dà 7. Anche `a := 2`, più definizioni in una formula (`$a = 2, \quad b = 3$`) e
-  `$a = 3 + 4 =$` (mostra 7 e definisce a).
+  `$a = 3 + 4 =$` (mostra 7 e definisce a). In una formula le righe separate da `\\` sono formule a sé:
+  in `$6^3 = 216 \\ 324 - 216 = 108 \\ 216 \cdot 2 =$` le prime due si controllano (il ✗ dice la riga
+  sbagliata: «✗ riga 2: fa 108») e l'ultima ha il risultato (le righe dentro `\begin{cases}` o una matrice
+  restano insieme).
 - I risultati come in un quaderno: frazioni esatte (`$\frac{1}{3} + \frac{1}{6} =$` dà ½), decimali
   con la virgola (`0{,}1 + 0{,}2` dà 0,3, non 0,30000000000000004), i puntini quando le cifre
   continuano (√2 = 1,414213…), le potenze di 10 per i numeri molto grandi o piccoli.

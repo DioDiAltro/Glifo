@@ -4,6 +4,7 @@ import { Sheet } from '../src/math/sheet'
 import { parseMath, parseStatement } from '../src/math/parse'
 import { compile, EMPTY_SCOPE, errorMessage } from '../src/math/evaluate'
 import { toLatex } from '../src/math/latex'
+import { checkHtml, checkTitle } from '../src/render/check'
 
 /**
  * I conti in inglese (la parte A di src/math): i risultati con le parole, gli errori, lo studio di
@@ -100,6 +101,13 @@ describe('i controlli delle uguaglianze', () => {
     expect(line(r`\sqrt{2} = 1.414`)?.check).toEqual({ ok: true, rounded: true })
     expect(line(r`\sqrt{2} = 1.5`)?.check).toEqual({ ok: false, value: { tex: r`1.414213\ldots`, text: '1.414213…' } })
     expect(line(r`\int_0^1 x^2 \, dx = 0.5`)?.check).toEqual({ ok: false, value: { tex: r`\frac{1}{3}`, text: '1/3' } })
+  })
+
+  it('in una formula su più righe (\\\\) il ✗ dice la riga sbagliata', () => {
+    const check = line(r`6^3 = 216 \\ 324 - 216 = 216 \\ 216 * 2 =`)!.check!
+    expect(check).toMatchObject({ ok: false, line: 2 })
+    expect(checkTitle(check)).toBe('Wrong according to Glifo on line 2: the correct value is 108')
+    expect(checkHtml(check)).toContain('✗ line 2: should be')
   })
 
   it('nella lingua di quando si controlla (anche la stessa formula già controllata)', () => {

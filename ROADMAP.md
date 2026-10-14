@@ -688,6 +688,14 @@ scritti nel blocco: `titolo:`, `asse x:`). Restano, per il controllo e le immagi
   [ABBONAMENTI.md](ABBONAMENTI.md) sono un'idea per il piano Quantistico;
 - scegliere la misura dell'immagine (oggi 640 × 400) e scaricare anche in PDF.
 
+**Le righe separate da `\\` (14 ottobre 2026, lo studente con una foto).** In
+`$6^3 = 216 \\ 324 - 216 = 216 \\ 216 * 2 =$` Glifo proponeva 216 (il valore di `6^3`) invece di 432 e non
+segnava la seconda riga, sbagliata: leggeva tutto come una catena sola. Ora, sul ramo `prova`, ogni riga è una
+formula a sé: le prime si controllano (qui «✗ riga 2: fa 108») e l'ultima ha il risultato. Le righe dentro
+`\begin{cases}` e nelle matrici restano insieme, e anche le virgole di una funzione a pezzi, che prima non si
+definiva (`tests/math.test.ts`, `tests/check.test.ts`, `tests/graphNote.test.ts`). Resta: in una catena con
+l'uguale alla fine (`2 + 2 = 5 =`) le uguaglianze in mezzo non si controllano.
+
 ### Matematica per i corsi: idee in più
 
 Fatto con lo studente (2 ottobre 2026), in sette tappe pubblicate una per una: grafici e calcoli per

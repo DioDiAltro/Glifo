@@ -208,6 +208,20 @@ describe('il foglio: definizioni e risultati dopo «=»', () => {
     expect(splitPieces('a = 1;\\, b = 2')).toEqual(['a = 1', '\\, b = 2'])
   })
 
+  it('divide le righe separate da \\\\, non dentro \\begin…\\end (14 ottobre 2026: con tre righe dava il valore della prima)', () => {
+    expect(splitPieces(r`6^3 = 216 \\ 216 * 2 =`)).toEqual(['6^3 = 216 ', ' 216 * 2 ='])
+    expect(splitPieces(r`a = 2 \\[4pt] b = 3`)).toEqual(['a = 2 ', ' b = 3'])
+    // Le righe e le virgole di una funzione a pezzi o di una matrice restano insieme (con le virgole f non si definiva).
+    const cases = r`f(x) = \begin{cases} x^2, & x \ge 0 \\ -x, & x < 0 \end{cases}`
+    expect(splitPieces(cases)).toEqual([cases])
+    expect(splitPieces(r`A = \begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}`)).toHaveLength(1)
+    expect(result(r`6^3 = 216 \\ 324 - 216 = 216 \\ 216 * 2 =`)).toBe('432')
+    expect(result(r`6^3 = 216 \\[4pt] 216 * 2 =`)).toBe('432')
+    expect(result(r`a = 3 \\ a^2 =`)).toBe('9')
+    expect(result(cases, 'f(-3) =')).toBe('3')
+    expect(result(r`x + y = 3 \\ x - y = 1 \Rightarrow`)).toBe(r`x = 2,\ y = 1`)
+  })
+
   it('calcola con le definizioni scritte prima', () => {
     expect(result('a = 2', 'b = a + 1', 'a + b =')).toBe('5')
     expect(result('f(x) = x^2 + 1', 'f(3) =')).toBe('10')

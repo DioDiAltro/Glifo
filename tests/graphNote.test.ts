@@ -104,6 +104,20 @@ describe('il controllo dei risultati scritti (✓/✗)', () => {
     expect(preview('$a = 2$ e $x^2 - 5x + 6 = 0$').querySelector('.calc-check')).toBeNull()
   })
 
+  it('in una formula su più righe (\\\\) il ✗ dice la riga sbagliata, e il risultato è dell\'ultima (14 ottobre 2026)', () => {
+    const tex = r`$6^3 = 216 \\ 324 - 216 = 216 \\ 216 * 2 =$`
+    const host = preview(tex)
+    const wrong = host.querySelector<HTMLElement>('.calc-check.is-wrong')!
+    expect(wrong.textContent).toContain('✗ riga 2: fa')
+    expect(wrong.title).toBe('Sbagliato secondo Glifo alla riga 2: il valore giusto è 108')
+    expect(host.querySelector('.calc-result')?.textContent).toContain('432')
+    const doc = `${tex} e poi`
+    const v = makeView(doc, doc.length)
+    const check = v.dom.querySelector<HTMLElement>('.cm-calc-check.is-wrong')!
+    expect(check.textContent).toBe('✗ riga 2: fa 108')
+    expect(check.title).toBe('Sbagliato secondo Glifo alla riga 2: il valore giusto è 108')
+  })
+
   it('nell\'editor: dopo Tab il risultato scritto ha il ✓', () => {
     const doc = r`$a = 2$ e $a^{10} =$ fine`
     const v = makeView(doc, doc.indexOf('=$') + 1)
