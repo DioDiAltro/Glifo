@@ -7588,7 +7588,7 @@
       "file_type": "code",
       "norm_label": "differentialinfraction()",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2187"
+      "source_location": "L2188"
     },
     {
       "id": "src_math_parse_isdigit",
@@ -7624,7 +7624,7 @@
       "file_type": "code",
       "norm_label": "isminusone()",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2218"
+      "source_location": "L2219"
     },
     {
       "id": "src_math_parse_joinand",
@@ -7636,7 +7636,7 @@
       "file_type": "code",
       "norm_label": "joinand()",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2222"
+      "source_location": "L2223"
     },
     {
       "id": "src_math_parse_mathsyntaxerror_constructor",
@@ -7660,7 +7660,7 @@
       "file_type": "code",
       "norm_label": "parsemath()",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2228"
+      "source_location": "L2229"
     },
     {
       "id": "src_math_parse_pushwrapped",
@@ -7744,7 +7744,7 @@
       "file_type": "code",
       "norm_label": "withoutnormal()",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2212"
+      "source_location": "L2213"
     },
     {
       "id": "tests_arithmetic_test_tex",
@@ -7924,7 +7924,7 @@
       "file_type": "code",
       "norm_label": "item()",
       "source_file": "tests/vectorcalc.test.ts",
-      "source_location": "L220"
+      "source_location": "L225"
     },
     {
       "id": "tests_vectorcalc_test_result",
@@ -22420,7 +22420,7 @@
       "file_type": "code",
       "norm_label": "productpower()",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2249"
+      "source_location": "L2250"
     },
     {
       "id": "src_math_sheet_sheet_formmatrix",
@@ -25624,7 +25624,7 @@
       "file_type": "code",
       "norm_label": ".cases()",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2067"
+      "source_location": "L2068"
     },
     {
       "id": "src_math_parse_parser_combinatorial",
@@ -25696,7 +25696,7 @@
       "file_type": "code",
       "norm_label": ".derivativebody()",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1841"
+      "source_location": "L1842"
     },
     {
       "id": "src_math_parse_parser_derivativefrac",
@@ -25720,7 +25720,7 @@
       "file_type": "code",
       "norm_label": ".differentialhead()",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1846"
+      "source_location": "L1847"
     },
     {
       "id": "src_math_parse_parser_differentials",
@@ -25732,7 +25732,7 @@
       "file_type": "code",
       "norm_label": ".differentials()",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1991"
+      "source_location": "L1992"
     },
     {
       "id": "src_math_parse_parser_distribution",
@@ -25756,7 +25756,7 @@
       "file_type": "code",
       "norm_label": ".domainarg()",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1981"
+      "source_location": "L1982"
     },
     {
       "id": "src_math_parse_parser_done",
@@ -25888,7 +25888,7 @@
       "file_type": "code",
       "norm_label": ".group()",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2099"
+      "source_location": "L2100"
     },
     {
       "id": "src_math_parse_parser_implicitargument",
@@ -25972,7 +25972,7 @@
       "file_type": "code",
       "norm_label": ".limit()",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1894"
+      "source_location": "L1895"
     },
     {
       "id": "src_math_parse_parser_lineintegral",
@@ -25996,7 +25996,7 @@
       "file_type": "code",
       "norm_label": ".matrix()",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2154"
+      "source_location": "L2155"
     },
     {
       "id": "src_math_parse_parser_multipleintegral",
@@ -26020,7 +26020,7 @@
       "file_type": "code",
       "norm_label": ".nabla()",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1966"
+      "source_location": "L1967"
     },
     {
       "id": "src_math_parse_parser_name",
@@ -26068,7 +26068,7 @@
       "file_type": "code",
       "norm_label": ".partialderivative()",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1874"
+      "source_location": "L1875"
     },
     {
       "id": "src_math_parse_parser_peek",
@@ -26152,7 +26152,7 @@
       "file_type": "code",
       "norm_label": ".setbuilder()",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2015"
+      "source_location": "L2016"
     },
     {
       "id": "src_math_parse_parser_sethead",
@@ -26164,7 +26164,7 @@
       "file_type": "code",
       "norm_label": ".sethead()",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2032"
+      "source_location": "L2033"
     },
     {
       "id": "src_math_parse_parser_startsargument",
@@ -31924,7 +31924,7 @@
       "file_type": "code",
       "norm_label": "namesin()",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2255"
+      "source_location": "L2256"
     },
     {
       "id": "src_math_probability_onevariable",
@@ -38716,7 +38716,7 @@
       "file_type": "code",
       "norm_label": "children()",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2306"
+      "source_location": "L2307"
     },
     {
       "id": "src_math_parse_parsestatement",
@@ -38728,7 +38728,7 @@
       "file_type": "code",
       "norm_label": "parsestatement()",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2237"
+      "source_location": "L2238"
     },
     {
       "id": "src_math_probability_distributionof",
@@ -51220,7 +51220,7 @@
       "file_type": "code",
       "norm_label": "one",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2184"
+      "source_location": "L2185"
     },
     {
       "id": "src_math_parse_or_words",
@@ -51253,7 +51253,7 @@
       "file_type": "code",
       "norm_label": "surface",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2209"
+      "source_location": "L2210"
     },
     {
       "id": "src_math_parse_t",
@@ -51275,7 +51275,7 @@
       "file_type": "code",
       "norm_label": "zero",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2206"
+      "source_location": "L2207"
     },
     {
       "id": "tests_arithmetic_test",
@@ -61368,7 +61368,7 @@
       "node_kind": "heading",
       "norm_label": "aggiungere un simbolo",
       "source_file": "README.md",
-      "source_location": "L1203"
+      "source_location": "L1205"
     },
     {
       "id": "readme_assistente_ai",
@@ -61380,7 +61380,7 @@
       "node_kind": "heading",
       "norm_label": "assistente ai",
       "source_file": "README.md",
-      "source_location": "L913"
+      "source_location": "L915"
     },
     {
       "id": "readme_com_\u00e8_fatto",
@@ -61392,7 +61392,7 @@
       "node_kind": "heading",
       "norm_label": "com'e fatto",
       "source_file": "README.md",
-      "source_location": "L1025"
+      "source_location": "L1027"
     },
     {
       "id": "readme_come_viene_pubblicata",
@@ -61404,7 +61404,7 @@
       "node_kind": "heading",
       "norm_label": "come viene pubblicata",
       "source_file": "README.md",
-      "source_location": "L889"
+      "source_location": "L891"
     },
     {
       "id": "readme_compatibilit\u00e0_con_vs_code",
@@ -61416,7 +61416,7 @@
       "node_kind": "heading",
       "norm_label": "compatibilita con vs code",
       "source_file": "README.md",
-      "source_location": "L1007"
+      "source_location": "L1009"
     },
     {
       "id": "readme_condividere_una_nota_con_un_link",
@@ -61476,7 +61476,7 @@
       "node_kind": "heading",
       "norm_label": "idee per il futuro",
       "source_file": "README.md",
-      "source_location": "L1274"
+      "source_location": "L1276"
     },
     {
       "id": "readme_licenze",
@@ -61488,7 +61488,7 @@
       "node_kind": "heading",
       "norm_label": "licenze",
       "source_file": "README.md",
-      "source_location": "L1244"
+      "source_location": "L1246"
     },
     {
       "id": "readme_provarlo_sul_tuo_computer",
@@ -61500,7 +61500,7 @@
       "node_kind": "heading",
       "norm_label": "provarlo sul tuo computer",
       "source_file": "README.md",
-      "source_location": "L866"
+      "source_location": "L868"
     },
     {
       "id": "readme_scrivere_un_testo_dell_interfaccia",
@@ -61512,7 +61512,7 @@
       "node_kind": "heading",
       "norm_label": "scrivere un testo dell'interfaccia",
       "source_file": "README.md",
-      "source_location": "L1220"
+      "source_location": "L1222"
     },
     {
       "id": "readme_spiegami_in_prova",
@@ -61524,7 +61524,7 @@
       "node_kind": "heading",
       "norm_label": "spiegami (in prova)",
       "source_file": "README.md",
-      "source_location": "L946"
+      "source_location": "L948"
     },
     {
       "id": "readme_usarla_tutti_i_giorni",
@@ -118010,7 +118010,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2298",
+      "source_location": "L2299",
       "weight": 1.0
     },
     {
@@ -118022,7 +118022,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2229",
+      "source_location": "L2230",
       "weight": 1.0
     },
     {
@@ -118034,7 +118034,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2229",
+      "source_location": "L2230",
       "weight": 1.0
     },
     {
@@ -118046,7 +118046,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2230",
+      "source_location": "L2231",
       "weight": 1.0
     },
     {
@@ -118058,7 +118058,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2231",
+      "source_location": "L2232",
       "weight": 1.0
     },
     {
@@ -118070,7 +118070,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2232",
+      "source_location": "L2233",
       "weight": 1.0
     },
     {
@@ -118214,7 +118214,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2071",
+      "source_location": "L2072",
       "weight": 1.0
     },
     {
@@ -118226,7 +118226,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2072",
+      "source_location": "L2073",
       "weight": 1.0
     },
     {
@@ -118238,7 +118238,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2072",
+      "source_location": "L2073",
       "weight": 1.0
     },
     {
@@ -118250,7 +118250,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2074",
+      "source_location": "L2075",
       "weight": 1.0
     },
     {
@@ -118262,7 +118262,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2081",
+      "source_location": "L2082",
       "weight": 1.0
     },
     {
@@ -118423,6 +118423,18 @@
     },
     {
       "source": "src_math_parse_parser_derivativebody",
+      "target": "src_math_parse_parser_implicitargument",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/math/parse.ts",
+      "source_location": "L1843",
+      "weight": 1.0
+    },
+    {
+      "source": "src_math_parse_parser_derivativebody",
       "target": "src_math_parse_parser_is",
       "relation": "calls",
       "_origin": "ast",
@@ -118430,7 +118442,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1842",
+      "source_location": "L1843",
       "weight": 1.0
     },
     {
@@ -118442,19 +118454,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1842",
-      "weight": 1.0
-    },
-    {
-      "source": "src_math_parse_parser_derivativebody",
-      "target": "src_math_parse_parser_term",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src/math/parse.ts",
-      "source_location": "L1842",
+      "source_location": "L1843",
       "weight": 1.0
     },
     {
@@ -118562,7 +118562,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1848",
+      "source_location": "L1849",
       "weight": 1.0
     },
     {
@@ -118574,7 +118574,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1993",
+      "source_location": "L1994",
       "weight": 1.0
     },
     {
@@ -118586,7 +118586,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1995",
+      "source_location": "L1996",
       "weight": 1.0
     },
     {
@@ -118598,7 +118598,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1996",
+      "source_location": "L1997",
       "weight": 1.0
     },
     {
@@ -118610,7 +118610,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1998",
+      "source_location": "L1999",
       "weight": 1.0
     },
     {
@@ -118706,7 +118706,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1982",
+      "source_location": "L1983",
       "weight": 1.0
     },
     {
@@ -118718,7 +118718,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1982",
+      "source_location": "L1983",
       "weight": 1.0
     },
     {
@@ -118730,7 +118730,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1984",
+      "source_location": "L1985",
       "weight": 1.0
     },
     {
@@ -118742,7 +118742,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1985",
+      "source_location": "L1986",
       "weight": 1.0
     },
     {
@@ -118754,7 +118754,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1986",
+      "source_location": "L1987",
       "weight": 1.0
     },
     {
@@ -119138,7 +119138,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2102",
+      "source_location": "L2103",
       "weight": 1.0
     },
     {
@@ -119150,7 +119150,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2103",
+      "source_location": "L2104",
       "weight": 1.0
     },
     {
@@ -119162,7 +119162,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2110",
+      "source_location": "L2111",
       "weight": 1.0
     },
     {
@@ -119174,7 +119174,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2115",
+      "source_location": "L2116",
       "weight": 1.0
     },
     {
@@ -119186,7 +119186,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2136",
+      "source_location": "L2137",
       "weight": 1.0
     },
     {
@@ -119198,7 +119198,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2138",
+      "source_location": "L2139",
       "weight": 1.0
     },
     {
@@ -119558,7 +119558,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1897",
+      "source_location": "L1898",
       "weight": 1.0
     },
     {
@@ -119570,7 +119570,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1897",
+      "source_location": "L1898",
       "weight": 1.0
     },
     {
@@ -119582,7 +119582,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1907",
+      "source_location": "L1908",
       "weight": 1.0
     },
     {
@@ -119594,7 +119594,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1911",
+      "source_location": "L1912",
       "weight": 1.0
     },
     {
@@ -119606,7 +119606,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1933",
+      "source_location": "L1934",
       "weight": 1.0
     },
     {
@@ -119618,7 +119618,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1941",
+      "source_location": "L1942",
       "weight": 1.0
     },
     {
@@ -119630,7 +119630,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1943",
+      "source_location": "L1944",
       "weight": 1.0
     },
     {
@@ -119642,7 +119642,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1944",
+      "source_location": "L1945",
       "weight": 1.0
     },
     {
@@ -119654,7 +119654,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1954",
+      "source_location": "L1955",
       "weight": 1.0
     },
     {
@@ -119750,7 +119750,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2159",
+      "source_location": "L2160",
       "weight": 1.0
     },
     {
@@ -119762,7 +119762,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2160",
+      "source_location": "L2161",
       "weight": 1.0
     },
     {
@@ -119774,7 +119774,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2160",
+      "source_location": "L2161",
       "weight": 1.0
     },
     {
@@ -119786,7 +119786,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2161",
+      "source_location": "L2162",
       "weight": 1.0
     },
     {
@@ -119894,7 +119894,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1969",
+      "source_location": "L1970",
       "weight": 1.0
     },
     {
@@ -119906,7 +119906,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1972",
+      "source_location": "L1973",
       "weight": 1.0
     },
     {
@@ -119918,7 +119918,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1973",
+      "source_location": "L1974",
       "weight": 1.0
     },
     {
@@ -119930,7 +119930,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1976",
+      "source_location": "L1977",
       "weight": 1.0
     },
     {
@@ -119942,7 +119942,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1976",
+      "source_location": "L1977",
       "weight": 1.0
     },
     {
@@ -119954,7 +119954,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1977",
+      "source_location": "L1978",
       "weight": 1.0
     },
     {
@@ -120146,7 +120146,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1878",
+      "source_location": "L1879",
       "weight": 1.0
     },
     {
@@ -120158,7 +120158,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1878",
+      "source_location": "L1879",
       "weight": 1.0
     },
     {
@@ -120170,7 +120170,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1883",
+      "source_location": "L1884",
       "weight": 1.0
     },
     {
@@ -120182,7 +120182,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1889",
+      "source_location": "L1890",
       "weight": 1.0
     },
     {
@@ -120194,7 +120194,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1889",
+      "source_location": "L1890",
       "weight": 1.0
     },
     {
@@ -120206,7 +120206,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L1890",
+      "source_location": "L1891",
       "weight": 1.0
     },
     {
@@ -120686,7 +120686,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2020",
+      "source_location": "L2021",
       "weight": 1.0
     },
     {
@@ -120698,24 +120698,12 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2025",
+      "source_location": "L2026",
       "weight": 1.0
     },
     {
       "source": "src_math_parse_parser_setbuilder",
       "target": "src_math_parse_parser_is",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src/math/parse.ts",
-      "source_location": "L2025",
-      "weight": 1.0
-    },
-    {
-      "source": "src_math_parse_parser_setbuilder",
-      "target": "src_math_parse_parser_condition",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -120727,7 +120715,7 @@
     },
     {
       "source": "src_math_parse_parser_setbuilder",
-      "target": "src_math_parse_parser_expect",
+      "target": "src_math_parse_parser_condition",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -120735,6 +120723,18 @@
       "context": "call",
       "source_file": "src/math/parse.ts",
       "source_location": "L2027",
+      "weight": 1.0
+    },
+    {
+      "source": "src_math_parse_parser_setbuilder",
+      "target": "src_math_parse_parser_expect",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/math/parse.ts",
+      "source_location": "L2028",
       "weight": 1.0
     },
     {
@@ -120746,7 +120746,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2034",
+      "source_location": "L2035",
       "weight": 1.0
     },
     {
@@ -120758,7 +120758,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2038",
+      "source_location": "L2039",
       "weight": 1.0
     },
     {
@@ -120770,7 +120770,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2057",
+      "source_location": "L2058",
       "weight": 1.0
     },
     {
@@ -120782,7 +120782,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2060",
+      "source_location": "L2061",
       "weight": 1.0
     },
     {
@@ -121154,7 +121154,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2238",
+      "source_location": "L2239",
       "weight": 1.0
     },
     {
@@ -121166,7 +121166,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2238",
+      "source_location": "L2239",
       "weight": 1.0
     },
     {
@@ -121178,7 +121178,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2239",
+      "source_location": "L2240",
       "weight": 1.0
     },
     {
@@ -121190,7 +121190,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2240",
+      "source_location": "L2241",
       "weight": 1.0
     },
     {
@@ -121202,7 +121202,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/math/parse.ts",
-      "source_location": "L2241",
+      "source_location": "L2242",
       "weight": 1.0
     },
     {
@@ -172346,7 +172346,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "tests/vectorcalc.test.ts",
-      "source_location": "L220",
+      "source_location": "L225",
       "weight": 1.0
     },
     {
@@ -245315,7 +245315,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L1203",
+      "source_location": "L1205",
       "weight": 1.0
     },
     {
@@ -245326,7 +245326,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L1220",
+      "source_location": "L1222",
       "weight": 1.0
     },
     {
@@ -245337,7 +245337,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L1007",
+      "source_location": "L1009",
       "weight": 1.0
     },
     {
@@ -245348,7 +245348,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L1025",
+      "source_location": "L1027",
       "weight": 1.0
     },
     {
@@ -245359,7 +245359,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L1244",
+      "source_location": "L1246",
       "weight": 1.0
     },
     {
@@ -245370,7 +245370,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L1274",
+      "source_location": "L1276",
       "weight": 1.0
     },
     {
@@ -245403,7 +245403,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L866",
+      "source_location": "L868",
       "weight": 1.0
     },
     {
@@ -245414,7 +245414,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L889",
+      "source_location": "L891",
       "weight": 1.0
     },
     {
@@ -245425,7 +245425,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L913",
+      "source_location": "L915",
       "weight": 1.0
     },
     {
@@ -245436,7 +245436,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L946",
+      "source_location": "L948",
       "weight": 1.0
     },
     {
@@ -267095,7 +267095,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L2184",
+      "source_location": "L2185",
       "weight": 1.0
     },
     {
@@ -267106,7 +267106,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L2187",
+      "source_location": "L2188",
       "weight": 1.0
     },
     {
@@ -267117,7 +267117,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L2206",
+      "source_location": "L2207",
       "weight": 1.0
     },
     {
@@ -267128,7 +267128,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L2209",
+      "source_location": "L2210",
       "weight": 1.0
     },
     {
@@ -267139,7 +267139,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L2212",
+      "source_location": "L2213",
       "weight": 1.0
     },
     {
@@ -267150,7 +267150,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L2218",
+      "source_location": "L2219",
       "weight": 1.0
     },
     {
@@ -267161,7 +267161,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L2222",
+      "source_location": "L2223",
       "weight": 1.0
     },
     {
@@ -267172,7 +267172,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L2228",
+      "source_location": "L2229",
       "weight": 1.0
     },
     {
@@ -267183,7 +267183,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L2237",
+      "source_location": "L2238",
       "weight": 1.0
     },
     {
@@ -267194,7 +267194,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L2249",
+      "source_location": "L2250",
       "weight": 1.0
     },
     {
@@ -267205,7 +267205,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L2255",
+      "source_location": "L2256",
       "weight": 1.0
     },
     {
@@ -267238,7 +267238,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L2306",
+      "source_location": "L2307",
       "weight": 1.0
     },
     {
@@ -290775,7 +290775,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L1841",
+      "source_location": "L1842",
       "weight": 1.0
     },
     {
@@ -290786,7 +290786,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L1846",
+      "source_location": "L1847",
       "weight": 1.0
     },
     {
@@ -290797,7 +290797,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L1874",
+      "source_location": "L1875",
       "weight": 1.0
     },
     {
@@ -290808,7 +290808,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L1894",
+      "source_location": "L1895",
       "weight": 1.0
     },
     {
@@ -290819,7 +290819,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L1966",
+      "source_location": "L1967",
       "weight": 1.0
     },
     {
@@ -290830,7 +290830,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L1981",
+      "source_location": "L1982",
       "weight": 1.0
     },
     {
@@ -290841,7 +290841,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L1991",
+      "source_location": "L1992",
       "weight": 1.0
     },
     {
@@ -290852,7 +290852,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L2015",
+      "source_location": "L2016",
       "weight": 1.0
     },
     {
@@ -290863,7 +290863,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L2032",
+      "source_location": "L2033",
       "weight": 1.0
     },
     {
@@ -290874,7 +290874,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L2067",
+      "source_location": "L2068",
       "weight": 1.0
     },
     {
@@ -290885,7 +290885,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L2099",
+      "source_location": "L2100",
       "weight": 1.0
     },
     {
@@ -290896,7 +290896,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/math/parse.ts",
-      "source_location": "L2154",
+      "source_location": "L2155",
       "weight": 1.0
     },
     {
@@ -297034,7 +297034,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L892",
+      "source_location": "L894",
       "weight": 1.0
     },
     {
@@ -302298,7 +302298,7 @@
       "confidence_score": 0.95,
       "context": "derivativeBody",
       "source_file": "ARCHITETTURA.md",
-      "source_location": "L247",
+      "source_location": "L248",
       "weight": 1.0
     },
     {
@@ -302346,7 +302346,7 @@
       "confidence_score": 0.95,
       "context": "dist",
       "source_file": "README.md",
-      "source_location": "L900",
+      "source_location": "L902",
       "weight": 1.0
     },
     {
@@ -302951,6 +302951,18 @@
     },
     {
       "source": "architettura_dove_sono_le_cose",
+      "target": "src_math_parse_parser_implicitargument",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "context": "implicitArgument",
+      "source_file": "ARCHITETTURA.md",
+      "source_location": "L248",
+      "weight": 1.0
+    },
+    {
+      "source": "architettura_dove_sono_le_cose",
       "target": "src_relocation_importpackage",
       "relation": "references",
       "_origin": "ast",
@@ -303138,7 +303150,7 @@
       "confidence_score": 0.95,
       "context": "k",
       "source_file": "README.md",
-      "source_location": "L561",
+      "source_location": "L563",
       "weight": 1.0
     },
     {
@@ -305399,5 +305411,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "994457814b1cdc2c3b0fd682ca0d26d19ecd01e7"
+  "built_at_commit": "88694caf8040e68ebc99a8dee88779f0df6625a6"
 }
