@@ -159,6 +159,11 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
   Qwen3.5 4B è stato il migliore, e poi si decide quali Qwen3.5 passano tra i consigliati. Le prove nuove
   si fanno ancora sul sito di prova https://glifo-prova.pages.dev (Cloudflare Pages, dal ramo `prova`; lì
   l'account è spento).
+- Provare sul sito di prova la correzione delle derivate (14 ottobre 2026, «Spiegami» in ROADMAP.md): in una
+  nota `$\frac{d}{dx}(x^2+1) \cdot (x-1) = 2x(x-1)$` ha il ✓, e «Spiegami» su
+  `$\frac{d}{dx}\left(\frac{x^2+1}{x-1}\right) =$` non fa più correggere la regola del quoziente scritta
+  giusta. Poi dire se va sul sito vero e se la derivata senza parentesi (`\frac{d}{dx} x^2 \sin x`) resta di
+  tutto il prodotto.
 - Leggere ogni tanto i commenti di chi prova Glifo (online dall'8 ottobre 2026; si leggono nella pagina
   «Domande frequenti e commenti», glifo.page/faq, a cui porta il link nella finestra del fumetto in fondo
   alla barra laterale): dashboard di Supabase → progetto `glifo` → Table Editor → `feedback`, dove ci sono

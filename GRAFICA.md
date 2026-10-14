@@ -448,9 +448,10 @@ qui sotto, perché Glifo le leggeva male (vedi sotto). Quante sono arrivate al r
   conto scritto da solo si confronta con il passaggio prima e dà ✓ se è uguale (se no resta «non
   controllato»: può essere un conto a parte). Per esempio la stessa spiegazione di Qwen3 8B sulla derivata
   aveva 1 passaggio controllato su 4, ora 4 su 4.
-- **Trovato e non corretto**: il motore legge `\frac{d}{dx}(x^2+1) \cdot (x-1)` come la derivata di
-  tutto il prodotto, così un passaggio giusto di Qwen3.5 9B (la regola del quoziente scritta con le
-  derivate dentro) è segnato ✗. È proposto come lavoro a parte.
+- **Trovato e corretto sul ramo `prova`** (14 ottobre 2026, in un lavoro a parte): il motore leggeva
+  `\frac{d}{dx}(x^2+1) \cdot (x-1)` come la derivata di tutto il prodotto, così un passaggio giusto di
+  Qwen3.5 9B (la regola del quoziente scritta con le derivate dentro) era segnato ✗. Ora con una parentesi
+  subito dopo la derivata si deriva solo la parentesi (ROADMAP.md, «Spiegami»).
 - **Non si è visto** quanto ci mettono nel browser e se WebGPU li fa girare su un computer vero: llama.cpp
   non è WebLLM. Si vede sul sito di prova, sul computer dello studente.
 
