@@ -828,6 +828,12 @@ kbd {
   color: var(--danger);
 }
 
+/* Spenta: si legge e si preme solo per sapere perché (es. l'SQL, che a breve sarà a pagamento). */
+.tool-menu-item[aria-disabled='true'] {
+  color: var(--muted);
+  cursor: default;
+}
+
 .tool-menu-sep {
   height: 1px;
   margin: 4px 2px;

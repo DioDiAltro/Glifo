@@ -1187,27 +1187,24 @@ try {
       panelSave.status === 'Salvato nella nota',
     `nel pannello si danno i tipi, si aggiungono e si tolgono i campi, e Ctrl+S salva nella nota (${JSON.stringify({ panelBefore, afterEnter, added, panelSave })})`,
   )
-  // Il codice SQL: si sceglie il database, si scarica; Glifo si ricorda la scelta.
+  // Il codice SQL è spento dal 14 ottobre 2026: la voce resta, e chi la preme legge che a breve sarà a
+  // pagamento (la finestra del codice e il file .sql li provano i test in inglese, con l'SQL acceso).
   await db.locator('.schema-menu-button', { hasText: 'Scarica' }).click()
-  await db.locator('.tool-menu-item', { hasText: 'Codice SQL' }).click()
-  await db.locator('dialog.dialog-sql select').selectOption('postgresql')
-  const [sqlDownload] = await Promise.all([db.waitForEvent('download'), db.locator('dialog.dialog-sql button', { hasText: 'Scarica .sql' }).click()])
-  const sqlFile = readFileSync(await sqlDownload.path(), 'utf8')
-  await db.keyboard.press('Escape')
-  await db.locator('dialog.dialog-sql').waitFor({ state: 'detached' })
-  await db.locator('.schema-menu-button', { hasText: 'Scarica' }).click()
-  await db.locator('.tool-menu-item', { hasText: 'Codice SQL' }).click()
-  const remembered = await db.locator('dialog.dialog-sql select').inputValue()
-  await db.keyboard.press('Escape')
-  await db.locator('dialog.dialog-sql').waitFor({ state: 'detached' })
+  const sqlItem = db.locator('.tool-menu-item', { hasText: 'Codice SQL' })
+  const sqlOff = { disabled: await sqlItem.getAttribute('aria-disabled'), title: await sqlItem.getAttribute('title') }
+  // Playwright non preme da solo una voce con aria-disabled; chi usa Glifo sì, e legge il messaggio.
+  await sqlItem.click({ force: true })
+  const sqlToast = db.locator('dialog.schema-editor .toast', { hasText: 'a pagamento' })
+  await sqlToast.waitFor({ timeout: 3000 })
+  sqlOff.toast = await sqlToast.textContent()
+  await db.waitForTimeout(300)
+  sqlOff.windows = await db.locator('dialog.dialog-sql').count()
   check(
-    sqlDownload.suggestedFilename() === 'Basi-di-dati-tabelle.sql' &&
-      sqlFile.startsWith('-- Tabelle per PostgreSQL') &&
-      sqlFile.includes('CREATE TABLE Studente (\n  Matricola CHAR(6) NOT NULL,') &&
-      sqlFile.includes('  PRIMARY KEY (Matricola, Corso)') &&
-      sqlFile.includes('«Studente.Corso» è una chiave esterna, ma non si capisce di quale tabella') &&
-      remembered === 'postgresql',
-    `«Scarica» → «Codice SQL delle tabelle» scarica il codice per il database scelto, e lo ricorda (${sqlDownload.suggestedFilename()}: ${JSON.stringify(sqlFile.slice(0, 400))})`,
+    sqlOff.disabled === 'true' &&
+      sqlOff.title === 'A breve il codice SQL delle tabelle sarà a pagamento: per ora non si può usare.' &&
+      sqlOff.toast === sqlOff.title &&
+      sqlOff.windows === 0,
+    `«Scarica» → «Codice SQL delle tabelle» è spento: chi lo preme legge che a breve sarà a pagamento, e non si apre niente (${JSON.stringify(sqlOff)})`,
   )
   await db.locator('dialog.schema-editor .btn-primary', { hasText: 'Fatto' }).click()
   await dbEditor.waitFor({ state: 'detached' })

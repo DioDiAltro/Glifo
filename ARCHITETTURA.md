@@ -179,7 +179,11 @@ finita il 14 ottobre 2026, il file non c'è più e si legge nella storia del rep
   `label.ts`, e nell'editor si scrive in due parti, il nome e i campi (`splitTable`/`joinTable`
   in `model.ts`). Una riga di campo è `PK FK Nome: TIPO` (`tableField`/`fieldLine`); il pannello a
   destra cambia gli stessi campi (`tableSection` nell'editor) e `sql.ts` ne fa il codice SQL per
-  ogni database (i test lo eseguono in PGlite e in SQLite). I modelli pronti sono in `templates.ts`, allinea e
+  ogni database (i test lo eseguono in PGlite e in SQLite). Dal 14 ottobre 2026 la voce «Codice SQL delle
+  tabelle…» del menu «Scarica» è spenta, perché a breve sarà a pagamento: resta, con `off` (il testo
+  che spiega perché: in `src/ui/menu.ts` una voce `off` ha `aria-disabled` e premuta mostra solo il
+  messaggio); l'opzione `sql` dell'editor la riaccende, oggi solo nelle prove (`tests/schemaEn.test.ts`),
+  con i piani dal piano dell'account. I modelli pronti sono in `templates.ts`, allinea e
   distribuisci in `arrange.ts`, PNG e «Copia come immagine» in `image.ts`. Menu e messaggi
   dentro l'editor vanno messi nella sua finestra (è modale: fuori restano sotto).
 - `src/spreadsheet/`: le tabelle con le formule, come Excel (6 ottobre 2026). Nella

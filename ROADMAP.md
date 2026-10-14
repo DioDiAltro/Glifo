@@ -371,8 +371,9 @@ lavagna». Se servirà:
 Gli schemi sono fatti, con lo studente (ottobre 2026): editor stile draw.io con maxGraph (scelto
 al posto del vero draw.io incorporato perché funziona offline e non manda niente a nessuno); forme, frecce curve, modelli pronti, allinea e distribuisci, immagini PNG e SVG;
 le figure delle basi di dati (E-R come nell'Atzeni, tabelle con PK, FK e tipi) e il codice SQL
-delle tabelle per più database; dal 6 ottobre 2026 si spostano nella nota con le frecce ↑ ↓, come i
-grafici. Tutto è descritto nel README. Se serviranno:
+delle tabelle per più database (spento dal 14 ottobre 2026, perché a breve sarà a pagamento: la voce
+del menu resta e lo dice; vedi [ABBONAMENTI.md](ABBONAMENTI.md), «Deciso»); dal 6 ottobre 2026 si
+spostano nella nota con le frecce ↑ ↓, come i grafici. Tutto è descritto nel README. Se serviranno:
 
 - **i diagrammi di flusso trasformati in codice** (lo studente, 5 ottobre 2026): come oggi le
   tabelle danno l'SQL, un diagramma di flusso fatto con le forme di sempre (inizio e fine,

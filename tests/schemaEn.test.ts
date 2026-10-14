@@ -37,10 +37,13 @@ afterEach(() => {
   setLangForTests('it')
 })
 
-/** Apre l'editor degli schemi: la finestra, i pulsanti per testo o titolo e gli schemi salvati nella nota. */
-function open(source = EMPTY) {
+/**
+ * Apre l'editor degli schemi: la finestra, i pulsanti per testo o titolo e gli schemi salvati nella nota.
+ * Con `sql` il codice SQL delle tabelle è acceso, come lo sarà con i piani a pagamento.
+ */
+function open(source = EMPTY, sql = false) {
   const saved: Schema[] = []
-  void openSchemaEditor({ schema: parseSchema(source), theme: 'light', title: 'Notes', onSave: (schema) => saved.push(schema) })
+  void openSchemaEditor({ schema: parseSchema(source), theme: 'light', title: 'Notes', sql, onSave: (schema) => saved.push(schema) })
   const dialog = document.querySelector<HTMLDialogElement>('dialog.schema-editor')!
   const all = (root: ParentNode, selector: string) => [...root.querySelectorAll<HTMLElement>(selector)]
   const byText = (text: string, root: ParentNode = dialog) => all(root, 'button').find((b) => b.textContent?.trim() === text) as HTMLButtonElement
@@ -228,8 +231,31 @@ describe('l\'editor degli schemi in inglese', () => {
     expect(saved[0].nodes.map((n) => n.text)).toEqual(['Customer\nSales\nWarehouse\nLane 4'])
   })
 
-  it('il codice SQL delle tabelle: la finestra, i database e i commenti', () => {
+  it('il codice SQL delle tabelle è spento: la voce resta, e chi la preme legge che a breve sarà a pagamento', () => {
     const { dialog, preset, byText, all } = open()
+    const soon = 'SQL code for the tables will soon be a paid feature: for now it can\'t be used.'
+    const last = () => [...document.querySelectorAll('.toast')].at(-1)
+    // Senza tabelle: prima di tutto si dice che è spento.
+    byText('Download').click()
+    byText('SQL code for the tables…', dialog.querySelector('.tool-menu')!).click()
+    expect(lastToast()).toBe(soon)
+    const first = last()
+    preset('table').click()
+    byText('Download').click()
+    expect(all(dialog, '.tool-menu-item').map((b) => b.textContent)).toEqual(['PNG image', 'SVG image', 'Copy as image', 'SQL code for the tables…'])
+    const item = byText('SQL code for the tables…', dialog.querySelector('.tool-menu')!)
+    expect(item.getAttribute('aria-disabled')).toBe('true')
+    expect(item.title).toBe(soon)
+    expect(all(dialog, '.tool-menu-item').filter((b) => b.hasAttribute('aria-disabled')).length).toBe(1)
+    item.click()
+    expect(last()).not.toBe(first)
+    expect(lastToast()).toBe(soon)
+    expect(dialog.querySelector('.tool-menu')).toBeNull()
+    expect(document.querySelector('dialog.dialog-sql')).toBeNull()
+  })
+
+  it('il codice SQL delle tabelle, quando è acceso: la finestra, i database e i commenti', () => {
+    const { dialog, preset, byText, all } = open(EMPTY, true)
     preset('table').click()
     byText('Download').click()
     expect(all(dialog, '.tool-menu-item').map((b) => b.textContent)).toEqual(['PNG image', 'SVG image', 'Copy as image', 'SQL code for the tables…'])
@@ -262,7 +288,7 @@ describe('l\'editor degli schemi in inglese', () => {
       names.push(this.download)
     })
     try {
-      const { dialog, preset, byText } = open()
+      const { dialog, preset, byText } = open(EMPTY, true)
       preset('table').click()
       byText('Download').click()
       byText('SVG image', dialog.querySelector('.tool-menu')!).click()
@@ -280,7 +306,7 @@ describe('l\'editor degli schemi in inglese', () => {
   })
 
   it('i messaggi: niente da salvare come immagine, niente tabelle, e chiudere senza salvare', async () => {
-    const { dialog, byText, preset } = open()
+    const { dialog, byText, preset } = open(EMPTY, true)
     byText('Download').click()
     byText('PNG image', dialog.querySelector('.tool-menu')!).click()
     expect(lastToast()).toBe('The diagram is empty: there\'s nothing to save as an image yet.')
