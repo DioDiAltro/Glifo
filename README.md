@@ -662,7 +662,10 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
 - **Codice SQL** delle tabelle, da «Scarica»: `CREATE TABLE` con chiavi primarie ed esterne, per
   SQL standard, PostgreSQL, MySQL/MariaDB, SQLite, Oracle o SQL Server, da scaricare come file
   `.sql` o copiare. Le chiavi esterne trovano la loro tabella con le frecce tra le tabelle o con i
-  nomi; quello che non si capisce resta in una nota nel codice.
+  nomi; quello che non si capisce resta in una nota nel codice. **Spento dal 14 ottobre 2026**,
+  perché a breve sarà a pagamento ([ABBONAMENTI.md](ABBONAMENTI.md)): la voce «Codice SQL delle
+  tabelle…» resta nel menu, in grigio, e chi la preme legge «A breve il codice SQL delle tabelle sarà a
+  pagamento: per ora non si può usare.»
 - **Processi con le corsie** (chi fa cosa, come nei diagrammi dei processi aziendali e dei
   gestionali ERP): la forma **Corsie** è un riquadro diviso in corsie, una per chi lavora (cliente,
   vendite, magazzino…), con i nomi nella fascia in alto, o a sinistra se le corsie sono in righe. Le

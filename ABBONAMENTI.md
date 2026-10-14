@@ -35,8 +35,11 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
 - **L'SQL e il codice dagli schemi sono a pagamento**, da Relativistico (5 ottobre 2026): oltre
   all'SQL dalle tabelle, il codice dai diagrammi di flusso, nei linguaggi principali (C, C++, Java,
   Python, e anche JavaScript e lo pseudocodice, come ha proposto Claude). Lo studente: «fa bene scrivere codice a mano
-  invece che copiarlo». Oggi l'SQL si scarica ancora gratis: si toglie prima di aprire l'account a
-  tutti (vedi «Come si decide cosa far pagare»).
+  invece che copiarlo». **Dal 14 ottobre 2026 l'SQL non si scarica più**, prima di aprire l'account a tutti
+  (vedi «Come si decide cosa far pagare»). Lo studente: «direi di togliere già ora la possibilità di
+  scaricare le tabelle in sql; o meglio lascia il pulsante ma rendilo non interaggibile, chi lo tocca al
+  massimo viene avvisato che a breve quella funzione sarà a pagamento». Il pulsante resta, spento, e chi
+  lo tocca legge l'avviso.
 - **Le tabelle come in Excel negli schemi sono gratis** (5 ottobre 2026), come i calcoli e i grafici:
   sono conti, non un lavoro fatto al posto di chi studia. Con il grafico del punto di pareggio, il
   diagramma di Gantt e i flussi con le corsie (vedi la ROADMAP).
@@ -135,6 +138,12 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
     con tre precisazioni (conta chi fa il lavoro; non tutto quello che non costa è gratis; due cose
     costano poco e restano gratis), e divide così anche le cose nuove di [AI.md](AI.md): vedi «Se costa,
     è a pagamento?», in «Come si decide cosa far pagare». Niente di deciso.
+21. **L'SQL si spegne subito** (14 ottobre 2026). Lo studente non ha capito bene la regola «conta chi fa
+    il lavoro». Claude la rispiega più semplice: si paga quello che costa a Glifo; un lavoro fatto dal
+    computer di chi scrive non costa niente ed è gratis, lo stesso lavoro fatto dall'AI di Glifo sui
+    server lo paga Glifo a ogni uso ed è a pagamento; l'eccezione sono le cose che non costano ma fanno il
+    lavoro al posto di chi studia, come l'SQL. Lo studente decide di togliere già ora lo scaricamento
+    dell'SQL, lasciando il pulsante spento con un avviso: fatto sul ramo principale (vedi «Deciso»).
 
 ## La proposta dello studente (4 ottobre 2026)
 
@@ -192,8 +201,9 @@ paga il *fare*, mai il *vedere*.
 
 Due accortezze per non far arrabbiare nessuno:
 
-- quello che è gratis **non si toglie più**. Oggi chiunque apra il sito usa tutto, SQL compreso: se
-  qualcosa diventa a pagamento, va deciso prima di aprire l'account a tutti;
+- quello che è gratis **non si toglie più**. Oggi chiunque apra il sito usa tutto (l'SQL no: dal 14
+  ottobre 2026 il pulsante c'è ma è spento, perché sarà a pagamento): se qualcosa diventa a pagamento,
+  va deciso prima di aprire l'account a tutti;
 - i tetti (domande all'AI, ore di trascrizione, spazio) **partono bassi e poi si alzano**: alzarli fa
   piacere, abbassarli no.
 

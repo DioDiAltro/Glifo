@@ -105,6 +105,7 @@ const T = texts({
   svg: ['Immagine SVG', 'SVG image'],
   copyImage: ['Copia come immagine', 'Copy as image'],
   sqlMenu: ['Codice SQL delle tabelle…', 'SQL code for the tables…'],
+  sqlSoon: ['A breve il codice SQL delle tabelle sarà a pagamento: per ora non si può usare.', 'SQL code for the tables will soon be a paid feature: for now it can\'t be used.'],
   close: ['Chiudi', 'Close'],
   done: ['Fatto', 'Done'],
   // Il pannello delle forme, il foglio e il riquadro dove si scrive
@@ -240,6 +241,12 @@ export interface SchemaEditorOptions {
   theme: Theme
   /** Il titolo della nota: dà il nome alle immagini scaricate. */
   title?: string
+  /**
+   * Il codice SQL delle tabelle. Dal 14 ottobre 2026 è spento, perché a breve sarà a pagamento
+   * (ABBONAMENTI.md): la voce del menu resta e dice solo questo. Con i piani lo accenderà il piano
+   * dell'account; oggi lo accendono solo le prove.
+   */
+  sql?: boolean
   /** Mette lo schema nella nota: con «Fatto» e con Ctrl+S (che lascia aperto l'editor). */
   onSave(schema: Schema): void
 }
@@ -562,7 +569,7 @@ class SchemaEditor {
         { label: T.png, run: () => void this.exportImage('png') },
         { label: T.svg, run: () => void this.exportImage('svg') },
         { label: T.copyImage, run: () => void this.exportImage('copy') },
-        { label: T.sqlMenu, run: () => this.openSql() },
+        { label: T.sqlMenu, run: () => this.openSql(), off: this.options.sql ? undefined : T.sqlSoon },
       ]),
       h('button', { class: 'btn', attrs: { type: 'button' }, on: { click: () => void this.requestClose() } }, T.close),
       h('button', { class: 'btn btn-primary', attrs: { type: 'button' }, on: { click: () => this.finish() } }, T.done),
