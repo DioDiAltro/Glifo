@@ -170,6 +170,23 @@ describe('il controllo delle uguaglianze scritte (✓/✗)', () => {
     expect(check(r`y' = y, \; y(0) = 1`, r`y(1) = 2{,}718`)).toBe('✓≈')
   })
 
+  it('\\frac{d}{dx} con la parentesi subito dopo deriva solo la parentesi (14 ottobre 2026: derivava tutto il prodotto)', () => {
+    expect(check(r`\frac{d}{dx}(x^2+1) \cdot (x-1) = 2x(x-1)`)).toBe('✓')
+    expect(check(r`\frac{d}{dx}(x^2+1) \cdot (x-1) = 3x^2 - 2x + 1`)).toBe('✗ 2x(x − 1)')
+    expect(check(r`(x-1) \cdot \frac{d}{dx}(x^2+1) = 2x(x-1)`)).toBe('✓')
+    // Anche accostata, con \left( e le quadre, con \mathrm{d}, con un'altra variabile, con ∂ e \partial_x.
+    expect(check(r`\frac{d}{dx}(x^2+1)(x-1) = 2x(x-1)`)).toBe('✓')
+    expect(check(r`\frac{\mathrm{d}}{dx}\left(x^2+1\right) \cdot (x-1) = 2x(x-1)`)).toBe('✓')
+    expect(check(r`\frac{d}{dx}\left[x^2+1\right] \cdot (x-1) = 2x(x-1)`)).toBe('✓')
+    expect(check(r`\frac{d}{dt}(t^2) \cdot t = 2t^2`)).toBe('✓')
+    expect(check(r`\frac{\partial}{\partial x}(x^2 y) \cdot x = 2x^2 y`)).toBe('✓')
+    expect(check(r`\partial_x (x^2 y) \cdot x = 2x^2 y`)).toBe('✓')
+    // L'esponente dopo la parentesi è suo: (x + 1)² derivato, per x.
+    expect(check(r`\frac{d}{dx}(x+1)^2 \cdot x = 2x(x+1)`)).toBe('✓')
+    // Senza parentesi la derivata resta di tutto il prodotto.
+    expect(check(r`\frac{d}{dx} x^2 \sin x = 2x \sin x + x^2 \cos x`)).toBe('✓')
+  })
+
   it('limiti, serie e infiniti', () => {
     expect(check(r`\lim_{x \to 0} \frac{\sin x}{x} = 1`)).toBe('✓')
     expect(check(r`\lim_{x \to 0} \frac{\sin x}{x} = 0`)).toBe('✗ 1')

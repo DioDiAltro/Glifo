@@ -253,7 +253,10 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
   comuni raccolti: `(1 − x)e^{−x}`); anche `f''(x)`, `\frac{d}{dx} \sin x \cos x =`, `\frac{d^2}{dx^2}`, la
   funzione integrale (`F(x) = \int_0^x e^{-t^2} \, dt` dà `F'(x) = e^{−x²}`) e, in un punto, `f'(2) =`. Le
   **derivate parziali** si scrivono `\frac{\partial f}{\partial x}`, `\frac{\partial^2 f}{\partial x \partial y}`,
-  `\partial_x f`, anche in un punto (`\frac{\partial f}{\partial x}(1, 2) =`). Con i campi: il **gradiente**
+  `\partial_x f`, anche in un punto (`\frac{\partial f}{\partial x}(1, 2) =`). Con una parentesi subito dopo la
+  derivata (`\frac{d}{dx}`, `\frac{\partial}{\partial x}`, `\partial_x`) si deriva solo la parentesi, con il suo
+  esponente: `\frac{d}{dx}(x^2 + 1) \cdot (x - 1) =` dà `2x(x − 1)` e `\frac{d}{dx}(x^2 + 1)^3` è la derivata di
+  (x² + 1)³; senza parentesi si deriva tutto il prodotto (`\frac{d}{dx} \sin x \cos x`). Con i campi: il **gradiente**
   (`\nabla f`, `\operatorname{grad} f`), la **divergenza** (`\nabla \cdot F`, `\operatorname{div} F`), il **rotore**
   (`\nabla \times F`, `\operatorname{rot} F`; nel piano è un numero), il laplaciano (`\nabla^2 f`), l'hessiana
   (`\operatorname{Hess} f`, anche `\det \operatorname{Hess} f(1, 1) =`) e la jacobiana (`\operatorname{jac} F`).

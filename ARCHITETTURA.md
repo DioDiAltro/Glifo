@@ -238,7 +238,9 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   con la virgola (`FLOAT`): determinante, inversa, rango, nucleo, autovalori, polinomio caratteristico, e la
   geometria (segmenti, rette, circonferenze, piani, poligoni, angoli, intersezioni: `geometryOf`); i
   risultati con le matrici hanno `rich` e l'editor li disegna con KaTeX; `symbolic.ts` i conti con le
-  lettere: derivate (`f'(x)`, nodi `diff` da `\frac{d}{dx}` e `\partial`), gradiente, divergenza, rotore,
+  lettere: derivate (`f'(x)`, nodi `diff` da `\frac{d}{dx}` e `\partial`; con una parentesi subito dopo la
+  derivata è solo la parentesi, con il suo esponente, se no tutto il prodotto: `derivativeBody` in `parse.ts`,
+  dal 14 ottobre 2026), gradiente, divergenza, rotore,
   hessiana e jacobiana, con le semplificazioni (`tidy`: frazioni unite, polinomi in ordine, fattori
   raccolti); il foglio li usa con `expandCalculus` e, se restano lettere, mostra la formula; gli integrali
   definiti con le lettere, uno dentro l'altro o dentro un'espressione li fa `definiteValue` (il `Converter`
