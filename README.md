@@ -253,15 +253,15 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
   esatte: `(−√2, −√2); (√2, √2)`). Le figure con un nome (`r = \operatorname{retta}(A, B)`) si usano dopo.
 - **Derivate scritte come formula**: con `$f(x) = \frac{x^2 - 1}{x + 2}$`, `$f'(x) =$` dà
   `(x² + 4x + 1)/(x + 2)²` (le frazioni con un denominatore solo, i polinomi dal grado più alto, i fattori
-  comuni raccolti: `(1 − x)e^{−x}`); anche `f''(x)`, `\frac{d}{dx}(\sin x \cos x) =`, `\frac{d^2}{dx^2}`, la
+  comuni raccolti: `(1 − x)e^{−x}`); anche `f''(x)`, `\frac{d}{dx}(\sin x \cos x) =`, `\frac{d^2}{dx^2}(\sin x) =`, la
   funzione integrale (`F(x) = \int_0^x e^{-t^2} \, dt` dà `F'(x) = e^{−x²}`) e, in un punto, `f'(2) =`. Le
   **derivate parziali** si scrivono `\frac{\partial f}{\partial x}`, `\frac{\partial^2 f}{\partial x \partial y}`,
-  `\partial_x f`, anche in un punto (`\frac{\partial f}{\partial x}(1, 2) =`). Con una parentesi subito dopo la
-  derivata (`\frac{d}{dx}`, `\frac{\partial}{\partial x}`, `\partial_x`) si deriva solo la parentesi, con il suo
-  esponente: `\frac{d}{dx}(x^2 + 1) \cdot (x - 1) =` dà `2x(x − 1)` e `\frac{d}{dx}(x^2 + 1)^3` è la derivata di
-  (x² + 1)³. Senza parentesi si deriva solo quello che viene subito dopo, come nelle somme:
-  `\frac{d}{dx} x^2 \sin x =` dà `2x sin(x)`, `\frac{d}{dx} 3x^2 =` dà `6x`, ma `\frac{d}{dx} 2 \sin x =` dà 0
-  (per derivare un prodotto lo si mette tra parentesi: `\frac{d}{dx}(2 \sin x)`). Con i campi: il **gradiente**
+  `\partial_x f`, anche in un punto (`\frac{\partial f}{\partial x}(1, 2) =`). Dopo `\frac{d}{dx}` (e
+  `\frac{d^2}{dx^2}`, `\frac{\partial}{\partial x}`) la funzione va sempre tra parentesi, come in Photomath: si
+  deriva solo quello che c'è dentro, con il suo esponente, e il resto si moltiplica:
+  `\frac{d}{dx}(x^2 + 1) \cdot (x - 1) =` dà `2x(x − 1)` e `\frac{d}{dx}(x^2 + 1)^3` è la derivata di (x² + 1)³.
+  Senza parentesi (`\frac{d}{dx} x^2`) Glifo non la legge. Con `\partial_x` senza parentesi si deriva solo quello
+  che viene subito dopo, come nelle somme (`\partial_x f`). Con i campi: il **gradiente**
   (`\nabla f`, `\operatorname{grad} f`), la **divergenza** (`\nabla \cdot F`, `\operatorname{div} F`), il **rotore**
   (`\nabla \times F`, `\operatorname{rot} F`; nel piano è un numero), il laplaciano (`\nabla^2 f`), l'hessiana
   (`\operatorname{Hess} f`, anche `\det \operatorname{Hess} f(1, 1) =`) e la jacobiana (`\operatorname{jac} F`).

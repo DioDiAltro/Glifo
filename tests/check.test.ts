@@ -83,7 +83,7 @@ describe('il controllo delle uguaglianze scritte (✓/✗)', () => {
       [r`\int_0^1 e^{-x^2} \, dx =`],
       [r`\int_0^{\infty} e^{-x^2} \, dx =`],
       [r`\sum_{n=1}^{\infty} \frac{1}{n^3} =`],
-      [r`\frac{d}{dx} x^x =`],
+      [r`\frac{d}{dx}(x^x) =`],
       [r`\int x e^x \, dx =`],
       [r`X \sim N(0, 1)`, r`P(X \le 1{,}5) =`],
       [r`A = \begin{pmatrix} 2 & 1 \\ 1 & 3 \end{pmatrix}`, r`A^{-1} =`],
@@ -159,7 +159,7 @@ describe('il controllo delle uguaglianze scritte (✓/✗)', () => {
     expect(check(r`f(x) = x^2`, "f'(3) = 6")).toBe('✓')
     expect(check(r`f(x) = x^2`, "f'(x) = 2x")).toBe('✓')
     expect(check(r`f(x) = x^2`, "f'(x) = x")).toBe('✗ 2x')
-    expect(check(r`\frac{d}{dx} \sin x = \cos x`)).toBe('✓')
+    expect(check(r`\frac{d}{dx}(\sin x) = \cos x`)).toBe('✓')
     expect(check(r`\int x^2 \, dx = \frac{x^3}{3} + c`)).toBe('✓')
     expect(check(r`\int x^2 \, dx = x^3 + c`)).toBe('✗ x³/3 + c')
     // Il valore in π o in i: non è una funzione con la variabile π (una volta lo diventava).
@@ -185,11 +185,11 @@ describe('il controllo delle uguaglianze scritte (✓/✗)', () => {
     expect(check(r`\partial_x (x^2 y) \cdot x = 2x^2 y`)).toBe('✓')
     // L'esponente dopo la parentesi è suo: (x + 1)² derivato, per x.
     expect(check(r`\frac{d}{dx}(x+1)^2 \cdot x = 2x(x+1)`)).toBe('✓')
-    // Senza parentesi si deriva solo quello che viene subito dopo, come in \sum (lo studente, 14 ottobre 2026).
-    expect(check(r`\frac{d}{dx} x^2 \sin x = 2x \sin x`)).toBe('✓')
-    expect(check(r`\frac{d}{dx} x^2 \sin x = 2x \sin x + x^2 \cos x`)).toBe('✗ 2x sin(x)')
+    // Dopo \frac{d}{dx} la parentesi va sempre, come in Photomath (lo studente, 14 ottobre 2026): senza, niente.
+    expect(check(r`\frac{d}{dx} x^2 \sin x = 2x \sin x`)).toBeNull()
+    expect(check(r`\frac{d}{dx}(x^2) \sin x = 2x \sin x`)).toBe('✓')
     expect(check(r`\frac{d}{dx}(x^2 \sin x) = 2x \sin x + x^2 \cos x`)).toBe('✓')
-    expect(check(r`\frac{d}{dx} 3x^2 = 6x`)).toBe('✓')
+    expect(check(r`\frac{d}{dx}(3x^2) = 6x`)).toBe('✓')
   })
 
   it('le righe separate da \\\\ si controllano una per una (14 ottobre 2026)', () => {

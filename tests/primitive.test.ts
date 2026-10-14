@@ -211,7 +211,7 @@ describe('le correzioni', () => {
 
   it('la variabile di un integrale resta variabile anche se la nota la definisce come numero', () => {
     expect(text('t = 5', r`F(x) = \int_0^x t^2 \, dt`, "F'(x) =")).toBe('x²')
-    expect(text('t = 5', r`\frac{d}{dx} \int_0^x t^2 \, dt =`)).toBe('x²')
+    expect(text('t = 5', r`\frac{d}{dx}\left(\int_0^x t^2 \, dt\right) =`)).toBe('x²')
   })
 
   it('a(x + 1)^2 con a un numero è a · (x + 1)², non (a(x + 1))²', () => {

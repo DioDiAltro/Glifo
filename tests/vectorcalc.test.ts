@@ -26,7 +26,7 @@ const sphere = r`S(u, v) = (\sin v \cos u, \sin v \sin u, \cos v), \; u \in [0, 
 
 describe('le derivate: come si scrivono', () => {
   it('\\frac{d}{dx}, \\frac{\\partial^2 f}{\\partial x \\partial y}, \\partial_x f, la funzione in un punto', () => {
-    const d = parseMath(r`\frac{d}{dx} x^2`)
+    const d = parseMath(r`\frac{d}{dx}(x^2)`)
     expect(d).toMatchObject({ k: 'diff', vars: ['x'], partial: false })
     expect(parseMath(r`\frac{\partial^2 f}{\partial x \partial y}`)).toMatchObject({ k: 'diff', vars: ['x', 'y'], partial: true, body: { k: 'name', name: 'f' } })
     expect(parseMath(r`\frac{d^2 f}{dx^2}`)).toMatchObject({ k: 'diff', vars: ['x', 'x'] })
@@ -35,20 +35,22 @@ describe('le derivate: come si scrivono', () => {
     // Una frazione qualsiasi resta una frazione.
     expect(parseMath(r`\frac{d}{x}`)).toMatchObject({ k: 'bin', op: '/' })
     expect(toLatex(parseMath(r`\frac{\partial^2 f}{\partial x^2}`))).toBe(r`\frac{\partial^{2} f}{\partial x^{2}}`)
-    expect(toLatex(d)).toBe(r`\frac{d}{dx} x^{2}`)
+    expect(toLatex(d)).toBe(r`\frac{d}{dx}\left(x^{2}\right)`)
   })
 
-  it('con la parentesi subito dopo la derivata è solo la parentesi, con il suo esponente; senza, solo quello che viene subito dopo', () => {
+  it('dopo \\frac{d}{dx} sempre la parentesi, e si deriva solo lei, con il suo esponente (come in Photomath)', () => {
     const diff = { k: 'diff', vars: ['x'], partial: false }
     expect(parseMath(r`\frac{d}{dx}(x^2+1) \cdot (x-1)`)).toMatchObject({ k: 'bin', op: '*', a: diff })
     expect(parseMath(r`\frac{d}{dx}(x^2+1)(x-1)`)).toMatchObject({ k: 'bin', op: '*', a: diff, implicit: true })
     expect(parseMath(r`\frac{d}{dx}\left[x^2+1\right] / (x-1)`)).toMatchObject({ k: 'bin', op: '/', a: diff })
     expect(parseMath(r`\frac{d}{dx}(x+1)^3 \cdot x`)).toMatchObject({ k: 'bin', op: '*', a: { ...diff, body: { k: 'bin', op: '^' } } })
     expect(parseMath(r`\partial_x (x^2 y) \cdot y`)).toMatchObject({ k: 'bin', op: '*', a: { k: 'diff', vars: ['x'], partial: true } })
-    // Senza parentesi solo quello che viene subito dopo, come in \sum (lo studente, 14 ottobre 2026): x^2, poi · sin x.
-    expect(parseMath(r`\frac{d}{dx} x^2 \sin x`)).toMatchObject({ k: 'bin', op: '*', a: { ...diff, body: { k: 'bin', op: '^' } } })
-    expect(parseMath(r`\frac{d}{dx} 3x^2`)).toMatchObject({ ...diff, body: { k: 'bin', op: '*' } })
-    expect(parseMath(r`\frac{d}{dx} x^2 \cdot x`)).toMatchObject({ k: 'bin', op: '*', a: diff })
+    // Senza parentesi non si legge (lo studente, 14 ottobre 2026: «lo voglio stile fotomath»).
+    for (const f of [r`\frac{d}{dx} x^2 \sin x`, r`\frac{d}{dx} 3x^2`, r`\frac{d}{dx} \sin x`, r`\frac{\partial}{\partial x} x^2 y`, r`\frac{d}{dx}`]) {
+      expect(() => parseMath(f)).toThrow(r`Dopo \frac{d}{dx} va la funzione da derivare, tra parentesi: \frac{d}{dx}(x^2)`)
+    }
+    // \partial_x resta com'è: senza parentesi solo quello che viene subito dopo.
+    expect(parseMath(r`\partial_x x^2 y \cdot y`)).toMatchObject({ k: 'bin', op: '*', a: { k: 'diff', vars: ['x'], partial: true, body: { k: 'bin', op: '*' } } })
     // Stampata e riletta resta la stessa: \frac{d}{dx} \left(x + 1\right)^{3} ha l'esponente dentro.
     for (const f of [r`\frac{d}{dx}(x^2+1) \cdot (x-1)`, r`\frac{d}{dx}(x+1)^3`, r`\frac{d}{dx}(x+1)^3 \cdot x`, r`\partial_x (x^2 y) \cdot y`]) {
       const node = parseMath(f)
@@ -99,20 +101,20 @@ describe('le derivate scritte come formula', () => {
 
   it('le regole: prodotto, quoziente (con un denominatore solo), catena, potenze', () => {
     expect(tex(r`\frac{d}{dx} (\sin x \cos x) =`)).toBe(r`\cos^{2} x - \sin^{2} x`)
-    // Senza parentesi si deriva solo \sin x (lo studente, 14 ottobre 2026).
-    expect(tex(r`\frac{d}{dx} \sin x \cos x =`)).toBe(r`\cos^{2} x`)
+    // La parentesi dice cosa si deriva: qui solo \sin x.
+    expect(tex(r`\frac{d}{dx}(\sin x) \cos x =`)).toBe(r`\cos^{2} x`)
     expect(tex(r`\frac{d}{dx} (x^2 + 1)^3 =`)).toBe(r`6x\left(x^{2} + 1\right)^{2}`)
-    expect(tex(r`\frac{d}{dx} e^{-x^2} =`)).toBe('-2xe^{-x^{2}}')
-    expect(tex(r`\frac{d}{dx} \ln(x^2 + 1) =`)).toBe(r`\frac{2x}{x^{2} + 1}`)
-    expect(tex(r`\frac{d}{dx} \sqrt{x} =`)).toBe(r`\frac{1}{2\sqrt{x}}`)
-    expect(tex(r`\frac{d}{dx} \frac{x}{x + 1} =`)).toBe(r`\frac{1}{\left(x + 1\right)^{2}}`)
+    expect(tex(r`\frac{d}{dx}(e^{-x^2}) =`)).toBe('-2xe^{-x^{2}}')
+    expect(tex(r`\frac{d}{dx}(\ln(x^2 + 1)) =`)).toBe(r`\frac{2x}{x^{2} + 1}`)
+    expect(tex(r`\frac{d}{dx}(\sqrt{x}) =`)).toBe(r`\frac{1}{2\sqrt{x}}`)
+    expect(tex(r`\frac{d}{dx}\left(\frac{x}{x + 1}\right) =`)).toBe(r`\frac{1}{\left(x + 1\right)^{2}}`)
     expect(tex(r`f(x) = \frac{x^2 - 1}{x + 2}`, "f'(x) =")).toBe(r`\frac{x^{2} + 4x + 1}{\left(x + 2\right)^{2}}`)
-    expect(tex(r`\frac{d}{dx} \frac{x}{x^2 + 1} =`)).toBe(r`\frac{1 - x^{2}}{\left(x^{2} + 1\right)^{2}}`)
+    expect(tex(r`\frac{d}{dx}\left(\frac{x}{x^2 + 1}\right) =`)).toBe(r`\frac{1 - x^{2}}{\left(x^{2} + 1\right)^{2}}`)
     expect(tex(r`f(x) = x e^{-x}`, "f'(x) =")).toBe(r`\left(1 - x\right)e^{-x}`)
-    expect(tex(r`\frac{d}{dx} x^x =`)).toBe(r`x^{x}\left(\ln x + 1\right)`)
-    expect(tex(r`\frac{d}{dx} \tan x =`)).toBe(r`\frac{1}{\cos^{2} x}`)
-    expect(tex(r`\frac{d}{dx} \arctan x =`)).toBe(r`\frac{1}{x^{2} + 1}`)
-    expect(tex(r`\frac{d^2}{dx^2} \sin x =`)).toBe(r`-\sin x`)
+    expect(tex(r`\frac{d}{dx}(x^x) =`)).toBe(r`x^{x}\left(\ln x + 1\right)`)
+    expect(tex(r`\frac{d}{dx}(\tan x) =`)).toBe(r`\frac{1}{\cos^{2} x}`)
+    expect(tex(r`\frac{d}{dx}(\arctan x) =`)).toBe(r`\frac{1}{x^{2} + 1}`)
+    expect(tex(r`\frac{d^2}{dx^2}(\sin x) =`)).toBe(r`-\sin x`)
   })
 
   it('la funzione integrale, i decimali come li scrive chi prende appunti, niente risultato senza la funzione', () => {
@@ -290,7 +292,7 @@ describe('i campi e le curve nei grafici', () => {
   })
 
   it('una derivata in un grafico si calcola con i numeri', () => {
-    const spec = parseGraph(r`y = \frac{d}{dx} x^3`)
+    const spec = parseGraph(r`y = \frac{d}{dx}(x^3)`)
     const f = item(spec.items, 'function').f
     expect(f(2)).toBeCloseTo(12, 6)
   })

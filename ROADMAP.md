@@ -563,9 +563,13 @@ calcolatrice (`d/dx (x+2x) * x`, `dy/dx`, `∂/∂x`) sono state fatte sul ramo 
 giorno: lo studente, «facciamo che per fare la derivata si deve per forza scrivere frac{}{}». Sulle somme:
 «a me sembra giusto che sin k resti fuori dalla sommatoria, di solito se non stanno le parentesi si prende solo
 la prima cosa che sta subito dopo al simbolo» (`\sum_{k=1}^{3} k \sin k` resta (Σk)·sin k). E anche per le
-derivate: «sì, se non c'è la parentesi si prende solo quello che sta subito dopo il simbolo». Così, sul ramo
-`prova`, `\frac{d}{dx} x^2 \sin x` è 2x·sin x (prima era la derivata di tutto il prodotto), `\frac{d}{dx} 3x^2`
-resta 6x, e `\frac{d}{dx} 2 \sin x` dà 0: per derivare un prodotto lo si mette tra parentesi.
+derivate: «sì, se non c'è la parentesi si prende solo quello che sta subito dopo il simbolo»; e poi, vista la
+regola: «lo voglio stile fotomath; dopo d/dx (con il frac) si mettono SEMPRE le parentesi, cosi solo quello che
+sta nelle parentesi viene fatto la derivata». Così, sul ramo `prova`, dopo `\frac{d}{dx}` (e `\frac{d^2}{dx^2}`,
+`\frac{\partial}{\partial x}`) la parentesi è obbligatoria: `\frac{d}{dx}(x^2) \sin x` è 2x·sin x e
+`\frac{d}{dx} x^2` non si legge (Glifo per ora non dice perché: lo direbbe il messaggio «Dopo \frac{d}{dx} va la
+funzione da derivare, tra parentesi», che nella nota non si vede). `\partial_x` senza parentesi prende solo quello
+che viene subito dopo, come le somme. Esempi, aiuto, modelli del catalogo e test hanno le parentesi.
 
 Da fare:
 - provarlo davvero su un computer con WebGPU (Chrome o Edge), su esercizi veri, e scegliere il modello

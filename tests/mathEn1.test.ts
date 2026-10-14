@@ -127,6 +127,7 @@ describe('gli errori', () => {
     expect(readError(r`\foo`)).toBe(r`I can't calculate \foo`)
     expect(readError(')')).toBe('Something is missing before “)”')
     expect(readError(r`\frac{1}`)).toBe(r`Missing the denominator of \frac`)
+    expect(readError(r`\frac{d}{dx} x^2`)).toBe(r`After \frac{d}{dx} write the function to differentiate in parentheses: \frac{d}{dx}(x^2)`)
     expect(readError(r`\int_0 x \, dx`)).toBe(r`An integral needs both bounds, e.g. \int_0^1, or none: \int x \, dx`)
     expect(readError(r`X \sim Q(3)`)).toMatch(/^I don't know the distribution “Q”: for example B\(n, p\)/)
     // Gli esempi con i decimali dell'inglese.

@@ -132,10 +132,10 @@ describe('le correzioni che servono allo studio', () => {
   })
 
   it('le derivate più semplici: radici dispari, frazioni con le radici, funzioni razionali', () => {
-    expect(text(r`\frac{d}{dx} \sqrt[3]{x^2} =`)).toBe('2/(3∛x)')
-    expect(text(r`\frac{d^2}{dx^2} \sqrt{x^2 - 4} =`)).toBe('−4/(x² − 4)^(3/2)')
-    expect(text(r`\frac{d}{dx} \arctan \frac{1}{x} =`)).toBe('−1/(x² + 1)')
-    expect(text(r`\frac{d^2}{dx^2} \frac{x}{x^2 - 1} =`)).toBe('(2x(x² + 3))/(x² − 1)³')
+    expect(text(r`\frac{d}{dx}(\sqrt[3]{x^2}) =`)).toBe('2/(3∛x)')
+    expect(text(r`\frac{d^2}{dx^2}(\sqrt{x^2 - 4}) =`)).toBe('−4/(x² − 4)^(3/2)')
+    expect(text(r`\frac{d}{dx}\left(\arctan \frac{1}{x}\right) =`)).toBe('−1/(x² + 1)')
+    expect(text(r`\frac{d^2}{dx^2}\left(\frac{x}{x^2 - 1}\right) =`)).toBe('(2x(x² + 3))/(x² − 1)³')
   })
 })
 

@@ -107,7 +107,10 @@ const T = texts({
   lineEnd: (v: string) => [`Alla fine va ds, dr oppure dx, dy, dz (non d${v})`, `At the end write ds, dr or dx, dy, dz (not d${v})`],
   formDifferentials: (v: string) => [`In una forma vanno dx, dy e dz (non d${v})`, `A form uses dx, dy and dz (not d${v})`],
   formDifferential: ['Manca il differenziale: dx, dy o dz', 'Missing the differential: dx, dy or dz'],
-  derivativeAfterFraction: ['Manca la funzione da derivare dopo la frazione', 'Missing the function to differentiate after the fraction'],
+  derivativeAfterFraction: [
+    'Dopo \\frac{d}{dx} va la funzione da derivare, tra parentesi: \\frac{d}{dx}(x^2)',
+    'After \\frac{d}{dx} write the function to differentiate in parentheses: \\frac{d}{dx}(x^2)',
+  ],
   partialVariable: ['Dopo \\partial va la variabile: \\partial_x f', 'After \\partial write the variable: \\partial_x f'],
   variableBrace: ['la graffa } della variabile', 'the brace } closing the variable'],
   derivativeAfterPartial: ['Manca la funzione da derivare dopo \\partial', 'Missing the function to differentiate after \\partial'],
@@ -1786,7 +1789,7 @@ class Parser {
   }
 
   /**
-   * `\frac{d}{dx} x^2`, `\frac{d^2 f}{dx^2}`, `\frac{\partial f}{\partial x}(1, 2)`,
+   * `\frac{d}{dx}(x^2)`, `\frac{d^2 f}{dx^2}`, `\frac{\partial f}{\partial x}(1, 2)`,
    * `\frac{\partial^2}{\partial x \partial y} (x^2 y)`: una derivata. Null (senza leggere niente) se la
    * frazione è un'altra.
    */
@@ -1826,18 +1829,20 @@ class Parser {
         body = { k: 'apply', name: fn, args: group.k === 'tuple' ? group.items : [group], primes: 0 }
       } else body = { k: 'name', name: fn }
     } else {
-      if (!this.peek() || !this.startsArgument()) throw this.error(T.derivativeAfterFraction)
-      body = this.derivativeBody()
+      // Dopo \frac{d}{dx} la funzione va sempre tra parentesi, come in Photomath, e si deriva solo lei (con il
+      // suo esponente: \frac{d}{dx}(x^2+1)^3); il resto si moltiplica: \frac{d}{dx}(x^2+1) \cdot (x-1) è
+      // 2x·(x − 1) (lo studente, 14 ottobre 2026: «lo voglio stile fotomath»).
+      if (!this.is('open', '(') && !this.is('open', '[')) throw this.error(T.derivativeAfterFraction)
+      body = this.power()
     }
     return { k: 'diff', body, vars, partial: top.partial }
   }
 
   /**
-   * Quello che si deriva dopo `\frac{d}{dx}` o `\partial_x`. Con una parentesi subito dopo solo lei,
-   * con il suo esponente: `\frac{d}{dx}(x^2+1) \cdot (x-1)` è 2x·(x − 1) (era la derivata di tutto il
-   * prodotto), `\frac{d}{dx}(x^2+1)^3` la derivata di (x² + 1)³. Senza, solo quello che viene subito
-   * dopo, come in \sum: `\frac{d}{dx} x^2 \sin x` è 2x·sin x, `\frac{d}{dx} 3x^2` è 6x (lo studente,
-   * 14 ottobre 2026: «se non c'è la parentesi si prende solo quello che sta subito dopo il simbolo»).
+   * Quello che si deriva dopo `\partial_x`: con una parentesi subito dopo solo lei, con il suo
+   * esponente (`\partial_x (x^2 y) \cdot y`); senza, solo quello che viene subito dopo, come in \sum
+   * (`\partial_x x^2 y \cdot y`; lo studente, 14 ottobre 2026: «se non c'è la parentesi si prende solo
+   * quello che sta subito dopo il simbolo»).
    */
   private derivativeBody(): MathNode {
     return this.is('open', '(') || this.is('open', '[') ? this.power() : this.implicitArgument()

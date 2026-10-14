@@ -357,7 +357,7 @@ export function toLatex(node: MathNode): string {
   return ''
 }
 
-/** \frac{\partial^2 f}{\partial x \, \partial y}, \frac{d}{dx} (…), \frac{\partial f}{\partial x}(1, 2). */
+/** \frac{\partial^2 f}{\partial x \, \partial y}, \frac{d}{dx}\left(…\right), \frac{\partial f}{\partial x}(1, 2). */
 function diffLatex(node: Extract<MathNode, { k: 'diff' }>): string {
   const d = node.partial ? '\\partial' : 'd'
   const n = node.vars.length
@@ -372,7 +372,8 @@ function diffLatex(node: Extract<MathNode, { k: 'diff' }>): string {
   const body = node.body
   if (body.k === 'name') return `\\frac{${top} ${nameLatex(body.name)}}{${bottom}}`
   if (body.k === 'apply' && !body.primes) return `\\frac{${top} ${nameLatex(body.name)}}{${bottom}}\\left(${body.args.map(toLatex).join(', ')}\\right)`
-  return `\\frac{${top}}{${bottom}} ${wrap(body, 3)}`
+  // La funzione da derivare sempre tra parentesi: il lettore le vuole (vedi `derivativeFrac` in parse.ts).
+  return `\\frac{${top}}{${bottom}}\\left(${toLatex(body)}\\right)`
 }
 
 /** (P \, dx + Q \, dy): una forma differenziale. */

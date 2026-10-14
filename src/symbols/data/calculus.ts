@@ -94,7 +94,7 @@ export const calculus = [
     w: 9,
     f: [
       [r`\frac{d#}{d#}`, 'dy/dx'],
-      [r`\frac{d}{d#}`, ['operatore d/dx', 'd/dx operator']],
+      [r`\frac{d}{d#}(#)`, ['operatore d/dx', 'd/dx operator']],
       [r`\frac{d^{2}#}{d#^{2}}`, ['derivata seconda', 'second derivative']],
       [r`\frac{d^{#}#}{d#^{#}}`, ['derivata n-esima', 'nth derivative']],
       [r`\frac{\mathrm{d}#}{\mathrm{d}#}`, ['con d dritta', 'with upright d']],
@@ -105,7 +105,7 @@ export const calculus = [
     w: 8,
     f: [
       [r`\frac{\partial #}{\partial #}`, '∂f/∂x'],
-      [r`\frac{\partial}{\partial #}`, ['operatore ∂/∂x', '∂/∂x operator']],
+      [r`\frac{\partial}{\partial #}(#)`, ['operatore ∂/∂x', '∂/∂x operator']],
       [r`\frac{\partial^{2} #}{\partial #^{2}}`, ['seconda', 'second']],
       [r`\frac{\partial^{2} #}{\partial # \, \partial #}`, ['mista', 'mixed']],
     ],
