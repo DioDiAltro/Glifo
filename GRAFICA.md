@@ -16,7 +16,7 @@ quando i punti sono tutti fatti si cancella, insieme alla voce «La grafica» di
 | 1 | «Cambia account» | fatto: sul sito dal 12 ottobre; lo studente: «va bene» |
 | 2 | La pagina dei commenti, tipo FAQ | fatto: sul sito dal 13 ottobre 2026; lo studente: «va bene» |
 | 3 | Le impostazioni divise in sezioni | fatto: sul sito dal 13 ottobre 2026; lo studente: «va bene» |
-| 4 | Più modelli per «Spiegami» | fatto sul ramo `prova` il 13 ottobre 2026; il 14 provati i modelli veri (con llama.cpp) e divisi in consigliati, sconsigliati e non certificati; prossimo passo: la prova sul computer dello studente |
+| 4 | Più modelli per «Spiegami» | fatto: provati i modelli veri (con llama.cpp) e divisi in consigliati, sconsigliati e non certificati; sul sito dal 14 ottobre 2026; lo studente: «va bene» |
 | 5 | A cosa serve la chiave dell'AI | da decidere |
 | 6 | Glifo anche in inglese | fatto: tutto tradotto, anche le parole delle note, i numeri, l'AI e l'informativa; sul sito vero dal 12 ottobre 2026; lo studente: «va bene» |
 | 7 | Via il registro dei tocchi | fatto: sul sito dal 13 ottobre 2026; lo studente: «va bene» |
@@ -469,8 +469,10 @@ gruppi, divisi dalle prove.
   provato e può sbagliare di più». Quelli delle avanzate (versioni di prima, per il codice o per i conti,
   quasi solo in inglese, senza compressione) entrano in questo gruppo con la casella.
 
-Resta da vedere sul computer dello studente quanto ci mettono i consigliati nuovi, a cominciare dal Qwen3.5
-4B accanto al Qwen3 4B, e se i tre gruppi vanno bene così.
+Lo studente, 14 ottobre 2026, viste le foto: «va bene». Sul sito dal 14 ottobre 2026 (glifo.page e il vecchio
+indirizzo), insieme alla correzione delle derivate con la parentesi (fatta in un lavoro a parte, vedi sopra).
+Resta da sapere quanto ci mettono i consigliati nuovi sul computer dello studente, a cominciare dal Qwen3.5 4B
+accanto al Qwen3 4B.
 
 ## 5. A cosa serve la chiave dell'AI
 

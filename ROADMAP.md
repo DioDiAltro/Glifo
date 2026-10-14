@@ -111,8 +111,8 @@ gli altri modelli, non provati con Glifo; tutti gli altri nelle avanzate), con l
 licenza di ognuno, i modelli che non sanno chiedere i conti che li ricevono già fatti e i modelli nel browser
 con «Togli» anche nella sezione «AI». Il 14 ottobre 2026 i modelli veri sono stati provati con Glifo (con
 llama.cpp nella sessione) e, come ha chiesto lo studente («tieniamoli tutti ma dividiamoli»), divisi in
-consigliati, sconsigliati e non certificati; si aspetta che lo studente provi i consigliati nuovi sul suo
-computer.
+consigliati, sconsigliati e non certificati. Lo studente: «va bene»; sul sito dal 14 ottobre 2026. Resta da
+sapere quanto ci mettono i consigliati nuovi sul suo computer.
 
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
@@ -567,9 +567,8 @@ parentesi subito dopo la derivata (`\frac{d}{dx}`,
 (`tests/check.test.ts`, `tests/explain.test.ts`, `tests/vectorcalc.test.ts`). Nessuna nota d'esempio cambia
 significato. Senza parentesi (`\frac{d}{dx} x^2 \sin x`) si deriva ancora tutto il prodotto: da decidere con lo
 studente se resta così (Claude lo consiglia: per fermare la derivata c'è la parentesi; se il `\cdot` la chiudesse,
-`\frac{d}{dx} 3 \cdot x^2` darebbe 0). Da provare sul sito di prova; quando lo studente dice «va bene» va sul
-sito, con il resto di `prova` o da sola: il ramo `claude/elegant-brahmagupta-6bqlv8` è il principale con la sola
-correzione.
+`\frac{d}{dx} 3 \cdot x^2` darebbe 0). Sul sito dal 14 ottobre 2026, con il resto di `prova` (lo studente: «va
+bene»).
 
 Da fare:
 - provarlo davvero su un computer con WebGPU (Chrome o Edge), su esercizi veri, e scegliere il modello

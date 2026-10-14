@@ -155,14 +155,12 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
 - Dire quale modello di «Spiegami» tenere all'inizio (oggi Qwen3 1.7B) e quanto ci mette a rispondere:
   l'8 ottobre 2026 ha usato il Qwen3 4B e ha detto «ora funziona tutto», e «Spiegami» con il pannello ✨ è
   andato sul sito vero. Dal 14 ottobre 2026 i modelli sono divisi in consigliati, sconsigliati e non
-  certificati, dalle prove con Glifo (GRAFICA.md, punto 4): provare sul sito di prova il Qwen3.5 4B, il
-  migliore nelle prove, accanto al Qwen3 4B e dire quanto ci mettono. Le prove nuove si fanno ancora sul
+  certificati, dalle prove con Glifo (GRAFICA.md, punto 4; sul sito dal 14 ottobre): provare il Qwen3.5 4B,
+  il migliore nelle prove, accanto al Qwen3 4B e dire quanto ci mettono. Le prove nuove si fanno ancora sul
   sito di prova https://glifo-prova.pages.dev (Cloudflare Pages, dal ramo `prova`; lì l'account è spento).
-- Provare sul sito di prova la correzione delle derivate (14 ottobre 2026, «Spiegami» in ROADMAP.md): in una
-  nota `$\frac{d}{dx}(x^2+1) \cdot (x-1) = 2x(x-1)$` ha il ✓, e «Spiegami» su
-  `$\frac{d}{dx}\left(\frac{x^2+1}{x-1}\right) =$` non fa più correggere la regola del quoziente scritta
-  giusta. Poi dire se va sul sito vero e se la derivata senza parentesi (`\frac{d}{dx} x^2 \sin x`) resta di
-  tutto il prodotto.
+- Dire se la derivata senza parentesi (`\frac{d}{dx} x^2 \sin x`) resta di tutto il prodotto: con la parentesi
+  subito dopo (`$\frac{d}{dx}(x^2+1) \cdot (x-1) = 2x(x-1)$`) si deriva solo la parentesi, sul sito dal 14
+  ottobre 2026 («Spiegami» in ROADMAP.md).
 - Leggere ogni tanto i commenti di chi prova Glifo (online dall'8 ottobre 2026; si leggono nella pagina
   «Domande frequenti e commenti», glifo.page/faq, a cui porta il link nella finestra del fumetto in fondo
   alla barra laterale): dashboard di Supabase → progetto `glifo` → Table Editor → `feedback`, dove ci sono
