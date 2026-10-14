@@ -1827,9 +1827,19 @@ class Parser {
       } else body = { k: 'name', name: fn }
     } else {
       if (!this.peek() || !this.startsArgument()) throw this.error(T.derivativeAfterFraction)
-      body = this.term()
+      body = this.derivativeBody()
     }
     return { k: 'diff', body, vars, partial: top.partial }
+  }
+
+  /**
+   * Quello che si deriva dopo `\frac{d}{dx}` o `\partial_x`. Con una parentesi subito dopo solo lei,
+   * con il suo esponente: `\frac{d}{dx}(x^2+1) \cdot (x-1)` è 2x·(x − 1) (era la derivata di tutto il
+   * prodotto), `\frac{d}{dx}(x^2+1)^3` la derivata di (x² + 1)³. Senza, tutto il prodotto:
+   * `\frac{d}{dx} \sin x \cos x`.
+   */
+  private derivativeBody(): MathNode {
+    return this.is('open', '(') || this.is('open', '[') ? this.power() : this.term()
   }
 
   /** `d`, `\partial`, `d^2`, `\partial^2` (con `variable`: seguito dalla variabile, `dx`, `\partial x^2`). */
@@ -1877,7 +1887,7 @@ class Parser {
       this.next()
     }
     if (!this.peek() || !this.startsArgument()) throw this.error(T.derivativeAfterPartial, start.pos)
-    return { k: 'diff', body: this.term(), vars, partial: true }
+    return { k: 'diff', body: this.derivativeBody(), vars, partial: true }
   }
 
   /** `\lim_{x \to 0} \frac{\sin x}{x}`, `\lim_{x \to 0^+}`, `\lim_{n \to \infty}`. */

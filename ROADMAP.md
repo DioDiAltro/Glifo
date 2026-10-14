@@ -549,6 +549,17 @@ elettrico, indaco, viola, rosa shocking; nel tema scuro più luminosi) con un al
 pulsante acceso con la luce dentro. Gli aloni stanno dentro il pulsante: la barra sopra il testo scorre quando
 non c'è posto, e taglierebbe quello che esce.
 
+**Un passaggio giusto segnato sbagliato (14 ottobre 2026, provando «Spiegami» con Qwen3.5 9B)**: su
+`$\frac{d}{dx}\left(\frac{x^2+1}{x-1}\right) =$` il modello ha scritto come primo passaggio la regola del
+quoziente con le derivate dentro, `\frac{\frac{d}{dx}(x^2+1) \cdot (x-1) - (x^2+1) \cdot \frac{d}{dx}(x-1)}{(x-1)^2}`,
+giusta, e Glifo l'ha segnata ✗ («il valore giusto è (x² − 2x − 1)/(x − 1)²»), facendogliela correggere due
+volte. Il difetto era nel motore delle formule, anche nelle note: `\frac{d}{dx}(x^2+1) \cdot (x-1)` era la
+derivata di tutto il prodotto. Corretto: con una parentesi subito dopo la derivata (`\frac{d}{dx}`,
+`\frac{\partial}{\partial x}`, `\partial_x`) si deriva solo la parentesi, con il suo esponente
+(`tests/check.test.ts`, `tests/explain.test.ts`, `tests/vectorcalc.test.ts`). Nessuna nota d'esempio cambia
+significato. Senza parentesi (`\frac{d}{dx} x^2 \sin x`) si deriva ancora tutto il prodotto: da decidere con lo
+studente se resta così.
+
 Da fare:
 - provarlo davvero su un computer con WebGPU (Chrome o Edge), su esercizi veri, e scegliere il modello
   di partenza: finora è provato solo con un modello finto (nelle sessioni di Claude Hugging Face era

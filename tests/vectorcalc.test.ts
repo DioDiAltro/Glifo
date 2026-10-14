@@ -38,6 +38,21 @@ describe('le derivate: come si scrivono', () => {
     expect(toLatex(d)).toBe(r`\frac{d}{dx} x^{2}`)
   })
 
+  it('con la parentesi subito dopo la derivata è solo la parentesi, con il suo esponente; senza, tutto il prodotto', () => {
+    const diff = { k: 'diff', vars: ['x'], partial: false }
+    expect(parseMath(r`\frac{d}{dx}(x^2+1) \cdot (x-1)`)).toMatchObject({ k: 'bin', op: '*', a: diff })
+    expect(parseMath(r`\frac{d}{dx}(x^2+1)(x-1)`)).toMatchObject({ k: 'bin', op: '*', a: diff, implicit: true })
+    expect(parseMath(r`\frac{d}{dx}\left[x^2+1\right] / (x-1)`)).toMatchObject({ k: 'bin', op: '/', a: diff })
+    expect(parseMath(r`\frac{d}{dx}(x+1)^3 \cdot x`)).toMatchObject({ k: 'bin', op: '*', a: { ...diff, body: { k: 'bin', op: '^' } } })
+    expect(parseMath(r`\partial_x (x^2 y) \cdot y`)).toMatchObject({ k: 'bin', op: '*', a: { k: 'diff', vars: ['x'], partial: true } })
+    expect(parseMath(r`\frac{d}{dx} x^2 \sin x`)).toMatchObject({ ...diff, body: { k: 'bin', op: '*' } })
+    // Stampata e riletta resta la stessa: \frac{d}{dx} \left(x + 1\right)^{3} ha l'esponente dentro.
+    for (const f of [r`\frac{d}{dx}(x^2+1) \cdot (x-1)`, r`\frac{d}{dx}(x+1)^3`, r`\frac{d}{dx}(x+1)^3 \cdot x`, r`\partial_x (x^2 y) \cdot y`]) {
+      const node = parseMath(f)
+      expect(parseMath(toLatex(node))).toEqual(node)
+    }
+  })
+
   it('\\nabla: gradiente, divergenza, rotore e laplaciano; anche con i nomi (grad, div, rot)', () => {
     expect(parseMath(r`\nabla f`)).toMatchObject({ k: 'fn', name: 'grad', nabla: true })
     expect(parseMath(r`\nabla \cdot F`)).toMatchObject({ k: 'fn', name: 'div' })
