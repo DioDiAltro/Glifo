@@ -455,6 +455,19 @@ describe('il pulsante «Grafico» e la formula sotto il cursore', () => {
     expect(v.state.doc.toString()).toBe(doc + '\n\n```grafico\n' + r`\int_0^2 f(x)\,dx` + '\n```\n')
   })
 
+  it('un integrale con gli estremi a lettere: il blocco ha gli slider, da 0 a 1 (14 ottobre 2026: dava «y = »)', () => {
+    const integral = r`\int_{a}^{b} x^3 \, dx`
+    const doc = '$$\n' + integral + '\n$$\n'
+    const v = makeView(doc, doc.indexOf('x^3'))
+    const f = formulaAtCursor(v)!
+    expect(f).toEqual({ tex: 'a = 0\nb = 1\n' + integral, defs: [], to: doc.lastIndexOf('$$') + 2 })
+    insertGraphBlock(v, f.tex, f.to)
+    expect(v.state.doc.toString()).toContain('```grafico\na = 0\nb = 1\n' + integral + '\n```')
+    // Con a e b definiti prima nella nota, l'integrale da solo.
+    const defined = '$a = 0$ e $b = 2$\n\n' + doc
+    expect(formulaAtCursor(makeView(defined, defined.indexOf('x^3')))).toMatchObject({ tex: integral, defs: ['a = 0', 'b = 2'] })
+  })
+
   it('mette il grafico su righe sue, dopo la riga della formula', () => {
     const doc = 'Sia $y = x^2$ la parabola.\nAltro'
     const v = makeView(doc, 6)

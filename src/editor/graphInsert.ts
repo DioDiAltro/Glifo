@@ -1,7 +1,7 @@
 import { syntaxTree } from '@codemirror/language'
 import { EditorSelection } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
-import { formulaGraph, formulaGraphLine, graphBlockText, graphNames } from '../graph/spec'
+import { formulaGraph, formulaGraphLine, formulaGraphLines, graphBlockText, graphNames } from '../graph/spec'
 import type { Lang } from '../i18n'
 import { calculationRequest } from '../math/sheet'
 import { graphKeyLine, parseGraphKey, type GraphKey } from '../noteWords'
@@ -10,7 +10,8 @@ import { mathRegionAt } from './mathContext'
 
 /**
  * La formula sotto il cursore, se è una funzione da disegnare (y = …, f(x) = …) o un integrale (la
- * sua area): la riga per il blocco ```grafico e le definizioni della nota scritte prima, che usa.
+ * sua area): le righe per il blocco ```grafico (la formula, con prima gli slider per le lettere senza un
+ * valore: a = 0, b = 1 in \int_a^b x^3 \, dx) e le definizioni della nota scritte prima, che usa.
  */
 export function formulaAtCursor(view: EditorView): { tex: string; defs: string[]; to: number } | null {
   const { state } = view
@@ -20,7 +21,8 @@ export function formulaAtCursor(view: EditorView): { tex: string; defs: string[]
   const sheet = sheetBefore(state, region.from)
   const tex = formulaGraphLine(region.tex)
   const defs = sheet.definitionsFor(graphNames(tex))
-  if (formulaGraph(tex, defs)) return { tex, defs, to: region.to }
+  const lines = formulaGraphLines(tex, defs)
+  if (lines) return { tex: lines.join('\n'), defs, to: region.to }
   // Un conto con i numeri complessi (1 + i =, \sqrt[3]{8i} =): il numero prima dell'uguale.
   const request = calculationRequest(tex)?.trim()
   if (!request) return null

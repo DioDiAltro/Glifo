@@ -1540,13 +1540,17 @@ function readGraph(source: string, defs: readonly string[], values?: ReadonlyMap
   }
 
   // I nomi che mancano: la riga da aggiungere al blocco per averli, con uno slider (k = 1, o
-  // l'inizio dell'intervallo scritto, se 1 è fuori).
+  // l'inizio dell'intervallo scritto, se 1 è fuori). In \int_a^b senza a né b, a = 0: con 1 e 1
+  // l'area non si vedrebbe.
   for (const { error, line } of undefinedIn) {
     const missing = missingNumbers(line, scope(), space).filter((name) => !defined.has(name) && !(gauss && (name === 'i' || name === 'z')))
     if (!missing.length || missing.length > 6 || hasWord(line.text)) continue
+    const int = areaOf(line.main)?.int
+    const lower = int?.from.k === 'name' && int.to.k === 'name' && missing.includes(int.from.name) && missing.includes(int.to.name) ? int.from.name : null
     error.add = missing.map((name) => {
       const r = sliderRanges.get(name)
-      const value = !r || (r.range[0] <= 1 && r.range[1] >= 1) ? '1' : r.ends[0]
+      const start = name === lower ? 0 : 1
+      const value = !r || (r.range[0] <= start && r.range[1] >= start) ? String(start) : r.ends[0]
       return { name, line: `${nameLatex(name)} = ${value}` }
     })
   }
@@ -2005,6 +2009,32 @@ export function formulaGraphLine(tex: string): string {
  * nota `defs`).
  */
 export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSpec | null {
+  const text = plottableLine(tex, defs)
+  if (!text) return null
+  const spec = parseGraph(text, defs)
+  // Una riga sola: con i punti della nota che usa (i vertici) o, per un integrale, anche il campo.
+  return spec.errors.length || !spec.items.length ? null : spec
+}
+
+/**
+ * Le righe del blocco ```grafico per una formula della nota (vedi `formulaGraph`): la formula e, se le
+ * mancano solo dei numeri (\int_a^b x^3 \, dx senza a né b), prima gli slider per loro, come «Aggiungi
+ * gli slider» nell'anteprima (14 ottobre 2026: il pulsante «Grafico» scriveva solo «y = »). Null se non è
+ * un grafico.
+ */
+export function formulaGraphLines(tex: string, defs: readonly string[] = []): string[] | null {
+  const text = plottableLine(tex, defs)
+  if (!text) return null
+  const { errors, items } = parseGraph(text, defs)
+  if (!errors.length) return items.length ? [text] : null
+  if (errors.some((e) => !e.add?.length)) return null
+  const lines = [...new Set(errors.flatMap((e) => e.add!.map((a) => a.line))), text]
+  const spec = parseGraph(lines.join('\n'), defs)
+  return spec.errors.length || !spec.items.length ? null : lines
+}
+
+/** La riga del blocco per una formula della nota, se è qualcosa da disegnare (vedi `formulaGraph`); se no null. */
+function plottableLine(tex: string, defs: readonly string[]): string | null {
   const text = formulaGraphLine(tex)
   if (!text || text.includes('\n')) return null
   let main: MathNode
@@ -2057,9 +2087,7 @@ export function formulaGraph(tex: string, defs: readonly string[] = []): GraphSp
       (all.has('z') && (all.has('x') || all.has('y')))
     if (!plottable) return null
   }
-  const spec = parseGraph(text, defs)
-  // Una riga sola: con i punti della nota che usa (i vertici) o, per un integrale, anche il campo.
-  return spec.errors.length || !spec.items.length ? null : spec
+  return text
 }
 
 /** Il blocco da mettere nella nota, con il nome nella lingua di Glifo (```grafico o ```graph). */

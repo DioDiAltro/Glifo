@@ -150,6 +150,8 @@ describe('gli integrali: l\'area sotto la curva', () => {
     expect(parseGraph(r`\int_0^2 x^2 \, dx, x > 1`).errors[0].message).toMatch(/Un integrale non ha condizioni/)
     // Un estremo che manca: lo slider per averlo.
     expect(parseGraph(r`\int_0^k x \, dx`).errors[0].add).toEqual([{ name: 'k', line: 'k = 1' }])
+    // Senza tutti e due gli estremi: da 0 a 1, così l'area si vede (con 1 e 1 sarebbe vuota).
+    expect(parseGraph(r`\int_a^b x^3 \, dx`).errors[0].add).toEqual([{ name: 'a', line: 'a = 0' }, { name: 'b', line: 'b = 1' }])
   })
 
   it('gli estremi e la funzione possono usare i numeri con lo slider e le funzioni della nota', () => {

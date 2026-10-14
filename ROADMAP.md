@@ -578,6 +578,13 @@ di 2ab, perché con le lettere nel punto Glifo derivava f(a, b), dove x non c'è
 e `\frac{df}{dx}(t^2)`, anche nei grafici). Corretto sul ramo `prova`: è la derivata di f calcolata nel punto,
 con le lettere messe tutte insieme (`(y, x)` dà 2xy); `\frac{d}{dx}(f(x^2))` resta la derivata di tutta f(x²).
 
+**Il grafico di un integrale con le lettere (14 ottobre 2026, lo studente con una foto).** Con il cursore su
+`$$\int_{a}^{b} x^3 \, dx$$` il pulsante «Grafico» scriveva solo `y = `: un grafico con un nome senza valore
+non contava come formula da disegnare. Ora, sul ramo `prova`, il blocco ha l'integrale con prima gli slider delle
+lettere che mancano, come «Aggiungi gli slider» nell'anteprima: per gli estremi di un integrale `a = 0` e
+`b = 1` (con 1 e 1 l'area non si vedrebbe), e l'area si vede subito (`tests/graphNote.test.ts`,
+`tests/graph.test.ts`).
+
 Da fare:
 - provarlo davvero su un computer con WebGPU (Chrome o Edge), su esercizi veri, e scegliere il modello
   di partenza. Il 14 ottobre 2026 nove modelli veri (i Qwen3, i Qwen3.5, Llama 3.2 1B) sono stati provati

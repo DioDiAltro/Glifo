@@ -454,8 +454,9 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
   funzione (`$f(x) = …$`) disegna quella, su un integrale (`$\int_0^2 x^2 \, dx =$`) la sua area (e
   così le curve di livello, i polinomi di Taylor, le primitive, gli studi di funzione, le distribuzioni e le
   probabilità, le equazioni differenziali), se no prepara il blocco
-  da scrivere. Il grafico della formula sotto il cursore si vede anche nel
-  pannello a destra, con «Inserisci il grafico».
+  da scrivere. Le lettere senza un valore nella nota diventano slider nel blocco: per `\int_a^b x^3 \, dx`
+  il blocco ha `a = 0` e `b = 1`, e muovendoli l'area cambia. Il grafico della formula sotto il cursore si
+  vede anche nel pannello a destra, con «Inserisci il grafico».
 - Il blocco ` ```grafico ` ha una riga per ogni cosa da disegnare: funzioni (`y = x^2`, `f(x) = \frac{1}{x}`,
   o solo `x^2`), anche dove vale una condizione (`y = \sqrt{x}, 0 \le x \le 4`), rette verticali
   (`x = 2`), curve qualsiasi (`x^2 + y^2 = 4`), in coordinate polari (`r = 1 + \cos\theta`) o con un

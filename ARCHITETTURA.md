@@ -369,7 +369,9 @@ finita il 14 ottobre 2026, il file non c'è più e si legge nella storia del rep
   prima quello dietro), `picture.ts` il disegno fermo per pannello e file .md. Il valore si può anche scrivere nella casella accanto (`typedSliderValue`;
   fuori dallo slider, `widenSlider` lo allarga). «Aggiungi lo slider per k» passa da `onAddToGraph`
   (`src/ui/preview.ts`) a `addToGraphBlock`. Il pulsante «Grafico» e il grafico nel pannello della
-  formula: `src/editor/graphInsert.ts`. I grafici da mostrare: `titolo: …` e `asse x: …` (y, z) nel
+  formula: `src/editor/graphInsert.ts`; le righe del blocco le dà `formulaGraphLines` in `spec.ts`, con prima
+  gli slider delle lettere che mancano (le stesse di «Aggiungi gli slider»; in \int_a^b senza a né b,
+  a = 0 e b = 1, dal 14 ottobre 2026). I grafici da mostrare: `titolo: …` e `asse x: …` (y, z) nel
   blocco (`labelLine`, `spec.title`, `spec.axes`; `labels.ts` li fa in HTML con KaTeX e, nei disegni, con
   le formule come testo SVG nei `<tspan>`); il pulsante «Scarica» (`openImageMenu` in `preview.ts`) dà la
   figura chiara su bianco 640 × 400 (`graphFigure` in `file.ts`, con la parte che contiene quella sullo
