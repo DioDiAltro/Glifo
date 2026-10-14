@@ -434,8 +434,9 @@ export function stepsIn(reply: string): { text: string; formula: string | null }
     .replace(/\r/g, '')
     .replace(/\\\[([\s\S]*?)\\\]/g, (_, f: string) => `$$${f}$$`)
     .replace(/\\\(([\s\S]*?)\\\)/g, (_, f: string) => `$${f}$`)
-  // «Passo 1:», e in inglese «Step 1:» (le due lingue sempre: il modello a volte cambia lingua).
-  const numbered = /^\s*(?:\*\*)?(?:(?:passo|passaggio|step)\s*)?\d{1,2}\s*[.):](?:\*\*)?(?:\s+|$)(.*)$/i
+  // «Passo 1:», e in inglese «Step 1:» (le due lingue sempre: il modello a volte cambia lingua), anche come
+  // titolo, «### Passo 1:» (Qwen3.5 2B, 14 ottobre 2026).
+  const numbered = /^\s*(?:#{1,6}\s*)?(?:\*\*)?(?:(?:passo|passaggio|step)\s*)?\d{1,2}\s*[.):](?:\*\*)?(?:\s+|$)(.*)$/i
   const bullet = /^\s*[-*•]\s+(.*)$/
   const lines = clean.split('\n')
   const start = lines.some((l) => numbered.test(l)) ? numbered : lines.some((l) => bullet.test(l)) ? bullet : null
@@ -536,13 +537,49 @@ function bareResult(s: { formula: string | null }): boolean {
   return !!s.formula && splitEquals(s.formula).length < 2 && !RELATION.test(s.formula)
 }
 
+/** L'ultima parte di una catena a = b = c (anche «= b = c», che continua il passaggio prima). */
+function lastPart(tex: string): string {
+  const parts = splitEquals(tex.replace(/^\s*=/, ''))
+    .map((p) => p.trim())
+    .filter(Boolean)
+  return parts[parts.length - 1] ?? tex
+}
+
+/**
+ * Ogni formula da controllare, letta con quella prima (il primo passaggio con la domanda). Una che comincia con
+ * «=» la continua («= 2\pi R^3 - …», Qwen3.5 2B, 14 ottobre 2026) e si controlla con la sua ultima parte. Anche
+ * un'espressione da sola si confronta con quella parte (Qwen3.5 9B scrive così metà dei passaggi), ma dà solo ✓
+ * (`soft`): può essere un conto a parte, come la primitiva di un termine. Nelle equazioni (`start` null) le
+ * espressioni da sole sono le soluzioni e restano come sono.
+ */
+function chained(raw: { formula: string | null }[], start: string | null): ({ formula: string; soft: boolean } | null)[] {
+  let before = start
+  return raw.map((s) => {
+    if (!s.formula) return null
+    const formula = s.formula.trim()
+    const step = formula.startsWith('=') && before ? { formula: `${before} ${formula}`, soft: false } : bareResult({ formula }) && before && start ? { formula: `${before} = ${formula}`, soft: true } : { formula, soft: false }
+    // Dopo una relazione (x \geq 0, \Rightarrow) non c'è un valore da continuare.
+    before = RELATION.test(step.formula) ? null : lastPart(step.formula)
+    return step
+  })
+}
+
+/** `next`, un'espressione da sola, ripete il valore a cui arriva `prev`, un'uguaglianza (anche «= …»)? */
+function repeatsResult(prev: string | null, next: string | null, sheet: SheetFactory): boolean {
+  if (!prev || !next || (!prev.trim().startsWith('=') && bareResult({ formula: prev }))) return false
+  return sheet().same(lastPart(prev), next) === true
+}
+
 /** I passaggi con il controllo di Glifo e se l'ultimo arriva al risultato. */
 export function checkSteps(raw: { text: string; formula: string | null }[], target: ExplainTarget, sheet: SheetFactory): { steps: ExplainStep[]; reaches: boolean | null } {
-  // In fondo il solo risultato, senza uguale (Qwen3, 8 ottobre 2026): ripete quello a cui l'ultimo passaggio
-  // è già arrivato, come «Risultato finale» senza formula (vedi `stepsIn`), e si toglie. Nelle equazioni no:
-  // le soluzioni scritte da sole sono la risposta.
+  // In fondo il solo risultato, senza uguale (Qwen3, 8 ottobre 2026): se ripete quello a cui è arrivata
+  // l'uguaglianza prima, come «Risultato finale» senza formula (vedi `stepsIn`), si toglie. Le altre formule
+  // senza uguale restano: togliendole tutte, Qwen3 1.7B (14 ottobre 2026) perdeva 7 passaggi su 8 e l'ultimo
+  // «non arrivava». Nelle equazioni no: le soluzioni scritte da sole sono la risposta.
   let kept = raw
-  while (target.kind !== 'solve' && kept.length > 1 && bareResult(kept[kept.length - 1]) && kept.slice(0, -1).some((s) => s.formula && !bareResult(s))) kept = kept.slice(0, -1)
+  const n = kept.length
+  if (target.kind !== 'solve' && n > 1 && bareResult(kept[n - 1]) && repeatsResult(kept[n - 2].formula, kept[n - 1].formula, sheet)) kept = kept.slice(0, -1)
+  const formulas = chained(kept, target.kind === 'solve' ? null : target.question)
   const question = parsed(target.question)
   const variable = integralsIn(question)[0]?.v ?? null
   // Le lettere che la formula e le definizioni usano: un ✗ con altre lettere (u = x^2, c, a, b) non è sicuro.
@@ -550,10 +587,11 @@ export function checkSteps(raw: { text: string; formula: string | null }[], targ
   for (const d of target.defs) allNames(d).forEach((n) => own.add(n))
   // Nelle equazioni le parti non sono uguali per ogni x: lì un confronto con le lettere dice solo ✓.
   const identities = target.kind === 'solve' ? 'soft' : 'strict'
-  const steps = kept.map((s): ExplainStep => {
-    if (!s.formula) return { ...s, check: null }
-    let check = checkFormula(s.formula, sheet, variable, identities)
-    if (check && !check.ok && [...formulaNames(s.formula)].some((n) => !own.has(n) && !['π', 'e', 'i'].includes(n))) check = null
+  const steps = kept.map((s, i): ExplainStep => {
+    const f = formulas[i]
+    if (!f) return { ...s, check: null }
+    let check = checkFormula(f.formula, sheet, variable, identities)
+    if (check && !check.ok && (f.soft || [...formulaNames(f.formula)].some((n) => !own.has(n) && !['π', 'e', 'i'].includes(n)))) check = null
     return { ...s, check }
   })
   const last = [...steps].reverse().find((s) => s.formula)?.formula ?? null
@@ -561,11 +599,7 @@ export function checkSteps(raw: { text: string; formula: string | null }[], targ
   if (last) {
     if (target.kind === 'solve') reaches = sameSolutions(last, target.answer.tex, sheet)
     else {
-      const parts = splitEquals(last)
-        .map((p) => p.trim())
-        .filter(Boolean)
-      const end = parts[parts.length - 1]
-      const check = end ? checkFormula(`${target.question} = ${end}`, sheet, variable) : null
+      const check = checkFormula(`${target.question} = ${lastPart(last)}`, sheet, variable)
       reaches = check ? check.ok : null
     }
   }

@@ -16,7 +16,7 @@ quando i punti sono tutti fatti si cancella, insieme alla voce «La grafica» di
 | 1 | «Cambia account» | fatto: sul sito dal 12 ottobre; lo studente: «va bene» |
 | 2 | La pagina dei commenti, tipo FAQ | fatto: sul sito dal 13 ottobre 2026; lo studente: «va bene» |
 | 3 | Le impostazioni divise in sezioni | fatto: sul sito dal 13 ottobre 2026; lo studente: «va bene» |
-| 4 | Più modelli per «Spiegami» | fatto sul ramo `prova` il 13 ottobre 2026; prossimo passo: provare i modelli veri con Hugging Face |
+| 4 | Più modelli per «Spiegami» | fatto sul ramo `prova` il 13 ottobre 2026; i modelli veri provati il 14 ottobre (con llama.cpp); prossimo passo: la prova sul computer dello studente, poi quali Qwen3.5 tra i consigliati |
 | 5 | A cosa serve la chiave dell'AI | da decidere |
 | 6 | Glifo anche in inglese | fatto: tutto tradotto, anche le parole delle note, i numeri, l'AI e l'informativa; sul sito vero dal 12 ottobre 2026; lo studente: «va bene» |
 | 7 | Via il registro dei tocchi | fatto: sul sito dal 13 ottobre 2026; lo studente: «va bene» |
@@ -417,6 +417,51 @@ centinaio da scrivere, più i giri con il motore) durerebbe molte ore, con l'8B 
 `scripts/spiegami-qwen.mjs` non serve a provare i modelli. llama.cpp, che sulla CPU è molto più veloce,
 la protezione della sessione l'ha fermato perché è un programma scaricato da fuori: si chiede allo
 studente come fare le prove.
+
+**Com'è andata** (14 ottobre 2026). Lo studente: «sì, usa llama.cpp». Glifo vero nel browser (domande,
+conti del motore, controlli e correzioni), con le risposte del modello da un server llama.cpp sulla CPU:
+lo stesso modello, compresso in modo simile (GGUF Q4_K_M), con gli stessi parametri del worker (`LLAMA`
+in `scripts/spiegami-qwen.mjs`). Due formule: l'integrale della sfera (Glifo dà la primitiva) e la
+derivata di (x²+1)/(x−1) con la regola del quoziente (senza aiuti); 33 spiegazioni, di cui 3 non contate
+qui sotto, perché Glifo le leggeva male (vedi sotto). Quante sono arrivate al risultato di Glifo:
+
+| Modello | Sfera | Derivata | Come scrive |
+|---|---|---|---|
+| Qwen3 0.6B | 0 su 1 | 0 su 1 | copia la riga d'esempio del messaggio di sistema |
+| Qwen3.5 0.8B | 0 su 2 | 0 su 1 | arriva ai 900 token senza finire |
+| Llama 3.2 1B | 0 su 1 | 0 su 1 | frasi senza senso, mai nel formato dei passaggi |
+| Qwen3 1.7B | 2 su 2 | 1 su 1 | passaggi brevi, spesso senza «=» |
+| Qwen3.5 2B | 2 su 2 | 3 su 3 | scrive il doppio degli altri (più lento), con titoli e catene «= …» |
+| Qwen3 4B | 1 su 2 | 2 su 2 | l'unico che chiede spesso i conti al motore; un errore di segno rimasto dopo 2 correzioni |
+| Qwen3.5 4B | 3 su 3 | 3 su 3 | mai una correzione |
+| Qwen3 8B | 1 su 1 | 2 su 2 | sulla sfera usa anche la simmetria; 6 passaggi controllati su 6 |
+| Qwen3.5 9B | 1 su 1 | 1 su 1 | un ✗ falso del motore (vedi sotto) |
+
+- **Le chiamate al motore** sono rare: Qwen3 4B in 3 prove su 4, Qwen3.5 2B una volta (con gli argomenti
+  non in LaTeX, che Glifo non legge), gli altri mai. Nessun Qwen3.5 ha usato il suo formato (<function=…>):
+  quando chiamano, scrivono il JSON del messaggio di sistema.
+- **Glifo leggeva male i passaggi**, e ora è corretto sul ramo `prova`, con le prove: togliendo in fondo
+  tutte le formule senza «=» (doveva togliere solo il risultato ripetuto), con Qwen3 1.7B, il modello di
+  partenza, restava 1 passaggio su 8 e Glifo faceva correggere una spiegazione arrivata al risultato (3
+  spiegazioni di Qwen3 1.7B e Qwen3.5 2B, prima della correzione, segnate «non arriva»); i titoli «### Passo
+  1:» non erano passaggi; una formula che comincia con «=» ora continua quella prima e si controlla; un
+  conto scritto da solo si confronta con il passaggio prima e dà ✓ se è uguale (se no resta «non
+  controllato»: può essere un conto a parte). Per esempio la stessa spiegazione di Qwen3 8B sulla derivata
+  aveva 1 passaggio controllato su 4, ora 4 su 4.
+- **Trovato e non corretto**: il motore legge `\frac{d}{dx}(x^2+1) \cdot (x-1)` come la derivata di
+  tutto il prodotto, così un passaggio giusto di Qwen3.5 9B (la regola del quoziente scritta con le
+  derivate dentro) è segnato ✗. È proposto come lavoro a parte.
+- **Non si è visto** quanto ci mettono nel browser e se WebGPU li fa girare su un computer vero: llama.cpp
+  non è WebLLM. Si vede sul sito di prova, sul computer dello studente.
+
+**Da decidere**, dopo la prova sul computer dello studente:
+
+- Qwen3.5 4B tra i consigliati? In queste prove è il migliore dei 4B; chiede 3,9 GB di memoria contro i
+  3,4 del Qwen3 4B. Claude consiglia di sì, se sul computer non è più lento.
+- Qwen3.5 2B e 9B restano tra gli altri modelli? Il 2B va come il Qwen3 1.7B ma scrive il doppio; il 9B
+  va bene ma chiede 6,4 GB, più dell'8B.
+- Qwen3 0.6B, il più leggero dei consigliati, non è mai arrivato al risultato, come Qwen3.5 0.8B: resta?
+- Llama 3.2 1B passa da «altri modelli» a «tutti gli altri» (avanzate)? Claude consiglia di sì.
 
 ## 5. A cosa serve la chiave dell'AI
 

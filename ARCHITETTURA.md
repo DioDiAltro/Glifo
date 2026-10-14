@@ -463,11 +463,16 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   nelle equazioni: solo ✓). `explain.ts` il giro: `explainTarget` (un risultato dopo «=», un risultato
   scritto, le soluzioni dopo ⇒), il primo messaggio con il risultato di Glifo e la primitiva di ogni
   integrale (`engineHints`), fino a 3 giri di strumenti, `stepsIn` legge «1. frase $$formula$$» (anche
-  \[…\], la formula in linea, i paragrafi; toglie «Una frase breve:», che Qwen3 copiava dal vecchio
+  \[…\], la formula in linea, i paragrafi, i titoli «### Passo 1:»; toglie «Una frase breve:», che Qwen3 copiava dal vecchio
   schema, e un «Risultato finale» senza conto in fondo). Il messaggio di sistema (`systemPrompt`) ha una
   riga d'esempio vera, una derivata (non uno schema da riempire), e i nomi giusti delle regole (teorema
   fondamentale del calcolo integrale, regola della potenza…). `checkSteps` (un ✗ con lettere che la formula non ha, come
-  u = x², non è sicuro e non si dice; `reaches`: l'ultimo passaggio contro il risultato), `feedback` fa
+  u = x², non è sicuro e non si dice; in fondo toglie il solo risultato senza uguale se ripete l'uguaglianza
+  prima, `repeatsResult`, e le altre formule senza uguale restano: togliendole tutte, il 14 ottobre 2026
+  Qwen3 1.7B perdeva 7 passaggi su 8; `chained` legge ogni formula con quella prima, il primo passaggio con
+  la domanda: «= …» la continua e si controlla con la sua ultima parte, un'espressione da sola si confronta
+  con quella parte e dà solo ✓, perché può essere un conto a parte; `reaches`: l'ultimo passaggio contro il
+  risultato), `feedback` fa
   correggere fino a 2 volte e si tiene la spiegazione con meno ✗; il contesto è di 4096 token
   (`tooLong`, `CONTEXT_TOKENS` di localModels.ts). Un modello senza `tools` (`explain`, `explainTopic` e
   `answerFollowUp` con `tools` false, da `modelOf(loaded)` nel pannello e nella chat) non ha gli strumenti

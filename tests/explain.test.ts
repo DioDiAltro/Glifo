@@ -217,6 +217,106 @@ describe('i passaggi scritti dal modello', () => {
     expect(solve.steps).toHaveLength(2)
   })
 
+  it('Qwen3 1.7B vero (14 ottobre 2026): le formule senza uguale in fondo restano, si toglie solo il risultato che ripete un\'uguaglianza', () => {
+    const lines = [
+      r`1. Per la regola della primitiva di un prodotto, calcolo l'integrale indefinito di $\pi(R^2 - x^2)$. $$\int \left(\pi(R^{2} - x^{2})\right) \, dx = \pi\left(R^{2}x - \frac{x^{3}}{3}\right) + c$$`,
+      r`2. Per la regola della linearità dell'integrale, applico la proprietà di linearità all'integrale. $$\pi\left(R^{2}x - \frac{x^{3}}{3}\right)$$`,
+      r`3. Per la regola della potenza, calcolo l'integrale di $-x^2$ con esponente $-2$. $$-\frac{x^{3}}{3}$$`,
+      r`4. Per la regola del prodotto, moltiplico il risultato per $\pi$ e applico la proprietà di linearità. $$\pi\left(R^{2}x - \frac{x^{3}}{3}\right)$$`,
+      r`5. Per la regola del teorema fondamentale del calcolo integrale, sostituisco gli estremi di integrazione $-R$ e $R$ nel risultato. $$\pi\left(R^{2}R - \frac{R^{3}}{3}\right) - \pi\left(R^{2}(-R) - \frac{(-R)^{3}}{3}\right)$$`,
+      r`6. Per la regola del prodotto e della potenza, semplifico i termini. $$\pi\left(R^{3} - \frac{R^{3}}{3} - \left(-R^{3} + \frac{R^{3}}{3}\right)\right)$$`,
+      r`7. Per la regola del prodotto e della potenza, semplifico ulteriormente. $$\pi\left(R^{3} - \frac{R^{3}}{3} + R^{3} - \frac{R^{3}}{3}\right)$$`,
+    ]
+    const sphere = target(r`\int_{-R}^{R} \pi (R^2 - x^2) \, dx =`)
+    // Prima restava solo il primo passaggio, e «non arriva al risultato» faceva correggere una spiegazione giusta.
+    const right = checkSteps(stepsIn([...lines, r`8. Semplifico ancora. $$\frac{4\pi R^{3}}{3}$$`].join('\n')), sphere, sheet)
+    expect(right.steps).toHaveLength(8)
+    expect(right.steps[0].check).toEqual({ ok: true })
+    expect(right.reaches).toBe(true)
+    // L'ottavo passaggio vero era sbagliato (2 al posto di 4): l'ultimo non arriva, e Glifo lo fa correggere.
+    const wrong = checkSteps(stepsIn([...lines, r`8. Semplifico ancora. $$\pi\left(\frac{2R^{3}}{3}\right)$$`].join('\n')), sphere, sheet)
+    expect(wrong.steps).toHaveLength(8)
+    expect(wrong.reaches).toBe(false)
+  })
+
+  it('Qwen3.5 2B vero (14 ottobre 2026): i titoli «### Passo 1:» sono passaggi, e una formula che comincia con «=» continua quella prima', () => {
+    const headings = [
+      'Ecco la spiegazione passo dopo passo, strutturata come una lezione universitaria rigorosa.',
+      '',
+      `### Passo 1: Individuare la struttura dell'integrale`,
+      `Innanzitutto, identifico l'integrale definito:`,
+      r`$$\int_{-R}^{R} \pi (R^2 - x^2) \, dx$$`,
+      r`Il risultato del motore di Glifo è $\frac{4\pi R^{3}}{3}$. Per procedere, devo scomporre l'integrale in una somma di integrali, applicando la proprietà di lineare dell'integrale:`,
+      r`$$\int_{-R}^{R} \pi (R^2 - x^2) \, dx = \pi \int_{-R}^{R} (R^2 - x^2) \, dx$$`,
+      '',
+      r`### Passo 2: Riconoscere che $R^2$ è una costante`,
+      r`Poiché $R^2$ non dipende da $x$, posso portare fuori dall'integrale come fattore:`,
+      r`$$= \pi \int_{-R}^{R} R^2 \, dx - \pi \int_{-R}^{R} x^2 \, dx$$`,
+      r`Applicando la proprietà di linearità dell'integrale ($\int (f+g) = \int f + \int g$):`,
+      r`$$= \pi R^2 \int_{-R}^{R} 1 \, dx - \pi \int_{-R}^{R} x^2 \, dx$$`,
+      '',
+      '### Passo 3: Calcolare l\'integrale della costante',
+      r`$$\int_{-R}^{R} 1 \, dx = [x]_{-R}^{R} = R - (-R) = 2R$$`,
+      'Sostituendo questo risultato nell\'espressione:',
+      r`$$= 2\pi R^3 - \pi \int_{-R}^{R} x^2 \, dx$$`,
+      '',
+      r`### Passo 4: Trovare la primitiva di $x^2$`,
+      r`$$\left[ \frac{x^3}{3} \right]_{-R}^{R} = \frac{R^3}{3} - \frac{(-R)^3}{3} = \frac{2R^3}{3}$$`,
+      'Sostituendo questo risultato:',
+      r`$$= 2\pi R^3 - \pi \left( \frac{2R^3}{3} \right)$$`,
+      '',
+      '### Passo 5: Estrarre e semplificare il coefficiente',
+      r`$$= \pi \left( \frac{4R^3}{3} \right)$$`,
+      r`$$= \frac{4\pi R^3}{3}$$`,
+      '',
+      'Questo coincide con il risultato di Glifo.',
+    ].join('\n')
+    const raw = stepsIn(headings)
+    expect(raw.map((s) => s.text.slice(0, 22))).toEqual(['Individuare la struttu', 'Riconoscere che $R^2$ ', 'Calcolare l\'integrale ', 'Trovare la primitiva d', 'Estrarre e semplificar'])
+    // Prima ogni «= …» era «non controllato»: ora si controlla con l'ultima parte della formula prima.
+    const sphere = checkSteps(raw, target(r`\int_{-R}^{R} \pi (R^2 - x^2) \, dx =`), sheet)
+    expect(sphere.steps.map((s) => s.check?.ok)).toEqual([true, true, true, true, true])
+    expect(sphere.reaches).toBe(true)
+    const numbered = [
+      '1. Per calcolare la derivata di un quoziente, si applica la **regola del quoziente**.',
+      r`   $$\frac{d}{dx}\left(\frac{u}{v}\right) = \frac{u'v - uv'}{v^2}$$`,
+      '2. Sostituendo i valori di $u$, $v$ e i loro derivati nell\'equazione del quoziente.',
+      r`   $$\frac{d}{dx}\left(\frac{x^2+1}{x-1}\right) = \frac{(2x)(x-1) - (x^2+1)(1)}{(x-1)^2}$$`,
+      '3. Si espandono i termini nell\'uguaglianza.',
+      r`   $$= \frac{2x^2 - 2x - (x^2 + 1)}{(x-1)^2}$$`,
+      '4. Si somma i due termini simili nel numeratore.',
+      r`   $$= \frac{x^2 - 2x - 1}{(x-1)^2}$$`,
+      '5. Il risultato ottenuto coincide con quello di Glifo.',
+      r`   $$\frac{x^2 - 2x - 1}{(x-1)^2}$$`,
+    ].join('\n')
+    // L'ultimo ripete il risultato a cui arriva il quarto, «= …»: si toglie.
+    const quotient = checkSteps(stepsIn(numbered), target(r`\frac{d}{dx}\left(\frac{x^2+1}{x-1}\right) =`), sheet)
+    expect(quotient.steps.map((s) => s.check?.ok ?? null)).toEqual([null, true, true, true])
+    expect(quotient.reaches).toBe(true)
+    // Un «= …» sbagliato ora si vede.
+    const slip = checkSteps(stepsIn(numbered.replace(r`= \frac{x^2 - 2x - 1}`, r`= \frac{x^2 + 2x - 1}`)), target(r`\frac{d}{dx}\left(\frac{x^2+1}{x-1}\right) =`), sheet)
+    expect(slip.steps[3].check?.ok).toBe(false)
+  })
+
+  it('Qwen3.5 9B vero (14 ottobre 2026): le espressioni da sole si confrontano con il passaggio prima, e danno solo ✓', () => {
+    const reply = [
+      r`1. Per la linearità dell'integrale definito, scoppio l'integrando in due termini separati. $$\int_{-R}^{R} \pi R^2 \, dx - \int_{-R}^{R} \pi x^2 \, dx$$`,
+      r`2. Estraggo le costanti $\pi$ fuori dagli integrali e applico la regola della potenza per trovare le primitive di $x^2$ e $x^1$. $$\pi \left[ R^2 x - \frac{x^3}{3} \right]_{-R}^{R}$$`,
+      r`3. Valuto la funzione primitiva nei due estremi di integrazione, applicando il teorema fondamentale del calcolo integrale ($F(b) - F(a)$). $$\pi \left( \left( R^2(R) - \frac{R^3}{3} \right) - \left( R^2(-R) - \frac{(-R)^3}{3} \right) \right)$$`,
+      r`4. Semplifico i termini algebrici all'interno delle parentesi, tenendo conto dei segni negativi e delle potenze dispari di $-R$. $$\pi \left( R^3 - \frac{R^3}{3} - \left( -R^3 + \frac{R^3}{3} \right) \right)$$`,
+      r`5. Elimino le parentesi e raggruppo i termini simili, sommando le frazioni con denominatore comune. $$\pi \left( R^3 - \frac{R^3}{3} + R^3 - \frac{R^3}{3} \right) = \pi \left( 2R^3 - \frac{2R^3}{3} \right)$$`,
+      r`6. Eseguiamo la sottrazione delle frazioni e semplifichiamo il coefficiente numerico per ottenere il risultato finale. $$\pi \cdot \frac{6R^3 - 2R^3}{3} = \frac{4\pi R^3}{3}$$`,
+    ].join('\n')
+    const sphere = target(r`\int_{-R}^{R} \pi (R^2 - x^2) \, dx =`)
+    // Prima i primi quattro erano «non controllato».
+    const out = checkSteps(stepsIn(reply), sphere, sheet)
+    expect(out.steps.map((s) => s.check?.ok ?? null)).toEqual([true, true, true, true, true, true])
+    expect(out.reaches).toBe(true)
+    // Un conto a parte, diverso dal passaggio prima, non è sbagliato: resta «non controllato».
+    const apart = checkSteps(stepsIn(reply.replace(r`$$\pi \left[ R^2 x - \frac{x^3}{3} \right]_{-R}^{R}$$`, () => r`$$-\frac{x^3}{3}$$`)), sphere, sheet)
+    expect(apart.steps.map((s) => s.check?.ok ?? null)).toEqual([true, null, null, true, true, true])
+  })
+
   it('il messaggio di sistema dà una riga d\'esempio vera, non uno schema da copiare, e i nomi giusti delle regole', () => {
     for (const tone of ['professore', 'semplice'] as const) {
       const system = systemPrompt(tone)

@@ -555,14 +555,11 @@ non c'è posto, e taglierebbe quello che esce.
 
 Da fare:
 - provarlo davvero su un computer con WebGPU (Chrome o Edge), su esercizi veri, e scegliere il modello
-  di partenza: finora è provato solo con un modello finto (nelle sessioni di Claude Hugging Face era
-  bloccato, anche riprovando il 7 ottobre 2026, e dentro claude.ai il modello non si scarica). Quando
-  l'ambiente delle sessioni permette `huggingface.co` e `*.hf.co`, la prova con Qwen3 vero si fa anche
-  lì con `node scripts/spiegami-qwen.mjs` (WebGPU sulla CPU: lento, ma il resto è già pronto);
-- provare con Glifo il Qwen3 8B e i Qwen3.5 (dal 13 ottobre 2026 nell'elenco, GRAFICA.md punto 4; i
-  Qwen3.5 scrivono le chiamate in un altro formato, che Glifo legge): se vanno bene, i Qwen3.5 passano
-  tra i consigliati. Anche questo si fa con `MODELLO=Qwen3.5-2B node scripts/spiegami-qwen.mjs`, con la
-  rete verso Hugging Face;
+  di partenza. Il 14 ottobre 2026 nove modelli veri (i Qwen3, i Qwen3.5, Llama 3.2 1B) sono stati provati
+  con Glifo vero nella sessione, con le risposte da llama.cpp sulla CPU (`LLAMA` in
+  `scripts/spiegami-qwen.mjs`: WebGPU sulla CPU impiega ore): com'è andata è in GRAFICA.md, punto 4.
+  Restano da vedere sul computer dello studente quanto ci mettono e se WebGPU li fa girare, e da decidere
+  quali Qwen3.5 passano tra i consigliati;
 - dove WebGPU non c'è (telefono, iPad): lo stesso giro con il modello sul server (Cloudflare Workers
   AI) o con la propria chiave;
 - il «Perché?» su ogni passaggio, i passaggi che il motore sa scrivere da solo (derivate, Ruffini,

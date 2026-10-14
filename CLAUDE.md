@@ -52,10 +52,13 @@ prossimi passi sono in «In programma» nella ROADMAP.
   nome (`formule`) rifà solo quella pagina.
 - `node scripts/spiegami-qwen.mjs`: «Spiegami» con Qwen3 vero sulla build in `dist/` (le prove di
   sempre usano un modello finto). Serve la rete verso Hugging Face (`huggingface.co` e i server dei
-  file, `*.hf.co`); senza scheda grafica Chromium usa WebGPU sulla CPU (SwiftShader): va bene per
-  vedere se passaggi e strumenti funzionano, non per la velocità. `MODELLO=Qwen3-1.7B` per un altro
-  modello (un nome dell'elenco di `src/ai/localModels.ts`, anche `Qwen3.5-2B` o `Llama-3.2-1B-Instruct`);
-  scrive le domande, le risposte del modello e i passaggi con i segni di Glifo.
+  file, `*.hf.co`). `MODELLO=Qwen3-1.7B` per un altro modello (un nome dell'elenco di
+  `src/ai/localModels.ts`, anche `Qwen3.5-2B` o `Llama-3.2-1B-Instruct`); scrive le domande, le risposte
+  del modello e i passaggi con i segni di Glifo. Nelle sessioni (senza scheda grafica) WebGPU sulla CPU
+  impiega ore per una spiegazione: lì si usa `LLAMA=http://127.0.0.1:8080`, con le risposte da un server
+  llama.cpp con lo stesso modello in GGUF e Glifo vero per tutto il resto (comando nell'intestazione dello
+  script). llama.cpp (compilato dal pacchetto `llama-cpp-python` di PyPI) è codice scaricato da fuori:
+  prima chiedi allo studente (il 14 ottobre 2026 ha detto sì).
 - `node scripts/relocation-test.mjs`: prova il trasloco su glifo.page con i due indirizzi veri
   (vecchio sito → nuovo): fa da sé una build con le date del trasloco accese e serve `CHROMIUM_PATH`;
   con `FOTO=cartella` salva le foto della fascia, della pagina finale e del messaggio sul sito nuovo.
@@ -151,9 +154,11 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
   grafica: le idee sono al passo 5 di ROADMAP.md.
 - Dire quale modello di «Spiegami» tenere all'inizio (0.6B, 1.7B, 4B o, dal 13 ottobre 2026, 8B, nelle
   impostazioni) e quanto ci mette a rispondere: l'8 ottobre 2026 ha usato il 4B e ha detto «ora funziona
-  tutto», e «Spiegami» con il pannello ✨ è andato sul sito vero. Se prova gli altri modelli dell'elenco
-  (GRAFICA.md, punto 4), dire come vanno: i Qwen3.5, se funzionano, passano tra i consigliati. Le prove nuove si fanno ancora sul sito di prova
-  https://glifo-prova.pages.dev (Cloudflare Pages, dal ramo `prova`; lì l'account è spento).
+  tutto», e «Spiegami» con il pannello ✨ è andato sul sito vero. Provare sul sito di prova Qwen3.5 4B
+  accanto al Qwen3 4B e dire quanto ci mettono: nelle prove del 14 ottobre 2026 (GRAFICA.md, punto 4) il
+  Qwen3.5 4B è stato il migliore, e poi si decide quali Qwen3.5 passano tra i consigliati. Le prove nuove
+  si fanno ancora sul sito di prova https://glifo-prova.pages.dev (Cloudflare Pages, dal ramo `prova`; lì
+  l'account è spento).
 - Leggere ogni tanto i commenti di chi prova Glifo (online dall'8 ottobre 2026; si leggono nella pagina
   «Domande frequenti e commenti», glifo.page/faq, a cui porta il link nella finestra del fumetto in fondo
   alla barra laterale): dashboard di Supabase → progetto `glifo` → Table Editor → `feedback`, dove ci sono
