@@ -247,43 +247,59 @@ propria chiave non costa niente a Glifo.
 prompt, te lo dico e tu lo scrivi».
 
 **Com'è oggi.** In Glifo non c'è niente per la voce: né microfono, né registrazione, né riconoscimento.
-La dettatura del sistema (il microfono della tastiera dell'iPad e del telefono, Win+H su Windows, la
-dettatura del Mac) scrive in qualsiasi campo di testo, quindi anche nell'editor di Glifo (da provare), ma
-solo parole: «x al quadrato», non $x^2$.
+C'è già la dettatura del sistema, che scrive in qualsiasi campo di testo: il microfono della tastiera
+dell'iPad (l'italiano lo riconosce sul dispositivo), la dettatura del Mac (sul dispositivo con i chip
+Apple) e Win+H su Windows (l'italiano c'è, ma la voce va ai server di Microsoft). Nell'editor di Glifo va
+provata: sull'iPad, nei campi come quello di CodeMirror, c'era un difetto noto (dopo «nuova riga» il testo
+dettato non compariva finché non si toccava l'editor). E scrive solo parole: «x al quadrato», non $x^2$.
 
-**Cosa se ne sa.**
+**Cosa se ne sa** (ricerca del 14 ottobre 2026, fonti in fondo).
 
-- **Il riconoscimento del browser** (la Web Speech API) è gratis e non scarica niente, ma di solito la voce
-  va a un server: in Chrome a Google, in Safari ad Apple; Firefox non ce l'ha. Serve la rete.
-- **Un modello nel browser**, senza server: Whisper (aperto, di OpenAI) gira con transformers.js e WebGPU,
-  come i modelli di «Spiegami». Capisce bene l'italiano nelle versioni più grandi, che pesano da qualche
-  centinaio di MB a più di un GB e vanno bene su un computer con una buona scheda grafica.
-- **Un servizio** (con la propria chiave o con l'AI di Glifo) è il più preciso e si paga a minuti.
+- **Il riconoscimento del browser** (la Web Speech API), gratis e senza niente da scaricare:
+  - Chrome: di base la voce va ai server di Google e senza rete non funziona; dal Chrome 139 (agosto 2025)
+    può riconoscere sul dispositivo, anche l'italiano: il pacchetto della lingua si scarica una volta, poi
+    va anche senza rete;
+  - Edge: la voce va ai server di Microsoft;
+  - Safari, sul Mac e sull'iPad: usa il riconoscitore di Apple, sul dispositivo quando può (l'italiano sì),
+    se no sui server di Apple. Ma nelle app installate dalla schermata Home, come Glifo installato, secondo
+    più fonti non funziona: va provato;
+  - Firefox: non c'è (solo in prova, sul computer).
+- **Un modello nel browser**, senza server: Whisper (aperto, di OpenAI; in italiano il più grande sbaglia
+  circa 3 parole su 100, il piccolo circa 10; si scaricano da 250 a 750 MB) e Parakeet v3 di NVIDIA
+  (italiano, circa 3 parole su 100, da 0,7 a 1,2 GB, molto veloce con una scheda grafica). Sono fatti per i
+  file più che per la dettatura dal vivo (lavorano a pezzi di 30 secondi). Sull'iPad sono pesanti: solo i
+  più piccoli, e transformers.js usa la scheda grafica di Safari solo da settembre 2026.
+- **Le formule dette**: nessuna app le trasforma in LaTeX. La ricerca più recente (Speech-to-LaTeX, in
+  inglese e russo) sbaglia ancora più di un carattere su quattro; per l'italiano non c'è niente. Chi detta
+  deve sempre vedere la formula prima di inserirla.
 
 **Proposta di Claude.**
 
-- Un pulsante con il microfono nella barra: si parla e il testo compare dove c'è il cursore.
-- **Le formule dette a parole**: «integrale da zero a uno di x al quadrato in dx» diventa
-  `$\int_0^1 x^2 \, dx$`. È il pezzo che manca alla dettatura del sistema, che scrive solo parole, e che
-  serve a chi prende appunti di matematica. Lo fa un modello che traduce la frase in LaTeX (anche quello
-  nel browser: è un lavoro corto), aiutato dai nomi italiani dei simboli che Glifo ha già nella ricerca
-  («alfa», «integrale», «sommatoria»); Glifo mostra la formula disegnata prima di inserirla.
-- Chi riconosce la voce: per cominciare quello del browser, dove c'è (gratis, niente da scaricare, ma la
-  voce va a Google o ad Apple e serve la rete); per chi vuole che la voce resti sul dispositivo, o lavora
-  senza rete, un modello nel browser che si scarica una volta, come quelli di «Spiegami».
+- **Il testo**: la dettatura del sistema, che c'è già, non costa niente e sull'iPad e sul Mac resta sul
+  dispositivo. Prima si prova nell'editor di Glifo e, se c'è un difetto, si corregge.
+- **Le formule a parole**, il pezzo che manca ovunque: una casella «Formula a parole» dove si detta (con
+  il microfono della tastiera) o si scrive «integrale da zero a uno di x al quadrato in dx», e Glifo la
+  traduce in `$\int_0^1 x^2 \, dx$`, mostrandola disegnata prima di inserirla. Serve anche a chi non sa il
+  LaTeX e la scrive a parole. È parente di «Chiedi all'AI», dove si descrive a parole un simbolo: qui è una
+  formula intera. La traduzione la fa un modello (prima si prova quello nel browser: la frase è corta),
+  aiutato dai nomi italiani dei simboli che Glifo ha già nella ricerca («alfa», «integrale»,
+  «sommatoria»).
+- **Un pulsante con il microfono di Glifo** (il riconoscimento del browser, sul dispositivo dove si può)
+  solo se la dettatura del sistema non basta: sull'iPad, nell'app installata, potrebbe non funzionare.
 
 **Da decidere.**
 
-- Per il testo basta la dettatura del sistema, e Glifo aggiunge solo le formule dette a parole? Oppure un
-  pulsante di Glifo che fa tutto?
-- Va bene che la voce vada ai server di Google o di Apple, o deve restare sul dispositivo?
+- Va bene partire dalla dettatura del sistema per il testo e fare in Glifo le formule a parole, dette o
+  scritte?
+- Serve anche il pulsante con il microfono di Glifo, o basta quello della tastiera?
 
-**Con gli abbonamenti.** Dettare il testo non costa niente a Glifo (lo fa il browser, o un modello nel
-browser): può stare nel piano gratuito, perché è scrivere. Le formule dette a parole sono gratis con il
-modello nel browser; con l'AI di frontiera, nei piani a pagamento o con la propria chiave.
+**Con gli abbonamenti.** Dettare il testo non costa niente a Glifo (lo fa il sistema, o il browser): può
+stare nel piano gratuito, perché è scrivere. Le formule a parole sono gratis con il modello nel browser;
+con l'AI di frontiera, nei piani a pagamento o con la propria chiave.
 
-**Nel codice.** Non c'è niente da cui partire. L'editor è CodeMirror (`src/editor/`): il testo dettato si
-inserisce al cursore come una battitura.
+**Nel codice.** Per la voce non c'è niente da cui partire. L'editor è CodeMirror (`src/editor/`): il
+testo dettato si inserisce al cursore come una battitura. La casella delle formule a parole può stare
+accanto a «Chiedi all'AI», nel pannello dei simboli (`src/ui/sidePanel.ts`).
 
 **Risposte e decisioni.** —
 
@@ -303,35 +319,49 @@ inserisce al cursore come una battitura.
   (IndexedDB), dove potrebbe andare anche l'audio; Glifo però non chiede al browser di tenerlo
   (`navigator.storage.persist`), quindi con il disco pieno il browser può svuotarlo.
 
-**Cosa se ne sa.**
+**Cosa se ne sa** (ricerca del 14 ottobre 2026, fonti in fondo).
 
-- **Registrare** nel browser si può (MediaRecorder): due ore di voce compressa sono qualche decina di MB.
-  Sull'iPad, però, Safari smette di ascoltare quando lo schermo si spegne o si passa a un'altra app: per
-  due ore di lezione è più sicuro registrare con l'app del telefono e poi caricare il file in Glifo.
-- **Trascrivere nel browser** (Whisper) è gratis e privato, ma per due ore serve un computer con una buona
-  scheda grafica, e anche lì ci vuole tempo.
-- **Con un servizio** costa da pochi centesimi a circa 40 centesimi per ora di audio, secondo il servizio
-  (ABBONAMENTI.md: da 15 a 36 centesimi, più l'AI che ne fa appunti).
+- **Registrare** nel browser si può, in Chrome e in Safari (MediaRecorder): due ore di voce compressa sono
+  da 20 a 60 MB. Lo spazio c'è (Chrome e Safari lasciano a un sito fino al 60% del disco), ma Safari
+  cancella i dati dei siti non aperti per 7 giorni in cui lo si usa (con Glifo sulla schermata Home no: lo
+  dice già una domanda frequente). Sull'iPad Safari, e anche Glifo installato, smette di ascoltare quando lo
+  schermo si spegne o si passa a un'altra app: lo schermo si può tenere acceso (Wake Lock, nelle app
+  installate da iPadOS 18.4), ma per due ore è più sicuro registrare con un'app del telefono e caricare il
+  file in Glifo.
+- **Trascrivere nel browser** è gratis e privato, ma serve una buona scheda grafica: due ore in circa 12
+  minuti con Whisper turbo (dichiarato, su un computer non detto; con una grafica integrata si stimano da
+  20 a 60 minuti) e in circa 6 con Parakeet v3 su un PC potente; solo con il processore, ore. Sull'iPad no.
+- **Con un servizio**, per ora di audio: Groq (Whisper) circa 4 centesimi di dollaro, con un piano gratuito
+  che basta per una lezione (8 ore al giorno, file fino a 25 MB, quindi a pezzi); Mistral e OpenAI mini 18;
+  AssemblyAI ed ElevenLabs circa 21-22; OpenAI fino a 36; Gemini, con i modelli generali, da 5 a 12 (una
+  stima). In ABBONAMENTI.md si contavano da 15 a 36 centesimi, più l'AI che ne fa appunti.
 - **Dalla trascrizione agli appunti** serve un modello che legga testi lunghi: due ore di lezione sono
-  decine di migliaia di parole, troppe per i modelli nel browser, che leggono qualche pagina alla volta.
+  decine di migliaia di parole, troppe per i modelli nel browser, che leggono qualche pagina alla volta. Le
+  formule dette restano il pezzo difficile (punto 4): gli appunti vanno riletti.
+- **Le app per studenti**: Notability e GoodNotes legano l'audio a quello che si scrive (si tocca un punto
+  degli appunti e riparte la lezione da quel momento) e trascrivono; nessuna trasforma in LaTeX la
+  matematica detta.
 
 **Proposta di Claude.** Tre pezzi, ognuno utile da solo:
 
-1. **Registrare** dentro Glifo, sul computer, oppure **caricare un file audio** registrato con il
-   telefono (più sicuro per due ore, e l'unico modo sull'iPad). L'audio sta nello spazio del browser per i
-   dati grandi, con Glifo che chiede al browser di tenerlo.
+1. **Registrare** dentro Glifo, sul computer (e sull'iPad con lo schermo acceso), oppure **caricare un
+   file audio** registrato con il telefono, più sicuro per due ore. L'audio si salva a pezzi nello spazio
+   del browser per i dati grandi, con Glifo che chiede al browser di tenerlo.
 2. **L'audio legato agli appunti**, come in Notability: mentre si registra e si scrive, Glifo ricorda a
    che minuto è stata scritta ogni riga; dopo, toccando una riga, si riascolta quel momento della lezione.
    Non serve l'AI: è gratis e funziona senza rete.
 3. **Trascrivere e farne appunti**: la voce diventa testo (con lo stesso riconoscimento del punto 4), poi
    l'AI ne fa appunti con titoli, elenchi e formule in LaTeX, e Glifo controlla i conti; la trascrizione
-   resta accanto, per ricontrollare. Per due ore servono un servizio (o un computer potente) per la voce
-   e un modello di frontiera per gli appunti.
+   resta accanto, per ricontrollare. Per la voce: nel browser su un computer con una buona scheda grafica
+   (gratis) o con un servizio (oggi con la propria chiave: quella gratuita di Groq basta per una lezione);
+   per gli appunti, un modello di frontiera.
 
-**Le regole.** Registrare una lezione per studiare è in genere permesso; per diffonderla (anche
-condividendo una nota con l'audio o con la trascrizione) serve il consenso di chi parla, cioè del
-professore e di chi interviene, e alcune università hanno regole loro. Glifo lo ricorda quando si comincia
-a registrare, e l'audio non va mai nelle note condivise.
+**Le regole.** Per il Garante della privacy (le sue indicazioni sono per la scuola) registrare una lezione
+per lo studio personale è lecito, se l'istituto non lo vieta; per ogni altro uso, e per diffonderla,
+bisogna informare chi parla e avere il suo consenso. Per l'università non c'è un provvedimento apposta; in
+più la lezione è un'opera del docente (diritto d'autore): registrarla per studiare è in genere accettato,
+ma il docente o il regolamento dell'ateneo possono vietarlo, e pubblicarla no. Glifo lo ricorda quando si
+comincia a registrare, e l'audio non va mai nelle note condivise.
 
 **Da decidere.**
 
@@ -383,4 +413,20 @@ un modello nel browser, sul ramo `prova`.
   [METATR](https://huggingface.co/papers/2605.26712),
   [la matematica scritta a mano con GPT-4.1-mini e Mathpix](https://arxiv.org/abs/2603.00895),
   [transformers.js su iPad e iPhone](https://github.com/huggingface/transformers.js/issues/1242).
+- La voce: [la Web Speech API](https://github.com/mdn/content/blob/main/files/en-us/web/api/web_speech_api/using_the_web_speech_api/index.md),
+  [il riconoscimento sul dispositivo di Chrome](https://github.com/WebAudio/web-speech-api/blob/main/explainers/on-device-speech-recognition.md),
+  [Safari nelle app installate](https://github.com/Fyrd/caniuse/blob/main/features-json/speech-recognition.json),
+  [la dettatura dell'iPad nei campi come CodeMirror](https://developer.apple.com/forums/thread/718669),
+  [Whisper](https://github.com/openai/whisper), [Parakeet v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3)
+  e [parakeet.js](https://github.com/ysdede/parakeet.js),
+  [transformers.js con la scheda grafica di Safari](https://github.com/huggingface/transformers.js/releases/tag/4.3.0),
+  [Speech-to-LaTeX](https://huggingface.co/papers/2508.03542).
+- Le lezioni: [MediaRecorder](https://github.com/mdn/browser-compat-data/blob/main/api/MediaRecorder.json),
+  [lo spazio dei browser](https://github.com/mdn/content/blob/main/files/en-us/web/api/storage_api/storage_quotas_and_eviction_criteria/index.md),
+  [il microfono di un'app installata sull'iPad](https://bugs.webkit.org/show_bug.cgi?id=239602),
+  [Parakeet nel browser, con le misure](https://github.com/thiswillbeyourgithub/parakeet_web),
+  [i limiti gratuiti di Groq](https://console.groq.com/docs/rate-limits),
+  [Voxtral Transcribe 2](https://mistral.ai/news/voxtral-transcribe-2/),
+  [il Garante: scuola e privacy](https://www.garanteprivacy.it/home/faq/scuola-e-privacy),
+  [diritto d'autore e lezioni](https://www.unipa.it/Diritto-dautore-e-Universit/).
 - La chiave, il server locale e la scelta del modello: in ABBONAMENTI.md, «Fonti».
