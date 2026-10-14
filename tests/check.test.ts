@@ -174,6 +174,8 @@ describe('il controllo delle uguaglianze scritte (✓/✗)', () => {
     expect(check(r`\frac{d}{dx}(x^2+1) \cdot (x-1) = 2x(x-1)`)).toBe('✓')
     expect(check(r`\frac{d}{dx}(x^2+1) \cdot (x-1) = 3x^2 - 2x + 1`)).toBe('✗ 2x(x − 1)')
     expect(check(r`(x-1) \cdot \frac{d}{dx}(x^2+1) = 2x(x-1)`)).toBe('✓')
+    // L'esempio dello studente: si deriva quello che sta nella parentesi, poi si moltiplica.
+    expect(check(r`\frac{d}{dx}(x+2x) \cdot x = 3x`)).toBe('✓')
     // Anche accostata, con \left( e le quadre, con \mathrm{d}, con un'altra variabile, con ∂ e \partial_x.
     expect(check(r`\frac{d}{dx}(x^2+1)(x-1) = 2x(x-1)`)).toBe('✓')
     expect(check(r`\frac{\mathrm{d}}{dx}\left(x^2+1\right) \cdot (x-1) = 2x(x-1)`)).toBe('✓')
