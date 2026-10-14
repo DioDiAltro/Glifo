@@ -78,41 +78,19 @@ tutto suo, poi, chi ospita il sito si può cambiare senza che nessuno se ne acco
 5. il vecchio sito resta aperto almeno fino a fine febbraio 2027, per chi riapre gli appunti solo
    per gli esami.
 
-### La grafica: account, impostazioni, commenti, AI e lingua (chiesto il 10 ottobre 2026, se ne parla)
+### L'AI: a cosa serve, e le foto, la lavagna e la voce nella nota (14 ottobre 2026, se ne parla)
 
-Lo studente, «ora la grafica»: otto cose viste a colpo d'occhio, da discutere una alla volta prima di
-toccare il codice, ricordando che Glifo avrà gli abbonamenti (vedi ABBONAMENTI.md, «Com'è andata la
-discussione», punto 18): 1) «Cambia account»; 2) la pagina dei commenti, tipo FAQ; 3) le impostazioni
-divise in sezioni; 4) più modelli per «Spiegami»; 5) a cosa serve la chiave dell'AI; 6) Glifo anche in
-inglese; 7) via il registro dei tocchi; 8) il pulsante ✨ con il contorno.
+Lo studente, finita la grafica (le otto richieste del 10 ottobre 2026: sette fatte e sul sito; la quinta,
+«A cosa serve la chiave dell'AI», tolta perché «ricade negli abbonamenti»), porta cose nuove da capire
+prima di toccare il codice: 1) a cosa serve l'AI dei modelli di frontiera («a cosa mi serve questo tipo
+di AI?»); 2) la formula scritta sulla lavagna, presa con il laccio, che diventa LaTeX nella nota; 3) una
+foto trascritta nella nota; 4) dettare: la voce che diventa testo nella nota; 5) registrare le lezioni e
+trascriverle.
 
-Com'è oggi ogni punto, le proposte di Claude, le domande e le decisioni sono in
-[GRAFICA.md](GRAFICA.md), un file solo per questo lavoro: quando i punti sono fatti si cancella, e qui
-resta solo quello che non è stato fatto. Si fanno sul ramo `prova`, con le foto; fino al trasloco del
-18 ottobre il sito vero cambia il meno possibile. Il punto 1, «Cambia account», è sul sito dal 12
-ottobre 2026: lo studente ha detto «va bene» per provarlo, perché sul sito di prova l'account è spento,
-e poi, lo stesso giorno, «il punto 1 va bene». Il punto 6 è fatto e sul sito dal 12 ottobre 2026, con il
-punto 8: Glifo tutto anche in inglese (le schermate, i conti, i simboli, le tabelle, i grafici, gli
-schemi, l'AI, le parole delle note, i numeri con il punto, l'informativa, il tutorial rifatto con 11
-pagine e i video nelle due lingue; la lingua va con l'account, come il tema; lo studente: «non puoi
-tradurre tutto ora e poi mettiamo tutto online?») e il pulsante ✨ con il contorno sfumato (variante B,
-scelta dallo studente). Lo studente, il 13 ottobre 2026: «quello che hai fatto fin ora va bene». Il punto 3,
-le impostazioni divise in sezioni (Generale, Scrittura, AI, Account, Dati, Informazioni; l'account è la
-sezione «Account», aperta dal pulsante dell'account; in «Dati» lo spazio occupato, con i modelli di
-«Spiegami»), è sul sito dal 13 ottobre 2026: lo studente, viste le foto, «va bene, portalo sul sito
-vero». Il punto 7, via il registro dei tocchi (dalle impostazioni, dalla lavagna e dal codice), è sul
-sito dal 13 ottobre 2026: lo studente, viste le foto, «va bene, portalo sul sito vero». Il punto 2, la
-pagina «Domande frequenti e commenti» (faq.html, glifo.page/faq: 14 domande frequenti per argomento, poi i
-commenti; il fumetto apre subito la finestra per scrivere, con il link alla pagina), è sul sito dal 13
-ottobre 2026: lo studente l'ha voluta prima sul ramo `prova` («fai faq, però dobbiamo prima capire perché
-forse non mi convince molto»), poi, provata, «va bene, portalo sul sito vero». Il punto 4, più modelli per
-«Spiegami», è fatto sul ramo `prova` il 13 ottobre 2026: l'elenco ragionato (i Qwen3 consigliati, con l'8B;
-gli altri modelli, non provati con Glifo; tutti gli altri nelle avanzate), con la memoria, il peso e la
-licenza di ognuno, i modelli che non sanno chiedere i conti che li ricevono già fatti e i modelli nel browser
-con «Togli» anche nella sezione «AI». Il 14 ottobre 2026 i modelli veri sono stati provati con Glifo (con
-llama.cpp nella sessione) e, come ha chiesto lo studente («tieniamoli tutti ma dividiamoli»), divisi in
-consigliati, sconsigliati e non certificati. Lo studente: «va bene»; sul sito dal 14 ottobre 2026. Resta da
-sapere quanto ci mettono i consigliati nuovi sul suo computer.
+Com'è oggi ogni punto, cosa se ne sa, le proposte di Claude, le domande e le decisioni sono in
+[AI.md](AI.md), un file solo per questo lavoro: quando i punti sono fatti si cancella, e qui resta solo
+quello che non è stato fatto. La propria chiave, il server locale (Ollama) e quale modello con l'AI di
+Glifo sono in [ABBONAMENTI.md](ABBONAMENTI.md), «La chiave, il server locale e la scelta del modello».
 
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
@@ -279,6 +257,14 @@ Perché non gli altri:
        Glifo tiene tutte e due le versioni). In più la cronologia (chi ha cambiato cosa) e le
        proposte di modifica da approvare.
 
+**Idee per dopo** (proposte da Claude con «Cambia account», 12 ottobre 2026; lo studente non le ha
+chieste):
+
+- l'elenco «Account su questo dispositivo», come in Gmail, per rientrare più in fretta: con Google basta
+  sceglierlo, con l'email serve di nuovo il codice (il browser tiene un accesso alla volta);
+- la foto e il nome di Google nel pulsante dell'account, al posto della lettera: Glifo li riceve già; la
+  foto arriva dai server di Google, e va scritto nell'informativa.
+
 **Da tenere a mente:**
 
 - Il browser dà circa 5 MB di spazio (localStorage): con tanti appunti, e più avanti con le
@@ -329,7 +315,9 @@ Idee per dopo:
 - le risposte di chi prova Glifo sotto un commento, come in un forum vero (servirebbe controllare
   quello che si scrive);
 - allegare, se chi scrive vuole, una foto della pagina;
-- rispondere da Glifo a chi ha lasciato l'email.
+- rispondere da Glifo a chi ha lasciato l'email;
+- un limite per persona al posto di quello unico di 60 commenti all'ora (oggi chi ne manda 60 blocca gli
+  altri per un'ora): serve una funzione sul server. Per ora va bene così (dalla grafica, punto 2).
 
 ### La lavagna: idee in più
 
@@ -343,8 +331,9 @@ ottobre 2026 per la prova sull'iPad, è stato tolto il 13 ottobre 2026: serviva 
 la lavagna (GRAFICA.md, punto 7). La discussione è in [ABBONAMENTI.md](ABBONAMENTI.md), «La
 lavagna». Se servirà:
 
-- con l'AI e nei piani a pagamento, le formule scritte a mano convertite in LaTeX e aggiunte alla
-  nota se si vuole («Aggiungi alla nota»): aspetta la discussione sulla chiave API;
+- con l'AI e nei piani a pagamento (deciso il 5 ottobre 2026), le formule scritte a mano prese con il
+  laccio e convertite in LaTeX, da aggiungere alla nota se si vuole («Aggiungi alla nota»): se ne parla in
+  [AI.md](AI.md), punto 2 (14 ottobre 2026);
 - **una lavagna completa di tutto** (lo studente, 5 ottobre 2026: «deve essere una lavagna completa
   di tutto», come Microsoft Whiteboard). I primi cinque punti sono fatti e pubblicati (5 ottobre
   2026, «sì a tutto, comincia dagli strumenti della lavagna», poi «sì, parti con le linee e le
@@ -455,6 +444,8 @@ attiva solo quando lo dice lo studente, è in [COSTI.md](COSTI.md).
   titoli, elenchi e formule in LaTeX.
 - Due strade: trascrizione nel browser con un modello Whisper (gratis e privata, ma pesante
   per i telefoni) oppure un servizio in cloud, più veloce e preciso, a pagamento.
+- Se ne parla in [AI.md](AI.md), punto 5 (14 ottobre 2026), insieme alla dettatura (punto 4): la voce
+  che diventa testo nella nota mentre si parla.
 
 ### Spiegami: le spiegazioni dei conti (in prova)
 
@@ -574,7 +565,8 @@ Da fare:
 - provarlo davvero su un computer con WebGPU (Chrome o Edge), su esercizi veri, e scegliere il modello
   di partenza. Il 14 ottobre 2026 nove modelli veri (i Qwen3, i Qwen3.5, Llama 3.2 1B) sono stati provati
   con Glifo vero nella sessione, con le risposte da llama.cpp sulla CPU (`LLAMA` in
-  `scripts/spiegami-qwen.mjs`: WebGPU sulla CPU impiega ore): com'è andata è in GRAFICA.md, punto 4.
+  `scripts/spiegami-qwen.mjs`: WebGPU sulla CPU impiega ore): com'è andata è qui sotto, in «Le prove dei
+  modelli veri».
   Lo stesso giorno, come ha chiesto lo studente, i modelli sono divisi in consigliati, sconsigliati e non
   certificati. Resta da vedere sul computer dello studente quanto ci mettono e se WebGPU li fa girare;
 - dove WebGPU non c'è (telefono, iPad): lo stesso giro con il modello sul server (Cloudflare Workers
@@ -582,6 +574,36 @@ Da fare:
 - il «Perché?» su ogni passaggio, i passaggi che il motore sa scrivere da solo (derivate, Ruffini,
   Gauss) e il primo argomento da curare (la proposta è gli integrali);
 - poi, se va bene, il tutor («Aiuto con gli esercizi»), con lo stesso controllo dei passaggi.
+
+**Le prove dei modelli veri (14 ottobre 2026; prima erano in GRAFICA.md, punto 4).** Lo studente: «sì, usa
+llama.cpp». Glifo vero nel browser (domande, conti del motore, controlli e correzioni), con le risposte del
+modello da un server llama.cpp sulla CPU della sessione: lo stesso modello, compresso in modo simile (GGUF
+Q4_K_M), con gli stessi parametri del worker (`LLAMA` in `scripts/spiegami-qwen.mjs`). Due formule:
+l'integrale della sfera (Glifo dà la primitiva) e la derivata di (x²+1)/(x−1) con la regola del quoziente
+(senza aiuti). Quante spiegazioni sono arrivate al risultato di Glifo (30 contate, più 3 che Glifo leggeva
+male):
+
+| Modello | Sfera | Derivata | Come scrive |
+|---|---|---|---|
+| Qwen3 0.6B | 0 su 1 | 0 su 1 | copia la riga d'esempio del messaggio di sistema |
+| Qwen3.5 0.8B | 0 su 2 | 0 su 1 | arriva ai 900 token senza finire |
+| Llama 3.2 1B | 0 su 1 | 0 su 1 | frasi senza senso, mai nel formato dei passaggi |
+| Qwen3 1.7B | 2 su 2 | 1 su 1 | passaggi brevi, spesso senza «=» |
+| Qwen3.5 2B | 2 su 2 | 3 su 3 | scrive il doppio degli altri (più lento), con titoli e catene «= …» |
+| Qwen3 4B | 1 su 2 | 2 su 2 | l'unico che chiede spesso i conti al motore; un errore di segno rimasto dopo 2 correzioni |
+| Qwen3.5 4B | 3 su 3 | 3 su 3 | mai una correzione |
+| Qwen3 8B | 1 su 1 | 2 su 2 | sulla sfera usa anche la simmetria; 6 passaggi controllati su 6 |
+| Qwen3.5 9B | 1 su 1 | 1 su 1 | un ✗ falso del motore, poi corretto (vedi «Un passaggio giusto segnato sbagliato», qui sopra) |
+
+- Le chiamate al motore sono rare: Qwen3 4B in 3 prove su 4, Qwen3.5 2B una volta (con gli argomenti non in
+  LaTeX, che Glifo non legge), gli altri mai. Nessun Qwen3.5 ha usato il suo formato (`<function=…>`):
+  quando chiamano, scrivono il JSON del messaggio di sistema.
+- Glifo leggeva male alcuni passaggi, ed è stato corretto con le prove: toglieva in fondo tutte le formule
+  senza «=» (doveva togliere solo il risultato ripetuto), prendeva per passaggi i titoli «### Passo 1:», e
+  ora una formula che comincia con «=» continua quella prima e si controlla. La stessa spiegazione di Qwen3
+  8B sulla derivata aveva 1 passaggio controllato su 4, ora 4 su 4.
+- Non si è visto quanto ci mettono nel browser e se WebGPU li fa girare su un computer vero: llama.cpp non
+  è WebLLM. Si vede sul sito di prova, sul computer dello studente.
 
 **Come si riprende (7 ottobre 2026, sera).** Il codice è tutto sul ramo `prova`, già su GitHub. Lo
 studente ha scelto di provarlo su un **sito di prova a parte su Cloudflare Pages** (gratis, l'account

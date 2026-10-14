@@ -3,6 +3,11 @@
 La mappa dettagliata del codice, tolta da CLAUDE.md per tenerlo corto: si leggono solo le parti
 che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «Attenzione a».
 
+«GRAFICA.md punto N», qui e nei commenti del codice, è la discussione sulla grafica del 10 ottobre 2026:
+finita il 14 ottobre 2026, il file non c'è più e si legge nella storia del repository
+(`git show 650620b:GRAFICA.md`). Le prove dei modelli di «Spiegami» (il punto 4) sono in ROADMAP.md,
+«Spiegami».
+
 ## Dove sono le cose
 
 - `src/i18n.ts` (12 ottobre 2026, GRAFICA.md punto 6): le due lingue, italiano e inglese. `lang` si

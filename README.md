@@ -980,7 +980,7 @@ messaggi, che se ne va riaprendo il pannello.
 
 In **Impostazioni → AI**, nel riquadro «Spiegazioni (prova)», si sceglie il modello e il tono (come il
 professore o più semplice). I modelli sono divisi in tre gruppi, dalle prove con Glifo del 14 ottobre 2026
-(GRAFICA.md, punto 4):
+(ROADMAP.md, «Spiegami», «Le prove dei modelli veri»):
 
 - **consigliati**, provati con Glifo e arrivati al risultato: Qwen3 1.7B (quello di partenza), Qwen3.5 2B,
   Qwen3 4B, Qwen3.5 4B (più bravo), Qwen3 8B (il più bravo, per le schede grafiche potenti) e Qwen3.5 9B;

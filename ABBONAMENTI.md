@@ -109,17 +109,26 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
     vedi «In prova sul ramo `prova`» qui sotto, in «I modelli e le chiavi API». Niente di deciso sui
     piani: per ora è gratis, perché non costa niente a Glifo.
 18. **La grafica, pensando agli abbonamenti** (10 ottobre 2026). Lo studente chiede di sistemare
-    account, impostazioni, commenti, AI e lingua (ROADMAP.md, «La grafica») e di ricordare che Glifo
-    avrà gli abbonamenti. Claude propone dove andranno: nell'account il piano (è dell'account, non del
-    dispositivo: cambiando account cambia anche il piano); nelle impostazioni una sezione
-    «Abbonamento» con il piano, il rinnovo, le ricevute e il pulsante per disdire (il «pulsante di
-    recesso» obbligatorio dal 19 giugno 2026, che deve trovarsi subito); nell'AI la scelta di chi
+    account, impostazioni, commenti, AI e lingua (GRAFICA.md, finita il 14 ottobre 2026) e di ricordare
+    che Glifo avrà gli abbonamenti. Claude propone dove andranno: nell'account il piano (è
+    dell'account, non del dispositivo: cambiando account cambia anche il piano); nelle impostazioni una
+    sezione «Abbonamento» con il piano, il rinnovo, le ricevute e il pulsante per disdire (il «pulsante
+    di recesso» obbligatorio dal 19 giugno 2026, che deve trovarsi subito); nell'AI la scelta di chi
     risponde: il modello nel browser (gratis per tutti), la propria chiave e, con i piani a pagamento,
     l'AI di Glifo; accanto all'informativa e alla pagina dei commenti, più avanti, le pagine dei prezzi
     e dei termini di servizio, in italiano e in inglese se l'interfaccia sarà in due lingue. Da sapere:
     se le spiegazioni con la propria chiave arrivano adesso, restano gratis per sempre (quello che è
     gratis non si toglie più); per Claude va bene, perché a Glifo non costano niente e i piani a
     pagamento danno l'AI senza chiave, i modelli migliori e il tutor. Niente di deciso.
+19. **La chiave dell'AI e quale modello** (14 ottobre 2026). Chiusa la grafica, lo studente toglie il
+    punto 5 di GRAFICA.md («A cosa serve la chiave dell'AI»): «penso che ricada negli abbonamenti».
+    Pensa che, oltre al modello nel browser, possa restare «una diciamo chiave o forse meglio server
+    locale (tipo Ollama) se si ha un modello personale», e che i modelli di frontiera li dia Glifo con
+    l'abbonamento, fino a un tetto; il dubbio è come fare se uno vuole Claude, un altro ChatGPT e un
+    altro Gemini. Chiede anche a cosa serve davvero questa AI e porta idee nuove (la lavagna e le foto
+    trascritte nella nota, la dettatura, le lezioni registrate e trascritte): se ne parla in
+    [AI.md](AI.md). Il parere di Claude è in «La chiave, il server locale e la scelta del modello», qui
+    sotto. Niente di deciso.
 
 ## La proposta dello studente (4 ottobre 2026)
 
@@ -439,7 +448,7 @@ se si vuole, si aggiungono alla nota con un pulsante («Aggiungi alla nota»).
   cursore. Se finisce con `=`, Glifo la calcola come le altre. La fa l'AI, che legge l'immagine della
   formula (una frazione di centesimo a formula, e serve internet): i modelli che girano nel browser
   sono pesanti e sbagliano di più. Con quale chiave (quella di chi scrive o quella di Glifo) si decide
-  con la discussione sulla chiave API.
+  con la discussione sulla chiave API; dal 14 ottobre 2026 se ne parla in [AI.md](AI.md), punto 2.
 - La lavagna anche sugli altri dispositivi, con l'account.
 - Riconoscere un simbolo senza internet (come Detexify, già tra le idee della ROADMAP), il testo
   scritto a mano, il tutor che guarda la lavagna e dice dove si è sbagliato.
@@ -552,6 +561,92 @@ Workers AI. Com'è fatto (vedi README, «Spiegami», e ARCHITETTURA.md, `src/ai/
 - Da provare sul computer dello studente, su esercizi veri: dentro claude.ai il modello non si
   scarica, e nella sessione di Claude Hugging Face era bloccato, quindi è stato provato solo con un
   modello finto.
+
+### La chiave, il server locale e la scelta del modello (14 ottobre 2026)
+
+**Lo studente.** «per il punto 5 pensavo per ora di toglierlo, penso che ricada negli abbonamenti; ti
+spiego: potremmo fare che rimane una diciamo chiave o forse meglio server locale (tipo Ollama) se si ha un
+modello personale. però non so come fare con le altre chiavi, avevamo pensato che avremmo venduto noi le
+chiavi: le persone pagavano un abbonamento su glifo e noi gli davamo un tetto massimo dove poter
+utilizzare l'ai; il problema è che se uno vuole utilizzare un modello rispetto ad un altro? tipo uno
+Claude e uno chatGPT o Gemini?»
+
+**Com'è oggi** (dal punto 5 di GRAFICA.md, tolto il 14 ottobre 2026). In Impostazioni → AI, «Assistente AI
+(facoltativo)»: il servizio (Anthropic, Gemini, OpenRouter, Ollama o un altro compatibile con OpenAI, con
+il suo indirizzo: così anche OpenAI e LM Studio), la chiave e il modello, solo nel browser. Serve solo a
+«Chiedi all'AI», sotto la ricerca dei simboli; «Spiegami» e il pannello ✨ usano solo il modello nel
+browser. Il punto 5 proponeva la chiave anche per spiegare, con la scelta «Chi spiega» (il modello nel
+browser, il servizio della propria chiave e, con i piani a pagamento, l'AI di Glifo): resta un'idea, da
+riprendere con gli abbonamenti.
+
+**Cosa se ne sa** (ricerca del 14 ottobre 2026, fonti in fondo).
+
+- **Gli abbonamenti ai chatbot non danno una chiave**: con ChatGPT Plus e Claude Pro le API si pagano a
+  parte. Fanno eccezione Claude Max (da 100 $ al mese di crediti API, dal 7 ottobre 2026) e Google AI Pro
+  (10 $ al mese di crediti Google Cloud, con cui farsi una chiave di Gemini). Quasi nessuno studente ha una
+  chiave.
+- **Entrare in Glifo con il proprio account dell'AI** lo permette solo OpenAI, con «Sign in with ChatGPT»:
+  chi ha ChatGPT Go, Plus o Pro fa usare il suo piano a un'app, con un tetto alla settimana deciso da lui;
+  un'app ospitata e a pagamento come Glifo deve essere approvata da OpenAI. Anthropic lo vieta (niente
+  accesso con l'account Claude nelle app degli altri), Google non ha una strada ufficiale.
+- **Come fanno le app con più modelli e un tetto**: quasi tutte danno un credito al mese, consumato al
+  prezzo vero di ogni modello, quindi un modello che costa il doppio consuma il doppio: GitHub Copilot (dal
+  1° giugno 2026; Pro a 10 $ con 15 $ di crediti), Cursor (Pro a 20 $ con almeno 20 $ di uso), Raycast
+  (accanto a ogni modello un segno di quanto consuma; la scelta automatica consuma circa il 70% in meno di
+  quella con i modelli più grandi), Notion. Finito il credito si aspetta il mese dopo, si passa a un
+  modello più leggero o si compra una ricarica. Le «richieste premium» con un moltiplicatore per modello
+  stanno sparendo.
+- **Una chiave sola per tutti i modelli**: Cloudflare AI Gateway (Glifo è già su Cloudflare) prende
+  Claude, GPT e Gemini con un conto solo (i token al prezzo dei fornitori, più il 5% sui crediti) e, dal 5
+  giugno 2026, mette un tetto di spesa per ogni utente: superato, si ferma o passa a un modello più
+  economico. OpenRouter fa lo stesso con il 5,5%. Il piccolo server che tiene le chiavi sta gratis in una
+  funzione di Cloudflare Pages, sullo stesso glifo.page (100.000 richieste al giorno), o in una Edge
+  Function di Supabase (500.000 al mese, ma una risposta non può durare più di 150 secondi).
+- **Le regole dei fornitori**: Anthropic e OpenAI permettono di usare i loro modelli dentro un'app per i
+  propri utenti e non ci addestrano i modelli; la chiave di Glifo resta sul server (OpenAI vieta di
+  vendere o passare le chiavi: Glifo vende il servizio, non le chiavi). Gemini, per gli utenti nell'UE, si
+  può offrire solo con il piano a pagamento; se la regola valga anche per la chiave gratuita messa da chi
+  usa Glifo non è chiaro.
+- **Il server locale**: Ollama c'è già nelle impostazioni (dal 5 ottobre 2026), con
+  `OLLAMA_ORIGINS=https://glifo.page` sul computer; LM Studio con «Enable CORS». Funziona da Chrome, Edge e
+  Firefox, che chiedono il permesso di parlare con le app del dispositivo (Chrome dalla versione 142); da
+  Safari no, perché blocca `http://localhost` da una pagina https; da iPad no, perché Ollama lì non c'è.
+  Serve a chi ha un computer con una buona scheda grafica: le stesse persone che possono usare il modello
+  nel browser, ma con modelli più grandi e anche con quelli che leggono le immagini.
+
+**Il parere di Claude (niente di deciso).**
+
+- **Per Glifo una chiave e un server locale sono la stessa cosa**: un indirizzo che parla la «lingua» di
+  OpenAI, con o senza chiave. Si può limitare agli indirizzi del proprio computer, ma è un limite messo
+  apposta, e toglie poco: quasi nessuno ha una chiave.
+- **Consiglio di tenere la propria chiave**, nelle avanzate della sezione AI, insieme al server locale
+  («Il tuo servizio»), gratis in ogni piano, come deciso il 5 ottobre: a Glifo non costa niente e la
+  useranno in pochi (chi ha una chiave del lavoro o dell'università, Claude Max o Google AI Pro). Soprattutto,
+  finché Glifo non paga l'AI (COSTI.md), è l'unico modo gratis di provare con un modello bravo le cose
+  nuove di [AI.md](AI.md) (la lavagna, le foto, la voce): toglierla vorrebbe dire aspettare, per provarle,
+  di pagare l'AI di Glifo.
+- **Con l'AI di Glifo il modello si sceglie, con i crediti**: un credito al mese, consumato al prezzo vero
+  di ogni modello, come fanno ormai tutti. Due modi:
+  - **Automatico**, quello di partenza: per ogni lavoro Glifo usa il modello, provato con Glifo, che lo fa
+    bene e costa meno, anche perché non tutti fanno tutto (non tutti leggono le immagini o ascoltano
+    l'audio). Il credito dura di più;
+  - **Scegli tu**, per chi vuole Claude, GPT o Gemini: pochi modelli provati con Glifo, divisi come quelli
+    di «Spiegami», ognuno con accanto quanto consuma.
+
+  Finito il credito restano il modello nel browser e la propria chiave, o si compra un pacchetto (già tra
+  le «Altre idee» dei prezzi).
+- **Come si costruisce**, quando lo studente deciderà di pagare l'AI (COSTI.md): una funzione di
+  Cloudflare Pages su glifo.page (gratis) con Cloudflare AI Gateway: una chiave di Glifo per ogni
+  fornitore, il tetto per ogni persona (il piano lo dice l'account) e il conto in un posto solo, con un
+  tetto di spesa per tutto Glifo.
+- **«Sign in with ChatGPT»** farebbe usare in Glifo l'abbonamento ChatGPT che uno ha già, senza pagare
+  Glifo per l'AI: si può chiedere a OpenAI quando Glifo sarà aperto a tutti. Per Claude e Gemini non
+  esiste.
+
+**Da decidere.**
+
+- La propria chiave resta (nelle avanzate, con il server locale) o resta solo il server locale?
+- Con l'AI di Glifo: «Automatico» e basta, o anche la scelta del modello, con i crediti?
 
 ## Quanto costano a Glifo le cose a pagamento
 
@@ -677,6 +772,9 @@ ricerca, i piani per università e dipartimenti.
   fondo). In sospeso dal 5 ottobre 2026: si riprende più avanti.
 - **L'assaggio** nel gratuito: 7 giorni di Relativistico o poche domande al mese?
 - **I prezzi e i tetti**: da verificare con gli studenti e con l'uso vero.
+- **La propria chiave e la scelta del modello** (14 ottobre 2026): resta la propria chiave o solo il
+  server locale? Con l'AI di Glifo si sceglie il modello (Claude, GPT, Gemini)? Vedi «La chiave, il
+  server locale e la scelta del modello».
 
 ## Fonti (controllate il 4 ottobre 2026)
 
@@ -700,3 +798,23 @@ ricerca, i piani per università e dipartimenti.
   [TexTeller](https://github.com/OleehyO/TexTeller),
   [piano gratuito di Gemini](https://tinkerllm.com/blog/gemini-api-free-tier-limits-rate-quotas/),
   [modelli nel browser con WebGPU](https://pinggy.io/blog/run_llm_in_browser_webgpu/).
+- L'AI in abbonamento, le chiavi e il server locale (controllate il 14 ottobre 2026):
+  [i piani di GitHub Copilot](https://github.com/features/copilot/plans),
+  [Copilot a consumo](https://github.blog/changelog/2026/04/27/github-copilot-is-moving-to-usage-based-billing/),
+  [Cursor](https://cursor.com/docs/models-and-pricing),
+  [Raycast](https://www.raycast.com/blog/changing-how-raycast-ai-is-priced),
+  [Cloudflare AI Gateway con un conto solo](https://developers.cloudflare.com/ai-gateway/features/unified-billing/)
+  e [con i tetti per utente](https://developers.cloudflare.com/ai-gateway/features/spend-limits/),
+  [OpenRouter](https://openrouter.ai/pricing),
+  [i limiti dei Workers](https://developers.cloudflare.com/workers/platform/limits/),
+  [i limiti delle Edge Functions](https://supabase.com/docs/guides/functions/limits),
+  le condizioni di [Anthropic](https://www.anthropic.com/legal/commercial-terms),
+  [OpenAI](https://openai.com/policies/services-agreement/) e
+  [dell'API Gemini](https://ai.google.dev/gemini-api/terms),
+  [Sign in with ChatGPT](https://developers.openai.com/siwc),
+  [niente accesso con l'account Claude nelle app degli altri](https://code.claude.com/docs/en/legal-and-compliance),
+  [i crediti API con Claude Max](https://platform.claude.com/docs/en/about-claude/api-credits-for-subscribers),
+  [i crediti con Google AI Pro](https://aistudio.google.com/learn/use-google-ai-plan-credits-in-ai-studio),
+  [Ollama e `OLLAMA_ORIGINS`](https://docs.ollama.com/faq),
+  [il permesso di Chrome per le app del dispositivo](https://developer.chrome.com/blog/local-network-access),
+  [Safari e `localhost`](https://bugs.webkit.org/show_bug.cgi?id=171934).

@@ -29,10 +29,11 @@ prossimi passi sono in «In programma» nella ROADMAP.
 - I piani di abbonamento (idee non ancora decise: cosa far pagare, prezzi, cosa serve prima di
   incassare) sono in [ABBONAMENTI.md](ABBONAMENTI.md): quando se ne parla si riparte da lì e ci si
   scrive quello che si dice e si decide.
-- La discussione sulla grafica del 10 ottobre 2026 (otto punti: account, commenti, impostazioni,
-  modelli e chiave dell'AI, inglese, registro dei tocchi, pulsante ✨) è in [GRAFICA.md](GRAFICA.md):
-  si fa un punto alla volta e lì si scrivono risposte e decisioni. Il file è solo per questo lavoro:
-  quando i punti sono fatti si cancella, con questa riga.
+- La discussione sull'AI del 14 ottobre 2026 (cinque punti: a cosa serve l'AI dei modelli di frontiera,
+  la lavagna e le foto trascritte nella nota, la dettatura, le lezioni registrate e trascritte) è in
+  [AI.md](AI.md): si fa un punto alla volta e lì si scrivono risposte e decisioni; la propria chiave e
+  quale modello con l'AI di Glifo sono in ABBONAMENTI.md. Il file è solo per questo lavoro: quando i punti
+  sono fatti si cancella, con questa riga.
 
 ## Comandi
 
@@ -155,7 +156,7 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
 - Dire quale modello di «Spiegami» tenere all'inizio (oggi Qwen3 1.7B) e quanto ci mette a rispondere:
   l'8 ottobre 2026 ha usato il Qwen3 4B e ha detto «ora funziona tutto», e «Spiegami» con il pannello ✨ è
   andato sul sito vero. Dal 14 ottobre 2026 i modelli sono divisi in consigliati, sconsigliati e non
-  certificati, dalle prove con Glifo (GRAFICA.md, punto 4; sul sito dal 14 ottobre): provare il Qwen3.5 4B,
+  certificati, dalle prove con Glifo (ROADMAP.md, «Spiegami»; sul sito dal 14 ottobre): provare il Qwen3.5 4B,
   il migliore nelle prove, accanto al Qwen3 4B e dire quanto ci mettono. Le prove nuove si fanno ancora sul
   sito di prova https://glifo-prova.pages.dev (Cloudflare Pages, dal ramo `prova`; lì l'account è spento).
 - Dire se la derivata senza parentesi (`\frac{d}{dx} x^2 \sin x`) resta di tutto il prodotto: con la parentesi
