@@ -129,6 +129,12 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
     trascritte nella nota, la dettatura, le lezioni registrate e trascritte): se ne parla in
     [AI.md](AI.md). Il parere di Claude è in «La chiave, il server locale e la scelta del modello», qui
     sotto. Niente di deciso.
+20. **Se costa, è a pagamento?** (14 ottobre 2026). Lo studente chiede, prima di tutto, cosa andrebbe
+    nel gratuito e cosa nei piani a pagamento secondo Claude, e se ha capito bene che quello che costa va
+    a pagamento, perché le chiavi dei servizi a consumo le mette Glifo. Claude: sì, è il primo criterio,
+    con tre precisazioni (conta chi fa il lavoro; non tutto quello che non costa è gratis; due cose
+    costano poco e restano gratis), e divide così anche le cose nuove di [AI.md](AI.md): vedi «Se costa,
+    è a pagamento?», in «Come si decide cosa far pagare». Niente di deciso.
 
 ## La proposta dello studente (4 ottobre 2026)
 
@@ -190,6 +196,51 @@ Due accortezze per non far arrabbiare nessuno:
   qualcosa diventa a pagamento, va deciso prima di aprire l'account a tutti;
 - i tetti (domande all'AI, ore di trascrizione, spazio) **partono bassi e poi si alzano**: alzarli fa
   piacere, abbassarli no.
+
+### Se costa, è a pagamento? (14 ottobre 2026)
+
+**Lo studente.** «prima di tutto spiegami cosa andrebbe nei piani a pagamento e cosa nel gratuito
+secondo te; se qualcosa costa allora dovrebbe essere in quello a pagamento perché le chiavi con i servizi
+d'uso le mettiamo noi. se ho capito bene»
+
+**Il parere di Claude (niente di deciso).** Sì, è il primo criterio: le chiavi dei servizi che si pagano a
+consumo (i modelli di frontiera, la trascrizione) sono di Glifo, stanno sul suo server e ogni uso lo paga
+Glifo; quindi lo deve coprire l'abbonamento, con un credito o un tetto al mese. Glifo però non vende le
+chiavi: vende l'AI già dentro Glifo, e le sue chiavi non si danno a nessuno (vedi «I modelli e le chiavi
+API»). Tre precisazioni:
+
+1. **Conta chi fa il lavoro, non la funzione.** La stessa cosa può essere gratis o a pagamento:
+   - la fa il dispositivo di chi scrive (il modello nel browser, la dettatura del sistema, la trascrizione
+     nel browser): a Glifo non costa niente, quindi è gratis. «Spiegami» con il modello nel browser è sul
+     sito per tutti dall'8 ottobre 2026 e resta gratis, perché quello che è gratis non si toglie più;
+   - la fa un servizio con la propria chiave, o il proprio server: paga chi la mette, quindi è gratis in
+     ogni piano (se la chiave resta: vedi «La chiave, il server locale e la scelta del modello»). Chi si
+     fa una chiave gratuita di Gemini avrebbe così anche le cose a pagamento: lo faranno in pochi, e gli
+     altri pagano proprio per non doversene occupare;
+   - la fa l'AI di Glifo, con le chiavi di Glifo: a pagamento, con il credito del mese.
+2. **Il contrario non vale sempre.** Quello che fa il lavoro al posto di chi studia, o serve a chi ha una
+   scadenza, è a pagamento anche se a Glifo non costa niente (il quarto criterio): l'SQL e il codice dagli
+   schemi (deciso il 5 ottobre 2026), gli strumenti per pubblicare la tesi, le soluzioni complete.
+3. **Due cose costano un po' e restano gratis lo stesso, con un limite**: l'account con la
+   sincronizzazione e uno spazio base (senza, il gratuito sarebbe a metà) e l'assaggio dell'AI di Glifo
+   (non si compra quello che non si è mai provato).
+
+Le cose nuove di [AI.md](AI.md), divise così (il resto come in «Piano per piano»):
+
+| | Gratis, in Classico: lo fa il dispositivo | A pagamento, da Relativistico: lo fa l'AI di Glifo |
+|---|---|---|
+| Spiegare | «Spiegami» e il pannello ✨ con il modello nel browser | «Spiegami» con un modello di frontiera, anche su telefono e iPad; il tutor |
+| La lavagna | «In LaTeX», se basta un modello nel browser | «In LaTeX» con un modello di frontiera |
+| Le foto | più avanti, le pagine stampate con un modello nel browser | le foto → appunti, anche scritti a mano |
+| La voce | la dettatura del sistema; le formule a parole con il modello nel browser | le formule a parole con un modello di frontiera |
+| Le lezioni | registrare; l'audio legato agli appunti, sul dispositivo; la trascrizione nel browser, dove il computer ce la fa | la trascrizione con un servizio e gli appunti fatti dall'AI, con le ore al mese |
+| Lo spazio | l'account con uno spazio base | più spazio: le immagini e l'audio nell'account |
+
+Quantistico ha le stesse cose con il credito più alto e i modelli migliori, più le soluzioni complete.
+
+**Da decidere.** Va bene «conta chi fa il lavoro», cioè le versioni nel browser gratis anche quando la
+stessa cosa con l'AI di Glifo è a pagamento? Per la lavagna è la domanda del punto 2 di AI.md: il 5
+ottobre 2026 la conversione era stata messa nei piani a pagamento perché la faceva l'AI.
 
 ## Piano per piano
 
@@ -775,6 +826,9 @@ ricerca, i piani per università e dipartimenti.
 - **La propria chiave e la scelta del modello** (14 ottobre 2026): resta la propria chiave o solo il
   server locale? Con l'AI di Glifo si sceglie il modello (Claude, GPT, Gemini)? Vedi «La chiave, il
   server locale e la scelta del modello».
+- **Gratis o a pagamento, con le cose nuove di AI.md** (14 ottobre 2026): va bene «conta chi fa il
+  lavoro» (le versioni nel browser gratis, quelle con l'AI di Glifo a pagamento)? Vedi «Se costa, è a
+  pagamento?».
 
 ## Fonti (controllate il 4 ottobre 2026)
 
