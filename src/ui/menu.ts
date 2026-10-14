@@ -1,6 +1,11 @@
 import { h } from './dom'
+import { toast } from './toast'
 
-export type MenuEntry = { label: string; run: () => void; danger?: boolean } | 'sep'
+/**
+ * Una voce del menu, o una riga che separa. Con `off` la voce si vede ma è spenta: premendola non fa
+ * niente, compare solo il messaggio che dice perché (es. l'SQL degli schemi, che a breve sarà a pagamento).
+ */
+export type MenuEntry = { label: string; run: () => void; danger?: boolean; off?: string } | 'sep'
 
 let current: { anchor: HTMLElement; close: (returnFocus?: boolean) => void } | null = null
 
@@ -27,11 +32,13 @@ export function openMenu(anchor: HTMLElement, entries: MenuEntry[], label: strin
       'button',
       {
         class: `tool-menu-item${entry.danger ? ' is-danger' : ''}`,
-        attrs: { type: 'button', role: 'menuitem', tabindex: -1 },
+        title: entry.off,
+        attrs: { type: 'button', role: 'menuitem', tabindex: -1, 'aria-disabled': entry.off ? 'true' : undefined },
         on: {
           click: () => {
             close()
-            entry.run()
+            if (entry.off) toast(entry.off, 'info', { duration: 5000 })
+            else entry.run()
           },
         },
       },
