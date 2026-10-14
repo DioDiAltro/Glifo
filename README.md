@@ -256,10 +256,7 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
   `\partial_x f`, anche in un punto (`\frac{\partial f}{\partial x}(1, 2) =`). Con una parentesi subito dopo la
   derivata (`\frac{d}{dx}`, `\frac{\partial}{\partial x}`, `\partial_x`) si deriva solo la parentesi, con il suo
   esponente: `\frac{d}{dx}(x^2 + 1) \cdot (x - 1) =` dà `2x(x − 1)` e `\frac{d}{dx}(x^2 + 1)^3` è la derivata di
-  (x² + 1)³; senza parentesi si deriva tutto il prodotto (`\frac{d}{dx} \sin x \cos x`). Le derivate si
-  scrivono anche con la barra, come in una calcolatrice: `d/dx (x^2 + 1) * (x - 1) =`, `d^2/dx^2 sin(x) =`,
-  `dy/dx = -2y \Rightarrow`, `∂/∂x (x^2 y) =`, `∂f/∂x` (le altre barre, come `d/2`, restano divisioni). Con i
-  campi: il **gradiente**
+  (x² + 1)³; senza parentesi si deriva tutto il prodotto (`\frac{d}{dx} \sin x \cos x`). Con i campi: il **gradiente**
   (`\nabla f`, `\operatorname{grad} f`), la **divergenza** (`\nabla \cdot F`, `\operatorname{div} F`), il **rotore**
   (`\nabla \times F`, `\operatorname{rot} F`; nel piano è un numero), il laplaciano (`\nabla^2 f`), l'hessiana
   (`\operatorname{Hess} f`, anche `\det \operatorname{Hess} f(1, 1) =`) e la jacobiana (`\operatorname{jac} F`).

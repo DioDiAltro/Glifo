@@ -90,9 +90,6 @@ describe('le altre equazioni del primo e del secondo ordine', () => {
 
   it("le derivate scritte in ogni modo: dy/dx, il punto sopra, y'(x)", () => {
     expect(text(r`\frac{dy}{dx} = -2y \Rightarrow`)).toBe('y = ce^(−2x)')
-    // Anche con la barra, come in una calcolatrice (14 ottobre 2026).
-    expect(text(r`dy/dx = -2y \Rightarrow`)).toBe('y = ce^(−2x)')
-    expect(text(r`d^2y/dt^2 + y = 0 \Rightarrow`)).toBe('y = c₁ cos(t) + c₂ sin(t)')
     expect(text(r`\ddot{x} + x = 0 \Rightarrow`)).toBe('x = c₁ cos(t) + c₂ sin(t)')
     expect(text(r`y'(x) = 2 y(x) \Rightarrow`)).toBe('y = ce^(2x)')
     expect(text(r`y' = 0{,}5 y \Rightarrow`)).toBe('y = ce^(0,5x)')
