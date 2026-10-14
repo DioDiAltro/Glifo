@@ -54931,7 +54931,7 @@
       "node_kind": "heading",
       "norm_label": "come controllare il lavoro",
       "source_file": "CLAUDE.md",
-      "source_location": "L202"
+      "source_location": "L200"
     },
     {
       "id": "claude_dove_sono_le_cose",
@@ -54967,7 +54967,7 @@
       "node_kind": "heading",
       "norm_label": "graphify",
       "source_file": "CLAUDE.md",
-      "source_location": "L220"
+      "source_location": "L218"
     },
     {
       "id": "claude_regole",
@@ -54979,7 +54979,7 @@
       "node_kind": "heading",
       "norm_label": "regole",
       "source_file": "CLAUDE.md",
-      "source_location": "L176"
+      "source_location": "L174"
     },
     {
       "id": "src_store_files",
@@ -60559,7 +60559,7 @@
       "node_kind": "heading",
       "norm_label": "5. a cosa serve la chiave dell'ai",
       "source_file": "GRAFICA.md",
-      "source_location": "L475"
+      "source_location": "L477"
     },
     {
       "id": "grafica_6_glifo_anche_in_inglese",
@@ -60571,7 +60571,7 @@
       "node_kind": "heading",
       "norm_label": "6. glifo anche in inglese",
       "source_file": "GRAFICA.md",
-      "source_location": "L514"
+      "source_location": "L516"
     },
     {
       "id": "grafica_7_via_il_registro_dei_tocchi",
@@ -60583,7 +60583,7 @@
       "node_kind": "heading",
       "norm_label": "7. via il registro dei tocchi",
       "source_file": "GRAFICA.md",
-      "source_location": "L630"
+      "source_location": "L632"
     },
     {
       "id": "grafica_8_il_pulsante_con_il_contorno",
@@ -60595,7 +60595,7 @@
       "node_kind": "heading",
       "norm_label": "8. il pulsante \u2728 con il contorno",
       "source_file": "GRAFICA.md",
-      "source_location": "L681"
+      "source_location": "L683"
     },
     {
       "id": "grafica_gli_abbonamenti_in_tutto_questo",
@@ -60607,7 +60607,7 @@
       "node_kind": "heading",
       "norm_label": "gli abbonamenti, in tutto questo",
       "source_file": "GRAFICA.md",
-      "source_location": "L732"
+      "source_location": "L734"
     },
     {
       "id": "grafica_in_che_ordine",
@@ -60619,7 +60619,7 @@
       "node_kind": "heading",
       "norm_label": "in che ordine",
       "source_file": "GRAFICA.md",
-      "source_location": "L749"
+      "source_location": "L751"
     },
     {
       "id": "grafica_la_grafica_le_otto_richieste_del_10_ottobre_2026",
@@ -244424,7 +244424,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L176",
+      "source_location": "L174",
       "weight": 1.0
     },
     {
@@ -244435,7 +244435,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L202",
+      "source_location": "L200",
       "weight": 1.0
     },
     {
@@ -244446,7 +244446,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L220",
+      "source_location": "L218",
       "weight": 1.0
     },
     {
@@ -244688,7 +244688,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "GRAFICA.md",
-      "source_location": "L475",
+      "source_location": "L477",
       "weight": 1.0
     },
     {
@@ -244699,7 +244699,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "GRAFICA.md",
-      "source_location": "L514",
+      "source_location": "L516",
       "weight": 1.0
     },
     {
@@ -244710,7 +244710,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "GRAFICA.md",
-      "source_location": "L630",
+      "source_location": "L632",
       "weight": 1.0
     },
     {
@@ -244721,7 +244721,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "GRAFICA.md",
-      "source_location": "L681",
+      "source_location": "L683",
       "weight": 1.0
     },
     {
@@ -244732,7 +244732,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "GRAFICA.md",
-      "source_location": "L732",
+      "source_location": "L734",
       "weight": 1.0
     },
     {
@@ -244743,7 +244743,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "GRAFICA.md",
-      "source_location": "L749",
+      "source_location": "L751",
       "weight": 1.0
     },
     {
@@ -296946,7 +296946,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L197",
+      "source_location": "L195",
       "weight": 1.0
     },
     {
@@ -301735,7 +301735,7 @@
       "confidence_score": 0.95,
       "context": "askCompatible",
       "source_file": "GRAFICA.md",
-      "source_location": "L507",
+      "source_location": "L509",
       "weight": 1.0
     },
     {
@@ -302167,7 +302167,7 @@
       "confidence_score": 0.95,
       "context": "converse",
       "source_file": "GRAFICA.md",
-      "source_location": "L509",
+      "source_location": "L511",
       "weight": 1.0
     },
     {
@@ -302539,7 +302539,7 @@
       "confidence_score": 0.95,
       "context": "explain",
       "source_file": "CLAUDE.md",
-      "source_location": "L222",
+      "source_location": "L220",
       "weight": 1.0
     },
     {
@@ -302803,7 +302803,7 @@
       "confidence_score": 0.95,
       "context": "forgetOldKeys",
       "source_file": "GRAFICA.md",
-      "source_location": "L669",
+      "source_location": "L671",
       "weight": 1.0
     },
     {
@@ -303883,7 +303883,7 @@
       "confidence_score": 0.95,
       "context": "path",
       "source_file": "CLAUDE.md",
-      "source_location": "L222",
+      "source_location": "L220",
       "weight": 1.0
     },
     {
@@ -304159,7 +304159,7 @@
       "confidence_score": 0.95,
       "context": "reply",
       "source_file": "CLAUDE.md",
-      "source_location": "L169",
+      "source_location": "L167",
       "weight": 1.0
     },
     {
@@ -304819,7 +304819,7 @@
       "confidence_score": 0.95,
       "context": "sqlite()",
       "source_file": "CLAUDE.md",
-      "source_location": "L214",
+      "source_location": "L212",
       "weight": 1.0
     },
     {
@@ -305323,7 +305323,7 @@
       "confidence_score": 0.95,
       "context": "visible",
       "source_file": "CLAUDE.md",
-      "source_location": "L170",
+      "source_location": "L168",
       "weight": 1.0
     },
     {
@@ -305520,5 +305520,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "b445d55cf6999a466d8628305ce659e89ed535e8"
+  "built_at_commit": "b2b16fc93eeb8901201e8d9d11a1bf6d703cdb52"
 }
