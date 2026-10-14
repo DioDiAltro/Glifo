@@ -379,6 +379,18 @@ describe('i passaggi scritti dal modello', () => {
     expect(checkFormula('(x + 1)^2 = x^2 + 1', sheet, null, 'soft')).toBeNull()
     expect(checkFormula('(x + 1)^2 = x^2 + 1', sheet, null, 'strict')).toEqual({ ok: false })
   })
+
+  it('checkFormula: \\frac{d}{dx}(…) deriva solo la parentesi (14 ottobre 2026: la regola del quoziente giusta era ✗)', () => {
+    // Il primo passaggio scritto da Qwen3.5 9B: Glifo lo segnava sbagliato e lo faceva correggere.
+    const quotient = r`\frac{d}{dx}\left(\frac{x^2+1}{x-1}\right) = \frac{\frac{d}{dx}(x^2+1) \cdot (x-1) - (x^2+1) \cdot \frac{d}{dx}(x-1)}{(x-1)^2}`
+    expect(checkFormula(quotient, sheet)).toEqual({ ok: true })
+    // Con i fattori scambiati andava già bene.
+    const swapped = r`\frac{d}{dx}\left(\frac{x^2+1}{x-1}\right) = \frac{(x-1) \cdot \frac{d}{dx}(x^2+1) - (x^2+1) \cdot \frac{d}{dx}(x-1)}{(x-1)^2}`
+    expect(checkFormula(swapped, sheet)).toEqual({ ok: true })
+    expect(checkFormula(r`\frac{d}{dx}(x^2+1) \cdot (x-1) = 2x(x-1)`, sheet)).toEqual({ ok: true })
+    expect(checkFormula(r`\frac{d}{dx}(x^2+1) \cdot (x-1) = 3x^2 - 2x + 1`, sheet)).toMatchObject({ ok: false })
+    expect(checkFormula(r`(x-1) \cdot \frac{d}{dx}(x^2+1) = 2x(x-1)`, sheet)).toEqual({ ok: true })
+  })
 })
 
 describe('il giro tra il modello e il motore', () => {
