@@ -158,9 +158,6 @@ Quando chiede «cosa dovevo fare?», ricordagli queste cose (e toglile da qui qu
   certificati, dalle prove con Glifo (GRAFICA.md, punto 4; sul sito dal 14 ottobre): provare il Qwen3.5 4B,
   il migliore nelle prove, accanto al Qwen3 4B e dire quanto ci mettono. Le prove nuove si fanno ancora sul
   sito di prova https://glifo-prova.pages.dev (Cloudflare Pages, dal ramo `prova`; lì l'account è spento).
-- Dire se la derivata senza parentesi (`\frac{d}{dx} x^2 \sin x`) resta di tutto il prodotto: con la parentesi
-  subito dopo (`$\frac{d}{dx}(x^2+1) \cdot (x-1) = 2x(x-1)$`) si deriva solo la parentesi, sul sito dal 14
-  ottobre 2026 («Spiegami» in ROADMAP.md).
 - Leggere ogni tanto i commenti di chi prova Glifo (online dall'8 ottobre 2026; si leggono nella pagina
   «Domande frequenti e commenti», glifo.page/faq, a cui porta il link nella finestra del fumetto in fondo
   alla barra laterale): dashboard di Supabase → progetto `glifo` → Table Editor → `feedback`, dove ci sono
