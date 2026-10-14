@@ -53,6 +53,27 @@ describe('le derivate: come si scrivono', () => {
     }
   })
 
+  it('scritte con la barra come in una calcolatrice: d/dx, d^2/dx^2, dy/dx, ∂/∂x, ∂f/∂x (14 ottobre 2026)', () => {
+    const diff = { k: 'diff', vars: ['x'], partial: false }
+    // L'esempio dello studente: la parentesi si deriva, poi si moltiplica.
+    expect(parseMath('d/dx (x+2x) * x')).toMatchObject({ k: 'bin', op: '*', a: { ...diff, body: { k: 'bin', op: '+' } } })
+    expect(parseMath('d/dx x^2')).toMatchObject({ ...diff, body: { k: 'bin', op: '^' } })
+    expect(parseMath('d/dx x^2 sin(x)')).toMatchObject({ ...diff, body: { k: 'bin', op: '*' } })
+    expect(parseMath('d^2/dx^2 x^3')).toMatchObject({ k: 'diff', vars: ['x', 'x'] })
+    expect(parseMath('dy/dx')).toMatchObject({ ...diff, body: { k: 'name', name: 'y' } })
+    expect(parseMath('dx/dt')).toMatchObject({ k: 'diff', vars: ['t'], body: { k: 'name', name: 'x' } })
+    expect(parseMath('df/dx(2)')).toMatchObject({ ...diff, body: { k: 'apply', name: 'f' } })
+    expect(parseMath('∂/∂x (x^2 y)')).toMatchObject({ k: 'diff', vars: ['x'], partial: true })
+    expect(parseMath('∂^2f/∂x∂y')).toMatchObject({ k: 'diff', vars: ['x', 'y'], partial: true, body: { k: 'name', name: 'f' } })
+    expect(parseMath(r`\partial f/\partial x`)).toMatchObject({ k: 'diff', vars: ['x'], partial: true, body: { k: 'name', name: 'f' } })
+    expect(parseMath(r`\mathrm{d}/\mathrm{d}x (x^2)`)).toMatchObject(diff)
+    expect(parseMath('d/dx d/dx x^3')).toMatchObject({ ...diff, body: { ...diff, body: { k: 'bin', op: '^' } } })
+    expect(() => parseMath('d/dx')).toThrow('Manca la funzione da derivare dopo d/dx')
+    expect(() => parseMath('∂^2/∂x∂y')).toThrow('Manca la funzione da derivare dopo ∂^2/∂x∂y')
+    // Le altre barre restano divisioni.
+    for (const f of ['d/2', 'd/t', 'd^2/4', 'd/d', 'd^2/dx', 'x/dx']) expect(parseMath(f)).toMatchObject({ k: 'bin' })
+  })
+
   it('\\nabla: gradiente, divergenza, rotore e laplaciano; anche con i nomi (grad, div, rot)', () => {
     expect(parseMath(r`\nabla f`)).toMatchObject({ k: 'fn', name: 'grad', nabla: true })
     expect(parseMath(r`\nabla \cdot F`)).toMatchObject({ k: 'fn', name: 'div' })

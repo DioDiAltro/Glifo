@@ -568,7 +568,10 @@ parentesi subito dopo la derivata (`\frac{d}{dx}`,
 significato. Senza parentesi (`\frac{d}{dx} x^2 \sin x`) si deriva ancora tutto il prodotto, e resta così: lo
 studente, 14 ottobre 2026, «Io penso sia meglio fare d/dx (x+2x) * x. Quello che sta nella parentesi è da fare
 la derivata, poi moltiplichi» (`\frac{d}{dx}(x+2x) \cdot x` dà 3x, nei test). Sul sito dal 14 ottobre 2026, con
-il resto di `prova` (lo studente: «va bene»).
+il resto di `prova` (lo studente: «va bene»). Poi lo studente: «sì, fagli capire anche d/dx»: le derivate si
+scrivono anche con la barra, come in una calcolatrice (`d/dx (x+2x) * x`, `d^2/dx^2 sin(x)`,
+`dy/dx = -2y \Rightarrow`, `∂/∂x (x^2 y)`, `∂f/∂x`), con le stesse regole; `d/2` e le altre barre restano
+divisioni. Sul ramo `prova` dal 14 ottobre 2026.
 
 Da fare:
 - provarlo davvero su un computer con WebGPU (Chrome o Edge), su esercizi veri, e scegliere il modello

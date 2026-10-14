@@ -108,6 +108,7 @@ const T = texts({
   formDifferentials: (v: string) => [`In una forma vanno dx, dy e dz (non d${v})`, `A form uses dx, dy and dz (not d${v})`],
   formDifferential: ['Manca il differenziale: dx, dy o dz', 'Missing the differential: dx, dy or dz'],
   derivativeAfterFraction: ['Manca la funzione da derivare dopo la frazione', 'Missing the function to differentiate after the fraction'],
+  derivativeAfterSlash: (what: string) => [`Manca la funzione da derivare dopo ${what}`, `Missing the function to differentiate after ${what}`],
   partialVariable: ['Dopo \\partial va la variabile: \\partial_x f', 'After \\partial write the variable: \\partial_x f'],
   variableBrace: ['la graffa } della variabile', 'the brace } closing the variable'],
   derivativeAfterPartial: ['Manca la funzione da derivare dopo \\partial', 'Missing the function to differentiate after \\partial'],
@@ -861,6 +862,19 @@ function describe(t: Tok | undefined): string {
   return T.quoted(SHOW[t.v] ?? t.v)
 }
 
+/** La derivata scritta con la barra, per i messaggi: d/dx, d^2/dx^2, ∂^2/∂x∂y. */
+function slashText(partial: boolean, vars: string[]): string {
+  const d = partial ? '∂' : 'd'
+  const power = (n: number) => (n > 1 ? `^${n}` : '')
+  const groups: [string, number][] = []
+  for (const v of vars) {
+    const last = groups[groups.length - 1]
+    if (last && last[0] === v) last[1]++
+    else groups.push([v, 1])
+  }
+  return `${d}${power(vars.length)}/${groups.map(([v, k]) => `${d}${v}${power(k)}`).join('')}`
+}
+
 class Parser {
   private i = 0
   /** Quante | di valore assoluto sono aperte: lì una | chiude. */
@@ -1376,8 +1390,11 @@ class Parser {
       case 'num':
         this.next()
         return { k: 'num', v: Number(t.v), text: t.v, comma: !!t.comma }
-      case 'name':
-        return this.name()
+      case 'name': {
+        // d/dx (x^2 + 1), dy/dx: la derivata scritta con la barra.
+        const derivative = t.v === 'd' ? this.derivativeSlash() : null
+        return derivative ?? this.name()
+      }
       case 'fn':
         return this.fnCall()
       case 'frac': {
@@ -1419,7 +1436,7 @@ class Parser {
       case 'nabla':
         return this.nabla()
       case 'partial':
-        return this.partialDerivative()
+        return this.derivativeSlash() ?? this.partialDerivative()
       case 'lim':
         return this.limit()
       case 'cases':
@@ -1799,14 +1816,8 @@ class Parser {
     this.next()
     if (!this.is('open', '{')) return fail()
     this.next()
-    const top = this.differentialHead()
-    if (!top) return fail()
-    let fn: string | null = null
-    if (this.is('name')) {
-      fn = this.next().v
-      if (this.is('op', '_')) fn += '_' + this.subscriptText()
-    }
-    if (!this.is('close', '}')) return fail()
+    const top = this.derivativeTop()
+    if (!top || !this.is('close', '}')) return fail()
     this.next()
     if (!this.is('open', '{')) return fail()
     this.next()
@@ -1818,22 +1829,68 @@ class Parser {
     }
     this.next()
     if (!vars.length || (top.order !== null && top.order !== vars.length)) return fail()
+    return this.derivativeOf(top, vars, T.derivativeAfterFraction)
+  }
+
+  /**
+   * `d/dx (x^2+1)`, `d^2/dx^2 x^3`, `dy/dx`, `df/dx(2)`, `∂/∂x (x^2 y)`, `∂^2f/∂x∂y`: la derivata scritta
+   * con la barra, come in una calcolatrice, letta come con \frac. Null (senza leggere niente) se la barra
+   * è una divisione: `d/2`, `d^2/4`.
+   */
+  private derivativeSlash(): MathNode | null {
+    const start = this.i
+    const fail = () => {
+      this.i = start
+      return null
+    }
+    const top = this.derivativeTop()
+    if (!top || !this.is('op', '/')) return fail()
+    this.next()
+    // Il denominatore finisce dove non c'è più una d (o ∂) con la sua variabile: d/dx d/dx x^3.
+    const vars: string[] = []
+    for (;;) {
+      const at = this.i
+      const head = this.differentialHead(true)
+      if (!head) {
+        this.i = at
+        break
+      }
+      for (let k = 0; k < (head.order ?? 1); k++) vars.push(head.v!)
+    }
+    if (!vars.length || (top.order !== null && top.order !== vars.length)) return fail()
+    return this.derivativeOf(top, vars, T.derivativeAfterSlash(slashText(top.partial, vars)))
+  }
+
+  /** Il numeratore di una derivata: `d`, `d^2`, `\partial`, con la funzione se c'è (`dy`, `\partial^2 f`). */
+  private derivativeTop(): { partial: boolean; order: number | null; fn: string | null } | null {
+    const top = this.differentialHead()
+    if (!top) return null
+    let fn: string | null = null
+    if (this.is('name')) {
+      fn = this.next().v
+      if (this.is('op', '_')) fn += '_' + this.subscriptText()
+    }
+    return { partial: top.partial, order: top.order, fn }
+  }
+
+  /** Dopo numeratore e denominatore: la funzione (anche in un punto) o quello che si deriva. */
+  private derivativeOf(top: { partial: boolean; fn: string | null }, vars: string[], missing: string): MathNode {
     let body: MathNode
-    if (fn) {
+    if (top.fn) {
       // \frac{\partial f}{\partial x}(1, 2): f nel punto; senza punto, f con le sue variabili.
       if (this.is('open', '(')) {
         const group = this.group(true)
-        body = { k: 'apply', name: fn, args: group.k === 'tuple' ? group.items : [group], primes: 0 }
-      } else body = { k: 'name', name: fn }
+        body = { k: 'apply', name: top.fn, args: group.k === 'tuple' ? group.items : [group], primes: 0 }
+      } else body = { k: 'name', name: top.fn }
     } else {
-      if (!this.peek() || !this.startsArgument()) throw this.error(T.derivativeAfterFraction)
+      if (!this.peek() || !this.startsArgument()) throw this.error(missing)
       body = this.derivativeBody()
     }
     return { k: 'diff', body, vars, partial: top.partial }
   }
 
   /**
-   * Quello che si deriva dopo `\frac{d}{dx}` o `\partial_x`. Con una parentesi subito dopo solo lei,
+   * Quello che si deriva dopo `\frac{d}{dx}`, `d/dx` o `\partial_x`. Con una parentesi subito dopo solo lei,
    * con il suo esponente: `\frac{d}{dx}(x^2+1) \cdot (x-1)` è 2x·(x − 1) (era la derivata di tutto il
    * prodotto), `\frac{d}{dx}(x^2+1)^3` la derivata di (x² + 1)³. Senza, tutto il prodotto:
    * `\frac{d}{dx} \sin x \cos x`.

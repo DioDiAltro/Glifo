@@ -189,6 +189,25 @@ describe('il controllo delle uguaglianze scritte (✓/✗)', () => {
     expect(check(r`\frac{d}{dx} x^2 \sin x = 2x \sin x + x^2 \cos x`)).toBe('✓')
   })
 
+  it('le derivate scritte con la barra, come in una calcolatrice (14 ottobre 2026)', () => {
+    // L'esempio dello studente: si deriva la parentesi, poi si moltiplica.
+    expect(check('d/dx (x+2x) * x = 3x')).toBe('✓')
+    expect(check('d/dx (x^2+1) * (x-1) = 2x(x-1)')).toBe('✓')
+    expect(check('d/dx (x^2+1) * (x-1) = 3x^2 - 2x + 1')).toBe('✗ 2x(x − 1)')
+    expect(check('d/dx x^2 = 2x')).toBe('✓')
+    // L'esempio dell'aiuto.
+    expect(check('d/dx sin(x) = cos(x)')).toBe('✓')
+    expect(check('d/dx x^2 sin(x) = 2x sin(x) + x^2 cos(x)')).toBe('✓')
+    expect(check('d^2/dx^2 sin(x) = -sin(x)')).toBe('✓')
+    expect(check('d/dt (t^3) = 3t^2')).toBe('✓')
+    expect(check('∂/∂x (x^2 y) * x = 2x^2 y')).toBe('✓')
+    expect(check(r`\mathrm{d}/\mathrm{d}x (x^2) = 2x`)).toBe('✓')
+    expect(check('f(x) = x^3', 'df/dx(2) = 12')).toBe('✓')
+    expect(check('f(x) = x^3', 'df/dx = 3x^2')).toBe('✓')
+    // Le altre barre restano divisioni.
+    expect(check('d = 6', 'd/2 = 3')).toBe('✓')
+  })
+
   it('limiti, serie e infiniti', () => {
     expect(check(r`\lim_{x \to 0} \frac{\sin x}{x} = 1`)).toBe('✓')
     expect(check(r`\lim_{x \to 0} \frac{\sin x}{x} = 0`)).toBe('✗ 1')
