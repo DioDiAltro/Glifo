@@ -539,9 +539,10 @@ Workers AI. Com'è fatto (vedi README, «Spiegami», e ARCHITETTURA.md, `src/ai/
 
 - Qwen3 0.6B, 1.7B (quello di partenza) o 4B, scelto nelle impostazioni con il tono; si scarica da
   Hugging Face la prima volta (da 0,4 a 2,3 GB) e poi resta nel browser, anche offline. Licenza Apache
-  2.0, come WebLLM. Dal 13 ottobre 2026 (GRAFICA.md, punto 4) anche il Qwen3 8B e, non provati con
-  Glifo, i modelli delle altre famiglie che WebLLM sa far girare, solo con una licenza che va bene
-  anche con Glifo a pagamento.
+  2.0, come WebLLM. Dal 13 ottobre 2026 (GRAFICA.md, punto 4) anche i Qwen3.5 e i modelli delle altre
+  famiglie che WebLLM sa far girare, solo con una licenza che va bene anche con Glifo a pagamento; dal 14,
+  dopo le prove, divisi in consigliati (Qwen3 1.7B, 4B e 8B, Qwen3.5 2B, 4B e 9B), sconsigliati (Qwen3
+  0.6B, Qwen3.5 0.8B, Llama 3.2 1B) e non certificati (gli altri).
 - Il modello usa il motore come strumenti (calcola, controlla, deriva, primitiva, risolvi), Glifo
   controlla ogni passaggio, gli fa correggere quelli sbagliati e mostra il ✓ o il ✗; «Inserisci nella
   nota» e «Rifai». Il «Perché?» su ogni passaggio non c'è ancora.

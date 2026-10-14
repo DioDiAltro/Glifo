@@ -1,19 +1,18 @@
 /**
- * «Spiegami» con Qwen3 vero, nel browser, sulla build in dist/ (esegui prima `npm run build`):
+ * «Spiegami» con un modello vero, nel browser, sulla build in dist/ (esegui prima `npm run build`):
  *   CHROMIUM_PATH=/opt/pw-browsers/chromium node scripts/spiegami-qwen.mjs
  *
  * Le prove di sempre (scripts/smoke-test.mjs) usano un worker finto; questa scarica il modello da
  * Hugging Face (serve la rete verso huggingface.co e i suoi server dei file, *.hf.co) e lo fa girare.
- * Senza scheda grafica Chromium usa WebGPU sulla CPU (SwiftShader, con --enable-unsafe-webgpu): va
- * bene per vedere se i passaggi e gli strumenti funzionano, non per la velocità.
  *
- * MODELLO=Qwen3-1.7B per un altro modello (di solito Qwen3-0.6B, il più leggero; uno qualunque dell'elenco
+ * MODELLO=Qwen3.5-4B per un altro modello (di solito Qwen3-1.7B, quello di partenza; uno qualunque dell'elenco
  * di src/ai/localModels.ts, per esempio Qwen3.5-2B o Llama-3.2-1B-Instruct), FORMULA per un altro
  * conto, MINUTI per aspettare di più (60), FOTO=cartella per la foto della spiegazione. Scrive le
  * domande e le risposte del modello, poi i passaggi con i segni di Glifo.
  *
- * Sulla CPU WebGPU è lentissimo (Qwen3.5 0.8B: 0,4 token al secondo per leggere, 39 secondi per token
- * scritto): con LLAMA=http://127.0.0.1:8080 le risposte le dà un server llama.cpp con lo stesso modello in
+ * Senza scheda grafica Chromium usa WebGPU sulla CPU (SwiftShader, con --enable-unsafe-webgpu), lentissimo
+ * (Qwen3.5 0.8B: 0,4 token al secondo per leggere, 39 secondi per token scritto, 14 ottobre 2026):
+ * con LLAMA=http://127.0.0.1:8080 le risposte le dà un server llama.cpp con lo stesso modello in
  * GGUF (`llama-server -m modello.gguf --jinja -c 4096 -np 1 --reasoning-format none`), molto più veloce.
  * Glifo resta quello vero (domande, conti del motore, controlli e correzioni): finto è solo il worker di
  * «Spiegami», che gira le domande al server con gli stessi parametri del worker vero. Non dice quanto è
@@ -22,7 +21,7 @@
 import { chromium } from 'playwright-core'
 import { preview } from 'vite'
 
-const model = process.env.MODELLO || 'Qwen3-0.6B'
+const model = process.env.MODELLO || 'Qwen3-1.7B'
 const formula = process.env.FORMULA || String.raw`\int_{-R}^{R} \pi (R^2 - x^2) \, dx =`
 const minutes = Number(process.env.MINUTI || 60)
 const llama = process.env.LLAMA

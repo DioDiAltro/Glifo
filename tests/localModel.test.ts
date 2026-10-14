@@ -53,15 +53,11 @@ const LEFT_OUT: Record<string, string> = {
 }
 
 describe('i modelli nel browser', () => {
-  it('l\'elenco ragionato: i Qwen3 consigliati, gli altri modelli, tutti gli altri nelle avanzate', () => {
+  it('l\'elenco diviso dalle prove con Glifo (14 ottobre 2026): consigliati, sconsigliati, non certificati e, nelle avanzate, gli altri', () => {
     const ids = (group: string) => LOCAL_MODELS.filter((m) => m.group === group).map((m) => m.id)
-    expect(ids('recommended')).toEqual(['Qwen3-0.6B', 'Qwen3-1.7B', 'Qwen3-4B', 'Qwen3-8B'])
+    expect(ids('recommended')).toEqual(['Qwen3-1.7B', 'Qwen3.5-2B', 'Qwen3-4B', 'Qwen3.5-4B', 'Qwen3-8B', 'Qwen3.5-9B'])
+    expect(ids('discouraged')).toEqual(['Qwen3-0.6B', 'Qwen3.5-0.8B', 'Llama-3.2-1B-Instruct'])
     expect(ids('other')).toEqual([
-      'Qwen3.5-0.8B',
-      'Qwen3.5-2B',
-      'Qwen3.5-4B',
-      'Qwen3.5-9B',
-      'Llama-3.2-1B-Instruct',
       'Llama-3.2-3B-Instruct',
       'Llama-3.1-8B-Instruct',
       'Hermes-3-Llama-3.2-3B',
@@ -78,10 +74,12 @@ describe('i modelli nel browser', () => {
     // Senza compressione: nelle avanzate, con il nome che lo dice.
     expect(localModel('Qwen3-0.6B-q0')).toMatchObject({ name: 'Qwen3 0.6B (senza compressione)', group: 'all', f16: { id: 'Qwen3-0.6B-q0f16-MLC' }, f32: { id: 'Qwen3-0.6B-q0f32-MLC' } })
     expect(LOCAL_MODELS.filter((m) => m.group === 'recommended').map((m) => m.label)).toEqual([
-      'Qwen3 0.6B, il più leggero',
       'Qwen3 1.7B, consigliato',
-      'Qwen3 4B, più bravo',
+      'Qwen3.5 2B',
+      'Qwen3 4B',
+      'Qwen3.5 4B, più bravo',
       'Qwen3 8B, il più bravo, per schede grafiche potenti',
+      'Qwen3.5 9B',
     ])
     expect(new Set(LOCAL_MODELS.map((m) => m.id)).size).toBe(LOCAL_MODELS.length)
   })
@@ -150,12 +148,12 @@ describe('i modelli nel browser', () => {
       { id: 'Sconosciuto-1B-q4f16_1-MLC', vram: 900, context: 4096 },
     ])
     expect(models.map((m) => [m.id, m.group, m.f16?.id ?? null, m.f32?.id ?? null])).toEqual([
-      ['Qwen3-0.6B', 'recommended', 'Qwen3-0.6B-q0f16-MLC', null],
       ['Qwen3-1.7B', 'recommended', 'Qwen3-1.7B-q4f16_1-MLC', 'Qwen3-1.7B-q4f32_1-MLC'],
-      ['Llama-3.2-1B-Instruct', 'other', 'Llama-3.2-1B-Instruct-q4f16_1-MLC', null],
+      ['Qwen3-0.6B', 'discouraged', 'Qwen3-0.6B-q0f16-MLC', null],
+      ['Llama-3.2-1B-Instruct', 'discouraged', 'Llama-3.2-1B-Instruct-q4f16_1-MLC', null],
     ])
     // Solo senza compressione: è il modello stesso, con il suo nome e il suo gruppo.
-    expect(models[0].name).toBe('Qwen3 0.6B')
+    expect(models[1].name).toBe('Qwen3 0.6B')
   })
 })
 
@@ -217,14 +215,15 @@ describe('i modelli già scaricati', () => {
         return cache
       },
     })
+    // Nell'ordine dell'elenco: prima i consigliati.
     expect(await modelsInBrowser()).toEqual([
-      { id: 'Qwen3-0.6B', name: 'Qwen3 0.6B', webllm: ['Qwen3-0.6B-q4f32_1-MLC'], bytes: 400_000_000, complete: true },
       { id: 'Qwen3-4B', name: 'Qwen3 4B', webllm: ['Qwen3-4B-q4f16_1-MLC'], bytes: 1_200_000_000, complete: false },
+      { id: 'Qwen3-0.6B', name: 'Qwen3 0.6B', webllm: ['Qwen3-0.6B-q4f32_1-MLC'], bytes: 400_000_000, complete: true },
       { id: 'Vecchio-2B-q4f16_1-MLC', name: 'Vecchio 2B', webllm: ['Vecchio-2B-q4f16_1-MLC'], bytes: 50_000_000, complete: true },
     ])
     // Le due varianti dello stesso modello sono una riga sola.
     stored.set('https://huggingface.co/mlc-ai/Qwen3-0.6B-q4f16_1-MLC/resolve/main/tensor-cache.json', { json: { records: [{ dataPath: 'p.bin', nbytes: 5 }] } })
-    expect((await modelsInBrowser())[0]).toEqual({ id: 'Qwen3-0.6B', name: 'Qwen3 0.6B', webllm: ['Qwen3-0.6B-q4f32_1-MLC', 'Qwen3-0.6B-q4f16_1-MLC'], bytes: 400_000_000, complete: true })
+    expect((await modelsInBrowser())[1]).toEqual({ id: 'Qwen3-0.6B', name: 'Qwen3 0.6B', webllm: ['Qwen3-0.6B-q4f32_1-MLC', 'Qwen3-0.6B-q4f16_1-MLC'], bytes: 400_000_000, complete: true })
     // Se WebLLM non ha mai aperto la sua cache, non la si crea per guardarci dentro.
     opened.length = 0
     vi.stubGlobal('caches', { has: async () => false, open: async (name: string) => (opened.push(name), cache) })

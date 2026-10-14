@@ -16,7 +16,7 @@ quando i punti sono tutti fatti si cancella, insieme alla voce «La grafica» di
 | 1 | «Cambia account» | fatto: sul sito dal 12 ottobre; lo studente: «va bene» |
 | 2 | La pagina dei commenti, tipo FAQ | fatto: sul sito dal 13 ottobre 2026; lo studente: «va bene» |
 | 3 | Le impostazioni divise in sezioni | fatto: sul sito dal 13 ottobre 2026; lo studente: «va bene» |
-| 4 | Più modelli per «Spiegami» | fatto sul ramo `prova` il 13 ottobre 2026; i modelli veri provati il 14 ottobre (con llama.cpp); prossimo passo: la prova sul computer dello studente, poi quali Qwen3.5 tra i consigliati |
+| 4 | Più modelli per «Spiegami» | fatto sul ramo `prova` il 13 ottobre 2026; il 14 provati i modelli veri (con llama.cpp) e divisi in consigliati, sconsigliati e non certificati; prossimo passo: la prova sul computer dello studente |
 | 5 | A cosa serve la chiave dell'AI | da decidere |
 | 6 | Glifo anche in inglese | fatto: tutto tradotto, anche le parole delle note, i numeri, l'AI e l'informativa; sul sito vero dal 12 ottobre 2026; lo studente: «va bene» |
 | 7 | Via il registro dei tocchi | fatto: sul sito dal 13 ottobre 2026; lo studente: «va bene» |
@@ -454,14 +454,22 @@ qui sotto, perché Glifo le leggeva male (vedi sotto). Quante sono arrivate al r
 - **Non si è visto** quanto ci mettono nel browser e se WebGPU li fa girare su un computer vero: llama.cpp
   non è WebLLM. Si vede sul sito di prova, sul computer dello studente.
 
-**Da decidere**, dopo la prova sul computer dello studente:
+**Deciso.** Lo studente, 14 ottobre 2026: «tieniamoli tutti ma dividiamoli in consigliati, sconsigliati e
+non certificati da Glifo». Fatto sul ramo `prova` lo stesso giorno: nella tendina di Impostazioni → AI tre
+gruppi, divisi dalle prove.
 
-- Qwen3.5 4B tra i consigliati? In queste prove è il migliore dei 4B; chiede 3,9 GB di memoria contro i
-  3,4 del Qwen3 4B. Claude consiglia di sì, se sul computer non è più lento.
-- Qwen3.5 2B e 9B restano tra gli altri modelli? Il 2B va come il Qwen3 1.7B ma scrive il doppio; il 9B
-  va bene ma chiede 6,4 GB, più dell'8B.
-- Qwen3 0.6B, il più leggero dei consigliati, non è mai arrivato al risultato, come Qwen3.5 0.8B: resta?
-- Llama 3.2 1B passa da «altri modelli» a «tutti gli altri» (avanzate)? Claude consiglia di sì.
+- **«Consigliati, provati con Glifo»**: Qwen3 1.7B (quello di partenza, «consigliato»), Qwen3.5 2B, Qwen3 4B,
+  Qwen3.5 4B («più bravo»: il migliore nelle prove), Qwen3 8B («il più bravo, per schede grafiche potenti»)
+  e Qwen3.5 9B.
+- **«Sconsigliati: provati con Glifo, sbagliano spesso»**: Qwen3 0.6B, Qwen3.5 0.8B e Llama 3.2 1B. Scelto
+  uno di questi, l'avviso dice che nelle prove non è mai arrivato al risultato e che va bene solo se gli
+  altri non girano sul computer (sono i più leggeri).
+- **«Non certificati da Glifo»**: tutti gli altri, con l'avviso «Non certificato da Glifo: non è stato
+  provato e può sbagliare di più». Quelli delle avanzate (versioni di prima, per il codice o per i conti,
+  quasi solo in inglese, senza compressione) entrano in questo gruppo con la casella.
+
+Resta da vedere sul computer dello studente quanto ci mettono i consigliati nuovi, a cominciare dal Qwen3.5
+4B accanto al Qwen3 4B, e se i tre gruppi vanno bene così.
 
 ## 5. A cosa serve la chiave dell'AI
 

@@ -976,20 +976,23 @@ chiudere il pannello e continuare a scrivere, e quando ha finito sul pulsante co
 messaggi, che se ne va riaprendo il pannello.
 
 In **Impostazioni → AI**, nel riquadro «Spiegazioni (prova)», si sceglie il modello e il tono (come il
-professore o più semplice). I modelli sono in un elenco ragionato:
+professore o più semplice). I modelli sono divisi in tre gruppi, dalle prove con Glifo del 14 ottobre 2026
+(GRAFICA.md, punto 4):
 
-- **consigliati**, provati con Glifo: Qwen3 0.6B (il più leggero), 1.7B (quello di partenza), 4B e 8B
-  (il più bravo, per le schede grafiche potenti);
-- **altri modelli**, non provati con Glifo (possono sbagliare di più): i più nuovi delle altre famiglie,
-  Qwen3.5, Llama 3.2 e 3.1, Hermes 3, Gemma 2, Phi-4 mini, Ministral 3, Mistral 7B e Qwen2.5;
-- con la casella **avanzate**, tutti gli altri: le versioni di prima, i modelli per il codice o per i
-  conti, quelli che scrivono quasi solo in inglese e quelli senza compressione.
+- **consigliati**, provati con Glifo e arrivati al risultato: Qwen3 1.7B (quello di partenza), Qwen3.5 2B,
+  Qwen3 4B, Qwen3.5 4B (più bravo), Qwen3 8B (il più bravo, per le schede grafiche potenti) e Qwen3.5 9B;
+- **sconsigliati**, provati con Glifo e mai arrivati al risultato: Qwen3 0.6B, Qwen3.5 0.8B e Llama 3.2
+  1B, i più leggeri, per i computer dove gli altri non girano;
+- **non certificati da Glifo**, non provati (possono sbagliare di più): i più nuovi delle altre famiglie,
+  Llama 3.2 3B e 3.1, Hermes 3, Gemma 2, Phi-4 mini, Ministral 3, Mistral 7B e Qwen2.5 e, con la casella
+  **avanzate**, tutti gli altri: le versioni di prima, i modelli per il codice o per i conti, quelli che
+  scrivono quasi solo in inglese e quelli senza compressione.
 
 Ci sono solo i modelli di WebLLM con cui si chatta, che leggono almeno 4096 token e che hanno una
 licenza che va bene anche con Glifo a pagamento. Del modello scelto si vede quanta memoria della scheda
 grafica chiede (lo dice WebLLM), quanto si scarica (dal suo elenco dei file su Hugging Face) o quanto
-pesa nel browser, la licenza (con «Built with Llama» per Llama e l'avviso di Gemma) e, se serve, che non
-è provato con Glifo, che scrive quasi solo in inglese o che non sa chiedere i conti al motore (allora
+pesa nel browser, la licenza (con «Built with Llama» per Llama e l'avviso di Gemma) e, se serve, che è
+sconsigliato o non certificato da Glifo, che scrive quasi solo in inglese o che non sa chiedere i conti al motore (allora
 Glifo gli dà quelli già fatti e controlla i passaggi come sempre). Il modello si scarica da Hugging Face
 la prima volta che premi Spiegami e poi resta nel browser: le spiegazioni funzionano anche offline.
 Sotto, **i modelli in questo browser**, ognuno con quanto pesa e «Togli» (anche in «Dati»): provandone
@@ -1255,9 +1258,9 @@ sua licenza).
   `dictionary-it`) e quello inglese di SCOWL ([MIT e BSD](public/licenze/dizionario-inglese.txt), dal
   pacchetto `dictionary-en`);
 - «Spiegami»: [WebLLM](https://github.com/mlc-ai/web-llm) ([Apache 2.0](public/licenze/web-llm.txt)) e i
-  modelli Qwen3 del Qwen Team di Alibaba Cloud ([Apache 2.0](public/licenze/qwen3.txt)), quelli
-  consigliati; gli altri modelli si scaricano solo se li scegli, e la loro licenza è nelle impostazioni,
-  accanto a ognuno;
+  modelli Qwen3 e Qwen3.5 del Qwen Team di Alibaba Cloud ([Apache 2.0](public/licenze/qwen3.txt)), tra
+  cui tutti i consigliati; gli altri modelli si scaricano solo se li scegli, e la loro licenza è nelle
+  impostazioni, accanto a ognuno;
 - l'account: [Supabase](https://github.com/supabase/supabase-js) ([MIT](public/licenze/supabase.txt));
 - l'assistente AI: l'[SDK di Anthropic](https://github.com/anthropics/anthropic-sdk-typescript)
   ([MIT](public/licenze/anthropic-sdk.txt)).

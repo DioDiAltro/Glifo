@@ -20,8 +20,8 @@ const T = texts({
   english: ['il dizionario inglese, di SCOWL', 'the English dictionary, from SCOWL'],
   explain: ['«Spiegami» nel browser', '“Explain” in the browser'],
   models: [
-    'i modelli consigliati di «Spiegami», del Qwen Team di Alibaba Cloud (la licenza degli altri modelli è nella sezione «AI», accanto a ognuno)',
-    'the recommended “Explain” models, by Alibaba Cloud\'s Qwen Team (the license of the other models is in the “AI” section, next to each one)',
+    'i modelli Qwen3 e Qwen3.5 di «Spiegami», tra cui tutti i consigliati, del Qwen Team di Alibaba Cloud (la licenza degli altri modelli è nella sezione «AI», accanto a ognuno)',
+    'the Qwen3 and Qwen3.5 “Explain” models, including all the recommended ones, by Alibaba Cloud\'s Qwen Team (the license of the other models is in the “AI” section, next to each one)',
   ],
   account: ['l\'account', 'the account'],
   assistant: ['l\'assistente AI con Claude', 'the AI assistant with Claude'],
@@ -52,7 +52,7 @@ export const LICENSES: readonly License[] = [
   { name: 'dictionary-it', get what() { return T.italian }, license: 'GPL 3', file: 'dizionario-italiano.txt', packages: ['dictionary-it'] },
   { name: 'dictionary-en', get what() { return T.english }, license: 'MIT, BSD', file: 'dizionario-inglese.txt', packages: ['dictionary-en'] },
   { name: 'WebLLM', get what() { return T.explain }, license: 'Apache 2.0', file: 'web-llm.txt', packages: ['@mlc-ai/web-llm'] },
-  { name: 'Qwen3', get what() { return T.models }, license: 'Apache 2.0', file: 'qwen3.txt', packages: [] },
+  { name: 'Qwen3, Qwen3.5', get what() { return T.models }, license: 'Apache 2.0', file: 'qwen3.txt', packages: [] },
   { name: 'Supabase', get what() { return T.account }, license: 'MIT', file: 'supabase.txt', packages: ['@supabase/supabase-js'] },
   { name: 'Anthropic SDK', get what() { return T.assistant }, license: 'MIT', file: 'anthropic-sdk.txt', packages: ['@anthropic-ai/sdk'] },
 ]

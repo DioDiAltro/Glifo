@@ -439,9 +439,12 @@ che servono. Le regole da tenere sempre a mente sono anche in CLAUDE.md, in «At
   GRAFICA.md punto 4): l'elenco ragionato `LOCAL_MODELS` viene da `catalogFrom` con i modelli di WebLLM
   (`__WEBLLM_MODELS__`, che vite.config.ts legge da `prebuiltAppConfig` della versione installata: nome,
   memoria della scheda grafica, contesto; la pagina non importa WebLLM) e le righe di `FAMILIES`, con
-  quello che WebLLM non dice: il nome, il gruppo (`recommended`, i Qwen3 provati con Glifo; `other`, i
-  più nuovi delle altre famiglie; `all`, gli altri, nelle avanzate, con quelli senza compressione, q0,
-  che hanno l'id `<nome>-q0`), la licenza (`MODEL_LICENSES`, con la scritta che chiede: «Built with
+  quello che WebLLM non dice: il nome, il gruppo, dalle prove con Glifo del 14 ottobre 2026 (GRAFICA.md
+  punto 4): `recommended`, i consigliati, arrivati al risultato; `discouraged`, gli sconsigliati, mai
+  arrivati (tenuti per i computer dove gli altri non girano); i non certificati, cioè `other`, i più nuovi
+  delle altre famiglie, e `all`, gli altri, nelle avanzate, con quelli senza compressione, q0, che hanno
+  l'id `<nome>-q0`. Nella tendina sono tre gruppi: `all` entra nei non certificati con la casella delle
+  avanzate. Poi la licenza (`MODEL_LICENSES`, con la scritta che chiede: «Built with
   Llama», l'avviso di Gemma), `tools` (sa chiedere i conti con <tool_call>: i Qwen dal 2.5 e gli Hermes),
   `thinking` (Qwen3 e Qwen3.5) ed `english`. Entrano solo i modelli che leggono almeno `CONTEXT_TOKENS`
   (4096) token; quelli lasciati fuori, con il perché, sono in `LEFT_OUT` di tests/localModel.test.ts, che

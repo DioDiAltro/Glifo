@@ -3,9 +3,10 @@
  * (src/ai/explain.ts). Si scaricano da Hugging Face la prima volta e poi restano nel browser (nella Cache
  * Storage, come li tiene WebLLM): niente chiave, niente costi, e la nota non esce dal dispositivo.
  *
- * L'elenco è ragionato (13 ottobre 2026, GRAFICA.md punto 4): i consigliati sono i Qwen3, provati con
- * Glifo; gli altri modelli sono i più nuovi delle altre famiglie, non provati con Glifo; tutti gli altri
- * stanno nelle avanzate. Ci sono solo i modelli di WebLLM con cui si chatta, che leggono almeno 4096 token
+ * L'elenco è ragionato (13 ottobre 2026, GRAFICA.md punto 4) e diviso dalle prove con Glifo (14 ottobre):
+ * i consigliati e gli sconsigliati sono provati con Glifo; i non certificati no, e quelli meno adatti
+ * (versioni di prima, per il codice, quasi solo in inglese) stanno nelle avanzate. Ci sono solo i modelli
+ * di WebLLM con cui si chatta, che leggono almeno 4096 token
  * e hanno una licenza che va bene anche con Glifo a pagamento: quelli lasciati fuori, con il perché, sono
  * in tests/localModel.test.ts. La memoria e il contesto li dice WebLLM (`__WEBLLM_MODELS__`, da
  * vite.config.ts), il peso l'elenco dei pezzi del modello (tensor-cache.json): non si scrivono a mano.
@@ -17,7 +18,6 @@ import { texts } from '../i18n'
 
 // Le etichette dei consigliati nelle impostazioni (src/ui/settings.ts).
 const T = texts({
-  lightest: ['il più leggero', 'the lightest'],
   recommended: ['consigliato', 'recommended'],
   better: ['più bravo', 'more capable'],
   best: ['il più bravo, per schede grafiche potenti', 'the most capable, for powerful graphics cards'],
@@ -36,8 +36,11 @@ declare const __WEBLLM_MODELS__: WebllmModel[]
 /** Il contesto delle spiegazioni (src/ai/explain.ts): i modelli che leggono meno token non ci sono. */
 export const CONTEXT_TOKENS = 4096
 
-/** Dove sta il modello nell'elenco: consigliato, tra gli altri modelli o tra tutti gli altri (nelle avanzate). */
-export type ModelGroup = 'recommended' | 'other' | 'all'
+/**
+ * Dove sta il modello nell'elenco: consigliato o sconsigliato (provati con Glifo, GRAFICA.md punto 4), o non
+ * certificato, tra quelli che si vedono sempre (`other`) o nelle avanzate (`all`).
+ */
+export type ModelGroup = 'recommended' | 'discouraged' | 'other' | 'all'
 
 export type LicenseId = 'apache' | 'mit' | 'llama2' | 'llama3' | 'llama3.1' | 'llama3.2' | 'gemma'
 
@@ -68,7 +71,7 @@ interface Family {
   group: ModelGroup
   license: LicenseId
   /** Per i consigliati: come va rispetto agli altri. */
-  hint?: 'lightest' | 'recommended' | 'better' | 'best'
+  hint?: 'recommended' | 'better' | 'best'
   /** Sa chiedere i conti al motore con <tool_call> (src/ai/tools.ts): i Qwen dal 2.5 in poi e gli Hermes. */
   tools?: true
   /** Ragiona (<think>) se non glielo si spegne: i Qwen3 e i Qwen3.5 (`enable_thinking` nel worker). */
@@ -78,17 +81,18 @@ interface Family {
 }
 
 const FAMILIES: readonly Family[] = [
-  // Consigliati: i Qwen3, provati con Glifo.
-  { base: 'Qwen3-0.6B', name: 'Qwen3 0.6B', group: 'recommended', hint: 'lightest', license: 'apache', tools: true, thinking: true },
+  // Consigliati: provati con Glifo il 14 ottobre 2026, arrivano al risultato (GRAFICA.md punto 4).
   { base: 'Qwen3-1.7B', name: 'Qwen3 1.7B', group: 'recommended', hint: 'recommended', license: 'apache', tools: true, thinking: true },
-  { base: 'Qwen3-4B', name: 'Qwen3 4B', group: 'recommended', hint: 'better', license: 'apache', tools: true, thinking: true },
+  { base: 'Qwen3.5-2B', name: 'Qwen3.5 2B', group: 'recommended', license: 'apache', tools: true, thinking: true },
+  { base: 'Qwen3-4B', name: 'Qwen3 4B', group: 'recommended', license: 'apache', tools: true, thinking: true },
+  { base: 'Qwen3.5-4B', name: 'Qwen3.5 4B', group: 'recommended', hint: 'better', license: 'apache', tools: true, thinking: true },
   { base: 'Qwen3-8B', name: 'Qwen3 8B', group: 'recommended', hint: 'best', license: 'apache', tools: true, thinking: true },
-  // Gli altri modelli: i più nuovi delle altre famiglie, che scrivono anche in italiano.
-  { base: 'Qwen3.5-0.8B', name: 'Qwen3.5 0.8B', group: 'other', license: 'apache', tools: true, thinking: true },
-  { base: 'Qwen3.5-2B', name: 'Qwen3.5 2B', group: 'other', license: 'apache', tools: true, thinking: true },
-  { base: 'Qwen3.5-4B', name: 'Qwen3.5 4B', group: 'other', license: 'apache', tools: true, thinking: true },
-  { base: 'Qwen3.5-9B', name: 'Qwen3.5 9B', group: 'other', license: 'apache', tools: true, thinking: true },
-  { base: 'Llama-3.2-1B-Instruct', name: 'Llama 3.2 1B', group: 'other', license: 'llama3.2' },
+  { base: 'Qwen3.5-9B', name: 'Qwen3.5 9B', group: 'recommended', license: 'apache', tools: true, thinking: true },
+  // Sconsigliati: provati con Glifo, non sono mai arrivati al risultato.
+  { base: 'Qwen3-0.6B', name: 'Qwen3 0.6B', group: 'discouraged', license: 'apache', tools: true, thinking: true },
+  { base: 'Qwen3.5-0.8B', name: 'Qwen3.5 0.8B', group: 'discouraged', license: 'apache', tools: true, thinking: true },
+  { base: 'Llama-3.2-1B-Instruct', name: 'Llama 3.2 1B', group: 'discouraged', license: 'llama3.2' },
+  // Non certificati: i più nuovi delle altre famiglie, che scrivono anche in italiano.
   { base: 'Llama-3.2-3B-Instruct', name: 'Llama 3.2 3B', group: 'other', license: 'llama3.2' },
   { base: 'Llama-3.1-8B-Instruct', name: 'Llama 3.1 8B', group: 'other', license: 'llama3.1' },
   { base: 'Hermes-3-Llama-3.2-3B', name: 'Hermes 3 3B', group: 'other', license: 'llama3.2', tools: true },
@@ -100,7 +104,7 @@ const FAMILIES: readonly Family[] = [
   { base: 'Mistral-7B-Instruct-v0.3', name: 'Mistral 7B v0.3', group: 'other', license: 'apache' },
   { base: 'Qwen2.5-1.5B-Instruct', name: 'Qwen2.5 1.5B', group: 'other', license: 'apache', tools: true },
   { base: 'Qwen2.5-7B-Instruct', name: 'Qwen2.5 7B', group: 'other', license: 'apache', tools: true },
-  // Tutti gli altri, nelle avanzate: le versioni di prima, quelli per il codice o per i conti, quelli quasi solo in inglese.
+  // Non certificati, nelle avanzate: le versioni di prima, quelli per il codice o per i conti, quelli quasi solo in inglese.
   { base: 'Qwen2.5-0.5B-Instruct', name: 'Qwen2.5 0.5B', group: 'all', license: 'apache', tools: true },
   { base: 'Qwen2.5-Coder-0.5B-Instruct', name: 'Qwen2.5 Coder 0.5B', group: 'all', license: 'apache', tools: true },
   { base: 'Qwen2.5-Coder-1.5B-Instruct', name: 'Qwen2.5 Coder 1.5B', group: 'all', license: 'apache', tools: true },

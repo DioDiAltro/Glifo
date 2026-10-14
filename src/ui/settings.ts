@@ -127,8 +127,8 @@ const T = texts({
     'With the cursor on a calculation, “Explain” (below the formula preview) has an AI model that runs in this browser with WebLLM write out the steps: no key, no cost, and the note never leaves your device. Glifo\'s engine does the math and checks it. Requires WebGPU: an up-to-date Chrome or Edge, on a computer.',
   ],
   modelsRecommended: ['Consigliati, provati con Glifo', 'Recommended, tested with Glifo'],
-  modelsOther: ['Altri modelli, non provati con Glifo', 'Other models, not tested with Glifo'],
-  modelsAll: ['Tutti gli altri (avanzate)', 'All the others (advanced)'],
+  modelsDiscouraged: ['Sconsigliati: provati con Glifo, sbagliano spesso', 'Not recommended: tested with Glifo, often wrong'],
+  modelsUncertified: ['Non certificati da Glifo', 'Not certified by Glifo'],
   modelOption: (label: string, memory: string) => [`${label} (${memory} di memoria)`, `${label} (${memory} of memory)`],
   modelOptionNoF16: (label: string) => [`${label} (non va su questa scheda grafica)`, `${label} (doesn't run on this graphics card)`],
   allModels: [
@@ -148,7 +148,11 @@ const T = texts({
   inBrowserValue: (size: string) => [`${size}: le spiegazioni funzionano anche offline`, `${size}: explanations work offline too`],
   partlyValue: (size: string) => [`${size}, scaricato a metà: finisce la prossima volta che premi «Spiegami»`, `${size}, partly downloaded: it finishes the next time you press “Explain”`],
   license: ['Licenza', 'License'],
-  notTested: ['Non provato con Glifo: può sbagliare di più.', 'Not tested with Glifo: it may make more mistakes.'],
+  notCertified: ['Non certificato da Glifo: non è stato provato e può sbagliare di più.', 'Not certified by Glifo: it hasn\'t been tested and may make more mistakes.'],
+  discouraged: [
+    'Sconsigliato: nelle prove con Glifo non è mai arrivato al risultato. Va bene solo se gli altri non girano su questo computer.',
+    'Not recommended: in Glifo\'s tests it never reached the result. Use it only if the others don\'t run on this computer.',
+  ],
   noTools: [
     'Non sa chiedere i conti al motore di Glifo: Glifo gli dà quelli già fatti e poi controlla i passaggi come sempre.',
     'It can\'t ask Glifo\'s engine for calculations: Glifo gives it the ones already done and then checks the steps as usual.',
@@ -693,11 +697,12 @@ function aiFieldset(initial: Settings, deps: SettingsDialogDeps): HTMLElement {
 
 /**
  * «Spiegazioni (prova)»: il modello che scrive i passaggi di «Spiegami», che gira in questo browser
- * (src/ai/localModels.ts). L'elenco è ragionato: i consigliati, gli altri modelli e, con la casella delle
- * avanzate, tutti gli altri (il modello scelto si vede sempre). Sotto, del modello scelto: la memoria della
- * scheda grafica, per la variante che questa scheda usa (`gpuF16`); quanto si scarica (dal suo elenco dei
- * pezzi su Hugging Face) o quanto pesa qui; la licenza, con la scritta che chiede; se è provato con Glifo e
- * se sa chiedere i conti al motore. Poi il tono e i modelli già in questo browser, ognuno con «Togli».
+ * (src/ai/localModels.ts). L'elenco è ragionato: i consigliati, gli sconsigliati e i non certificati, con
+ * quelli delle avanzate solo con la loro casella (il modello scelto si vede sempre). Sotto, del modello
+ * scelto: la memoria della scheda grafica, per la variante che questa scheda usa (`gpuF16`); quanto si
+ * scarica (dal suo elenco dei pezzi su Hugging Face) o quanto pesa qui; la licenza, con la scritta che
+ * chiede; se è sconsigliato o non certificato e se sa chiedere i conti al motore. Poi il tono e i modelli
+ * già in questo browser, ognuno con «Togli».
  * `refresh` guarda di nuovo i modelli nel browser: ogni volta che la sezione si mostra (si possono togliere
  * anche da «Dati»).
  */
@@ -716,14 +721,15 @@ function explainFieldset(initial: Settings, deps: SettingsDialogDeps): { el: HTM
   const problem = h('p', { class: 'field-help space-problem', attrs: { role: 'alert', hidden: true } })
 
   const fill = () => {
-    const groups: [ModelGroup, string][] = [
-      ['recommended', T.modelsRecommended],
-      ['other', T.modelsOther],
-      ['all', T.modelsAll],
+    // Tre gruppi (lo studente, 14 ottobre 2026): tra i non certificati quelli delle avanzate solo con la casella.
+    const groups: [ModelGroup[], string][] = [
+      [['recommended'], T.modelsRecommended],
+      [['discouraged'], T.modelsDiscouraged],
+      [['other', 'all'], T.modelsUncertified],
     ]
     select.replaceChildren(
-      ...groups.flatMap(([group, label]) => {
-        const models = LOCAL_MODELS.filter((m) => m.group === group && (group !== 'all' || all.checked || m.id === chosen.id))
+      ...groups.flatMap(([kinds, label]) => {
+        const models = LOCAL_MODELS.filter((m) => kinds.includes(m.group) && (m.group !== 'all' || all.checked || m.id === chosen.id))
         if (!models.length) return []
         const options = models.map((m) => {
           const variant = modelVariant(m, f16)
@@ -765,7 +771,8 @@ function explainFieldset(initial: Settings, deps: SettingsDialogDeps): { el: HTM
     }
     const lines: [string, string][] = []
     if (license.notice) lines.push([license.notice, 'model-notice'])
-    if (chosen.group !== 'recommended') lines.push([T.notTested, 'model-warning'])
+    if (chosen.group === 'discouraged') lines.push([T.discouraged, 'model-warning'])
+    else if (chosen.group !== 'recommended') lines.push([T.notCertified, 'model-warning'])
     if (!chosen.tools) lines.push([T.noTools, ''])
     if (chosen.english && lang === 'it') lines.push([T.english, ''])
     notes.replaceChildren(...lines.map(([text, kind]) => h('p', { class: `field-help ${kind}`.trim() }, text)))

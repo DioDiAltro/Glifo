@@ -3778,7 +3778,7 @@ try {
       inserted.length === 2 && inserted[0].startsWith('1. Porto fuori') && inserted[1].startsWith('2. Sostituisco') && wrongInNote === 0,
       `«Inserisci nella nota» mette i passaggi dopo la formula, e la nota li controlla (${JSON.stringify(inserted)})`,
     )
-    // Le impostazioni, nella sezione «AI»: l'elenco ragionato dei modelli (GRAFICA.md punto 4), del modello
+    // Le impostazioni, nella sezione «AI»: l'elenco ragionato dei modelli in tre gruppi (GRAFICA.md punto 4), del modello
     // scelto la memoria, quanto si scarica (da Hugging Face, qui finto) e la licenza; il tono.
     await openSettings(ex, 'ai')
     const settings = ex.locator('dialog fieldset.explain-settings')
@@ -3789,25 +3789,29 @@ try {
     const facts = await settings.locator('.model-facts').innerText()
     const tones = await settings.locator('.segmented label').allInnerTexts()
     check(
-      modelGroups.length === 2 &&
+      modelGroups.length === 3 &&
         modelGroups[0][0] === 'Consigliati, provati con Glifo' &&
-        recommended.length === 4 &&
-        /^Qwen3 1\.7B, consigliato \([\d,]+ GB di memoria\)$/.test(recommended[1]) &&
-        modelGroups[1][1] > 10 &&
+        recommended.length === 6 &&
+        /^Qwen3 1\.7B, consigliato \([\d,]+ GB di memoria\)$/.test(recommended[0]) &&
+        modelGroups[1][0] === 'Sconsigliati: provati con Glifo, sbagliano spesso' &&
+        modelGroups[1][1] === 3 &&
+        modelGroups[2][0] === 'Non certificati da Glifo' &&
+        modelGroups[2][1] > 10 &&
         facts.includes('1,1 GB, la prima volta che premi «Spiegami»') &&
         facts.includes('Apache 2.0') &&
         tones.join() === 'Come il professore,Più semplice',
       `nelle impostazioni l'elenco ragionato dei modelli, con la memoria, quanto si scarica e la licenza, e il tono (${JSON.stringify({ modelGroups, recommended, facts, tones })})`,
     )
-    // Un modello di un'altra famiglia, tra tutti gli altri: lo dice, e spiega con i conti che Glifo gli dà.
+    // Con la casella delle avanzate, anche gli altri non certificati. Un modello di un'altra famiglia, sconsigliato:
+    // lo dice, e spiega con i conti che Glifo gli dà.
     await settings.locator('#all-models').check()
-    const allGroups = await settings.locator('#local-model optgroup').count()
+    const uncertified = await settings.locator('#local-model optgroup').nth(2).locator('option').count()
     await settings.locator('#local-model').selectOption('Llama-3.2-1B-Instruct')
     const llamaNotes = await settings.locator('.model-notes').innerText()
     await ex.keyboard.press('Escape')
     check(
-      allGroups === 3 && llamaNotes.includes('Built with Llama') && llamaNotes.includes('Non provato con Glifo') && llamaNotes.includes('Non sa chiedere i conti al motore'),
-      `con la casella delle avanzate tutti i modelli; scelto Llama, la sua licenza e gli avvisi (${JSON.stringify({ allGroups, llamaNotes })})`,
+      uncertified > 30 && llamaNotes.includes('Built with Llama') && llamaNotes.includes('Sconsigliato: nelle prove con Glifo') && llamaNotes.includes('Non sa chiedere i conti al motore'),
+      `con la casella delle avanzate tutti i modelli; scelto Llama, sconsigliato, la sua licenza e gli avvisi (${JSON.stringify({ uncertified, llamaNotes })})`,
     )
     await ex.locator('.explain-box button', { hasText: 'Rifai' }).click()
     await ex.waitForFunction(() => document.querySelector('.explain-box .ai-model')?.textContent === 'Llama 3.2 1B' && document.querySelectorAll('.explain-box .explain-step').length === 2, null, { timeout: 10000 })

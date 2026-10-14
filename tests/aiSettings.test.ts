@@ -115,13 +115,17 @@ describe('le impostazioni delle spiegazioni (prova)', () => {
     expect(section.querySelector('legend')?.textContent).toBe('Spiegazioni (prova)')
     const select = section.querySelector<HTMLSelectElement>('#local-model')!
     const groups = () => [...select.querySelectorAll('optgroup')].map((g) => g.label)
-    expect(groups()).toEqual(['Consigliati, provati con Glifo', 'Altri modelli, non provati con Glifo'])
+    // Tre gruppi, dalle prove con Glifo (14 ottobre 2026).
+    expect(groups()).toEqual(['Consigliati, provati con Glifo', 'Sconsigliati: provati con Glifo, sbagliano spesso', 'Non certificati da Glifo'])
     expect([...select.querySelectorAll('optgroup')[0].querySelectorAll('option')].map((o) => o.textContent)).toEqual([
-      'Qwen3 0.6B, il più leggero (1,4 GB di memoria)',
       'Qwen3 1.7B, consigliato (2 GB di memoria)',
-      'Qwen3 4B, più bravo (3,4 GB di memoria)',
+      'Qwen3.5 2B (2,2 GB di memoria)',
+      'Qwen3 4B (3,4 GB di memoria)',
+      'Qwen3.5 4B, più bravo (3,9 GB di memoria)',
       'Qwen3 8B, il più bravo, per schede grafiche potenti (5,7 GB di memoria)',
+      'Qwen3.5 9B (6,4 GB di memoria)',
     ])
+    expect([...select.querySelectorAll('optgroup')[1].querySelectorAll('option')].map((o) => o.value)).toEqual(['Qwen3-0.6B', 'Qwen3.5-0.8B', 'Llama-3.2-1B-Instruct'])
     expect(select.value).toBe('Qwen3-1.7B')
     // Qui la Cache Storage non c'è: il modello si scaricherà, e quanto pesa lo dice Hugging Face.
     await vi.waitFor(() =>
@@ -144,9 +148,10 @@ describe('le impostazioni delle spiegazioni (prova)', () => {
       ['Da scaricare', 'la prima volta che premi «Spiegami»'],
       ['Licenza', 'Llama 3.2 Community License'],
     ])
+    // Uno sconsigliato: lo dice, con quando può servire.
     expect(notes(section)).toEqual([
       'Built with Llama',
-      'Non provato con Glifo: può sbagliare di più.',
+      'Sconsigliato: nelle prove con Glifo non è mai arrivato al risultato. Va bene solo se gli altri non girano su questo computer.',
       'Non sa chiedere i conti al motore di Glifo: Glifo gli dà quelli già fatti e poi controlla i passaggi come sempre.',
     ])
 
@@ -159,31 +164,33 @@ describe('le impostazioni delle spiegazioni (prova)', () => {
     expect(changes).toContainEqual({ explainTone: 'semplice' })
   })
 
-  it('con la casella delle avanzate, tutti gli altri modelli; quello scelto si vede sempre', async () => {
+  it('con la casella delle avanzate, anche gli altri non certificati; quello scelto si vede sempre', async () => {
     huggingFace()
     const { section, changes } = explainSection({ localModel: 'SmolLM2-1.7B-Instruct' })
     const select = section.querySelector<HTMLSelectElement>('#local-model')!
     const all = section.querySelector<HTMLInputElement>('#all-models')!
-    // Il modello scelto è tra tutti gli altri: la casella è già spuntata.
+    // Il modello scelto è nelle avanzate: la casella è già spuntata.
     expect(all.checked).toBe(true)
     expect(select.value).toBe('SmolLM2-1.7B-Instruct')
-    const allGroup = () => [...select.querySelectorAll('optgroup')].find((g) => g.label === 'Tutti gli altri (avanzate)')
-    expect(allGroup()?.querySelectorAll('option').length).toBeGreaterThan(20)
+    const uncertified = () => [...([...select.querySelectorAll('optgroup')].find((g) => g.label === 'Non certificati da Glifo')?.querySelectorAll('option') ?? [])].map((o) => o.value)
+    expect(uncertified().length).toBeGreaterThan(30)
     expect(notes(section)).toEqual([
-      'Non provato con Glifo: può sbagliare di più.',
+      'Non certificato da Glifo: non è stato provato e può sbagliare di più.',
       'Non sa chiedere i conti al motore di Glifo: Glifo gli dà quelli già fatti e poi controlla i passaggi come sempre.',
       'Scrive quasi solo in inglese: in italiano può sbagliare di più.',
     ])
-    // Togliendo la spunta resta solo quello scelto.
+    // Togliendo la spunta, delle avanzate resta solo quello scelto, con gli altri non certificati.
     all.click()
-    expect([...allGroup()!.querySelectorAll('option')].map((o) => o.value)).toEqual(['SmolLM2-1.7B-Instruct'])
+    expect(uncertified()).toContain('SmolLM2-1.7B-Instruct')
+    expect(uncertified()).toContain('Phi-4-mini-instruct')
+    expect(uncertified()).not.toContain('Llama-3.1-70B-Instruct')
     expect(select.value).toBe('SmolLM2-1.7B-Instruct')
     select.value = 'Qwen3-4B'
     select.dispatchEvent(new Event('change'))
     expect(changes).toContainEqual({ localModel: 'Qwen3-4B' })
     all.click()
     all.click()
-    expect(allGroup()).toBeUndefined()
+    expect(uncertified()).not.toContain('SmolLM2-1.7B-Instruct')
     // Gemma: l'avviso che chiede la sua licenza.
     all.click()
     select.value = 'gemma-2-2b-it'

@@ -109,7 +109,10 @@ forse non mi convince molto»), poi, provata, «va bene, portalo sul sito vero»
 «Spiegami», è fatto sul ramo `prova` il 13 ottobre 2026: l'elenco ragionato (i Qwen3 consigliati, con l'8B;
 gli altri modelli, non provati con Glifo; tutti gli altri nelle avanzate), con la memoria, il peso e la
 licenza di ognuno, i modelli che non sanno chiedere i conti che li ricevono già fatti e i modelli nel browser
-con «Togli» anche nella sezione «AI»; si aspetta che lo studente lo veda.
+con «Togli» anche nella sezione «AI». Il 14 ottobre 2026 i modelli veri sono stati provati con Glifo (con
+llama.cpp nella sessione) e, come ha chiesto lo studente («tieniamoli tutti ma dividiamoli»), divisi in
+consigliati, sconsigliati e non certificati; si aspetta che lo studente provi i consigliati nuovi sul suo
+computer.
 
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
@@ -558,8 +561,8 @@ Da fare:
   di partenza. Il 14 ottobre 2026 nove modelli veri (i Qwen3, i Qwen3.5, Llama 3.2 1B) sono stati provati
   con Glifo vero nella sessione, con le risposte da llama.cpp sulla CPU (`LLAMA` in
   `scripts/spiegami-qwen.mjs`: WebGPU sulla CPU impiega ore): com'è andata è in GRAFICA.md, punto 4.
-  Restano da vedere sul computer dello studente quanto ci mettono e se WebGPU li fa girare, e da decidere
-  quali Qwen3.5 passano tra i consigliati;
+  Lo stesso giorno, come ha chiesto lo studente, i modelli sono divisi in consigliati, sconsigliati e non
+  certificati. Resta da vedere sul computer dello studente quanto ci mettono e se WebGPU li fa girare;
 - dove WebGPU non c'è (telefono, iPad): lo stesso giro con il modello sul server (Cloudflare Workers
   AI) o con la propria chiave;
 - il «Perché?» su ogni passaggio, i passaggi che il motore sa scrivere da solo (derivate, Ruffini,
