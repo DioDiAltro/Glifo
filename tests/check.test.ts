@@ -185,8 +185,11 @@ describe('il controllo delle uguaglianze scritte (✓/✗)', () => {
     expect(check(r`\partial_x (x^2 y) \cdot x = 2x^2 y`)).toBe('✓')
     // L'esponente dopo la parentesi è suo: (x + 1)² derivato, per x.
     expect(check(r`\frac{d}{dx}(x+1)^2 \cdot x = 2x(x+1)`)).toBe('✓')
-    // Senza parentesi la derivata resta di tutto il prodotto.
-    expect(check(r`\frac{d}{dx} x^2 \sin x = 2x \sin x + x^2 \cos x`)).toBe('✓')
+    // Senza parentesi si deriva solo quello che viene subito dopo, come in \sum (lo studente, 14 ottobre 2026).
+    expect(check(r`\frac{d}{dx} x^2 \sin x = 2x \sin x`)).toBe('✓')
+    expect(check(r`\frac{d}{dx} x^2 \sin x = 2x \sin x + x^2 \cos x`)).toBe('✗ 2x sin(x)')
+    expect(check(r`\frac{d}{dx}(x^2 \sin x) = 2x \sin x + x^2 \cos x`)).toBe('✓')
+    expect(check(r`\frac{d}{dx} 3x^2 = 6x`)).toBe('✓')
   })
 
   it('le righe separate da \\\\ si controllano una per una (14 ottobre 2026)', () => {

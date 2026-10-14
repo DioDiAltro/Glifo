@@ -1835,11 +1835,12 @@ class Parser {
   /**
    * Quello che si deriva dopo `\frac{d}{dx}` o `\partial_x`. Con una parentesi subito dopo solo lei,
    * con il suo esponente: `\frac{d}{dx}(x^2+1) \cdot (x-1)` è 2x·(x − 1) (era la derivata di tutto il
-   * prodotto), `\frac{d}{dx}(x^2+1)^3` la derivata di (x² + 1)³. Senza, tutto il prodotto:
-   * `\frac{d}{dx} \sin x \cos x`.
+   * prodotto), `\frac{d}{dx}(x^2+1)^3` la derivata di (x² + 1)³. Senza, solo quello che viene subito
+   * dopo, come in \sum: `\frac{d}{dx} x^2 \sin x` è 2x·sin x, `\frac{d}{dx} 3x^2` è 6x (lo studente,
+   * 14 ottobre 2026: «se non c'è la parentesi si prende solo quello che sta subito dopo il simbolo»).
    */
   private derivativeBody(): MathNode {
-    return this.is('open', '(') || this.is('open', '[') ? this.power() : this.term()
+    return this.is('open', '(') || this.is('open', '[') ? this.power() : this.implicitArgument()
   }
 
   /** `d`, `\partial`, `d^2`, `\partial^2` (con `variable`: seguito dalla variabile, `dx`, `\partial x^2`). */

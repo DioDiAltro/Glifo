@@ -38,14 +38,17 @@ describe('le derivate: come si scrivono', () => {
     expect(toLatex(d)).toBe(r`\frac{d}{dx} x^{2}`)
   })
 
-  it('con la parentesi subito dopo la derivata è solo la parentesi, con il suo esponente; senza, tutto il prodotto', () => {
+  it('con la parentesi subito dopo la derivata è solo la parentesi, con il suo esponente; senza, solo quello che viene subito dopo', () => {
     const diff = { k: 'diff', vars: ['x'], partial: false }
     expect(parseMath(r`\frac{d}{dx}(x^2+1) \cdot (x-1)`)).toMatchObject({ k: 'bin', op: '*', a: diff })
     expect(parseMath(r`\frac{d}{dx}(x^2+1)(x-1)`)).toMatchObject({ k: 'bin', op: '*', a: diff, implicit: true })
     expect(parseMath(r`\frac{d}{dx}\left[x^2+1\right] / (x-1)`)).toMatchObject({ k: 'bin', op: '/', a: diff })
     expect(parseMath(r`\frac{d}{dx}(x+1)^3 \cdot x`)).toMatchObject({ k: 'bin', op: '*', a: { ...diff, body: { k: 'bin', op: '^' } } })
     expect(parseMath(r`\partial_x (x^2 y) \cdot y`)).toMatchObject({ k: 'bin', op: '*', a: { k: 'diff', vars: ['x'], partial: true } })
-    expect(parseMath(r`\frac{d}{dx} x^2 \sin x`)).toMatchObject({ ...diff, body: { k: 'bin', op: '*' } })
+    // Senza parentesi solo quello che viene subito dopo, come in \sum (lo studente, 14 ottobre 2026): x^2, poi · sin x.
+    expect(parseMath(r`\frac{d}{dx} x^2 \sin x`)).toMatchObject({ k: 'bin', op: '*', a: { ...diff, body: { k: 'bin', op: '^' } } })
+    expect(parseMath(r`\frac{d}{dx} 3x^2`)).toMatchObject({ ...diff, body: { k: 'bin', op: '*' } })
+    expect(parseMath(r`\frac{d}{dx} x^2 \cdot x`)).toMatchObject({ k: 'bin', op: '*', a: diff })
     // Stampata e riletta resta la stessa: \frac{d}{dx} \left(x + 1\right)^{3} ha l'esponente dentro.
     for (const f of [r`\frac{d}{dx}(x^2+1) \cdot (x-1)`, r`\frac{d}{dx}(x+1)^3`, r`\frac{d}{dx}(x+1)^3 \cdot x`, r`\partial_x (x^2 y) \cdot y`]) {
       const node = parseMath(f)
@@ -95,7 +98,9 @@ describe('le derivate scritte come formula', () => {
   })
 
   it('le regole: prodotto, quoziente (con un denominatore solo), catena, potenze', () => {
-    expect(tex(r`\frac{d}{dx} \sin x \cos x =`)).toBe(r`\cos^{2} x - \sin^{2} x`)
+    expect(tex(r`\frac{d}{dx} (\sin x \cos x) =`)).toBe(r`\cos^{2} x - \sin^{2} x`)
+    // Senza parentesi si deriva solo \sin x (lo studente, 14 ottobre 2026).
+    expect(tex(r`\frac{d}{dx} \sin x \cos x =`)).toBe(r`\cos^{2} x`)
     expect(tex(r`\frac{d}{dx} (x^2 + 1)^3 =`)).toBe(r`6x\left(x^{2} + 1\right)^{2}`)
     expect(tex(r`\frac{d}{dx} e^{-x^2} =`)).toBe('-2xe^{-x^{2}}')
     expect(tex(r`\frac{d}{dx} \ln(x^2 + 1) =`)).toBe(r`\frac{2x}{x^{2} + 1}`)
