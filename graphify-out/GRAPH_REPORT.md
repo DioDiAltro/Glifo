@@ -1,17 +1,17 @@
 # Graph Report - Glifo  (2026-10-14)
 
 ## Corpus Check
-- 346 files · ~724,528 words
+- 346 files · ~725,056 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 6 file(s) not represented in the graph (top: (none) 5, .css 1)
 
 ## Summary
 - 5560 nodes · 20327 edges · 170 communities (128 shown, 42 thin omitted)
-- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 684 edges (avg confidence: 0.89)
+- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 685 edges (avg confidence: 0.89)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `27d8cc49`
+- Built from commit: `460135e8`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -154,14 +154,14 @@
 - Distribution
 
 ## God Nodes (most connected - your core abstractions)
-1. `Dove sono le cose` - 326 edges
+1. `Dove sono le cose` - 328 edges
 2. `MathError` - 151 edges
 3. `Sheet` - 147 edges
 4. `num()` - 145 edges
 5. `h()` - 136 edges
 6. `MathNode` - 131 edges
-7. `texts` - 124 edges
-8. `mul()` - 124 edges
+7. `mul()` - 124 edges
+8. `texts` - 124 edges
 9. `Board` - 117 edges
 10. `compile()` - 116 edges
 
@@ -706,13 +706,13 @@ Nodes (11): addExp(), discreteQuantile(), Distribution, exactIntervalProbability
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `texts` connect `texts` to `licenses.ts`, `parse.ts`, `main.ts`, `math/evaluate.ts`, `spec.ts`, `BoardStore`, `graph/preview.ts`, `Dove sono le cose`, `distributions.ts`, `src/relocation.ts`, `svg.ts`, `plan.ts`, `schema/templates.ts`, `feedback.ts`, `xlsx.ts`, `siteUpdate.ts`, `numerical.ts`, `arithmetic.ts`, `index.ts`, `schema/editor.ts`, `ink.ts`, `ui/preview.ts`, `aiPanel.ts`, `several.ts`, `gantt.ts`, `toLatex`, `toolbar.ts`, `assistant.ts`, `logic.ts`, `usesDecimalComma`, `complex.ts`, `namesIn`, `laplace.ts`, `resize.ts`, `graphNote.test.ts`, `localModels.ts`, `inference.ts`, `functions.ts`, `MathError`, `spreadsheet/format.ts`, `editor/lists.ts`, `sidePanel.ts`, `noteWordsGraph.test.ts`, `linsys.ts`, `sql.ts`, `finite.ts`, `spreadsheetEn.test.ts`, `spreadsheet/editor.ts`, `odesolve.ts`, `sheet.ts`, `schemaEn.test.ts`, `symbolic.ts`, `ui/relocation.ts`, `topics.ts`, `files.ts`, `schemaBlocks.ts`, `FoldersStore`, `schemaTools.test.ts`, `graph/file.ts`, `spellcheck.ts`, `i18n.ts`, `supabase.ts`, `probability.ts`, `conics.ts`, `board.ts`, `page.ts`?**
-  _High betweenness centrality (0.139) - this node is a cross-community bridge._
+  _High betweenness centrality (0.136) - this node is a cross-community bridge._
 - **Why does `Dove sono le cose` connect `Dove sono le cose` to `parse.ts`, `main.ts`, `math/evaluate.ts`, `spec.ts`, `BoardStore`, `primitive.ts`, `Board`, `graph/preview.ts`, `src/relocation.ts`, `svg.ts`, `plan.ts`, `SchemaEditor`, `markdown.ts`, `feedback.ts`, `Rational`, `smoke-test.mjs`, `arithmetic.ts`, `numerical.ts`, `xlsx.ts`, `schema/editor.ts`, `SheetEditor`, `ExplainPanel`, `Parser`, `ink.ts`, `ui/preview.ts`, `aiPanel.ts`, `several.ts`, `gantt.ts`, `toLatex`, `toolbar.ts`, `assistant.ts`, `logic.ts`, `usesDecimalComma`, `complex.ts`, `namesIn`, `laplace.ts`, `view3d.ts`, `graphNote.test.ts`, `localModels.ts`, `inference.ts`, `num`, `MathError`, `functions.ts`, `.render`, `schema/shapes.ts`, `board/shapes.ts`, `sidePanel.ts`, `noteWordsGraph.test.ts`, `linsys.ts`, `evaluateExactComplex`, `finite.ts`, `spreadsheetEn.test.ts`, `siteUpdate.ts`, `spreadsheet/editor.ts`, `.constructor`, `odesolve.ts`, `sheet.ts`, `blockMove.ts`, `Pt`, `symbolic.ts`, `texts`, `tutorial.mjs`, `topics.ts`, `schemaBlocks.ts`, `schemaTools.test.ts`, `graph/file.ts`, `i18n.ts`, `graph.ts`, `supabase.ts`, `board.ts`, `Sheet`?**
-  _High betweenness centrality (0.104) - this node is a cross-community bridge._
+  _High betweenness centrality (0.106) - this node is a cross-community bridge._
 - **Why does `vitest` connect `i18n.ts` to `licenses.ts`, `parse.ts`, `spec.ts`, `BoardStore`, `Dove sono le cose`, `distributions.ts`, `src/relocation.ts`, `svg.ts`, `plan.ts`, `siteUpdate.ts`, `feedback.ts`, `captcha.ts`, `markdown.ts`, `numerical.ts`, `xlsx.ts`, `store.ts`, `ink.ts`, `ui/preview.ts`, `database.ts`, `gantt.ts`, `mathEn2.test.ts`, `assistant.ts`, `BoardOptions`, `complex.ts`, `translations.test.ts`, `resize.ts`, `view3d.ts`, `graphNote.test.ts`, `localModels.ts`, `num`, `MathError`, `board/shapes.ts`, `editor/lists.ts`, `sidePanel.ts`, `noteWordsGraph.test.ts`, `linsys.ts`, `sql.ts`, `spreadsheetEn.test.ts`, `spreadsheet/editor.ts`, `schemaEn.test.ts`, `blockMove.ts`, `picture.ts`, `texts`, `package.json`, `ui/relocation.ts`, `schemaBlocks.ts`, `FoldersStore`, `symbolsEn.test.ts`, `schemaTools.test.ts`, `graph/file.ts`, `suggest.ts`, `spellcheck.ts`, `supabase.ts`, `board.ts`, `Sheet`, `page.ts`?**
-  _High betweenness centrality (0.069) - this node is a cross-community bridge._
-- **Are the 325 inferred relationships involving `Dove sono le cose` (e.g. with `fakeLlmWorker()` and `tutorialModel()`) actually correct?**
-  _`Dove sono le cose` has 325 INFERRED edges - model-reasoned connections that need verification._
+  _High betweenness centrality (0.076) - this node is a cross-community bridge._
+- **Are the 327 inferred relationships involving `Dove sono le cose` (e.g. with `fakeLlmWorker()` and `tutorialModel()`) actually correct?**
+  _`Dove sono le cose` has 327 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `Condividere una nota con un link`, `Domande frequenti e commenti`, `Provarlo sul tuo computer` to the rest of the system?**
   _873 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `parse.ts` be split into smaller, more focused modules?**
