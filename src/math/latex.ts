@@ -371,7 +371,8 @@ function diffLatex(node: Extract<MathNode, { k: 'diff' }>): string {
   const bottom = groups.map(([v, k]) => `${d}${node.partial ? ' ' : ''}${nameLatex(v)}${k > 1 ? `^{${k}}` : ''}`).join(' \\, ')
   const body = node.body
   if (body.k === 'name') return `\\frac{${top} ${nameLatex(body.name)}}{${bottom}}`
-  if (body.k === 'apply' && !body.primes) return `\\frac{${top} ${nameLatex(body.name)}}{${bottom}}\\left(${body.args.map(toLatex).join(', ')}\\right)`
+  // f nel punto (\frac{\partial f}{\partial x}(a, b)); \frac{d}{dx}(f(x^2)) resta la derivata di tutta f(x²).
+  if (body.k === 'apply' && !body.primes && node.point) return `\\frac{${top} ${nameLatex(body.name)}}{${bottom}}\\left(${body.args.map(toLatex).join(', ')}\\right)`
   // La funzione da derivare sempre tra parentesi: il lettore le vuole (vedi `derivativeFrac` in parse.ts).
   return `\\frac{${top}}{${bottom}}\\left(${toLatex(body)}\\right)`
 }

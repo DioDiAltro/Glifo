@@ -246,7 +246,10 @@ finita il 14 ottobre 2026, il file non c'è più e si legge nella storia del rep
   lettere: derivate (`f'(x)`, nodi `diff` da `\frac{d}{dx}` e `\partial`; dopo `\frac{d}{dx}` la parentesi è
   obbligatoria, come in Photomath, e si deriva solo lei, con il suo esponente: `derivativeFrac` in `parse.ts`, e
   `diffLatex` in `latex.ts` la scrive sempre; `\partial_x` senza parentesi prende solo quello che viene subito
-  dopo, come \sum: `derivativeBody`; dal 14 ottobre 2026), gradiente, divergenza, rotore,
+  dopo, come \sum: `derivativeBody`; dal 14 ottobre 2026; `\frac{\partial f}{\partial x}(a, b)` e
+  `\partial_x f(a, b)` hanno `point` nel nodo: la derivata di f calcolata nel punto, anche con le lettere,
+  in `derivative`/`atPoint` di `symbolic.ts` e in `compileDerivative` di `evaluate.ts`, mentre
+  `\frac{d}{dx}(f(x^2))` è la derivata di tutta f(x²)), gradiente, divergenza, rotore,
   hessiana e jacobiana, con le semplificazioni (`tidy`: frazioni unite, polinomi in ordine, fattori
   raccolti); il foglio li usa con `expandCalculus` e, se restano lettere, mostra la formula; gli integrali
   definiti con le lettere, uno dentro l'altro o dentro un'espressione li fa `definiteValue` (il `Converter`

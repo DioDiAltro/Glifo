@@ -180,11 +180,12 @@ export type MathNode =
    */
   | { k: 'mint'; vars: string[]; domain: MathNode; body: MathNode }
   /**
-   * Una derivata: `\frac{d}{dx} …`, `\frac{\partial^2 f}{\partial x \partial y}`, `\partial_x f`; `vars` ha
-   * una variabile per ogni derivata. Di una funzione in un punto (`\frac{\partial f}{\partial x}(1, 2)`)
-   * `body` è f(1, 2).
+   * Una derivata: `\frac{d}{dx}(…)`, `\frac{\partial^2 f}{\partial x \partial y}`, `\partial_x f`; `vars` ha
+   * una variabile per ogni derivata. Di una funzione in un punto (`\frac{\partial f}{\partial x}(1, 2)`,
+   * `\partial_x f(a, b)`) `body` è f(1, 2) e `point` dice che è la derivata di f calcolata lì, anche con le
+   * lettere; senza, `\frac{d}{dx}(f(x^2))` è la derivata di tutta f(x²).
    */
-  | { k: 'diff'; body: MathNode; vars: string[]; partial: boolean }
+  | { k: 'diff'; body: MathNode; vars: string[]; partial: boolean; point?: boolean }
   /**
    * Un integrale di linea sulla curva `curve` (definita nella nota: γ(t) = (…), t ∈ [a, b]): di una
    * funzione (`ds`) o di un campo (il lavoro: F · dr); `form` se è scritto come P dx + Q dy.
@@ -1822,11 +1823,13 @@ class Parser {
     this.next()
     if (!vars.length || (top.order !== null && top.order !== vars.length)) return fail()
     let body: MathNode
+    let point = false
     if (fn) {
-      // \frac{\partial f}{\partial x}(1, 2): f nel punto; senza punto, f con le sue variabili.
+      // \frac{\partial f}{\partial x}(1, 2): f nel punto (anche (a, b)); senza punto, f con le sue variabili.
       if (this.is('open', '(')) {
         const group = this.group(true)
         body = { k: 'apply', name: fn, args: group.k === 'tuple' ? group.items : [group], primes: 0 }
+        point = true
       } else body = { k: 'name', name: fn }
     } else {
       // Dopo \frac{d}{dx} la funzione va sempre tra parentesi, come in Photomath, e si deriva solo lei (con il
@@ -1835,7 +1838,7 @@ class Parser {
       if (!this.is('open', '(') && !this.is('open', '[')) throw this.error(T.derivativeAfterFraction)
       body = this.power()
     }
-    return { k: 'diff', body, vars, partial: top.partial }
+    return { k: 'diff', body, vars, partial: top.partial, ...(point && { point }) }
   }
 
   /**
@@ -1893,7 +1896,10 @@ class Parser {
       this.next()
     }
     if (!this.peek() || !this.startsArgument()) throw this.error(T.derivativeAfterPartial, start.pos)
-    return { k: 'diff', body: this.derivativeBody(), vars, partial: true }
+    // \partial_x f(a, b): la derivata di f nel punto, come \frac{\partial f}{\partial x}(a, b).
+    const call = this.is('name') && this.is('open', '(', 1)
+    const body = this.derivativeBody()
+    return { k: 'diff', body, vars, partial: true, ...(call && body.k === 'apply' && !body.primes && { point: true }) }
   }
 
   /** `\lim_{x \to 0} \frac{\sin x}{x}`, `\lim_{x \to 0^+}`, `\lim_{n \to \infty}`. */

@@ -571,6 +571,12 @@ sta nelle parentesi viene fatto la derivata». Così, sul ramo `prova`, dopo `\f
 funzione da derivare, tra parentesi», che nella nota non si vede). `\partial_x` senza parentesi prende solo quello
 che viene subito dopo, come le somme. Esempi, aiuto, modelli del catalogo e test hanno le parentesi.
 
+Trovato guardando come il motore calcola le derivate (14 ottobre 2026, lo studente: «sì, correggi anche la
+derivata parziale con le lettere»): con `f(x, y) = x^2 y`, `\frac{\partial f}{\partial x}(a, b) =` dava 0 invece
+di 2ab, perché con le lettere nel punto Glifo derivava f(a, b), dove x non c'è più (lo stesso `\partial_x f(a, b)`
+e `\frac{df}{dx}(t^2)`, anche nei grafici). Corretto sul ramo `prova`: è la derivata di f calcolata nel punto,
+con le lettere messe tutte insieme (`(y, x)` dà 2xy); `\frac{d}{dx}(f(x^2))` resta la derivata di tutta f(x²).
+
 Da fare:
 - provarlo davvero su un computer con WebGPU (Chrome o Edge), su esercizi veri, e scegliere il modello
   di partenza. Il 14 ottobre 2026 nove modelli veri (i Qwen3, i Qwen3.5, Llama 3.2 1B) sono stati provati

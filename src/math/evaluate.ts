@@ -584,9 +584,11 @@ function snapSum(a: number, b: number): number {
 function compileDerivative(node: Extract<MathNode, { k: 'diff' }>, scope: Scope, options: CompileOptions): Compiled {
   let body = node.body
   let at: { params: string[]; point: Compiled[] } | null = null
-  // \frac{\partial f}{\partial x}: f con le sue variabili; \frac{\partial f}{\partial x}(1, 2): nel punto.
+  // \frac{\partial f}{\partial x}: f con le sue variabili; \frac{\partial f}{\partial x}(1, 2): nel punto (con `point`
+  // anche con le lettere, \frac{df}{dx}(x^2) è f' in x²; senza, solo con i numeri).
   const user = (body.k === 'name' || body.k === 'apply') && !scope.vars.has(body.name) ? scope.fns.get(body.name) : undefined
-  if (user && (body.k === 'name' || (body.k === 'apply' && !body.primes && body.args.length === user.params.length && body.args.every((a) => isConstant(a, scope))))) {
+  const inPoint = (args: MathNode[]) => node.point || args.every((a) => isConstant(a, scope))
+  if (user && (body.k === 'name' || (body.k === 'apply' && !body.primes && body.args.length === user.params.length && inPoint(body.args)))) {
     if (body.k === 'apply') at = { params: user.params, point: body.args.map((a) => compile(a, scope, options)) }
     body = { k: 'apply', name: body.name, args: user.params.map((p) => ({ k: 'name', name: p })), primes: 0 }
   }

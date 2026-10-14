@@ -160,6 +160,7 @@ describe('il controllo delle uguaglianze scritte (✓/✗)', () => {
     expect(check(r`f(x) = x^2`, "f'(x) = 2x")).toBe('✓')
     expect(check(r`f(x) = x^2`, "f'(x) = x")).toBe('✗ 2x')
     expect(check(r`\frac{d}{dx}(\sin x) = \cos x`)).toBe('✓')
+    expect(check('f(x, y) = x^2 y', r`\frac{\partial f}{\partial x}(a, b) = 2ab`)).toBe('✓')
     expect(check(r`\int x^2 \, dx = \frac{x^3}{3} + c`)).toBe('✓')
     expect(check(r`\int x^2 \, dx = x^3 + c`)).toBe('✗ x³/3 + c')
     // Il valore in π o in i: non è una funzione con la variabile π (una volta lo diventava).

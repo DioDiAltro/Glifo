@@ -256,7 +256,8 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
   comuni raccolti: `(1 − x)e^{−x}`); anche `f''(x)`, `\frac{d}{dx}(\sin x \cos x) =`, `\frac{d^2}{dx^2}(\sin x) =`, la
   funzione integrale (`F(x) = \int_0^x e^{-t^2} \, dt` dà `F'(x) = e^{−x²}`) e, in un punto, `f'(2) =`. Le
   **derivate parziali** si scrivono `\frac{\partial f}{\partial x}`, `\frac{\partial^2 f}{\partial x \partial y}`,
-  `\partial_x f`, anche in un punto (`\frac{\partial f}{\partial x}(1, 2) =`). Dopo `\frac{d}{dx}` (e
+  `\partial_x f`, anche in un punto, con i numeri o con le lettere (`\frac{\partial f}{\partial x}(1, 2) =`; con
+  `f(x, y) = x^2 y`, `\frac{\partial f}{\partial x}(a, b) =` dà `2ab`). Dopo `\frac{d}{dx}` (e
   `\frac{d^2}{dx^2}`, `\frac{\partial}{\partial x}`) la funzione va sempre tra parentesi, come in Photomath: si
   deriva solo quello che c'è dentro, con il suo esponente, e il resto si moltiplica:
   `\frac{d}{dx}(x^2 + 1) \cdot (x - 1) =` dà `2x(x − 1)` e `\frac{d}{dx}(x^2 + 1)^3` è la derivata di (x² + 1)³.

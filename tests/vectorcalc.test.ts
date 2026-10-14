@@ -52,7 +52,7 @@ describe('le derivate: come si scrivono', () => {
     // \partial_x resta com'è: senza parentesi solo quello che viene subito dopo.
     expect(parseMath(r`\partial_x x^2 y \cdot y`)).toMatchObject({ k: 'bin', op: '*', a: { k: 'diff', vars: ['x'], partial: true, body: { k: 'bin', op: '*' } } })
     // Stampata e riletta resta la stessa: \frac{d}{dx} \left(x + 1\right)^{3} ha l'esponente dentro.
-    for (const f of [r`\frac{d}{dx}(x^2+1) \cdot (x-1)`, r`\frac{d}{dx}(x+1)^3`, r`\frac{d}{dx}(x+1)^3 \cdot x`, r`\partial_x (x^2 y) \cdot y`]) {
+    for (const f of [r`\frac{d}{dx}(x^2+1) \cdot (x-1)`, r`\frac{d}{dx}(x+1)^3`, r`\frac{d}{dx}(x+1)^3 \cdot x`, r`\partial_x (x^2 y) \cdot y`, r`\frac{\partial f}{\partial x}(a, b)`, r`\frac{d}{dx}(f(x^2))`]) {
       const node = parseMath(f)
       expect(parseMath(toLatex(node))).toEqual(node)
     }
@@ -162,6 +162,16 @@ describe('le derivate parziali e gli operatori dei campi', () => {
     expect(tex(f, r`\frac{\partial^2 f}{\partial x \partial y} =`)).toBe(r`2x + \cos\left(xy\right) - xy\sin\left(xy\right)`)
     expect(text('f(x, y) = x^2 y', r`\frac{\partial f}{\partial x}(1, 2) =`)).toBe('4')
     expect(text(r`\partial_x (x^2 y) =`)).toBe('2xy')
+    // In un punto anche con le lettere (14 ottobre 2026: dava 0): la derivata di f, calcolata lì.
+    expect(text('f(x, y) = x^2 y', r`\frac{\partial f}{\partial x}(a, b) =`)).toBe('2ab')
+    expect(text('f(x, y) = x^2 y', r`\frac{\partial f}{\partial y}(a, b) =`)).toBe('a²')
+    expect(text('f(x, y) = x^2 y', r`\partial_x f(a, b) =`)).toBe('2ab')
+    expect(text('f(x, y) = x^2 y', 'a = 3', r`\frac{\partial f}{\partial x}(a, b) =`)).toBe('6b')
+    expect(text('f(x) = x^3', r`\frac{df}{dx}(t^2) =`)).toBe('3t⁴')
+    // Le lettere del punto vanno al loro posto tutte insieme: in (y, x) la y al posto di x e la x al posto di y.
+    expect(text('f(x, y) = x^2 y', r`\frac{\partial f}{\partial x}(y, x) =`)).toBe('2xy')
+    // Con la parentesi dopo \frac{d}{dx} è la derivata di tutta f(x²), con la regola della catena.
+    expect(text('f(x) = x^3', r`\frac{d}{dx}(f(x^2)) =`)).toBe('6x⁵')
   })
 
   it('gradiente, divergenza, rotore (nel piano un numero), laplaciano', () => {
@@ -295,5 +305,8 @@ describe('i campi e le curve nei grafici', () => {
     const spec = parseGraph(r`y = \frac{d}{dx}(x^3)`)
     const f = item(spec.items, 'function').f
     expect(f(2)).toBeCloseTo(12, 6)
+    // Quando le lettere non bastano (Φ), \frac{df}{dx}(x^2) è la derivata di f nel punto x², non quella di f(x²).
+    const point = parseGraph(r`y = \frac{df}{dx}(x^2)`, [r`f(x) = \Phi(x)`])
+    expect(item(point.items, 'function').f(1)).toBeCloseTo(0.2419707245, 6)
   })
 })

@@ -1054,11 +1054,14 @@ class Converter {
 
   /** \frac{\partial^2 f}{\partial x \partial y}, \frac{d}{dx}(…), f nel punto: \frac{\partial f}{\partial x}(1, 2). */
   private derivative(node: Extract<MathNode, { k: 'diff' }>, locals: ReadonlyMap<string, Ex>): Ex {
-    const at = this.atPoint(node.body)
+    const at = this.atPoint(node.body, !!node.point, locals)
     if (at) {
       let d = this.inline(at.name, at.params.map(sym))
       for (const v of node.vars) d = derive(d, v)
-      return at.params.reduce((e, p, i) => subst(e, p, at.args[i]), d)
+      // Il punto va al posto dei parametri tutto insieme: in (y, x) la y al posto di x e la x al posto di y.
+      const held = at.params.map((_, i) => `#${i}`)
+      d = at.params.reduce((e, p, i) => subst(e, p, sym(held[i])), d)
+      return held.reduce((e, h, i) => subst(e, h, at.args[i]), d)
     }
     const bare = node.body.k === 'name' ? node.body.name : null
     if (bare && !locals.has(bare) && !this.scope.fns.has(bare) && !node.vars.includes(bare)) throw new UndefinedName(bare)
@@ -1068,15 +1071,16 @@ class Converter {
   }
 
   /**
-   * Una funzione definita calcolata in un punto (f(1, 2), con numeri): sotto una derivata vuol dire
-   * «la derivata di f, in quel punto». Null se non lo è.
+   * Una funzione definita calcolata in un punto: sotto una derivata vuol dire «la derivata di f, in quel
+   * punto». Con `point` (\frac{\partial f}{\partial x}(a, b), \partial_x f(a, b)) anche con le lettere; senza,
+   * solo con i numeri (f(1, 2)): \frac{d}{dx}(f(x^2)) è la derivata di tutta f(x²). Null se non lo è.
    */
-  private atPoint(node: MathNode): { name: string; params: string[]; args: Ex[] } | null {
+  private atPoint(node: MathNode, point: boolean, locals: ReadonlyMap<string, Ex>): { name: string; params: string[]; args: Ex[] } | null {
     if (node.k !== 'apply' || node.primes) return null
     const f = this.scope.fns.get(node.name)
     if (!f || f.params.length !== node.args.length) return null
-    const args = node.args.map((a) => this.scalar(a))
-    if (args.some((a) => symbols(a).some((n) => n !== 'π' && n !== 'e'))) return null
+    const args = node.args.map((a) => this.scalar(a, locals))
+    if (!point && args.some((a) => symbols(a).some((n) => n !== 'π' && n !== 'e'))) return null
     return { name: node.name, params: f.params, args }
   }
 
@@ -1146,7 +1150,7 @@ class Converter {
 
   /** La funzione di un gradiente o di un laplaciano: f (con le sue variabili), f(1, 2) (in un punto) o un'espressione in x, y, z. */
   private scalarField(node: MathNode, locals: ReadonlyMap<string, Ex>): { f: Ex; vars: string[]; at: Ex[] | null } {
-    const point = this.atPoint(node)
+    const point = this.atPoint(node, false, locals)
     if (point) return { f: this.inline(point.name, point.params.map(sym)), vars: point.params, at: point.args }
     if (node.k === 'name' && this.scope.fns.has(node.name) && !locals.has(node.name)) {
       const f = this.scope.fns.get(node.name)!
