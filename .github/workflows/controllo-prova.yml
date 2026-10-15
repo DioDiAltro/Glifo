@@ -1,0 +1,36 @@
+# Controllo provvisorio (15 ottobre 2026): il sito di prova si raggiunge da fuori? Gira solo su questo ramo.
+name: Controllo del sito di prova
+
+on:
+  push:
+    branches: [claude/modest-wozniak-6g3flo]
+
+jobs:
+  controllo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: DNS
+        run: |
+          for n in glifo-prova.pages.dev 855c15c7.glifo-prova.pages.dev glifo-bru.pages.dev glifo.page; do
+            echo "== $n"
+            echo "1.1.1.1 A: $(dig +short A $n @1.1.1.1 | tr '\n' ' ')"
+            echo "8.8.8.8 A: $(dig +short A $n @8.8.8.8 | tr '\n' ' ')"
+            echo "1.1.1.1 AAAA: $(dig +short AAAA $n @1.1.1.1 | tr '\n' ' ')"
+            dig $n @1.1.1.1 | grep -E 'status:|IN\s+(A|CNAME|SOA)' || true
+          done
+      - name: HTTP
+        run: |
+          for u in https://glifo-prova.pages.dev/ https://855c15c7.glifo-prova.pages.dev/ https://glifo-bru.pages.dev/ https://glifo.page/; do
+            echo "== $u"
+            curl -sS -o /tmp/p.html -w 'codice %{http_code}, ip %{remote_ip}, %{time_total}s, finale %{url_effective}\n' -L --max-time 30 "$u" || true
+            grep -o '<title>[^<]*</title>' /tmp/p.html || true
+            head -c 400 /tmp/p.html; echo
+          done
+      - name: La pagina in Chrome
+        run: |
+          timeout 60 google-chrome --headless=new --disable-gpu --no-first-run --virtual-time-budget=15000 \
+            --enable-logging=stderr --log-level=0 --dump-dom https://glifo-prova.pages.dev/ > /tmp/dom.html 2> /tmp/chrome.log || true
+          echo "--- messaggi della console"
+          grep -i 'CONSOLE' /tmp/chrome.log | head -40 || true
+          echo "--- pagina (testo)"
+          sed -e 's/<[^>]*>/ /g' /tmp/dom.html | tr -s ' \n' | head -c 3000; echo
