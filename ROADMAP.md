@@ -437,7 +437,8 @@ spostano nella nota con le frecce ↑ ↓, come i grafici. Tutto è descritto ne
 - fatto (15 ottobre 2026, lo studente, dopo i contenitori: «aggiungi anche la possibilità di scegliere
   dove mettere il testo»): **la posizione del testo** nelle forme, come in draw.io: in alto, a metà o in
   basso, a sinistra, al centro o a destra (nove posti in un quadrato, nel pannello a destra); il titolo
-  del contenitore sopra o sotto, e il contenitore si prende da lì. Sul ramo `prova`, da provare;
+  del contenitore sopra o sotto, e il contenitore si prende da lì. Vista sul ramo `prova`, «va bene,
+  mettilo sul ramo principale»;
 - il contrario dell'SQL: da un file SQL alle tabelle disegnate; e il passaggio dallo schema E-R
   alle tabelle (la progettazione logica);
 - stampare con i colori del tema chiaro anche se si usa quello scuro;
