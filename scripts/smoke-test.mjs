@@ -1043,6 +1043,24 @@ try {
       Math.abs(inputBox.x - (title.x - 10)) < 20 && Math.abs(inputBox.y - (title.y - 8)) < 20 && inputAlign === 'left',
       `il titolo di un contenitore si scrive in alto a sinistra (${JSON.stringify({ inputBox, title, inputAlign })})`,
     )
+    // Il titolo del contenitore piccolo in basso al centro: il contenitore si prende da lì, non più dalla fascia in alto.
+    await away()
+    const smallTop = await textBox('Sistema informatico')
+    await cp.mouse.click(smallTop.x + smallTop.width / 2, smallTop.y + smallTop.height / 2)
+    const placeButtons = await cp.locator('.schema-place-section button').count()
+    await cp.locator('.schema-format button[aria-label="Testo in basso al centro"]').click()
+    const smallBottom = await textBox('Sistema informatico')
+    const serverNow = await textBox('Server')
+    await away()
+    await cp.mouse.click(smallTop.x + smallTop.width / 2, smallTop.y + smallTop.height / 2)
+    const topNoLonger = (await headings()).length
+    await cp.mouse.click(smallBottom.x + smallBottom.width / 2, smallBottom.y + smallBottom.height / 2)
+    const bottomSelects = await headings()
+    await away()
+    check(
+      placeButtons === 6 && smallBottom.y > serverNow.y + serverNow.height && smallBottom.x > smallTop.x + 40 && topNoLonger === 0 && bottomSelects[0] === 'CONTENITORE',
+      `«Posizione del testo» porta il titolo del contenitore in basso al centro, e il contenitore si prende da lì (${JSON.stringify({ placeButtons, smallTop, smallBottom, topNoLonger, bottomSelects })})`,
+    )
     await cp.locator('dialog.schema-editor .btn-primary', { hasText: 'Fatto' }).click()
     await boxEditor.waitFor({ state: 'detached' })
     await cp.waitForFunction(() => [...Array(localStorage.length).keys()].some((i) => localStorage.getItem(localStorage.key(i))?.includes('Sistema informativo aziendale')), null, { timeout: 5000 }).catch(() => {})
@@ -1054,11 +1072,12 @@ try {
       return ''
     })
     const order = [...boxNote.matchAll(/"text":"([^"]*)"/g)].map((m) => m[1])
+    const bottomTitle = boxNote.includes('"text":"Sistema informatico","place":"bottom"')
     await cp.waitForSelector('.preview-pane .schema-block > svg')
     const boxTexts = await cp.evaluate(() => [...document.querySelectorAll('.preview-pane .schema-block foreignObject')].map((f) => f.textContent).join('|'))
     check(
-      order.join('|') === 'Sistema organizzativo|Sistema informativo aziendale|Sistema informatico|Server' && boxTexts === 'Sistema organizzativo|Sistema informativo aziendale|Sistema informatico|Server',
-      `nella nota e nell'anteprima i contenitori vanno dal più grande al più piccolo, poi la forma che hanno dentro (${order.join('|')})`,
+      order.join('|') === 'Sistema organizzativo|Sistema informativo aziendale|Sistema informatico|Server' && boxTexts === 'Sistema organizzativo|Sistema informativo aziendale|Sistema informatico|Server' && bottomTitle,
+      `nella nota e nell'anteprima i contenitori vanno dal più grande al più piccolo, poi la forma che hanno dentro; il titolo in basso si salva (${order.join('|')}, ${bottomTitle})`,
     )
     await cp.close()
   }

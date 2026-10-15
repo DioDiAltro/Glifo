@@ -434,6 +434,10 @@ spostano nella nota con le frecce ↑ ↓, come i grafici. Tutto è descritto ne
   altre forme (dal più grande al più piccolo), si prendono dal titolo o dal bordo e si portano dietro
   quello che hanno dentro; dentro, il clic e il doppio clic sono come sul foglio vuoto. Con il modello
   «Contenitori» (i tre sistemi della foto), e «Spiegami» dice in quale contenitore sta ogni forma;
+- fatto (15 ottobre 2026, lo studente, dopo i contenitori: «aggiungi anche la possibilità di scegliere
+  dove mettere il testo»): **la posizione del testo** nelle forme, come in draw.io: in alto, a metà o in
+  basso, a sinistra, al centro o a destra (nove posti in un quadrato, nel pannello a destra); il titolo
+  del contenitore sopra o sotto, e il contenitore si prende da lì. Sul ramo `prova`, da provare;
 - il contrario dell'SQL: da un file SQL alle tabelle disegnate; e il passaggio dallo schema E-R
   alle tabelle (la progettazione logica);
 - stampare con i colori del tema chiaro anche se si usa quello scuro;

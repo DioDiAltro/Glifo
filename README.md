@@ -683,7 +683,9 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
   dietro alle altre forme, e uno dentro l'altro si vedono tutti (il più grande dietro). Si prende dal
   titolo o dal bordo e, spostandolo, vengono con lui le forme che ha dentro e i contenitori che ci
   stanno interi; dentro, il clic, il riquadro per scegliere più forme e il doppio clic (che aggiunge una
-  forma lì dentro) sono come sul foglio vuoto. Il titolo si scrive con un doppio clic sul titolo.
+  forma lì dentro) sono come sul foglio vuoto. Il titolo si scrive con un doppio clic sul titolo; con
+  «Posizione del testo» va in alto o in basso, a sinistra, al centro o a destra (il contenitore si
+  prende dalla fascia dove sta il titolo).
 - **Modelli pronti** da cui partire, sul foglio vuoto o dal menu «Modelli»: diagramma di flusso,
   mappa concettuale, albero, ciclo, linea del tempo, processo con le corsie (l'ordine di un cliente,
   dalle vendite al magazzino all'amministrazione), contenitori (i tre sistemi uno dentro l'altro), schema
@@ -694,7 +696,9 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
 - **Scarica** lo schema come immagine PNG (nitida, alla misura giusta anche in Word) o SVG,
   oppure **copialo come immagine** e incollalo in Word, Google Docs o nelle slide.
 - Doppio clic (o scrivere con una forma selezionata) per il testo, anche con **formule**
-  `$ … $` (si finisce con Esc o con un clic sul foglio; Ctrl+S salva anche mentre si scrive); colori, forma, dimensione del testo, frecce dritte, ad angolo o **curve**, con o senza
+  `$ … $` (si finisce con Esc o con un clic sul foglio; Ctrl+S salva anche mentre si scrive); colori, forma, dimensione del testo,
+  **posizione del testo** nella forma (in alto, a metà o in basso, a sinistra, al centro o a destra:
+  nove posti in un quadrato nel pannello; il titolo del contenitore sopra o sotto), frecce dritte, ad angolo o **curve**, con o senza
   punte, tratteggiate, con il testo all'inizio, a metà o alla fine (per le cardinalità). Annulla/Ripeti, copia e incolla, zoom, griglia, selezione a rettangolo.
 - Lo schema va nella nota come blocco ` ```schema ` (un JSON corto, una forma per riga):
   nell'anteprima si vede il disegno, nel testo una riga con «Modifica». Nell'anteprima, accanto a

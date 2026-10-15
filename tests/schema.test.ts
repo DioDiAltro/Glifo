@@ -5,8 +5,8 @@ import { parseSchema, SchemaError, serializeSchema, type Schema } from '../src/s
 
 const sample: Schema = {
   nodes: [
-    { id: 'a', shape: 'rounded', x: 40, y: 60, w: 140, h: 56, text: 'Ipotesi', color: 'blue', size: 'm', rot: 0 },
-    { id: 'b', shape: 'rhombus', x: 300.4, y: 60, w: 120, h: 80, text: 'Vale $x > 0$?', color: 'default', size: 'l', rot: 0 },
+    { id: 'a', shape: 'rounded', x: 40, y: 60, w: 140, h: 56, text: 'Ipotesi', color: 'blue', size: 'm', rot: 0, place: 'center' },
+    { id: 'b', shape: 'rhombus', x: 300.4, y: 60, w: 120, h: 80, text: 'Vale $x > 0$?', color: 'default', size: 'l', rot: 0, place: 'center' },
   ],
   edges: [
     { id: 'e1', from: 'a', to: 'b', text: 'quindi', color: 'default', size: 'm', route: 'orthogonal', arrows: 'end', dashed: false, points: [], at: 'middle' },
@@ -37,7 +37,7 @@ describe('il formato degli schemi', () => {
     const schema = parseSchema(
       JSON.stringify({
         nodes: [
-          { id: 'a', shape: 'stella', x: 'qui', y: 1e9, w: -5, text: 42, color: 'fucsia', size: 'xl' },
+          { id: 'a', shape: 'stella', x: 'qui', y: 1e9, w: -5, text: 42, color: 'fucsia', size: 'xl', place: 'fuori' },
           { id: 'a', shape: 'ellipse' },
           { shape: 'text' },
           'non una forma',
@@ -49,7 +49,7 @@ describe('il formato degli schemi', () => {
       }),
     )
     expect(schema.nodes.map((n) => n.id)).toEqual(['a', 'a~2', 'n1'])
-    expect(schema.nodes[0]).toEqual({ id: 'a', shape: 'rect', x: 0, y: 100000, w: 10, h: 60, text: '', color: 'default', size: 'm', rot: 0 })
+    expect(schema.nodes[0]).toEqual({ id: 'a', shape: 'rect', x: 0, y: 100000, w: 10, h: 60, text: '', color: 'default', size: 'm', rot: 0, place: 'center' })
     expect(schema.edges).toEqual([
       { id: 'x', from: 'a', to: 'a~2', text: '', color: 'default', size: 'm', route: 'orthogonal', arrows: 'end', dashed: false, points: [[1, 2]], at: 'middle' },
     ])
@@ -58,8 +58,8 @@ describe('il formato degli schemi', () => {
   it('le forme nuove si rileggono, e solo quelle con un verso si girano', () => {
     const json = serializeSchema({
       nodes: [
-        { id: 'f', shape: 'arrow', x: 0, y: 0, w: 60, h: 130, text: 'Poi', color: 'default', size: 'm', rot: 1 },
-        { id: 'd', shape: 'cylinder', x: 0, y: 200, w: 100, h: 90, text: 'Dati', color: 'gray', size: 'm', rot: 0 },
+        { id: 'f', shape: 'arrow', x: 0, y: 0, w: 60, h: 130, text: 'Poi', color: 'default', size: 'm', rot: 1, place: 'center' },
+        { id: 'd', shape: 'cylinder', x: 0, y: 200, w: 100, h: 90, text: 'Dati', color: 'gray', size: 'm', rot: 0, place: 'center' },
       ],
       edges: [],
     })

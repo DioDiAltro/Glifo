@@ -221,6 +221,16 @@ describe('l\'editor degli schemi in inglese', () => {
     const { saved, preset, format, byText } = open()
     preset('container').click()
     expect(format.querySelector('.schema-container-section h3')?.textContent).toBe('Container')
+    // Dove sta il titolo: sopra o sotto, a sinistra, al centro o a destra.
+    expect(format.querySelector('.schema-place-section h3')?.textContent).toBe('Text position')
+    expect([...format.querySelectorAll<HTMLButtonElement>('.schema-place-section button')].map((b) => b.title)).toEqual([
+      'Text at the top left',
+      'Text at the top center',
+      'Text at the top right',
+      'Text at the bottom left',
+      'Text at the bottom center',
+      'Text at the bottom right',
+    ])
     expect(format.querySelector('.schema-container-section .schema-format-hint')?.textContent).toBe(
       'Put shapes inside the container, other containers too: moving it moves them as well. Grab the container by its title or its border; inside it, double-click to add a shape.',
     )

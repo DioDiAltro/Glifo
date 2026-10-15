@@ -62,8 +62,10 @@ import {
   SHAPE_SIZE,
   SHAPES,
   TEXT_AT,
+  TEXT_PLACES,
   TEXT_SIZES,
   containerHeadFor,
+  defaultPlace,
   joinTable,
   laneHeadFor,
   laneNames,
@@ -74,6 +76,8 @@ import {
   tableHeight,
   tableMetrics,
   tableText,
+  placeAxes,
+  textPlaces,
   type EdgeArrows,
   type EdgeLook,
   type EdgeRoute,
@@ -83,6 +87,7 @@ import {
   type ShapeKind,
   type Table,
   type TextAt,
+  type TextPlace,
   type TextSize,
   type Theme,
 } from './model'
@@ -409,6 +414,25 @@ const AT_NAMES: Readonly<Record<TextAt, string>> = texts({
   end: ['Testo alla fine della freccia', 'Text at the end of the arrow'],
 })
 const AT_ICONS: Record<TextAt, string> = { start: PATHS.atStart, middle: PATHS.atMiddle, end: PATHS.atEnd }
+const PLACE_NAMES: Readonly<Record<TextPlace, string>> = texts({
+  'top-left': ['Testo in alto a sinistra', 'Text at the top left'],
+  top: ['Testo in alto al centro', 'Text at the top center'],
+  'top-right': ['Testo in alto a destra', 'Text at the top right'],
+  left: ['Testo a metà, a sinistra', 'Text in the middle, on the left'],
+  center: ['Testo al centro', 'Text in the center'],
+  right: ['Testo a metà, a destra', 'Text in the middle, on the right'],
+  'bottom-left': ['Testo in basso a sinistra', 'Text at the bottom left'],
+  bottom: ['Testo in basso al centro', 'Text at the bottom center'],
+  'bottom-right': ['Testo in basso a destra', 'Text at the bottom right'],
+})
+
+/** Il riquadro della forma con una riga di testo nel posto scelto. */
+function placeIcon(place: TextPlace): string {
+  const { vertical, horizontal } = placeAxes(place)
+  const x = { left: 6, center: 8.5, right: 11 }[horizontal]
+  const y = { top: 6, middle: 10.5, bottom: 15 }[vertical]
+  return `<rect x="3" y="3" width="18" height="18" rx="2"/><rect x="${x}" y="${y}" width="7" height="3" rx="1" fill="currentColor" stroke="none"/>`
+}
 const ARROW_NAMES: Readonly<Record<EdgeArrows, string>> = texts({
   end: ['Punta alla fine', 'Arrowhead at the end'],
   both: ['Punte alle due estremità', 'Arrowheads at both ends'],
@@ -702,7 +726,8 @@ class SchemaEditor {
 
   /**
    * Il punto (del foglio, in pixel) è dove si prendono le corsie o il contenitore? Le corsie dalla
-   * fascia dei nomi; il contenitore dalla fascia del titolo, dal titolo (anche se va a capo) o dal bordo.
+   * fascia dei nomi; il contenitore dalla fascia del titolo (in alto o in basso, dove sta il titolo), dal
+   * titolo (anche se va a capo) o dal bordo.
    */
   private onGrip(state: CellState, x: number, y: number): boolean {
     const look = nodeLook(state.cell)
@@ -721,7 +746,9 @@ class SchemaEditor {
     if (label && x >= label.x && x <= label.x + label.width && y >= label.y && y <= label.y + label.height) return true
     // Col dito il bordo è più largo.
     const edge = this.touch ? 12 : 6
-    return dy <= containerHeadFor(FONT_SIZE[look.size], look.text) * scale || dx <= edge || dy >= state.height - edge || dx >= state.width - edge
+    const head = containerHeadFor(FONT_SIZE[look.size], look.text) * scale
+    const onHead = placeAxes(look.place).vertical === 'bottom' ? dy >= state.height - head : dy <= head
+    return onHead || dx <= edge || dy >= state.height - edge || dx >= state.width - edge
   }
 
   /** La corsia nel punto (del foglio, in pixel). */
@@ -941,7 +968,7 @@ class SchemaEditor {
       const center = this.toSchema(this.canvas.clientWidth / 2, this.canvas.clientHeight / 2)
       ;[x, y] = this.freeSpot(this.graph.snap(center.x - w / 2), this.graph.snap(center.y - h / 2), w, h)
     }
-    const value: NodeLook = Object.freeze({ shape: preset.shape, text: preset.text, color: 'default', size: 'm', rot: 0 })
+    const value: NodeLook = Object.freeze({ shape: preset.shape, text: preset.text, color: 'default', size: 'm', rot: 0, place: defaultPlace(preset.shape) })
     // Contenitori e corsie vanno da soli dietro alle altre forme (orderFrames in graph.ts).
     const cell = this.graph.insertVertex({ position: [x, y], size: [w, h], value, style: nodeStyle(value, this.look) })
     this.graph.setSelectionCell(cell)
@@ -1150,14 +1177,19 @@ class SchemaEditor {
     const input = this.textInput
     input.style.fontSize = `${fontSize}px`
     // Il titolo del contenitore si scrive dov'è, in alto a sinistra.
-    const title = isContainer(cell)
-    input.classList.toggle('schema-text-title', title)
-    if (title) {
+    // Il testo si scrive allineato come sarà nella forma (a sinistra, al centro, a destra).
+    const placed = cell.isVertex() && textPlaces(nodeLook(cell).shape).length ? placeAxes(nodeLook(cell).place) : null
+    input.style.textAlign = placed?.horizontal ?? ''
+    if (isContainer(cell) && placed) {
+      // Il titolo del contenitore si scrive dov'è: sulla fascia in alto o in basso, a sinistra, al centro o a destra.
       const l = nodeLook(cell)
-      input.style.left = `${state.x}px`
-      input.style.top = `${state.y}px`
-      input.style.width = `${Math.max(160, Math.min(state.width, 320 * scale))}px`
-      input.style.minHeight = `${Math.max(30, containerHeadFor(FONT_SIZE[l.size], l.text) * scale)}px`
+      const head = containerHeadFor(FONT_SIZE[l.size], l.text) * scale
+      const width = Math.max(160, Math.min(state.width, 320 * scale))
+      const free = state.width - width
+      input.style.left = `${state.x + (placed.horizontal === 'left' ? 0 : placed.horizontal === 'right' ? free : free / 2)}px`
+      input.style.top = `${placed.vertical === 'bottom' ? state.y + state.height - head : state.y}px`
+      input.style.width = `${width}px`
+      input.style.minHeight = `${Math.max(30, head)}px`
     } else if (this.editingLane !== null) {
       // Sopra il nome della corsia, nella fascia (in righe un riquadro largo, a metà della corsia).
       const l = nodeLook(cell)
@@ -1387,12 +1419,16 @@ class SchemaEditor {
           // Il verso resta tra forme dello stesso tipo (le due frecce grandi, i due pallini); le altre ripartono dritte.
           const same = (kinds: readonly ShapeKind[]) => !!shape && kinds.includes(shape) && kinds.includes(before.shape)
           const keepRot = !shape || shape === before.shape || same(BIG_ARROWS) || same(DOT_SHAPES)
+          // Il posto del testo scelto resta, se la forma nuova lo ha; quello solito diventa quello solito della forma nuova.
+          const kind = shape ?? before.shape
+          const chosen = patch.place ?? (before.place === defaultPlace(before.shape) ? defaultPlace(kind) : before.place)
           const value: NodeLook = Object.freeze({
             ...before,
             ...(shape && { shape }),
             ...(color && { color }),
             ...(size && { size }),
             rot: keepRot ? before.rot : 0,
+            place: textPlaces(kind).includes(chosen) ? chosen : defaultPlace(kind),
           })
           model.setValue(cell, value)
           model.setStyle(cell, nodeStyle(value, this.look))
@@ -1571,6 +1607,14 @@ class SchemaEditor {
         TEXT_SIZES.map((s) => this.choice(SIZE_NAMES[s], size === s, () => this.update(cells, { size: s }), h('span', { class: `schema-size schema-size-${s}` }, 'A'))),
       ),
     )
+    // Dove sta il testo nelle forme (senza frecce: quelle hanno il loro «Posizione del testo»), tra i posti che hanno tutte.
+    const places = nodes.length && !edges.length ? TEXT_PLACES.filter((p) => nodes.every((n) => textPlaces(nodeLook(n).shape).includes(p))) : []
+    if (places.length) {
+      const place = same(nodes.map(nodeLook), 'place')
+      const section = this.section(T.textPosition, places.map((p) => this.choice(PLACE_NAMES[p], place === p, () => this.update(nodes, { place: p }), icon(placeIcon(p), 18))))
+      section.classList.add('schema-place-section')
+      sections.push(section)
+    }
     if (edges.length) {
       const edgeLooks = edges.map(edgeLook)
       const route = same(edgeLooks, 'route')

@@ -4,7 +4,7 @@
  * forme sono nella lingua di Glifo: `schema` rifà lo schema ogni volta, quando lo si inserisce.
  */
 import { texts } from '../i18n'
-import { DEFAULT_EDGE, SHAPE_SIZE, tableHeight, type Schema, type SchemaEdge, type SchemaNode, type ShapeKind } from './model'
+import { DEFAULT_EDGE, defaultPlace, SHAPE_SIZE, tableHeight, type Schema, type SchemaEdge, type SchemaNode, type ShapeKind } from './model'
 
 const T = texts({
   // I modelli: il nome e, sul pulsante, a cosa servono.
@@ -86,11 +86,11 @@ export interface Template {
   readonly schema: Schema
 }
 
-type NodeExtra = Partial<Omit<SchemaNode, 'id' | 'shape' | 'x' | 'y' | 'text'>>
+type NodeExtra = Partial<Omit<SchemaNode, 'id' | 'shape' | 'x' | 'y' | 'text' | 'place'>>
 
 function node(id: string, shape: ShapeKind, x: number, y: number, text: string, extra: NodeExtra = {}): SchemaNode {
   const [w, h] = SHAPE_SIZE[shape]
-  return { id, shape, x, y, w, h, text, color: 'default', size: 'm', rot: 0, ...extra }
+  return { id, shape, x, y, w, h, text, color: 'default', size: 'm', rot: 0, place: defaultPlace(shape), ...extra }
 }
 
 function edge(id: string, from: string, to: string, extra: Partial<Omit<SchemaEdge, 'id' | 'from' | 'to'>> = {}): SchemaEdge {

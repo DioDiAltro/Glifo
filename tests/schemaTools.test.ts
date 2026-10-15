@@ -133,8 +133,8 @@ describe('basi di dati e frecce curve', () => {
   it('le forme E-R, le frecce curve e il testo vicino a un capo si salvano e si rileggono', () => {
     const json = serializeSchema({
       nodes: [
-        { id: 'a', shape: 'identifier', x: 0, y: 0, w: 110, h: 20, text: 'Matricola', color: 'default', size: 'm', rot: 2 },
-        { id: 'b', shape: 'table', x: 200, y: 0, w: 170, h: 82, text: 'Studente\\nPK Matricola', color: 'blue', size: 'm', rot: 0 },
+        { id: 'a', shape: 'identifier', x: 0, y: 0, w: 110, h: 20, text: 'Matricola', color: 'default', size: 'm', rot: 2, place: 'center' },
+        { id: 'b', shape: 'table', x: 200, y: 0, w: 170, h: 82, text: 'Studente\\nPK Matricola', color: 'blue', size: 'm', rot: 0, place: 'center' },
       ],
       edges: [{ id: 'e', from: 'a', to: 'b', text: '(0,N)', color: 'default', size: 'm', route: 'curved', arrows: 'none', dashed: false, points: [], at: 'end' }],
     })

@@ -110,7 +110,7 @@ describe('i contenitori nell\'editor', () => {
     key('Enter')
     const input = dialog.querySelector<HTMLTextAreaElement>('.schema-text')!
     expect(input.hidden).toBe(false)
-    expect(input.classList.contains('schema-text-title')).toBe(true)
+    expect(input.style.textAlign).toBe('left')
     expect(input.value).toBe('Contenitore')
     input.value = 'Sistema informativo'
     done()

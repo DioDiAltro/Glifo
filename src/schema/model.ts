@@ -63,6 +63,9 @@ export type EdgeRoute = (typeof ROUTES)[number]
 /** Dove sta il testo di una freccia: vicino all'inizio, a metà o vicino alla fine (per le cardinalità). */
 export const TEXT_AT = ['start', 'middle', 'end'] as const
 export type TextAt = (typeof TEXT_AT)[number]
+/** Dove sta il testo in una forma: in alto, in mezzo o in basso, e a sinistra, al centro o a destra. */
+export const TEXT_PLACES = ['top-left', 'top', 'top-right', 'left', 'center', 'right', 'bottom-left', 'bottom', 'bottom-right'] as const
+export type TextPlace = (typeof TEXT_PLACES)[number]
 /** Punta alla fine, a tutte e due le estremità o nessuna (una linea). */
 export const ARROWS = ['end', 'both', 'none'] as const
 export type EdgeArrows = (typeof ARROWS)[number]
@@ -80,6 +83,8 @@ export interface SchemaNode {
   size: TextSize
   /** Solo per le forme con un verso (ROTATABLE) e per le corsie (1: in righe), altrimenti 0. */
   rot: Rotation
+  /** Dove sta il testo (textPlaces); se non lo si è scelto, quello solito della forma (defaultPlace). */
+  place: TextPlace
 }
 
 export interface SchemaEdge {
@@ -102,7 +107,7 @@ export interface Schema {
   edges: SchemaEdge[]
 }
 
-export type NodeLook = Pick<SchemaNode, 'shape' | 'text' | 'color' | 'size' | 'rot'>
+export type NodeLook = Pick<SchemaNode, 'shape' | 'text' | 'color' | 'size' | 'rot' | 'place'>
 export type EdgeLook = Pick<SchemaEdge, 'text' | 'color' | 'size' | 'route' | 'arrows' | 'dashed'>
 
 export const DEFAULT_EDGE: EdgeLook = { text: '', color: 'default', size: 'm', route: 'orthogonal', arrows: 'end', dashed: false }
@@ -328,6 +333,33 @@ function point(value: unknown): [number, number] | null {
 }
 
 /**
+ * Dove si può mettere il testo di una forma. Le tabelle, le corsie e i pallini hanno il testo sempre
+ * allo stesso posto; il titolo del contenitore sta sopra o sotto, sulla fascia da cui lo si prende.
+ */
+export function textPlaces(shape: ShapeKind): readonly TextPlace[] {
+  if (shape === 'table' || shape === 'lanes' || DOT_SHAPES.includes(shape)) return []
+  if (shape === 'container') return TEXT_PLACES.filter((p) => p.startsWith('top') || p.startsWith('bottom'))
+  return TEXT_PLACES
+}
+
+/** Il posto del testo se non lo si sceglie: al centro, il titolo del contenitore in alto a sinistra. */
+export function defaultPlace(shape: ShapeKind): TextPlace {
+  return shape === 'container' ? 'top-left' : 'center'
+}
+
+/** Il posto del testo diviso nelle due direzioni, come lo vuole maxGraph. */
+export function placeAxes(place: TextPlace): { vertical: 'top' | 'middle' | 'bottom'; horizontal: 'left' | 'center' | 'right' } {
+  const vertical = place.startsWith('top') ? 'top' : place.startsWith('bottom') ? 'bottom' : 'middle'
+  const horizontal = place.endsWith('left') ? 'left' : place.endsWith('right') ? 'right' : 'center'
+  return { vertical, horizontal }
+}
+
+/** Il posto del testo letto dalla nota: uno di quelli della forma, altrimenti quello solito. */
+function textPlace(shape: ShapeKind, value: unknown): TextPlace {
+  return textPlaces(shape).includes(value as TextPlace) ? (value as TextPlace) : defaultPlace(shape)
+}
+
+/**
  * Il verso, se la forma ne ha uno: i pallini hanno solo 0 (nome a destra) e 2 (a sinistra), le
  * corsie 0 (in colonne, i nomi in alto) e 1 (in righe, i nomi a sinistra).
  */
@@ -433,6 +465,7 @@ export function parseSchema(source: string): Schema {
       color: oneOf(raw.color, COLORS, 'default'),
       size: oneOf(raw.size, TEXT_SIZES, 'm'),
       rot: rotation(shape, raw.rot),
+      place: textPlace(shape, raw.place),
     })
   }
   const ids = new Set(nodes.map((n) => n.id))
@@ -469,6 +502,7 @@ export function serializeSchema(schema: Schema): string {
     if (n.color !== 'default') out.color = n.color
     if (n.size !== 'm') out.size = n.size
     if (n.rot) out.rot = n.rot
+    if (n.place !== defaultPlace(n.shape)) out.place = n.place
     return JSON.stringify(out)
   })
   const edges = schema.edges.map((e) => {

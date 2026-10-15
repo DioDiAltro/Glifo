@@ -4144,9 +4144,10 @@ kbd {
   outline: none;
 }
 
-/* Il titolo di un contenitore, che sta in alto a sinistra. */
-.schema-text-title {
-  text-align: left;
+/* Dove sta il testo nella forma: i nove posti in un quadrato, come nella forma. */
+.schema-place-section .schema-choices {
+  display: grid;
+  grid-template-columns: repeat(3, max-content);
 }
 
 /* La tabella mentre la si scrive, com'è disegnata: il nome nella fascia in alto, i campi sotto.

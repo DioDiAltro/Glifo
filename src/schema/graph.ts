@@ -21,7 +21,7 @@ import {
   type CellStyle,
 } from '@maxgraph/core'
 import { labelHtml, lanesHtml, tableHtml } from './label'
-import { DEFAULT_EDGE, FONT_SIZE, FRAMES, INK, insideFrame, laneNames, PALETTE, stackOrder, type EdgeLook, type NodeLook, type Rotation, type Schema, type TextAt, type Theme } from './model'
+import { DEFAULT_EDGE, FONT_SIZE, FRAMES, INK, insideFrame, laneNames, PALETTE, placeAxes, stackOrder, textPlaces, type EdgeLook, type NodeLook, type Rotation, type Schema, type TextAt, type Theme } from './model'
 import { DOT_PERIMETER, registerShapes, SHAPE_STYLES, type LanesStyle } from './shapes'
 
 export interface Look {
@@ -52,7 +52,15 @@ const TRIANGLE_TEXT: Record<Compass, CellStyle> = {
   west: { spacingLeft: 30, spacingTop: 12, spacingBottom: 12 },
 }
 
+/** Lo stile di una forma, con il testo nel posto scelto (in alto a sinistra, in basso…) se la forma lo permette. */
 export function nodeStyle(v: NodeLook, look: Look): CellStyle {
+  const style = shapeStyle(v, look)
+  if (!textPlaces(v.shape).length) return style
+  const { vertical, horizontal } = placeAxes(v.place)
+  return { ...style, verticalAlign: vertical, align: horizontal }
+}
+
+function shapeStyle(v: NodeLook, look: Look): CellStyle {
   const swatch = PALETTE[look.theme][v.color]
   const base: CellStyle = {
     shape: 'rectangle',
@@ -126,10 +134,12 @@ export function nodeStyle(v: NodeLook, look: Look): CellStyle {
       // Il nome in alto e i campi sotto li mette in fila tableHtml.
       return { ...base, shape: SHAPE_STYLES.table, verticalAlign: 'top', spacing: 0, overflow: 'fill' }
     case 'container': {
-      // Il titolo in alto a sinistra, a metà della fascia da cui si prende il contenitore (containerHeadFor).
+      // Il titolo a metà della fascia da cui si prende il contenitore (containerHeadFor), in alto o in basso.
       const size = FONT_SIZE[v.size]
       const side = Math.round(size * 0.8)
-      return { ...base, verticalAlign: 'top', align: 'left', spacing: 0, spacingTop: Math.round(size * 0.6), spacingLeft: side, spacingRight: side }
+      const edge = Math.round(size * 0.6)
+      const bottom = placeAxes(v.place).vertical === 'bottom'
+      return { ...base, spacing: 0, spacingTop: bottom ? 0 : edge, spacingBottom: bottom ? edge : 0, spacingLeft: side, spacingRight: side }
     }
     case 'lanes': {
       // I nomi nella fascia li mette lanesHtml; quante corsie e il verso servono al disegno (LanesShape).
@@ -183,7 +193,7 @@ const isEdgeLook = (v: unknown): v is EdgeLook => typeof v === 'object' && v !==
 /** Come appare una forma (il suo valore in maxGraph). Nessuno lo cambia: se ne mette uno nuovo. */
 export function nodeLook(cell: Cell): NodeLook {
   const v: unknown = cell.getValue()
-  return isNodeLook(v) ? v : { shape: 'rect', text: typeof v === 'string' ? v : '', color: 'default', size: 'm', rot: 0 }
+  return isNodeLook(v) ? v : { shape: 'rect', text: typeof v === 'string' ? v : '', color: 'default', size: 'm', rot: 0, place: 'center' }
 }
 
 export function edgeLook(cell: Cell): EdgeLook {
@@ -332,7 +342,7 @@ export function insertSchema(graph: Graph, schema: Schema, look: Look, { dx = 0,
   const added: Cell[] = []
   graph.batchUpdate(() => {
     for (const n of schema.nodes) {
-      const value: NodeLook = Object.freeze({ shape: n.shape, text: n.text, color: n.color, size: n.size, rot: n.rot })
+      const value: NodeLook = Object.freeze({ shape: n.shape, text: n.text, color: n.color, size: n.size, rot: n.rot, place: n.place })
       const id = keepIds ? n.id : undefined
       const vertex = graph.insertVertex({ parent, id, value, position: [n.x + dx, n.y + dy], size: [n.w, n.h], style: nodeStyle(value, look) })
       cells.set(n.id, vertex)

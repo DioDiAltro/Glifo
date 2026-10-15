@@ -169,8 +169,13 @@ finita il 14 ottobre 2026, il file non c'è più e si legge nella storia del rep
   sono in `shapes.ts`, con le corsie dei processi (`lanes`: un riquadro solo, diviso in parti
   uguali, in colonne o in righe con `rot` 1; i nomi uno per riga del testo, `laneNames`; `LanesShape`
   disegna fascia e divisioni, `lanesHtml` in `label.ts` i nomi, `laneAt`/`insideLanes` in `model.ts`
-  i conti). I contenitori (15 ottobre 2026) sono riquadri con il titolo in alto a sinistra, anche uno
-  dentro l'altro: lo stile in `nodeStyle`, la fascia del titolo `containerHeadFor` in `model.ts`.
+  i conti). Il posto del testo nelle forme (`place` nel JSON, solo se non è quello solito:
+  `TEXT_PLACES`, `textPlaces` dice quali ha ogni forma, `defaultPlace` quello solito, `placeAxes` lo
+  divide per maxGraph) lo mette `nodeStyle` sopra lo stile della forma (`shapeStyle`); tabelle, corsie
+  e pallini non lo hanno. Cambiando forma resta il posto scelto, se la forma nuova lo ha (`update`
+  nell'editor). I contenitori (15 ottobre 2026) sono riquadri con il titolo in alto a sinistra (o
+  dove lo si mette, ma sempre sopra o sotto), anche uno dentro l'altro: lo stile in `nodeStyle`, la
+  fascia del titolo `containerHeadFor` in `model.ts`, in alto o in basso come il titolo.
   Corsie e contenitori (`FRAMES`, `isFrame` in `graph.ts`) non hanno figli: le forme non stanno
   dentro (lo schema resta un elenco di forme, senza genitori) ma sopra. Vanno dietro, dal più grande
   al più piccolo (`stackOrder`): lo fa `orderFrames` in `graph.ts` alla fine di ogni modifica
