@@ -18,8 +18,8 @@ insieme alla voce «L'AI» di [ROADMAP.md](ROADMAP.md) e alla riga che lo indica
 
 | Punto | Cosa | Stato |
 |---|---|---|
-| 1 | A cosa serve l'AI dei modelli di frontiera | da discutere |
-| 2 | Dalla lavagna alla nota: la formula presa con il laccio diventa LaTeX | da discutere |
+| 1 | A cosa serve l'AI dei modelli di frontiera | deciso il 15 ottobre 2026 |
+| 2 | Dalla lavagna alla nota: la formula presa con il laccio diventa LaTeX | in corso: la prova dei lettori |
 | 3 | Da una foto alla nota | da discutere |
 | 4 | Dettare: la voce diventa testo nella nota | da discutere |
 | 5 | Registrare le lezioni e trascriverle | da discutere |
@@ -109,7 +109,9 @@ chiede il piano a pagamento (ABBONAMENTI.md, «La chiave, il server locale e la 
 `ChatFn` per attaccare un altro modello; il pulsante «Grafico» in `src/ui/toolbar.ts` e
 `insertGraphBlock` in `src/editor/graphInsert.ts`.
 
-**Risposte e decisioni.** —
+**Risposte e decisioni.** 15 ottobre 2026, lo studente: «va bene il punto 1, partiamo dalla lavagna». Deciso:
+l'AI di frontiera fa i quattro lavori della proposta, con la regola «l'AI propone, Glifo controlla, chi scrive
+decide»; si comincia dal punto 2, la lavagna.
 
 ## 2. Dalla lavagna alla nota
 
@@ -176,9 +178,66 @@ perché usa l'AI. Con un modello nel browser non costerebbe niente a Glifo.
 
 **Nel codice.** Il laccio e la selezione in `src/board/selection.ts`; il menu della selezione
 (`openSelMenu`) in `src/board/board.ts`; i tratti in `src/board/strokes.ts` e dove si salvano in
-`src/board/store.ts`; KaTeX in `src/render/`.
+`src/board/store.ts`; KaTeX in `src/render/`. Più in dettaglio (15 ottobre 2026): i tratti si disegnano con
+funzioni pure di `src/board/ink.ts` (`strokeOutline`, `outlineSvg`, che vanno anche nei test), il resto del
+disegno sta in metodi privati di `Board`; un'immagine dei tratti oggi non c'è (per gli schemi c'è `svgToPng` in
+`src/schema/image.ts`); dalla lavagna non si scrive nella nota (`BoardOptions` ha solo `store`, `confirmClear` e
+`warn`: serve un collegamento da `main.ts`, dove la nota si scrive con `MarkdownEditor.insert` o con
+`insertBlock` di `src/editor/insert.ts`); il controllo come nella nota è `sheetBefore` con `Sheet.read`; i
+servizi della propria chiave oggi mandano solo testo.
 
-**Risposte e decisioni.** —
+**La prova dei lettori** (preparata il 15 ottobre 2026, con `scripts/prova-lettori.py`).
+
+- **Lo studente** ricopia a mano sulla lavagna, con la penna o con quello che userà davvero, le 20 formule qui
+  sotto (gli sono arrivate disegnate, in un'immagine), una per riga e con un po' di spazio tra una e l'altra; se
+  vuole ne aggiunge qualcuna dei suoi appunti, dicendo cos'è. Poi manda le foto dello schermo nella chat. Il
+  backup, che ha i tratti, solo se le foto non bastano: contiene anche tutti gli appunti.
+- **Claude** ritaglia le formule (nere su bianco, come i tratti presi con il laccio), le fa leggere a
+  pix2text-mfr (gli stessi file del browser, qui sul processore) e a un modello di frontiera (Claude, in una
+  lettura a parte che non conosce l'elenco: con la propria chiave sarebbe Gemini o Claude), le pulisce come farà
+  Glifo e le conta: giusta, giusta dopo la pulizia, da correggere poco (un simbolo), sbagliata. Guarda anche il
+  segno del motore dove c'è un «=».
+- **Le formule**: 1. `\int_0^1 x^2 \, dx = \frac{1}{3}`; 2. `\lim_{x \to 0} \frac{\sin x}{x} = 1`;
+  3. `\frac{d}{dx}(x^2 \sin x) = 2x \sin x + x^2 \cos x`; 4. `\sum_{k=1}^{n} k = \frac{n(n+1)}{2}`;
+  5. `x_{1,2} = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}`; 6. `e^{i\pi} + 1 = 0`; 7. `\sin^2 x + \cos^2 x = 1`;
+  8. `f(x) = \frac{x^2 - 1}{x + 2}`; 9. `\sqrt{a^2 + b^2}`; 10. `\log_2 8 = 3`;
+  11. `\begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}`; 12. `\det A = ad - bc`;
+  13. `\frac{\partial f}{\partial x} = 2xy`; 14. `\nabla f = (2x, 2y)`;
+  15. `\binom{n}{k} = \frac{n!}{k!\,(n-k)!}`; 16. `P(A \cup B) = P(A) + P(B) - P(A \cap B)`;
+  17. `y'' + y = 0`; 18. `\alpha + \beta + \gamma = \pi`; 19. `|x - 3| \leq 2`;
+  20. `\int_{-R}^{R} \pi (R^2 - x^2) \, dx = \frac{4}{3} \pi R^3`.
+- **Come si decide**: se il modello nel browser ne legge giuste quasi tutte, o con poco da correggere, legge
+  lui: gratis, privato, anche senza rete e, perché pesa poco, anche sull'iPad; se no legge il modello di
+  frontiera, con la propria chiave e poi con l'AI di Glifo.
+
+**Il primo controllo** (15 ottobre 2026, prima della scrittura dello studente). pix2text-mfr (licenza MIT; 120
+MB: 88 il codificatore dell'immagine, 32 il decodificatore) funziona con i file ONNX che userebbe il browser.
+Le 20 formule, stampate, le legge tutte giuste nel significato, in meno di un secondo l'una con un processore
+solo, ma a modo suo (`\operatorname*{l i m}`, `\cfrac`, spazi tra i caratteri, il binomiale come una matrice
+di una colonna): la pulizia di Glifo le riscrive come una persona, e dopo la pulizia KaTeX le disegna tutte.
+Con le regole della nota il motore mette ✓ a sei (1, 2, 3, 6, 10 e 20) e a nessuna un ✗: le altre sono
+definizioni o equazioni, che nella nota non si giudicano. La scrittura a mano è un'altra cosa: lo dice la prova.
+
+**Il progetto** (da approvare con i risultati della prova; cambia solo chi legge).
+
+- *Cosa si vede.* Nel menu della selezione, dopo Taglia, Copia, Duplica ed Elimina, c'è «In LaTeX». Si apre un
+  pannello sopra la lavagna, come quello di «Spiegami»: la scrittura presa, piccola; sotto, la formula disegnata
+  con KaTeX e il suo codice in una casella da correggere (la formula si ridisegna mentre si scrive); con un «=»
+  il ✓ o il ✗ del motore, con le definizioni della nota che vengono prima del cursore. Più righe prese insieme
+  danno una formula per riga. Poi «Inserisci nella nota» (dove c'è il cursore: `$…$` dentro una riga, `$$…$$`
+  su una riga vuota), «Copia» e «Chiudi». La scrittura resta sulla lavagna. La prima volta, con il modello nel
+  browser, Glifo dice quanto pesa e lo scarica solo con un sì; poi funziona anche senza rete.
+- *Come funziona.* I tratti presi si disegnano neri su bianco, con le funzioni della lavagna, in un'immagine
+  ritagliata attorno alla scrittura; il lettore la legge; Glifo pulisce il LaTeX e il motore lo controlla. Il
+  modello nel browser gira in un worker, come Qwen di «Spiegami», e resta nella cache del browser; con la propria
+  chiave l'immagine va al servizio scelto (oggi «Chiedi all'AI» manda solo testo).
+- *Come si prova.* I test della pulizia del LaTeX, dell'immagine dai tratti e dell'inserimento nella nota; la
+  prova nel browser con un lettore finto, come per «Spiegami», e con i tratti della prova dei lettori; le foto del
+  pannello; poi lo studente sul sito di prova, sull'iPad con la penna.
+
+**Risposte e decisioni.** 15 ottobre 2026, lo studente: «va bene il punto 1, partiamo dalla lavagna». Si parte
+dalla prova dei lettori; il progetto qui sopra, e se la conversione resta a pagamento quando basta il modello
+nel browser, si decidono con i risultati.
 
 ## 3. Da una foto alla nota
 

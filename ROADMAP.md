@@ -92,6 +92,9 @@ Com'è oggi ogni punto, cosa se ne sa, le proposte di Claude, le domande e le de
 quello che non è stato fatto. La propria chiave, il server locale (Ollama) e quale modello con l'AI di
 Glifo sono in [ABBONAMENTI.md](ABBONAMENTI.md), «La chiave, il server locale e la scelta del modello».
 
+Il 15 ottobre 2026 lo studente ha approvato il punto 1 («va bene il punto 1, partiamo dalla lavagna»): si
+comincia dalla lavagna (punto 2), con la prova dei lettori sulle formule scritte da lui.
+
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
 **Cosa:** ognuno ha il suo account e ritrova gli stessi appunti su PC, tablet e telefono.
