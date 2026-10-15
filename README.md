@@ -186,7 +186,8 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
   cursore esca dalla formula, per non comparire a metà). Vale anche con le lettere
   (`$\int_{-R}^{R} \pi (R^2 - x^2) \, dx = \frac{4}{3} \pi R^3$`), con i decimali arrotondati o troncati
   (`$\sqrt{2} = 1{,}414$`), in ogni passaggio di una catena, anche con la primitiva tra gli estremi
-  (`$\int_0^1 x^2 \, dx = \left[\frac{x^3}{3}\right]_0^1 = \frac{1}{3}$`), per le primitive
+  (`$\int_0^1 x^2 \, dx = \left[\frac{x^3}{3}\right]_0^1 = \frac{1}{3}$`) e anche quando la catena finisce con
+  l'uguale del risultato (`$2 + 2 = 5 =$` ha il ✗, fa 4, e dopo l'uguale il risultato), per le primitive
   (`$\int x^2 \, dx = \frac{x^3}{3} + c$`, controllata derivandola), le derivate, i limiti, le matrici,
   i numeri complessi e gli insiemi. Le definizioni (`$a = 2$`) e le equazioni (`$x^2 - 5x + 6 = 0$`) non
   si controllano; con `\approx` contano solo le cifre scritte. I segni non vanno nella stampa né nei
@@ -259,10 +260,11 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
   `\partial_x f`, anche in un punto, con i numeri o con le lettere (`\frac{\partial f}{\partial x}(1, 2) =`; con
   `f(x, y) = x^2 y`, `\frac{\partial f}{\partial x}(a, b) =` dà `2ab`). Dopo `\frac{d}{dx}` (e
   `\frac{d^2}{dx^2}`, `\frac{\partial}{\partial x}`) la funzione va sempre tra parentesi, come in Photomath: si
-  deriva solo quello che c'è dentro, con il suo esponente, e il resto si moltiplica:
-  `\frac{d}{dx}(x^2 + 1) \cdot (x - 1) =` dà `2x(x − 1)` e `\frac{d}{dx}(x^2 + 1)^3` è la derivata di (x² + 1)³.
-  Senza parentesi (`\frac{d}{dx} x^2`) Glifo non la legge. Con `\partial_x` senza parentesi si deriva solo quello
-  che viene subito dopo, come nelle somme (`\partial_x f`). Con i campi: il **gradiente**
+  deriva solo quello che c'è dentro, e quello che viene dopo vale per la derivata:
+  `\frac{d}{dx}(x^2 + 1) \cdot (x - 1) =` dà `2x(x − 1)` e `\frac{d}{dx}(x^2 + 1)^3 =` dà `8x³`, cioè (2x)³; per
+  derivare (x² + 1)³ la potenza va dentro, `\frac{d}{dx}((x^2 + 1)^3)`. Senza parentesi (`\frac{d}{dx} x^2 =`) il ✗
+  dice «dopo d/dx le parentesi sono obbligatorie». Con `\partial_x` la parentesi vale allo stesso modo; senza si
+  deriva solo quello che viene subito dopo, come nelle somme (`\partial_x f`). Con i campi: il **gradiente**
   (`\nabla f`, `\operatorname{grad} f`), la **divergenza** (`\nabla \cdot F`, `\operatorname{div} F`), il **rotore**
   (`\nabla \times F`, `\operatorname{rot} F`; nel piano è un numero), il laplaciano (`\nabla^2 f`), l'hessiana
   (`\operatorname{Hess} f`, anche `\det \operatorname{Hess} f(1, 1) =`) e la jacobiana (`\operatorname{jac} F`).
@@ -291,8 +293,9 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
   immediati, per sostituzione (`\int x e^{x^2} \, dx`, `\int \frac{\ln x}{x} \, dx`, anche `\int \sin(\ln x) \, dx`),
   per parti (`x^2 \cos x`, `\ln x`, `\arctan x`, `e^x \sin x`), le funzioni razionali con i fratti semplici
   (`\frac{1}{x^2 - 1}` dà ½ ln|(x − 1)/(x + 1)|), le potenze di seno e coseno (`\sin^4 x`), le radici
-  (`\sqrt{1 - x^2}`, `x \sqrt{x + 1}`), anche con il dx nella frazione (`\int \frac{dx}{1 + x^2}`) e con le
-  lettere nei coefficienti, che sono numeri positivi (`\int \frac{dx}{x^2 + a^2}` dà arctan(x/a)/a,
+  (`\sqrt{1 - x^2}`, `x \sqrt{x + 1}`), anche con il dx nella frazione (`\int \frac{dx}{1 + x^2}`) o davanti,
+  come in fisica (`\int dx/x` dà ln|x| + c, `\int_0^1 dx \, x^2` dà ⅓: la funzione è quello che si moltiplica o
+  si divide dopo il dx, fino al + o al −), e con le lettere nei coefficienti, che sono numeri positivi (`\int \frac{dx}{x^2 + a^2}` dà arctan(x/a)/a,
   `\int \sqrt{R^2 - x^2} \, dx` dà x√(R² − x²)/2 + (R²/2) arcsin(x/R)). Ogni
   primitiva si controlla derivandola; quelle che non si scrivono con le funzioni elementari (`e^{-x^2}`,
   `\frac{\sin x}{x}`) non hanno risultato. La costante è c (k se la c c'è già); con un nome

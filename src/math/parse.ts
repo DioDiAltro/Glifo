@@ -107,10 +107,13 @@ const T = texts({
   lineEnd: (v: string) => [`Alla fine va ds, dr oppure dx, dy, dz (non d${v})`, `At the end write ds, dr or dx, dy, dz (not d${v})`],
   formDifferentials: (v: string) => [`In una forma vanno dx, dy e dz (non d${v})`, `A form uses dx, dy and dz (not d${v})`],
   formDifferential: ['Manca il differenziale: dx, dy o dz', 'Missing the differential: dx, dy or dz'],
-  derivativeAfterFraction: [
-    'Dopo \\frac{d}{dx} va la funzione da derivare, tra parentesi: \\frac{d}{dx}(x^2)',
-    'After \\frac{d}{dx} write the function to differentiate in parentheses: \\frac{d}{dx}(x^2)',
+  /** `op`: la derivata in LaTeX (\frac{d}{dx}); `example`: con la parentesi, \frac{d}{dx}(x^2). */
+  derivativeAfterFraction: (op: string, example: string) => [
+    `Dopo ${op} le parentesi sono obbligatorie: si deriva quello che c'è dentro, ${example}`,
+    `After ${op} parentheses are required: what is inside them is differentiated, ${example}`,
   ],
+  /** Lo stesso, corto, per la nota accanto alla formula; `op` è la derivata a parole (d/dx, ∂²/∂x∂y). */
+  derivativeParens: (op: string) => [`dopo ${op} le parentesi sono obbligatorie`, `after ${op} parentheses are required`],
   partialVariable: ['Dopo \\partial va la variabile: \\partial_x f', 'After \\partial write the variable: \\partial_x f'],
   variableBrace: ['la graffa } della variabile', 'the brace } closing the variable'],
   derivativeAfterPartial: ['Manca la funzione da derivare dopo \\partial', 'Missing the function to differentiate after \\partial'],
@@ -224,6 +227,11 @@ export class MathSyntaxError extends Error {
     message: string,
     /** Dove, nel testo: serve a indicare il punto sbagliato. */
     readonly at: number,
+    /**
+     * Il motivo da dire nella nota, accanto alla formula (src/math/sheet.ts, `EqualityCheck.error`): solo per
+     * gli errori di chi sa già cosa vuole scrivere, come la parentesi dopo \frac{d}{dx}; gli altri restano zitti.
+     */
+    readonly note?: string,
   ) {
     super(message)
   }
@@ -895,8 +903,8 @@ class Parser {
     return this.peek()?.pos ?? this.srcLength
   }
 
-  private error(message: string, at = this.at()): MathSyntaxError {
-    return new MathSyntaxError(message, at)
+  private error(message: string, at = this.at(), note?: string): MathSyntaxError {
+    return new MathSyntaxError(message, at, note)
   }
 
   private is(k: Kind, v?: string, o = 0): boolean {
@@ -1229,7 +1237,11 @@ class Parser {
   }
 
   private term(): MathNode {
-    let left = this.unary()
+    return this.termFrom(this.unary())
+  }
+
+  /** Il resto di un prodotto o di una divisione che comincia con `left` (vedi `term`). */
+  private termFrom(left: MathNode): MathNode {
     for (;;) {
       // 17 \bmod 5 (e 17 \mod 5 fuori da una congruenza): il resto.
       if (this.is('op', 'mod') || (!this.congruence && this.is('pmod', 'mod'))) {
@@ -1656,6 +1668,20 @@ class Parser {
     return this.is('name', 'd', o) && (this.is('name', undefined, o + 1) || this.is('open', '(', o + 1))
   }
 
+  /**
+   * Con il differenziale scritto davanti, come in fisica (`\int dx/x`, `\int_0^1 dx \, x^2`,
+   * `\int_0^1 dx \int_0^1 dy \, xy`): la funzione è quello che si moltiplica o si divide subito dopo,
+   * fino al + o al −; senza niente è 1 (`\int_0^1 dx`). Prima \int dx/x era (∫dx)/x = 1 (15 ottobre 2026).
+   */
+  private integrandAfterDifferential(): MathNode {
+    if (this.is('op', '/')) return this.termFrom(ONE)
+    if (this.is('op', '*') && !this.atDifferential(1)) {
+      this.next()
+      return this.term()
+    }
+    return this.startsFactor() ? this.term() : ONE
+  }
+
   /** `\int_a^b f(x)\,dx`. */
   private integral(): MathNode {
     const kind = this.peek()!.v
@@ -1675,11 +1701,12 @@ class Parser {
     // \int_\gamma f \, ds, \oint_C F \cdot dr: sulla curva.
     if (kind === 'oint' || (from && !to && from.k === 'name')) return this.lineIntegral(from, kind === 'oint', start)
     if (!from !== !to) throw this.error(T.integralBounds, start.pos)
+    // \int_0^1 dx, \int dx/x: il differenziale davanti, la funzione dopo.
+    const ahead = this.atDifferential()
     this.integrals++
     let body: MathNode
     try {
-      // \int_0^1 dx: la funzione è 1.
-      body = this.atDifferential() ? ONE : this.expr()
+      body = ahead ? ONE : this.expr()
     } finally {
       this.integrals--
     }
@@ -1687,6 +1714,7 @@ class Parser {
     if (this.is('name', 'd') && this.is('name', undefined, 1)) {
       this.next()
       v = this.next().v
+      if (ahead) body = this.integrandAfterDifferential()
     } else {
       // \int \frac{dx}{1 + x^2}: il dx nel numeratore.
       const inside = differentialInFraction(body)
@@ -1710,10 +1738,12 @@ class Parser {
     }
     if (this.is('op', '^')) throw this.error(T.domainBelow(symbol))
     if (!domain) throw this.error(T.domainUnder(symbol, n === 2 ? '\\iint_D' : '\\iiint_E'), start.pos)
+    // \iint_D dA (l'area), \iint_D dx \, dy \, xy: i differenziali davanti, la funzione dopo.
+    const ahead = this.atDifferential()
     this.integrals++
     let body: MathNode
     try {
-      body = this.atDifferential() ? ONE : this.expr()
+      body = ahead ? ONE : this.expr()
     } finally {
       this.integrals--
     }
@@ -1723,11 +1753,14 @@ class Parser {
     if (this.atDifferential() && SURFACE.has(this.peek(1)!.v)) {
       this.i += 2
       if (domain.k !== 'name') throw this.error(T.surfaceUnder(symbol), start.pos)
+      if (ahead) body = this.integrandAfterDifferential()
       const normal = dot ? null : withoutNormal(body)
       return { k: 'sint', surface: domain.name, closed: start.v === 'oiint', dS: !dot && !normal, body: normal ?? body }
     }
     if (dot || start.v === 'oiint') throw this.error(T.surfaceEnd(symbol))
-    return { k: 'mint', vars: this.differentials(n), domain, body }
+    const vars = this.differentials(n)
+    if (ahead) body = this.integrandAfterDifferential()
+    return { k: 'mint', vars, domain, body }
   }
 
   /** `\int_\gamma f \, ds`, `\oint_\gamma F \cdot dr`, `\int_\gamma y \, dx - x \, dy`: l'integrale sulla curva. */
@@ -1832,23 +1865,31 @@ class Parser {
         point = true
       } else body = { k: 'name', name: fn }
     } else {
-      // Dopo \frac{d}{dx} la funzione va sempre tra parentesi, come in Photomath, e si deriva solo lei (con il
-      // suo esponente: \frac{d}{dx}(x^2+1)^3); il resto si moltiplica: \frac{d}{dx}(x^2+1) \cdot (x-1) è
-      // 2x·(x − 1) (lo studente, 14 ottobre 2026: «lo voglio stile fotomath»).
-      if (!this.is('open', '(') && !this.is('open', '[')) throw this.error(T.derivativeAfterFraction)
-      body = this.power()
+      // Dopo \frac{d}{dx} la funzione va sempre tra parentesi, come in Photomath, e si deriva solo lei; il resto
+      // vale per la derivata: \frac{d}{dx}(x^2+1) \cdot (x-1) è 2x·(x − 1) (lo studente, 14 ottobre 2026: «lo
+      // voglio stile fotomath») e l'esponente dopo la parentesi la eleva, \frac{d}{dx}(x^2+1)^3 è (2x)³ = 8x³
+      // (15 ottobre 2026); lo legge power(), che ha chiamato primary().
+      if (!this.is('open', '(') && !this.is('open', '[')) {
+        const op = derivativeOperator(top.partial, vars)
+        // Senza parentesi l'errore lo dice anche nella nota (lo studente, 15 ottobre 2026: «se non si mettono le
+        // parentesi da un errore e dice che sono obbligatorie»), se dopo c'è qualcosa da derivare: da sola
+        // (\frac{d}{dx} = \frac{d}{dt} \cdot \frac{dt}{dx}) è l'operatore, che si scrive anche nel testo.
+        const note = this.peek() && this.startsArgument() ? T.derivativeParens(op.text) : undefined
+        throw this.error(T.derivativeAfterFraction(op.tex, `${op.tex}(${vars[0]}^2)`), this.at(), note)
+      }
+      body = this.group()
     }
     return { k: 'diff', body, vars, partial: top.partial, ...(point && { point }) }
   }
 
   /**
-   * Quello che si deriva dopo `\partial_x`: con una parentesi subito dopo solo lei, con il suo
-   * esponente (`\partial_x (x^2 y) \cdot y`); senza, solo quello che viene subito dopo, come in \sum
-   * (`\partial_x x^2 y \cdot y`; lo studente, 14 ottobre 2026: «se non c'è la parentesi si prende solo
-   * quello che sta subito dopo il simbolo»).
+   * Quello che si deriva dopo `\partial_x`: con una parentesi subito dopo solo lei, e l'esponente dopo è
+   * della derivata, come con \frac{d}{dx} (`\partial_x (x^2 y) \cdot y`, `\partial_x (x^2 y)^2`); senza,
+   * solo quello che viene subito dopo, come in \sum (`\partial_x x^2 y \cdot y`; lo studente, 14 ottobre
+   * 2026: «se non c'è la parentesi si prende solo quello che sta subito dopo il simbolo»).
    */
   private derivativeBody(): MathNode {
-    return this.is('open', '(') || this.is('open', '[') ? this.power() : this.implicitArgument()
+    return this.is('open', '(') || this.is('open', '[') ? this.group() : this.implicitArgument()
   }
 
   /** `d`, `\partial`, `d^2`, `\partial^2` (con `variable`: seguito dalla variabile, `dx`, `\partial x^2`). */
@@ -2194,6 +2235,28 @@ class Parser {
 
 /** La funzione 1 di \int_0^1 dx (e dell'area di un dominio, \iint_D dx \, dy). */
 const ONE: MathNode = { k: 'num', v: 1, text: '1', comma: false }
+
+/**
+ * La derivata `\frac{d}{dx}` per i messaggi: in LaTeX (\frac{d^{2}}{dx^{2}}, \frac{\partial^{2}}{\partial x \partial y})
+ * e a parole, da leggere nella nota (d²/dx², ∂²/∂x∂y). `vars`: le variabili, una per ogni derivata.
+ */
+function derivativeOperator(partial: boolean, vars: string[]): { tex: string; text: string } {
+  const groups: { v: string; n: number }[] = []
+  for (const v of vars) {
+    const last = groups[groups.length - 1]
+    if (last?.v === v) last.n++
+    else groups.push({ v, n: 1 })
+  }
+  const d = partial ? '\\partial' : 'd'
+  const u = partial ? '∂' : 'd'
+  const power = (n: number) => (n > 1 ? `^{${n}}` : '')
+  const sup = (n: number) => (n > 1 ? '⁰¹²³⁴⁵⁶⁷⁸⁹'[n] : '')
+  const below = groups.map(({ v, n }) => `${d}${partial ? ' ' : ''}${v}${power(n)}`).join(' ')
+  return {
+    tex: `\\frac{${d}${power(vars.length)}}{${below}}`,
+    text: `${u}${sup(vars.length)}/${groups.map(({ v, n }) => `${u}${v}${sup(n)}`).join('')}`,
+  }
+}
 
 /** \frac{dx}{1 + x^2}, \frac{x \, dx}{x^2 + 1}: la frazione senza il dx, e la variabile; null se il dx non c'è. */
 function differentialInFraction(body: MathNode): { body: MathNode; v: string } | null {

@@ -118,6 +118,30 @@ describe('il controllo dei risultati scritti (✓/✗)', () => {
     expect(check.title).toBe('Sbagliato secondo Glifo alla riga 2: il valore giusto è 108')
   })
 
+  it('con l\'uguale in fondo il ✗ della catena e il risultato si vedono insieme (15 ottobre 2026)', () => {
+    const host = preview('$2 + 2 = 5 =$')
+    expect(host.querySelector<HTMLElement>('.calc-check.is-wrong')?.textContent).toContain('✗ fa')
+    expect(host.querySelector('.calc-result')?.textContent).toContain('5')
+    const doc = '$2 + 2 = 5 =$ e poi'
+    const v = makeView(doc, doc.length)
+    expect(v.dom.querySelector<HTMLElement>('.cm-calc-check.is-wrong')?.textContent).toBe('✗ fa 4')
+  })
+
+  it('senza la parentesi dopo \\frac{d}{dx} il ✗ dice che è obbligatoria, nell\'anteprima e nell\'editor (15 ottobre 2026)', () => {
+    const tex = r`$\frac{d}{dx} x^2 =$`
+    const wrong = preview(tex).querySelector<HTMLElement>('.calc-check.is-wrong')!
+    expect(wrong.textContent).toBe('✗ dopo d/dx le parentesi sono obbligatorie')
+    expect(wrong.title).toBe('Glifo non riesce a leggere la formula: dopo d/dx le parentesi sono obbligatorie')
+    const doc = `${tex} e poi`
+    // Mentre si scrive (il cursore nella formula) non c'è: la parentesi può arrivare.
+    const v = makeView(doc, doc.indexOf('x^2'))
+    expect(v.dom.querySelector('.cm-calc-check')).toBeNull()
+    v.dispatch({ selection: { anchor: doc.length } })
+    const check = v.dom.querySelector<HTMLElement>('.cm-calc-check.is-wrong')!
+    expect(check.textContent).toBe('✗ dopo d/dx le parentesi sono obbligatorie')
+    expect(check.title).toBe('Glifo non riesce a leggere la formula: dopo d/dx le parentesi sono obbligatorie')
+  })
+
   it('nell\'editor: dopo Tab il risultato scritto ha il ✓', () => {
     const doc = r`$a = 2$ e $a^{10} =$ fine`
     const v = makeView(doc, doc.indexOf('=$') + 1)

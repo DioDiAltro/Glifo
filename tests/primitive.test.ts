@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Rational } from '../src/math/exact'
+import { toLatex } from '../src/math/latex'
 import { parseMath } from '../src/math/parse'
 import { factorQ, partialFractions, squareFree } from '../src/math/polynomial'
 import { Sheet } from '../src/math/sheet'
@@ -47,6 +48,23 @@ describe('le primitive', () => {
     expect(text(r`\int \frac{dx}{1 + x^2} =`)).toBe('arctan(x) + c')
     expect(text(r`\int \frac{x \, dx}{x^2 + 4} =`)).toBe('ln(x² + 4)/2 + c')
     expect(text(r`\int_0^1 \frac{dx}{1 + x^2} =`)).toBe('π/4 ≈ 0,785398…')
+  })
+
+  it('il dx davanti, come in fisica: la funzione è quello che viene dopo (15 ottobre 2026: \\int dx/x dava 1)', () => {
+    expect(parseMath(r`\int dx/x`)).toMatchObject({ k: 'prim', v: 'x', body: { k: 'bin', op: '/', a: { k: 'num', v: 1 }, b: { k: 'name', name: 'x' } } })
+    expect(toLatex(parseMath(r`\int dx/x`))).toBe(r`\int \frac{1}{x} \, dx`)
+    expect(text(r`\int dx/x =`)).toBe('ln|x| + c')
+    expect(text(r`\int dx/(1 + x^2) =`)).toBe('arctan(x) + c')
+    expect(text(r`\int dx \, x^2 =`)).toBe('x³/3 + c')
+    expect(text(r`\int dx \cdot x^2 =`)).toBe('x³/3 + c')
+    expect(text(r`\int dt \, \cos t =`)).toBe('sin(t) + c')
+    expect(text(r`\int_0^1 dx \, x^2 =`)).toBe(text(r`\int_0^1 x^2 \, dx =`))
+    expect(text(r`\int_1^2 dx/x =`)).toBe(text(r`\int_1^2 \frac{1}{x} \, dx =`))
+    // Senza niente dopo la funzione è 1; quello dopo un + o un − resta fuori.
+    expect(text(r`\int_0^1 dx =`)).toBe('1')
+    expect(text(r`\int_0^1 dx + 1 =`)).toBe('2')
+    // Uno dentro l'altro: \int dx \int dy f.
+    expect(text(r`\int_0^1 dx \int_0^2 dy \, x y =`)).toBe('1')
   })
 
   it('per sostituzione, anche con l\'inversa (x = eᵗ, x² = t − 1)', () => {

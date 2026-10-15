@@ -554,8 +554,8 @@ quoziente con le derivate dentro, `\frac{\frac{d}{dx}(x^2+1) \cdot (x-1) - (x^2+
 giusta, e Glifo l'ha segnata ✗ («il valore giusto è (x² − 2x − 1)/(x − 1)²»), facendogliela correggere due
 volte. Il difetto era nel motore delle formule, anche nelle note: `\frac{d}{dx}(x^2+1) \cdot (x-1)` era la
 derivata di tutto il prodotto. Corretto sul ramo `prova` (lo studente: «prima sul ramo prova»): con una
-parentesi subito dopo la derivata (`\frac{d}{dx}`,
-`\frac{\partial}{\partial x}`, `\partial_x`) si deriva solo la parentesi, con il suo esponente
+parentesi subito dopo la derivata (`\frac{d}{dx}`, `\frac{\partial}{\partial x}`, `\partial_x`) si deriva solo
+la parentesi (allora con il suo esponente: dal 15 ottobre 2026 l'esponente è della derivata, vedi sotto)
 (`tests/check.test.ts`, `tests/explain.test.ts`, `tests/vectorcalc.test.ts`). Nessuna nota d'esempio cambia
 significato. Lo studente, 14 ottobre 2026: «Io penso sia meglio fare d/dx (x+2x) * x. Quello che sta nella
 parentesi è da fare la derivata, poi moltiplichi» (`\frac{d}{dx}(x+2x) \cdot x` dà 3x, nei test). Sul sito dal 14
@@ -568,9 +568,8 @@ derivate: «sì, se non c'è la parentesi si prende solo quello che sta subito d
 regola: «lo voglio stile fotomath; dopo d/dx (con il frac) si mettono SEMPRE le parentesi, cosi solo quello che
 sta nelle parentesi viene fatto la derivata». Così, sul ramo `prova`, dopo `\frac{d}{dx}` (e `\frac{d^2}{dx^2}`,
 `\frac{\partial}{\partial x}`) la parentesi è obbligatoria: `\frac{d}{dx}(x^2) \sin x` è 2x·sin x e
-`\frac{d}{dx} x^2` non si legge (Glifo per ora non dice perché: lo direbbe il messaggio «Dopo \frac{d}{dx} va la
-funzione da derivare, tra parentesi», che nella nota non si vede). `\partial_x` senza parentesi prende solo quello
-che viene subito dopo, come le somme. Esempi, aiuto, modelli del catalogo e test hanno le parentesi.
+`\frac{d}{dx} x^2` non si legge (dal 15 ottobre 2026 la nota dice perché, vedi sotto). `\partial_x` senza parentesi
+prende solo quello che viene subito dopo, come le somme. Esempi, aiuto, modelli del catalogo e test hanno le parentesi.
 
 Trovato guardando come il motore calcola le derivate (14 ottobre 2026, lo studente: «sì, correggi anche la
 derivata parziale con le lettere»): con `f(x, y) = x^2 y`, `\frac{\partial f}{\partial x}(a, b) =` dava 0 invece
@@ -584,6 +583,19 @@ non contava come formula da disegnare. Ora, sul ramo `prova`, il blocco ha l'int
 lettere che mancano, come «Aggiungi gli slider» nell'anteprima: per gli estremi di un integrale `a = 0` e
 `b = 1` (con 1 e 1 l'area non si vedrebbe), e l'area si vede subito (`tests/graphNote.test.ts`,
 `tests/graph.test.ts`).
+
+**L'esponente dopo la derivata, il ✗ senza parentesi, le catene con l'uguale in fondo e il dx davanti (15 ottobre
+2026).** Lo studente: «\frac{d}{dx}(x^2+1)^3 deve dare 8x^3», «se non si mettono le parentesi da un errore e dice
+che sono obbligatorie» e, sui due difetti trovati guardando il motore, «sì, sistema anche quei due difetti». Sul
+ramo `prova`: l'esponente dopo la parentesi è della derivata, `\frac{d}{dx}(x^2+1)^3 =` dà 8x³ cioè (2x)³ (anche
+con `\frac{\partial}{\partial x}` e `\partial_x`), e per derivare la potenza la si scrive dentro,
+`\frac{d}{dx}((x^2+1)^3)`; lo dicono anche le regole di Spiegami al modello. Senza la parentesi
+(`\frac{d}{dx} x^2 =`) dopo la formula c'è il ✗ «dopo d/dx le parentesi sono obbligatorie», con la derivata
+com'è scritta (d/dt, d²/dx², ∂/∂x); la derivata da sola (`\frac{d}{dx} = …`) resta senza segno. Con l'uguale in
+fondo la catena prima si controlla: `2 + 2 = 5 =` dava solo 5, ora ha anche il ✗ (fa 4). Il dx davanti, come in
+fisica: `\int dx/x =` era (∫dx)/x = 1, ora è ln|x| + c, e `\int_0^1 dx \, x^2` dà 1/3, anche negli integrali
+doppi (`tests/check.test.ts`, `tests/vectorcalc.test.ts`, `tests/primitive.test.ts`, `tests/multiple.test.ts`,
+`tests/graphNote.test.ts`, `tests/mathEn1.test.ts`).
 
 Da fare:
 - provarlo davvero su un computer con WebGPU (Chrome o Edge), su esercizi veri, e scegliere il modello

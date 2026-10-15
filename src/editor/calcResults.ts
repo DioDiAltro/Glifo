@@ -26,6 +26,8 @@ const T = texts({
   wrongIs: ['✗ fa {value}', '✗ should be {value}'],
   wrongIsOnLine: ['✗ riga {line}: fa {value}', '✗ line {line}: should be {value}'],
   wrongLine: ['✗ riga {line}', '✗ line {line}'],
+  /** Una formula che Glifo non legge, con il motivo: dopo d/dx le parentesi sono obbligatorie. */
+  unreadableOnLineIs: ['✗ riga {line}: {reason}', '✗ line {line}: {reason}'],
 })
 
 export interface CalcResult {
@@ -179,7 +181,8 @@ class CheckWidget extends WidgetType {
       other.check.ok === this.check.ok &&
       other.check.rounded === this.check.rounded &&
       other.check.value?.tex === this.check.value?.tex &&
-      other.check.line === this.check.line
+      other.check.line === this.check.line &&
+      other.check.error === this.check.error
     )
   }
 
@@ -189,7 +192,8 @@ class CheckWidget extends WidgetType {
     span.title = checkTitle(this.check)
     span.setAttribute('aria-label', span.title)
     const line = String(this.check.line ?? '')
-    if (!this.check.ok && this.check.value) span.append(...rich(line ? T.wrongIsOnLine : T.wrongIs, { value: valueNode(this.check.value), line }))
+    if (!this.check.ok && this.check.error) span.append(...(line ? rich(T.unreadableOnLineIs, { reason: this.check.error, line }) : [`✗ ${this.check.error}`]))
+    else if (!this.check.ok && this.check.value) span.append(...rich(line ? T.wrongIsOnLine : T.wrongIs, { value: valueNode(this.check.value), line }))
     else if (!this.check.ok && line) span.append(...rich(T.wrongLine, { line }))
     else span.append(this.check.ok ? '✓' : '✗')
     return span

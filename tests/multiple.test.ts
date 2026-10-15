@@ -49,6 +49,8 @@ describe('gli integrali doppi e tripli: come si scrivono', () => {
     // Senza la funzione: ∬_D dA è l'area di D.
     const area = parseMath(r`\iint_D dA`)
     expect(area.k === 'mint' && area.body).toEqual({ k: 'num', v: 1, text: '1', comma: false })
+    // Con i differenziali davanti la funzione è quello che viene dopo, come in fisica (15 ottobre 2026).
+    expect(parseMath(r`\iint_D dx \, dy \, x y`)).toMatchObject({ k: 'mint', vars: ['x', 'y'], body: { k: 'bin', op: '*' } })
   })
 
   it('i differenziali che mancano o sono troppi lo dicono', () => {
@@ -77,6 +79,8 @@ describe('gli integrali doppi e tripli: come si scrivono', () => {
 describe('gli integrali doppi e tripli: i valori nella nota', () => {
   it('su rettangoli e parallelepipedi', () => {
     expect(result(r`\iint_{[0,1] \times [0,2]} x y \, dx \, dy =`)).toBe('1')
+    expect(result(r`\iint_{[0,1] \times [0,2]} dx \, dy \, x y =`)).toBe('1')
+    expect(result(r`\iint_{[0,1] \times [0,2]} dA =`)).toBe('2')
     expect(result(r`\iint_{[0,1] × [0,2]} x \, dx \, dy =`)).toBe('1')
     expect(result(r`\iint_{[0,1]^2} e^{x+y} \, d(x, y) =`)).toBe('2,952492…')
     expect(result(r`\iiint_{[0,1]^3} x y z \, dV =`)).toBe('0,125')

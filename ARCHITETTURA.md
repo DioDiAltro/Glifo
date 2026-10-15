@@ -248,9 +248,12 @@ finita il 14 ottobre 2026, il file non c'è più e si legge nella storia del rep
   geometria (segmenti, rette, circonferenze, piani, poligoni, angoli, intersezioni: `geometryOf`); i
   risultati con le matrici hanno `rich` e l'editor li disegna con KaTeX; `symbolic.ts` i conti con le
   lettere: derivate (`f'(x)`, nodi `diff` da `\frac{d}{dx}` e `\partial`; dopo `\frac{d}{dx}` la parentesi è
-  obbligatoria, come in Photomath, e si deriva solo lei, con il suo esponente: `derivativeFrac` in `parse.ts`, e
-  `diffLatex` in `latex.ts` la scrive sempre; `\partial_x` senza parentesi prende solo quello che viene subito
-  dopo, come \sum: `derivativeBody`; dal 14 ottobre 2026; `\frac{\partial f}{\partial x}(a, b)` e
+  obbligatoria, come in Photomath, e si deriva solo lei (`group`): l'esponente dopo è della derivata, lo legge
+  `power`, e `\frac{d}{dx}(x^2+1)^3` è (2x)³ (dal 15 ottobre 2026); `derivativeFrac` in `parse.ts`, e
+  `diffLatex` in `latex.ts` la scrive sempre, tra parentesi se è elevata a una potenza; senza la parentesi,
+  se dopo c'è qualcosa da derivare, l'errore ha `note` (`MathSyntaxError`) e la nota lo mostra con il ✗;
+  `\partial_x` con la parentesi fa lo stesso, senza prende solo quello che viene subito dopo, come \sum:
+  `derivativeBody`; dal 14 ottobre 2026; `\frac{\partial f}{\partial x}(a, b)` e
   `\partial_x f(a, b)` hanno `point` nel nodo: la derivata di f calcolata nel punto, anche con le lettere,
   in `derivative`/`atPoint` di `symbolic.ts` e in `compileDerivative` di `evaluate.ts`, mentre
   `\frac{d}{dx}(f(x^2))` è la derivata di tutta f(x²)), gradiente, divergenza, rotore,
@@ -298,7 +301,9 @@ finita il 14 ottobre 2026, il file non c'è più e si legge nella storia del rep
   come lettere (lineare nelle costanti: gruppi e parte particolare, `Shape`), controllata con i numeri
   (`satisfies`); la somiglianza con le esponenziali complesse (`Wave`, `similar`), i sistemi di due
   equazioni per eliminazione, le condizioni come sistema nelle costanti (`cauchy`); i polinomi di Taylor sono `\operatorname{taylor}`
-  in `symbolic.ts`; `primitive.ts` le primitive (nodo `prim`, `\int f \, dx` senza estremi; ognuna
+  in `symbolic.ts`; `primitive.ts` le primitive (nodo `prim`, `\int f \, dx` senza estremi, anche con il dx
+  davanti come in fisica, `\int dx/x`: la funzione è il resto del prodotto, `integrandAfterDifferential` in
+  `parse.ts`, dal 15 ottobre 2026; ognuna
   controllata derivandola con i numeri, `verified`), con i polinomi di `polynomial.ts` (fratti semplici) e,
   con le lettere nei coefficienti, `quadraticRootLetters` e `rationalLetters` (√(R² − x²), 1/(x² + a²));
   `definite.ts` gli integrali definiti con la primitiva, esatti o impropri, controllati con i numeri;
@@ -326,7 +331,12 @@ finita il 14 ottobre 2026, il file non c'è più e si legge nella storia del rep
   Con il risultato scritto (`$\int_0^1 x^2 \, dx = \frac{1}{3}$`) c'è il controllo (`Sheet.read`, `check`):
   la domanda è la prima parte che si sa calcolare (`resultOf`), le altre valgono quanto lei (con le lettere per tre scelte di
   numeri, i decimali arrotondati o troncati con `writtenSlack`, la primitiva tra gli estremi
-  `\left[…\right]_a^b` con `bracketValue`); definizioni, equazioni e formule con ⇒ no. Una parte senza un
+  `\left[…\right]_a^b` con `bracketValue`); definizioni, equazioni e formule con ⇒ no. Con l'uguale in fondo
+  la catena prima si controlla lo stesso, senza definire niente (`checkBeforeResult`: `2 + 2 = 5 =` ha il ✗ e il
+  risultato; dal 15 ottobre 2026). Una formula che non si legge non ha segno, tranne quando l'errore del lettore
+  ha un motivo da dire (`MathSyntaxError.note`, `readingNote`): allora il ✗ ha il motivo al posto del valore
+  (`EqualityCheck.error`: «dopo d/dx le parentesi sono obbligatorie»), mentre per Spiegami (`checkFormula` in
+  `src/ai/tools.ts`) resta non controllata. Una parte senza un
   valore (1/0, 0/0: in JavaScript ∞ e NaN) non si giudica, né ✓ né ✗ (`sameAs`, `sameScalar`, `same`; il 7
   ottobre 2026 `$1/0 = 5$` aveva il ✓). Il segno ✓/✗ è in
   `src/render/check.ts` (nell'editor il ✗ aspetta che il cursore esca dalla formula); i controlli fatti

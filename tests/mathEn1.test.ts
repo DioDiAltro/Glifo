@@ -110,6 +110,16 @@ describe('i controlli delle uguaglianze', () => {
     expect(checkHtml(check)).toContain('✗ line 2: should be')
   })
 
+  it('without the parentheses after \\frac{d}{dx} the note says they are required', () => {
+    const check = line(r`\frac{d}{dx} x^2 =`)!.check!
+    expect(check).toEqual({ ok: false, error: 'after d/dx parentheses are required' })
+    expect(checkTitle(check)).toBe("Glifo can't read the formula: after d/dx parentheses are required")
+    expect(checkHtml(check)).toContain('✗ after d/dx parentheses are required')
+    const second = line(r`2 + 2 = 4 \\ \frac{d}{dx} x^2 =`)!.check!
+    expect(checkTitle(second)).toBe("Glifo can't read line 2: after d/dx parentheses are required")
+    expect(checkHtml(second)).toContain('✗ line 2: after d/dx parentheses are required')
+  })
+
   it('nella lingua di quando si controlla (anche la stessa formula già controllata)', () => {
     setLangForTests('it')
     expect(line(r`\sqrt{3} = 1.8`)?.check?.value?.text).toBe('1,732050…')
@@ -127,7 +137,7 @@ describe('gli errori', () => {
     expect(readError(r`\foo`)).toBe(r`I can't calculate \foo`)
     expect(readError(')')).toBe('Something is missing before “)”')
     expect(readError(r`\frac{1}`)).toBe(r`Missing the denominator of \frac`)
-    expect(readError(r`\frac{d}{dx} x^2`)).toBe(r`After \frac{d}{dx} write the function to differentiate in parentheses: \frac{d}{dx}(x^2)`)
+    expect(readError(r`\frac{d}{dx} x^2`)).toBe(r`After \frac{d}{dx} parentheses are required: what is inside them is differentiated, \frac{d}{dx}(x^2)`)
     expect(readError(r`\int_0 x \, dx`)).toBe(r`An integral needs both bounds, e.g. \int_0^1, or none: \int x \, dx`)
     expect(readError(r`X \sim Q(3)`)).toMatch(/^I don't know the distribution “Q”: for example B\(n, p\)/)
     // Gli esempi con i decimali dell'inglese.

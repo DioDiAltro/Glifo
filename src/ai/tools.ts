@@ -123,6 +123,9 @@ export function checkFormula(tex: string, sheet: SheetFactory, variable: string 
   if (parts.length < 2) return null
   try {
     const check = sheet().read(tex).check
+    // Una formula che Glifo non legge (\frac{d}{dx} x^2, senza parentesi) non si controlla: nella nota il ✗ ha
+    // il motivo, qui resta come prima.
+    if (check?.error) return null
     if (check) return check.ok ? { ok: true, ...(check.rounded && { rounded: true }) } : { ok: false, ...(check.value && { value: check.value }) }
   } catch {
     // Si prova parte con parte.

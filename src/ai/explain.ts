@@ -71,6 +71,11 @@ const T = texts({
     '- Ogni formula è un\'uguaglianza in LaTeX (a = b), senza parole dentro. Da 2 a 6 passaggi: il primo fa già un conto (non ripetere la domanda), l\'ultimo arriva al risultato di Glifo (niente passaggio con il solo risultato).',
     '- Every formula is an equality in LaTeX (a = b), with no words inside. From 2 to 6 steps: the first one already does a calculation (don\'t repeat the question), the last one reaches Glifo\'s result (no step with just the result).',
   ],
+  // Dal 15 ottobre 2026 l'esponente dopo la parentesi è della derivata (src/math/parse.ts, `derivativeFrac`).
+  calcParens: [
+    '- Dopo \\frac{d}{dx} tutta la funzione da derivare va tra parentesi, anche le potenze: \\frac{d}{dx}\\left((x^2+1)^3\\right). Glifo legge \\frac{d}{dx}(x^2+1)^3 come la derivata di x^2+1, elevata alla terza.',
+    '- After \\frac{d}{dx} the whole function to differentiate goes in parentheses, powers included: \\frac{d}{dx}\\left((x^2+1)^3\\right). Glifo reads \\frac{d}{dx}(x^2+1)^3 as the derivative of x^2+1, cubed.',
+  ],
   calcNames: [
     '- Nomi giusti: l\'integrale definito è l\'area con segno sotto la curva e vale F(b) - F(a), con F una primitiva e a, b gli estremi di integrazione (teorema fondamentale del calcolo integrale); la primitiva di x^n è x^{n+1}/(n+1) (regola della potenza); poi linearità, integrazione per parti, per sostituzione; nelle derivate le regole della somma, del prodotto, del quoziente e della catena.',
     '- Correct names: the definite integral is the signed area under the curve and equals F(b) - F(a), with F an antiderivative and a, b the limits of integration (fundamental theorem of calculus); the antiderivative of x^n is x^{n+1}/(n+1) (power rule); then linearity, integration by parts, integration by substitution; for derivatives, the sum, product, quotient and chain rules.',
@@ -332,6 +337,7 @@ export function systemPrompt(tone: ExplainTone, tools = true): string {
     T.calcFormat,
     T.calcExample,
     T.calcEquality,
+    T.calcParens,
     T.calcNames,
     ...(tools ? ['', toolsPrompt()] : []),
   ].join('\n')

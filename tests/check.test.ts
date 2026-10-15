@@ -10,7 +10,7 @@ function check(...formulas: string[]): string | null {
   for (const f of formulas) last = sheet.read(f)
   const c = last?.check
   if (!c) return null
-  return c.ok ? (c.rounded ? '✓≈' : '✓') : `✗ ${c.value?.text}`
+  return c.ok ? (c.rounded ? '✓≈' : '✓') : `✗ ${c.value?.text ?? c.error}`
 }
 
 describe('il controllo delle uguaglianze scritte (✓/✗)', () => {
@@ -184,10 +184,17 @@ describe('il controllo delle uguaglianze scritte (✓/✗)', () => {
     expect(check(r`\frac{d}{dt}(t^2) \cdot t = 2t^2`)).toBe('✓')
     expect(check(r`\frac{\partial}{\partial x}(x^2 y) \cdot x = 2x^2 y`)).toBe('✓')
     expect(check(r`\partial_x (x^2 y) \cdot x = 2x^2 y`)).toBe('✓')
-    // L'esponente dopo la parentesi è suo: (x + 1)² derivato, per x.
-    expect(check(r`\frac{d}{dx}(x+1)^2 \cdot x = 2x(x+1)`)).toBe('✓')
-    // Dopo \frac{d}{dx} la parentesi va sempre, come in Photomath (lo studente, 14 ottobre 2026): senza, niente.
-    expect(check(r`\frac{d}{dx} x^2 \sin x = 2x \sin x`)).toBeNull()
+    // L'esponente dopo la parentesi è della derivata (lo studente, 15 ottobre 2026: «\frac{d}{dx}(x^2+1)^3 deve
+    // dare 8x^3»); la potenza da derivare va dentro la parentesi.
+    expect(check(r`\frac{d}{dx}(x^2+1)^3 = 8x^3`)).toBe('✓')
+    expect(check(r`\frac{d}{dx}(x^2+1)^3 = 6x(x^2+1)^2`)).toBe('✗ 8x³')
+    expect(check(r`\frac{d}{dx}((x^2+1)^3) = 6x(x^2+1)^2`)).toBe('✓')
+    expect(check(r`\frac{d}{dx}(x+1)^2 \cdot x = x`)).toBe('✓')
+    expect(check(r`\frac{\partial}{\partial x}(x^2 y)^2 = 4x^2 y^2`)).toBe('✓')
+    expect(check(r`\partial_x (x^2 y)^2 = 4x^2 y^2`)).toBe('✓')
+    // Dopo \frac{d}{dx} la parentesi va sempre, come in Photomath (lo studente, 14 ottobre 2026), e senza la nota
+    // lo dice (15 ottobre 2026: «se non si mettono le parentesi da un errore e dice che sono obbligatorie»).
+    expect(check(r`\frac{d}{dx} x^2 \sin x = 2x \sin x`)).toBe('✗ dopo d/dx le parentesi sono obbligatorie')
     expect(check(r`\frac{d}{dx}(x^2) \sin x = 2x \sin x`)).toBe('✓')
     expect(check(r`\frac{d}{dx}(x^2 \sin x) = 2x \sin x + x^2 \cos x`)).toBe('✓')
     expect(check(r`\frac{d}{dx}(3x^2) = 6x`)).toBe('✓')
@@ -203,6 +210,44 @@ describe('il controllo delle uguaglianze scritte (✓/✗)', () => {
     expect(new Sheet().read(r`6^3 = 216 \\ 324 - 216 = 216 \\ 216 * 2 =`).check).toMatchObject({ ok: false, line: 2 })
     expect(new Sheet().read(r`6^3 = 215 \\ 324 - 216 = 108`).check).toMatchObject({ ok: false, line: 1 })
     expect(new Sheet().read('2 + 2 = 5').check).toEqual({ ok: false, value: { tex: '4', text: '4' } })
+  })
+
+  it('senza la parentesi dopo \\frac{d}{dx} la nota dice che è obbligatoria (15 ottobre 2026)', () => {
+    const missing = '✗ dopo d/dx le parentesi sono obbligatorie'
+    expect(check(r`\frac{d}{dx} x^2 =`)).toBe(missing)
+    expect(new Sheet().read(r`\frac{d}{dx} x^2 =`)).toEqual({ result: null, check: { ok: false, error: 'dopo d/dx le parentesi sono obbligatorie' } })
+    expect(check(r`\frac{d}{dx} \sin x = \cos x`)).toBe(missing)
+    expect(check(r`2x = \frac{d}{dx} x^2`)).toBe(missing)
+    expect(check(r`g(x) = \frac{d}{dx} x^2`)).toBe(missing)
+    expect(check(r`\frac{d}{dt} t^2 =`)).toBe('✗ dopo d/dt le parentesi sono obbligatorie')
+    expect(check(r`\frac{d^2}{dx^2} x^3 =`)).toBe('✗ dopo d²/dx² le parentesi sono obbligatorie')
+    expect(check(r`\frac{\partial}{\partial x} x^2 y =`)).toBe('✗ dopo ∂/∂x le parentesi sono obbligatorie')
+    // Su più righe, o con più formule, dice quale; un ✗ prima resta il primo.
+    expect(new Sheet().read(r`2 + 2 = 4 \\ \frac{d}{dx} x^2 =`).check).toMatchObject({ ok: false, line: 2, error: 'dopo d/dx le parentesi sono obbligatorie' })
+    expect(check(r`a = 2, \quad \frac{d}{dx} x^2 = 2x`)).toBe(missing)
+    expect(check(r`2 + 2 = 5, \quad \frac{d}{dx} x^2 = 2x`)).toBe('✗ 4')
+    // Con le parentesi va; la derivata da sola e le formule che Glifo non legge per altri motivi restano senza segno.
+    expect(check(r`\frac{d}{dx}(x^2) = 2x`)).toBe('✓')
+    expect(check(r`\frac{d}{dx} = \frac{d}{dt} \cdot \frac{dt}{dx}`)).toBeNull()
+    expect(check('x^ = 2')).toBeNull()
+    expect(check(r`\foo(2) =`)).toBeNull()
+  })
+
+  it('con l\'uguale in fondo si controllano anche le uguaglianze prima (15 ottobre 2026: 2 + 2 = 5 = dava solo 5)', () => {
+    expect(check('2 + 2 = 5 =')).toBe('✗ 4')
+    expect(check('2 + 2 = 4 =')).toBe('✓')
+    // Il risultato dell'«=» in fondo resta, come con le righe.
+    expect(new Sheet().read('2 + 2 = 5 =')).toMatchObject({ result: { text: '5' }, check: { ok: false, value: { text: '4' } } })
+    expect(check(r`\int_0^1 x^2 \, dx = \left[\frac{x^3}{3}\right]_0^1 =`)).toBe('✓')
+    expect(check(r`\int_0^1 x^2 \, dx = \left[\frac{x^3}{2}\right]_0^1 =`)).toBe('✗ 1/3')
+    expect(check(r`\frac{1}{2} + \frac{1}{3} = \frac{2}{5} =`)).toBe('✗ 5/6')
+    // Su più righe il ✗ dice la riga.
+    expect(new Sheet().read(r`6^3 = 216 \\ 2 + 2 = 5 =`).check).toMatchObject({ ok: false, line: 2 })
+    // Una definizione con il risultato non si controlla: a = 3 + 4 = dà 7 e definisce a.
+    expect(check('a = 3 + 4 =')).toBeNull()
+    expect(check('f(x) = x^2 + 1 =')).toBeNull()
+    expect(check('a = 5', 'a = 3 + 4 =')).toBeNull()
+    expect(check('3 + 4 =')).toBeNull()
   })
 
   it('limiti, serie e infiniti', () => {

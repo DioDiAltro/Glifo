@@ -87,6 +87,8 @@ describe('il motore di Glifo come strumenti', () => {
     const system = systemPrompt('semplice')
     expect(system).toContain('come a un compagno di corso')
     expect(system).toContain(tools)
+    // La potenza da derivare dentro la parentesi: fuori è della derivata (15 ottobre 2026).
+    expect(system).toContain(r`anche le potenze: \frac{d}{dx}\left((x^2+1)^3\right)`)
     expect(systemPrompt('professore')).toContain('professore universitario')
   })
 

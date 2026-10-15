@@ -71,7 +71,9 @@ function level(n: MathNode): number {
     case 'lim':
       return 1.8
     case 'diff':
-      return n.body.k === 'name' || n.body.k === 'apply' ? 5 : 1.8
+      // Come la scrive diffLatex: \frac{df}{dx} e \frac{\partial f}{\partial x}(a, b) stanno da sole, \frac{d}{dx}\left(…\right)
+      // no: elevata a una potenza va tra parentesi, se no l'esponente sembra della funzione (15 ottobre 2026).
+      return n.body.k === 'name' || (n.body.k === 'apply' && !n.body.primes && n.point) ? 5 : 1.8
     case 'fn':
       return n.args.length === 1 && isAtom(n.args[0]) ? 3 : 5
     case 'post':

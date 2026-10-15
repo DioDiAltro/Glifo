@@ -66,7 +66,7 @@ import { mapNode } from './symbolic'
 import { trim as trimPoly, type Poly } from './polynomial'
 import { formatNumber, formatRational, type FormattedResult } from './format'
 import { toLatex } from './latex'
-import { children, namesIn, parseMath, type MathNode } from './parse'
+import { children, MathSyntaxError, namesIn, parseMath, type MathNode } from './parse'
 import { definiteIntegral } from './definite'
 import { study, studyPart, studyRows, studyTable } from './study'
 import { cancelLinear, definiteParts, definiteValue, derive, exOf, expandCalculus, functionOf, isVectorBody, needsSymbols, partialDerivative, plainText, symbolicValue, symbols, tidy, toNode, zeroOverZero, type Ex, type SymbolScope } from './symbolic'
@@ -116,6 +116,11 @@ export interface EqualityCheck {
   value?: FormattedResult
   /** In una formula su più righe (separate da \\), quando è sbagliata: la riga, da 1. */
   line?: number
+  /**
+   * Quando Glifo non legge la formula per un motivo da dire (`MathSyntaxError.note`: dopo \frac{d}{dx} le
+   * parentesi sono obbligatorie): il motivo, al posto del valore giusto.
+   */
+  error?: string
 }
 
 /** Quello che Glifo dice di una formula: il risultato dopo «=» (o ⇒) e il controllo dell'uguaglianza scritta. */
@@ -176,6 +181,34 @@ function parseCached(src: string): MathNode | null {
   if (parsed.size > 3000) parsed.delete(parsed.keys().next().value!)
   parsed.set(src, node)
   return node
+}
+
+const notes = new Map<string, string | null>()
+
+/**
+ * Perché un pezzo di formula non si legge, quando è da dire nella nota (`MathSyntaxError.note`, per esempio
+ * la parentesi dopo \frac{d}{dx}); null se si legge o se Glifo non ha niente da dire.
+ */
+function readingNote(src: string): string | null {
+  if (parseCached(src)) return null
+  const key = `${lang}\u0001${src}`
+  const hit = notes.get(key)
+  if (hit !== undefined) return hit
+  let note: string | null = null
+  try {
+    parseMath(src)
+  } catch (err) {
+    if (err instanceof MathSyntaxError) note = err.note ?? null
+  }
+  if (notes.size > 3000) notes.delete(notes.keys().next().value!)
+  notes.set(key, note)
+  return note
+}
+
+/** Il ✗ di un pezzo che non si legge, con il motivo (vedi `readingNote`); null se non c'è niente da dire. */
+function unreadable(piece: string): EqualityCheck | null {
+  const error = readingNote(withoutDots(piece))
+  return error ? { ok: false, error } : null
 }
 
 /**
@@ -615,14 +648,19 @@ export class Sheet {
       const pieces = piecesWithLines(request ?? tex)
       // 6^3 = 216 \\ 324 - 216 = 216 \\ 216 \cdot 2 =: ogni riga è una formula, il ✗ dice quale.
       const lines = pieces.length ? pieces[pieces.length - 1].line : 1
-      const last = request === null ? null : pieces.pop()?.text ?? null
-      for (const { text, line } of pieces) {
-        let found = this.defineOrCheck(text)
-        if (found && !found.ok && lines > 1) found = { ...found, line }
+      const last = request === null ? null : pieces.pop() ?? null
+      const take = (piece: EqualityCheck | null, line: number) => {
+        if (piece && !piece.ok && lines > 1) piece = { ...piece, line }
         // Con più uguaglianze (f(1) = 2, \quad f(2) = 5) conta la prima sbagliata.
-        if (found && (!check || (check.ok && (!found.ok || found.rounded)))) check = found
+        if (piece && (!check || (check.ok && (!piece.ok || piece.rounded)))) check = piece
       }
-      return { result: last === null ? null : this.calculate(last), check }
+      // \frac{d}{dx} x^2 = 2x: una formula che non si legge ha il ✗ con il motivo, se c'è da dirlo (15 ottobre 2026).
+      for (const { text, line } of pieces) take(this.defineOrCheck(text) ?? unreadable(text), line)
+      // 2 + 2 = 5 =: prima del risultato la catena scritta si controlla, come le altre (15 ottobre 2026).
+      if (last) take(this.checkBeforeResult(last.text), last.line)
+      const result = last === null ? null : this.calculate(last.text)
+      if (last && !result) take(unreadable(last.text), last.line)
+      return { result, check }
     } catch {
       // Una formula che non si riesce a calcolare (troppo grande, troppo annidata) non ha risultato.
       return { result: null, check }
@@ -745,6 +783,28 @@ export class Sheet {
     let check: EqualityCheck | null
     try {
       check = this.checkPiece(src, node, defined)
+    } catch {
+      check = null
+    }
+    if (checks.size > 3000) checks.delete(checks.keys().next().value!)
+    checks.set(key, check)
+    return check
+  }
+
+  /**
+   * Le uguaglianze prima dell'«=» in fondo (`2 + 2 = 5 =`, `\int_0^1 x^2 \, dx = \left[…\right]_0^1 =`): si
+   * controllano come senza, ma non definiscono niente (lo fa `calculate`, in `a = 3 + 4 =`) e con un
+   * nome davanti si controlla il resto.
+   */
+  private checkBeforeResult(piece: string): EqualityCheck | null {
+    const src = withoutDots(piece)
+    if (!/=|≈|\\approx/.test(src) || IMPLICATION.test(src)) return null
+    const key = `${this.state}\u0001=\u0001${src}\u0001${lang}`
+    const known = checks.get(key)
+    if (known !== undefined) return known
+    let check: EqualityCheck | null
+    try {
+      check = this.checkPiece(src, parseCached(src), false)
     } catch {
       check = null
     }

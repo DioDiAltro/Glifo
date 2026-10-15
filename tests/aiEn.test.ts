@@ -78,6 +78,7 @@ describe('i messaggi per il modello, in inglese', () => {
       expect(system).toContain('fundamental theorem of calculus')
       expect(system).toContain('power rule')
       expect(system).toContain('the limits of integration')
+      expect(system).toContain(r`powers included: \frac{d}{dx}\left((x^2+1)^3\right)`)
       expect(system).not.toMatch(ITALIAN)
       // La riga d'esempio si legge come un passaggio vero.
       const example = system.split('\n').find((l) => /^1\. /.test(l))

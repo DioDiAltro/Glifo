@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { toLatex } from '../src/math/latex'
-import { parseMath } from '../src/math/parse'
+import { MathSyntaxError, parseMath } from '../src/math/parse'
 import { Sheet } from '../src/math/sheet'
 import { symbolicValue } from '../src/math/symbolic'
 import { staticGraphSvg } from '../src/graph/picture'
@@ -38,21 +38,51 @@ describe('le derivate: come si scrivono', () => {
     expect(toLatex(d)).toBe(r`\frac{d}{dx}\left(x^{2}\right)`)
   })
 
-  it('dopo \\frac{d}{dx} sempre la parentesi, e si deriva solo lei, con il suo esponente (come in Photomath)', () => {
+  it('dopo \\frac{d}{dx} sempre la parentesi, e si deriva solo lei; l\'esponente dopo è del risultato (come in Photomath)', () => {
     const diff = { k: 'diff', vars: ['x'], partial: false }
     expect(parseMath(r`\frac{d}{dx}(x^2+1) \cdot (x-1)`)).toMatchObject({ k: 'bin', op: '*', a: diff })
     expect(parseMath(r`\frac{d}{dx}(x^2+1)(x-1)`)).toMatchObject({ k: 'bin', op: '*', a: diff, implicit: true })
     expect(parseMath(r`\frac{d}{dx}\left[x^2+1\right] / (x-1)`)).toMatchObject({ k: 'bin', op: '/', a: diff })
-    expect(parseMath(r`\frac{d}{dx}(x+1)^3 \cdot x`)).toMatchObject({ k: 'bin', op: '*', a: { ...diff, body: { k: 'bin', op: '^' } } })
+    // L'esponente dopo la parentesi vale per la derivata (lo studente, 15 ottobre 2026: «\frac{d}{dx}(x^2+1)^3
+    // deve dare 8x^3»), anche con ∂ e \partial_x; per derivare (x+1)^3 la potenza va dentro la parentesi.
+    expect(parseMath(r`\frac{d}{dx}(x+1)^3 \cdot x`)).toMatchObject({ k: 'bin', op: '*', a: { k: 'bin', op: '^', a: { ...diff, body: { k: 'bin', op: '+' } } } })
+    expect(parseMath(r`\frac{d}{dx}((x+1)^3)`)).toMatchObject({ ...diff, body: { k: 'bin', op: '^' } })
+    expect(parseMath(r`\frac{\partial}{\partial x}(x^2 y)^2`)).toMatchObject({ k: 'bin', op: '^', a: { k: 'diff', vars: ['x'], partial: true } })
+    expect(parseMath(r`\partial_x (x^2 y)^2`)).toMatchObject({ k: 'bin', op: '^', a: { k: 'diff', vars: ['x'], partial: true } })
     expect(parseMath(r`\partial_x (x^2 y) \cdot y`)).toMatchObject({ k: 'bin', op: '*', a: { k: 'diff', vars: ['x'], partial: true } })
-    // Senza parentesi non si legge (lo studente, 14 ottobre 2026: «lo voglio stile fotomath»).
-    for (const f of [r`\frac{d}{dx} x^2 \sin x`, r`\frac{d}{dx} 3x^2`, r`\frac{d}{dx} \sin x`, r`\frac{\partial}{\partial x} x^2 y`, r`\frac{d}{dx}`]) {
-      expect(() => parseMath(f)).toThrow(r`Dopo \frac{d}{dx} va la funzione da derivare, tra parentesi: \frac{d}{dx}(x^2)`)
+    // Senza parentesi non si legge (lo studente, 14 ottobre 2026: «lo voglio stile fotomath»), e l'errore lo dice
+    // con la derivata scritta (15 ottobre 2026: «se non si mettono le parentesi da un errore e dice che sono
+    // obbligatorie»); `note` è il motivo da mostrare nella nota, solo se dopo c'è qualcosa da derivare.
+    const failure = (f: string) => {
+      try {
+        parseMath(f)
+      } catch (err) {
+        return err instanceof MathSyntaxError ? { message: err.message, note: err.note } : null
+      }
+      return null
     }
+    for (const f of [r`\frac{d}{dx} x^2 \sin x`, r`\frac{d}{dx} 3x^2`, r`\frac{d}{dx} \sin x`, r`\frac{d}{dx} -x`]) {
+      expect(failure(f), f).toEqual({
+        message: r`Dopo \frac{d}{dx} le parentesi sono obbligatorie: si deriva quello che c'è dentro, \frac{d}{dx}(x^2)`,
+        note: 'dopo d/dx le parentesi sono obbligatorie',
+      })
+    }
+    expect(failure(r`\frac{\partial}{\partial x} x^2 y`)).toEqual({
+      message: r`Dopo \frac{\partial}{\partial x} le parentesi sono obbligatorie: si deriva quello che c'è dentro, \frac{\partial}{\partial x}(x^2)`,
+      note: 'dopo ∂/∂x le parentesi sono obbligatorie',
+    })
+    expect(failure(r`\frac{d^2}{dt^2} t^3`)?.note).toBe('dopo d²/dt² le parentesi sono obbligatorie')
+    expect(failure(r`\frac{\partial^2}{\partial x \partial y} x^2 y`)?.note).toBe('dopo ∂²/∂x∂y le parentesi sono obbligatorie')
+    // La derivata da sola (l'operatore, \frac{d}{dx} = …) non si legge, ma nella nota non c'è niente da dire.
+    expect(failure(r`\frac{d}{dx}`)).toMatchObject({ note: undefined })
+    expect(failure(r`\frac{d}{dx} = \frac{d}{dt} \cdot \frac{dt}{dx}`)).toMatchObject({ note: undefined })
     // \partial_x resta com'è: senza parentesi solo quello che viene subito dopo.
     expect(parseMath(r`\partial_x x^2 y \cdot y`)).toMatchObject({ k: 'bin', op: '*', a: { k: 'diff', vars: ['x'], partial: true, body: { k: 'bin', op: '*' } } })
-    // Stampata e riletta resta la stessa: \frac{d}{dx} \left(x + 1\right)^{3} ha l'esponente dentro.
-    for (const f of [r`\frac{d}{dx}(x^2+1) \cdot (x-1)`, r`\frac{d}{dx}(x+1)^3`, r`\frac{d}{dx}(x+1)^3 \cdot x`, r`\partial_x (x^2 y) \cdot y`, r`\frac{\partial f}{\partial x}(a, b)`, r`\frac{d}{dx}(f(x^2))`]) {
+    // Stampata e riletta resta la stessa, con l'esponente fuori o dentro la parentesi; elevata a una potenza la
+    // derivata va tra parentesi, anche quella di f(x²).
+    expect(toLatex(parseMath(r`\frac{d}{dx}(x+1)^3`))).toBe(r`\left(\frac{d}{dx}\left(x + 1\right)\right)^{3}`)
+    expect(toLatex(parseMath(r`(\frac{d}{dx}(f(x^2)))^3`))).toBe(r`\left(\frac{d}{dx}\left(f(x^{2})\right)\right)^{3}`)
+    for (const f of [r`\frac{d}{dx}(x^2+1) \cdot (x-1)`, r`\frac{d}{dx}(x+1)^3`, r`\frac{d}{dx}((x+1)^3)`, r`\frac{d}{dx}(x+1)^3 \cdot x`, r`\partial_x (x^2 y) \cdot y`, r`\partial_x (x^2 y)^2`, r`\frac{\partial f}{\partial x}(a, b)`, r`\frac{\partial f}{\partial x}(a, b)^2`, r`\frac{d}{dx}(f(x^2))`, r`(\frac{d}{dx}(f(x^2)))^3`]) {
       const node = parseMath(f)
       expect(parseMath(toLatex(node))).toEqual(node)
     }
@@ -103,7 +133,9 @@ describe('le derivate scritte come formula', () => {
     expect(tex(r`\frac{d}{dx} (\sin x \cos x) =`)).toBe(r`\cos^{2} x - \sin^{2} x`)
     // La parentesi dice cosa si deriva: qui solo \sin x.
     expect(tex(r`\frac{d}{dx}(\sin x) \cos x =`)).toBe(r`\cos^{2} x`)
-    expect(tex(r`\frac{d}{dx} (x^2 + 1)^3 =`)).toBe(r`6x\left(x^{2} + 1\right)^{2}`)
+    expect(tex(r`\frac{d}{dx}\left((x^2 + 1)^3\right) =`)).toBe(r`6x\left(x^{2} + 1\right)^{2}`)
+    // L'esponente dopo la parentesi è del risultato: (2x)^3 (lo studente, 15 ottobre 2026).
+    expect(tex(r`\frac{d}{dx} (x^2 + 1)^3 =`)).toBe('8x^{3}')
     expect(tex(r`\frac{d}{dx}(e^{-x^2}) =`)).toBe('-2xe^{-x^{2}}')
     expect(tex(r`\frac{d}{dx}(\ln(x^2 + 1)) =`)).toBe(r`\frac{2x}{x^{2} + 1}`)
     expect(tex(r`\frac{d}{dx}(\sqrt{x}) =`)).toBe(r`\frac{1}{2\sqrt{x}}`)
