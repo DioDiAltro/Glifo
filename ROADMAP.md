@@ -429,7 +429,7 @@ spostano nella nota con le frecce ↑ ↓, come i grafici. Tutto è descritto ne
       progetto** e **diagramma di Gantt**;
 - fatto (15 ottobre 2026, lo studente, con la foto del sistema organizzativo che contiene quello
   informativo, che contiene quello informatico: «nelle schematiche vorrei avere la possibilità di poter
-  disegnare anche queste cose»; sul ramo `prova` per provarli, non ancora sul sito vero): **i
+  disegnare anche queste cose»; visti sul ramo `prova`, «va bene, mettilo sul ramo principale»): **i
   contenitori**, riquadri con il titolo in alto a sinistra, anche uno dentro l'altro: stanno dietro alle
   altre forme (dal più grande al più piccolo), si prendono dal titolo o dal bordo e si portano dietro
   quello che hanno dentro; dentro, il clic e il doppio clic sono come sul foglio vuoto. Con il modello
