@@ -11,7 +11,7 @@ import { parseGraph, type GraphSpec } from '../graph/spec'
 import { texts, usesDecimalComma } from '../i18n'
 import { formatNumber } from '../math/format'
 import { Sheet } from '../math/sheet'
-import { DB_SHAPES, insideLanes, laneAt, laneNames, parseSchema, parseTable, SHAPE_NAMES, type Schema, type SchemaEdge, type SchemaNode, type ShapeKind, type TableField } from '../schema/model'
+import { DB_SHAPES, insideFrame, insideLanes, laneAt, laneNames, parseSchema, parseTable, SHAPE_NAMES, type Schema, type SchemaEdge, type SchemaNode, type ShapeKind, type TableField } from '../schema/model'
 import { SheetEvaluator, type CellResult } from '../spreadsheet/evaluate'
 import { errorText, formatValue } from '../spreadsheet/format'
 import { isFormula, normalizeFormula, shiftFormula } from '../spreadsheet/formula'
@@ -61,6 +61,7 @@ const T = texts({
   shapesHead: ['Forme:', 'Shapes:'],
   fields: (fields: string) => [`, campi: ${fields}`, `, fields: ${fields}`],
   inLane: (lane: string) => [`, nella corsia ${lane}`, `, in swimlane ${lane}`],
+  inContainer: (container: string) => [`, dentro ${container}`, `, inside ${container}`],
   linksHead: ['Collegamenti:', 'Connections:'],
   aShape: ['una forma', 'a shape'],
   textAtSide: (text: string, side: string) => [`, con «${text}» dalla parte di ${side}`, `, with “${text}” on the side of ${side}`],
@@ -298,6 +299,12 @@ function flowOrder(nodes: SchemaNode[], edges: SchemaEdge[]): SchemaNode[] {
   return [...order, ...byPos.filter((n) => !done.has(n.id))]
 }
 
+/** Il contenitore più piccolo in cui sta una forma (anche un altro contenitore); null se non è in nessuno. */
+function containerOf(n: SchemaNode, containers: SchemaNode[]): SchemaNode | null {
+  const around = containers.filter((c) => c !== n && insideFrame(c, n))
+  return around.sort((a, b) => a.w * a.h - b.w * b.h)[0] ?? null
+}
+
 /** La corsia in cui sta una forma: «Cliente», o il numero se la corsia non ha nome. */
 function laneOf(n: SchemaNode, lanes: SchemaNode[]): string | null {
   for (const l of lanes) {
@@ -335,7 +342,7 @@ export function schemaTitle(source: string): string | null {
 /**
  * Uno schema della nota (il JSON del blocco ```schema), descritto a parole: il modello non legge le
  * coordinate. Le corsie, le forme nell'ordine del flusso con il loro tipo (in uno schema E-R entità,
- * relazioni, attributi; le tabelle con i campi e le chiavi) e la corsia, i collegamenti con il verso e
+ * relazioni, attributi; le tabelle con i campi e le chiavi), la corsia e il contenitore in cui stanno, i collegamenti con il verso e
  * il testo (anche le cardinalità, dalla parte dove sono scritte). I fatti: quante forme, da dove si
  * parte e dove si arriva.
  */
@@ -344,6 +351,7 @@ export function schemaTopic(source: string): ExplainTopic {
   const lanes = schema.nodes.filter((n) => n.shape === 'lanes')
   const shapes = flowOrder(schema.nodes.filter((n) => n.shape !== 'lanes'), schema.edges)
   const er = shapes.some((n) => ER_SHAPES.has(n.shape))
+  const containers = shapes.filter((n) => n.shape === 'container')
   const names = new Map<string, string>(lanes.map((l) => [l.id, T.theLanes]))
   // Le forme con un testo: il nome è il testo tra virgolette, e dopo si dice che forma è.
   const named = new Set<string>()
@@ -371,6 +379,8 @@ export function schemaTopic(source: string): ExplainTopic {
     if (fields.length) line += T.fields(fields.map(fieldText).join(', '))
     const lane = lanes.length ? laneOf(n, lanes) : null
     if (lane) line += T.inLane(lane)
+    const container = containerOf(n, containers)
+    if (container) line += T.inContainer(names.get(container.id)!)
     lines.push(`- ${line}`)
   }
   if (schema.edges.length) {

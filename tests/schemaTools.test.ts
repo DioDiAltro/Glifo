@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { alignBoxes, distributeBoxes, type Box } from '../src/schema/arrange'
 import { crc32, withDensity } from '../src/schema/image'
 import { lanesHtml, tableHtml } from '../src/schema/label'
-import { fieldLine, insideLanes, joinTable, laneAt, laneHeadFor, laneNames, parseSchema, parseTable, serializeSchema, SHAPES, splitTable, tableField, tableHeight, tableText } from '../src/schema/model'
+import { containerHeadFor, fieldLine, insideFrame, insideLanes, joinTable, laneAt, laneHeadFor, laneNames, parseSchema, parseTable, serializeSchema, SHAPES, splitTable, stackOrder, tableField, tableHeight, tableText } from '../src/schema/model'
 import { TEMPLATES } from '../src/schema/templates'
 
 const boxes: Box[] = [
@@ -54,12 +54,14 @@ describe('allineare e distribuire', () => {
 
 describe('i modelli pronti', () => {
   it('sono schemi validi, che si salvano e si rileggono uguali, senza forme una sopra l\'altra', () => {
-    expect(TEMPLATES.map((t) => t.name)).toEqual(['Diagramma di flusso', 'Mappa concettuale', 'Albero', 'Ciclo', 'Linea del tempo', 'Processo con le corsie', 'Schema E-R', 'Tabelle'])
+    expect(TEMPLATES.map((t) => t.name)).toEqual(['Diagramma di flusso', 'Mappa concettuale', 'Albero', 'Ciclo', 'Linea del tempo', 'Processo con le corsie', 'Contenitori', 'Schema E-R', 'Tabelle'])
     for (const t of TEMPLATES) {
       const json = serializeSchema(t.schema)
       const again = parseSchema(json)
       expect(again, t.name).toEqual(t.schema)
       expect(new Set(again.nodes.map((n) => n.id)).size, t.name).toBe(again.nodes.length)
+      // Nella nota le forme sono già nell'ordine in cui si disegnano: contenitori e corsie dietro.
+      expect(stackOrder(again.nodes), t.name).toEqual(again.nodes)
       for (const [i, a] of again.nodes.entries()) {
         expect(SHAPES).toContain(a.shape)
         // Le forme di un processo stanno sopra le corsie (ognuna nella sua), non sulla fascia dei nomi.
@@ -74,12 +76,18 @@ describe('i modelli pronti', () => {
           continue
         }
         for (const b of again.nodes.slice(i + 1)) {
+          // Dentro un contenitore si sta sotto il titolo.
+          if (a.shape === 'container' && insideFrame(a, b)) {
+            expect(b.y, `${t.name}: ${b.id} sotto il titolo di ${a.id}`).toBeGreaterThan(a.y + containerHeadFor(14, a.text))
+            continue
+          }
           const apart = a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y
           expect(apart, `${t.name}: ${a.id} e ${b.id}`).toBe(true)
         }
       }
       expect(again.nodes.length, t.name).toBeGreaterThanOrEqual(3)
-      expect(again.edges.length, t.name).toBeGreaterThanOrEqual(2)
+      // I contenitori uno dentro l'altro non hanno frecce.
+      if (t.id !== 'contenitori') expect(again.edges.length, t.name).toBeGreaterThanOrEqual(2)
     }
   })
 })
@@ -218,6 +226,40 @@ describe('basi di dati e frecce curve', () => {
     expect(rows[0].querySelector('u')?.textContent).toBe('Matricola')
     // Con una chiave doppia la colonna di PK e FK è più larga.
     expect((rows[0].children[0] as HTMLElement).style.width).toBe('4.2em')
+  })
+})
+
+describe('i contenitori', () => {
+  const box = (shape: 'container' | 'rect' | 'lanes', x: number, y: number, w: number, h: number) => ({ shape, x, y, w, h })
+
+  it('si leggono e si salvano come le altre forme', () => {
+    const json = '{"v":1,"nodes":[{"id":"s","shape":"container","x":0,"y":0,"w":420,"h":290,"text":"Sistema organizzativo","rot":3}],"edges":[]}'
+    const [node] = parseSchema(json).nodes
+    expect(node).toMatchObject({ shape: 'container', w: 420, h: 290, text: 'Sistema organizzativo', rot: 0 })
+    expect(serializeSchema(parseSchema(json))).toBe('{"v":1,"nodes":[\n{"id":"s","shape":"container","x":0,"y":0,"w":420,"h":290,"text":"Sistema organizzativo"}\n],"edges":[]}')
+  })
+
+  it('una forma sta dentro se ci sta il suo centro, un altro contenitore se ci sta tutto intero', () => {
+    const outer = box('container', 0, 0, 400, 300)
+    expect(insideFrame(outer, box('rect', 300, 100, 120, 60))).toBe(true)
+    expect(insideFrame(outer, box('rect', 380, 100, 120, 60))).toBe(false)
+    expect(insideFrame(outer, box('container', 30, 50, 340, 200))).toBe(true)
+    // Un contenitore che esce anche di poco non è dentro: due contenitori accavallati non si portano dietro l'un l'altro.
+    expect(insideFrame(outer, box('container', 100, 50, 340, 200))).toBe(false)
+    expect(insideFrame(box('container', 100, 50, 340, 200), outer)).toBe(false)
+    // Lo stesso riquadro non è dentro se stesso, e le corsie dentro un contenitore valgono come contenitori.
+    expect(insideFrame(outer, outer)).toBe(false)
+    expect(insideFrame(outer, box('lanes', 10, 40, 380, 250))).toBe(true)
+  })
+
+  it('si disegnano dietro alle altre forme, dal più grande al più piccolo', () => {
+    const shapes = [box('rect', 0, 0, 120, 60), box('container', 0, 0, 300, 130), box('lanes', 0, 0, 800, 600), box('container', 0, 0, 420, 290), box('rect', 0, 0, 100, 40)]
+    expect(stackOrder(shapes)).toEqual([shapes[2], shapes[3], shapes[1], shapes[0], shapes[4]])
+  })
+
+  it('la fascia del titolo cresce con le righe del titolo', () => {
+    expect(containerHeadFor(14, 'Sistema')).toBe(laneHeadFor(14))
+    expect(containerHeadFor(14, 'Sistema\ninformativo')).toBe(laneHeadFor(14) + 18)
   })
 })
 

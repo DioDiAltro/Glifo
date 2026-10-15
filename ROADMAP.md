@@ -427,6 +427,13 @@ spostano nella nota con le frecce ↑ ↓, come i grafici. Tutto è descritto ne
       dell'editor delle tabelle, e «Apri .md» nella barra laterale);
     - i modelli **prezzo di vendita** (le configurazioni di costo e il ricarico), **preventivo di un
       progetto** e **diagramma di Gantt**;
+- fatto (15 ottobre 2026, lo studente, con la foto del sistema organizzativo che contiene quello
+  informativo, che contiene quello informatico: «nelle schematiche vorrei avere la possibilità di poter
+  disegnare anche queste cose»; sul ramo `claude/youthful-lovelace-pcushd`, non ancora online): **i
+  contenitori**, riquadri con il titolo in alto a sinistra, anche uno dentro l'altro: stanno dietro alle
+  altre forme (dal più grande al più piccolo), si prendono dal titolo o dal bordo e si portano dietro
+  quello che hanno dentro; dentro, il clic e il doppio clic sono come sul foglio vuoto. Con il modello
+  «Contenitori» (i tre sistemi della foto), e «Spiegami» dice in quale contenitore sta ogni forma;
 - il contrario dell'SQL: da un file SQL alle tabelle disegnate; e il passaggio dallo schema E-R
   alle tabelle (la progettazione logica);
 - stampare con i colori del tema chiaro anche se si usa quello scuro;

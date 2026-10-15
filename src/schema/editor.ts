@@ -32,11 +32,13 @@ import {
   edgeStyle,
   edgeTextAt,
   insertSchema,
+  isFrame,
   loadSchema,
   nodeLook,
   nodeStyle,
   readSchema,
   schemaImage,
+  withContents,
   withTextAt,
   type Look,
 } from './graph'
@@ -61,7 +63,7 @@ import {
   SHAPES,
   TEXT_AT,
   TEXT_SIZES,
-  insideLanes,
+  containerHeadFor,
   joinTable,
   laneHeadFor,
   laneNames,
@@ -128,6 +130,8 @@ const T = texts({
   editor: ['Editor dello schema', 'Diagram editor'],
   // Il testo delle forme nuove, da sostituire
   textPreset: ['Testo', 'Text'],
+  /** Il titolo di un contenitore nuovo, da sostituire. */
+  containerText: ['Contenitore', 'Container'],
   /** Le corsie nuove: tre, con i nomi di chi lavora in un processo di vendita (si cambiano). */
   lanesText: ['Cliente\nVendite\nMagazzino', 'Customer\nSales\nWarehouse'],
   entity: ['Entità', 'Entity'],
@@ -194,6 +198,12 @@ const T = texts({
   textPosition: ['Posizione del testo', 'Text position'],
   editText: ['Modifica il testo', 'Edit text'],
   delete: ['Elimina', 'Delete'],
+  // I contenitori
+  container: ['Contenitore', 'Container'],
+  containerHint: [
+    'Metti le forme dentro il contenitore, anche altri contenitori: spostandolo vengono con lui. Il contenitore si prende dal titolo o dal bordo; dentro, il doppio clic aggiunge una forma.',
+    'Put shapes inside the container, other containers too: moving it moves them as well. Grab the container by its title or its border; inside it, double-click to add a shape.',
+  ],
   // Le corsie
   lanes: ['Corsie', 'Swimlanes'],
   laneList: ['Corsie', 'Lanes'],
@@ -318,6 +328,7 @@ const SHAPE_ICONS: Record<ShapeKind, string> = {
   arrow: '<path d="M3 9h10.5V5l7.5 7-7.5 7v-4H3z"/>',
   doubleArrow: '<path d="m2.5 12 5.5-6v3.5h8V6l5.5 6-5.5 6v-3.5H8V18z"/>',
   text: '<path d="M5 7V5h14v2M12 5v14M9 19h6"/>',
+  container: '<rect x="3" y="3.5" width="18" height="17" rx="1"/><path d="M6 7h6"/><rect x="7" y="10.5" width="10.5" height="6.5" rx=".5"/>',
   lanes: '<rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 8.5h18M9 4v16M15 4v16"/>',
   weakEntity: '<rect x="3" y="6" width="18" height="12"/><rect x="5.5" y="8.5" width="13" height="7"/>',
   identifyingRelation: '<path d="m12 3 9 9-9 9-9-9z"/><path d="m12 6.6 5.4 5.4-5.4 5.4-5.4-5.4z"/>',
@@ -346,33 +357,8 @@ function isLanes(cell: Cell | null | undefined): boolean {
   return !!cell?.isVertex() && nodeLook(cell).shape === 'lanes'
 }
 
-/**
- * Le celle da spostare insieme: con le corsie anche le forme che stanno sopra di loro (con il
- * centro dentro) e le frecce tra quelle che si spostano, come in draw.io con i contenitori.
- */
-function withLaneContents(graph: Graph, cells: Cell[]): Cell[] {
-  const pools = cells.filter(isLanes)
-  if (!pools.length) return cells
-  const moved = new Set(cells)
-  const all = graph.getDefaultParent().getChildren()
-  const box = (c: Cell) => {
-    const g = c.getGeometry()
-    return g ? { x: g.x, y: g.y, w: g.width, h: g.height } : null
-  }
-  for (const pool of pools) {
-    const area = box(pool)
-    if (!area) continue
-    for (const c of all) {
-      const b = c.isVertex() && !isLanes(c) ? box(c) : null
-      if (b && insideLanes(area, b)) moved.add(c)
-    }
-  }
-  for (const c of all) {
-    const from = c.isEdge() ? c.getTerminal(true) : null
-    const to = c.isEdge() ? c.getTerminal(false) : null
-    if (from && to && moved.has(from) && moved.has(to)) moved.add(c)
-  }
-  return [...moved]
+function isContainer(cell: Cell | null | undefined): boolean {
+  return !!cell?.isVertex() && nodeLook(cell).shape === 'container'
 }
 
 /** Le forme di sempre: una voce per forma. Un testo vuoto non si vedrebbe: «Testo» nasce scritto. */
@@ -380,7 +366,7 @@ const BASE_PRESETS: Preset[] = SHAPES.filter((s) => !DB_SHAPES.includes(s)).map(
   id: s,
   shape: s,
   get name() { return SHAPE_NAMES[s] },
-  get text() { return s === 'text' ? T.textPreset : s === 'lanes' ? T.lanesText : '' },
+  get text() { return s === 'text' ? T.textPreset : s === 'container' ? T.containerText : s === 'lanes' ? T.lanesText : '' },
 }))
 
 /** Basi di dati: diagrammi E-R (Chen, e Atzeni con i pallini) e tabelle, con un testo da sostituire. */
@@ -652,7 +638,7 @@ class SchemaEditor {
       this.panning = this.graph.getPlugin<PanningHandler>('PanningHandler')
       this.setUpConnections()
       this.setUpMovePreview()
-      this.setUpLanes()
+      this.setUpFrames()
       this.setUpPanning()
 
       loadSchema(this.graph, options.schema, this.look)
@@ -714,12 +700,28 @@ class SchemaEditor {
     }
   }
 
-  /** Il punto (del foglio, in pixel) è sulla fascia dei nomi delle corsie? */
-  private onLaneHead(state: CellState, x: number, y: number): boolean {
+  /**
+   * Il punto (del foglio, in pixel) è dove si prendono le corsie o il contenitore? Le corsie dalla
+   * fascia dei nomi; il contenitore dalla fascia del titolo, dal titolo (anche se va a capo) o dal bordo.
+   */
+  private onGrip(state: CellState, x: number, y: number): boolean {
     const look = nodeLook(state.cell)
-    const head = laneHeadFor(FONT_SIZE[look.size]) * this.graph.view.scale
-    const inside = x >= state.x && x <= state.x + state.width && y >= state.y && y <= state.y + state.height
-    return inside && (look.rot === 1 ? x - state.x <= head : y - state.y <= head)
+    const scale = this.graph.view.scale
+    // Anche sulla metà esterna della linea del bordo.
+    const out = 2
+    const inside = x >= state.x - out && x <= state.x + state.width + out && y >= state.y - out && y <= state.y + state.height + out
+    if (!inside) return false
+    const dx = x - state.x
+    const dy = y - state.y
+    if (look.shape === 'lanes') {
+      const head = laneHeadFor(FONT_SIZE[look.size]) * scale
+      return look.rot === 1 ? dx <= head : dy <= head
+    }
+    const label = state.text?.boundingBox
+    if (label && x >= label.x && x <= label.x + label.width && y >= label.y && y <= label.y + label.height) return true
+    // Col dito il bordo è più largo.
+    const edge = this.touch ? 12 : 6
+    return dy <= containerHeadFor(FONT_SIZE[look.size], look.text) * scale || dx <= edge || dy >= state.height - edge || dx >= state.width - edge
   }
 
   /** La corsia nel punto (del foglio, in pixel). */
@@ -731,29 +733,30 @@ class SchemaEditor {
   }
 
   /**
-   * Le corsie si prendono dalla fascia dei nomi: il resto si comporta come il foglio (si trascina un
-   * riquadro per scegliere le forme, il doppio clic ne aggiunge una). Spostandole si spostano anche
-   * le forme che ci sono sopra; non si collegano con le frecce.
+   * Le corsie si prendono dalla fascia dei nomi, i contenitori dal titolo o dal bordo (onGrip): il
+   * resto si comporta come il foglio (si trascina un riquadro per scegliere le forme, il doppio clic
+   * ne aggiunge una). Spostandoli si spostano anche le forme che ci sono sopra (withContents); le
+   * corsie non si collegano con le frecce, i contenitori sì.
    */
-  private setUpLanes(): void {
+  private setUpFrames(): void {
     const { graph } = this
     const fire = graph.fireMouseEvent.bind(graph)
     graph.fireMouseEvent = (name, me, sender) => {
       const state = me.getState()
-      if (state && isLanes(state.cell)) {
+      if (state && isFrame(state.cell)) {
         // Qui maxGraph non ha ancora messo le coordinate del foglio nell'evento: si calcolano.
         const evt = me.getEvent()
         const p = styleUtils.convertPoint(graph.container, eventUtils.getClientX(evt), eventUtils.getClientY(evt))
-        if (!this.onLaneHead(state, p.x - graph.panDx, p.y - graph.panDy)) me.state = null
+        if (!this.onGrip(state, p.x - graph.panDx, p.y - graph.panDy)) me.state = null
       }
       fire(name, me, sender)
     }
     const intersects = graph.intersects.bind(graph)
-    graph.intersects = (state, x, y) => (isLanes(state.cell) ? this.onLaneHead(state, x, y) : intersects(state, x, y))
+    graph.intersects = (state, x, y) => (isFrame(state.cell) ? this.onGrip(state, x, y) : intersects(state, x, y))
     const selection = graph.getPlugin<SelectionHandler>('SelectionHandler')
     if (selection) {
       const getCells = selection.getCells.bind(selection)
-      selection.getCells = (initial) => withLaneContents(graph, getCells(initial))
+      selection.getCells = (initial) => withContents(graph, getCells(initial))
     }
     const validTarget = graph.isValidTarget.bind(graph)
     graph.isValidTarget = (cell) => !isLanes(cell) && validTarget(cell)
@@ -939,9 +942,8 @@ class SchemaEditor {
       ;[x, y] = this.freeSpot(this.graph.snap(center.x - w / 2), this.graph.snap(center.y - h / 2), w, h)
     }
     const value: NodeLook = Object.freeze({ shape: preset.shape, text: preset.text, color: 'default', size: 'm', rot: 0 })
+    // Contenitori e corsie vanno da soli dietro alle altre forme (orderFrames in graph.ts).
     const cell = this.graph.insertVertex({ position: [x, y], size: [w, h], value, style: nodeStyle(value, this.look) })
-    // Le corsie stanno dietro: le forme del processo ci vanno sopra.
-    if (preset.shape === 'lanes') this.graph.orderCells(true, [cell])
     this.graph.setSelectionCell(cell)
     this.reveal(cell)
     this.canvas.focus()
@@ -1147,7 +1149,16 @@ class SchemaEditor {
     const fontSize = Math.max(11, FONT_SIZE[look.size] * scale)
     const input = this.textInput
     input.style.fontSize = `${fontSize}px`
-    if (this.editingLane !== null) {
+    // Il titolo del contenitore si scrive dov'è, in alto a sinistra.
+    const title = isContainer(cell)
+    input.classList.toggle('schema-text-title', title)
+    if (title) {
+      const l = nodeLook(cell)
+      input.style.left = `${state.x}px`
+      input.style.top = `${state.y}px`
+      input.style.width = `${Math.max(160, Math.min(state.width, 320 * scale))}px`
+      input.style.minHeight = `${Math.max(30, containerHeadFor(FONT_SIZE[l.size], l.text) * scale)}px`
+    } else if (this.editingLane !== null) {
       // Sopra il nome della corsia, nella fascia (in righe un riquadro largo, a metà della corsia).
       const l = nodeLook(cell)
       const count = laneNames(l.text).length
@@ -1516,6 +1527,10 @@ class SchemaEditor {
     const lanes = cells.length === 1 && nodes.length === 1 && isLanes(nodes[0]) ? this.lanesSection(nodes[0]) : null
     if (table) sections.push(table.section)
     if (lanes) sections.push(lanes.section)
+    // Un contenitore: come si usa (si prende dal titolo o dal bordo, e si porta dietro quello che ha dentro).
+    if (cells.length === 1 && isContainer(nodes[0])) {
+      sections.push(h('div', { class: 'schema-format-section schema-container-section' }, h('h3', {}, T.container), h('p', { class: 'schema-format-hint' }, T.containerHint)))
+    }
     const color = same(looks, 'color')
     sections.push(
       this.section(
@@ -1915,7 +1930,7 @@ class SchemaEditor {
   }
 
   private duplicate(): void {
-    const cells = withLaneContents(this.graph, this.graph.getSelectionCells())
+    const cells = withContents(this.graph, this.graph.getSelectionCells())
     if (!cells.length) return
     const copies = this.graph.moveCells(cells, 20, 20, true)
     this.graph.setSelectionCells(copies)
@@ -2032,9 +2047,9 @@ class SchemaEditor {
     graph.addListener(InternalEvent.DOUBLE_CLICK, (_sender: unknown, evt: { getProperty(name: string): unknown; consume(): void }) => {
       let cell = evt.getProperty('cell') as Cell | null
       const event = evt.getProperty('event') as MouseEvent
-      // Dentro le corsie (fuori dalla fascia dei nomi) è come sul foglio vuoto.
-      const laneState = cell && isLanes(cell) ? graph.view.getState(cell) : null
-      if (laneState && !this.onLaneHead(laneState, ...this.canvasPoint(event))) cell = null
+      // Dentro le corsie o un contenitore (fuori dalla fascia dei nomi o dal titolo) è come sul foglio vuoto.
+      const frameState = cell && isFrame(cell) ? graph.view.getState(cell) : null
+      if (frameState && !this.onGrip(frameState, ...this.canvasPoint(event))) cell = null
       if (cell) {
         // Nelle tabelle conta dove: sul nome o su un campo.
         this.startEditing(cell, undefined, this.canvasPoint(event))
@@ -2195,7 +2210,7 @@ class SchemaEditor {
       const step = ev.shiftKey ? graph.getGridSize() : 1
       const dx = ev.key === 'ArrowLeft' ? -step : ev.key === 'ArrowRight' ? step : 0
       const dy = ev.key === 'ArrowUp' ? -step : ev.key === 'ArrowDown' ? step : 0
-      const cells = withLaneContents(graph, graph.getSelectionCells().filter((c) => c.isVertex()))
+      const cells = withContents(graph, graph.getSelectionCells().filter((c) => c.isVertex()))
       if (cells.length) graph.moveCells(cells, dx, dy)
       else this.panBy(-dx * 20, -dy * 20)
     } else if (ev.key === ' ') {

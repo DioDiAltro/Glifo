@@ -169,13 +169,20 @@ finita il 14 ottobre 2026, il file non c'è più e si legge nella storia del rep
   sono in `shapes.ts`, con le corsie dei processi (`lanes`: un riquadro solo, diviso in parti
   uguali, in colonne o in righe con `rot` 1; i nomi uno per riga del testo, `laneNames`; `LanesShape`
   disegna fascia e divisioni, `lanesHtml` in `label.ts` i nomi, `laneAt`/`insideLanes` in `model.ts`
-  i conti). Le forme del processo non stanno dentro le corsie (lo schema resta un elenco di forme)
-  ma sopra: le corsie vanno dietro (`orderCells`), si prendono solo dalla fascia dei nomi (`setUpLanes`
-  nell'editor: `fireMouseEvent` toglie la cella dagli eventi sul resto, `intersects` fa lo stesso per
-  `getCellAt`), e spostandole o duplicandole vengono con loro le forme con il centro dentro e le frecce
-  tra queste (`withLaneContents`, anche in `SelectionHandler.getCells`); non si collegano
-  (`isValidTarget`); il pannello ha nomi, «Aggiungi corsia» e il verso (`lanesSection`, `setLanes`:
-  le altre corsie restano grandi com'erano). Il testo delle tabelle (nome, campi, PK/FK) lo fa `tableHtml` in
+  i conti). I contenitori (15 ottobre 2026) sono riquadri con il titolo in alto a sinistra, anche uno
+  dentro l'altro: lo stile in `nodeStyle`, la fascia del titolo `containerHeadFor` in `model.ts`.
+  Corsie e contenitori (`FRAMES`, `isFrame` in `graph.ts`) non hanno figli: le forme non stanno
+  dentro (lo schema resta un elenco di forme, senza genitori) ma sopra. Vanno dietro, dal più grande
+  al più piccolo (`stackOrder`): lo fa `orderFrames` in `graph.ts` alla fine di ogni modifica
+  (`BEFORE_UNDO` del modello, così entra nella stessa modifica da annullare, e vale anche per
+  l'anteprima e per gli schemi della nota scritti in un altro ordine; aperto l'editor, se non si cambia
+  niente la nota non si riscrive). Si prendono solo dalla fascia dei nomi o dal titolo e dal bordo
+  (`onGrip` e `setUpFrames` nell'editor: `fireMouseEvent` toglie la cella dagli eventi sul resto,
+  `intersects` fa lo stesso per `getCellAt`), e spostandoli o duplicandoli vengono con loro le forme
+  con il centro dentro, i contenitori (o le corsie) che ci stanno interi e le frecce tra queste
+  (`withContents` in `graph.ts`, con `insideFrame`, anche in `SelectionHandler.getCells`); le corsie
+  non si collegano (`isValidTarget`), i contenitori sì; il pannello delle corsie ha nomi, «Aggiungi
+  corsia» e il verso (`lanesSection`, `setLanes`: le altre corsie restano grandi com'erano). Il testo delle tabelle (nome, campi, PK/FK) lo fa `tableHtml` in
   `label.ts`, e nell'editor si scrive in due parti, il nome e i campi (`splitTable`/`joinTable`
   in `model.ts`). Una riga di campo è `PK FK Nome: TIPO` (`tableField`/`fieldLine`); il pannello a
   destra cambia gli stessi campi (`tableSection` nell'editor) e `sql.ts` ne fa il codice SQL per

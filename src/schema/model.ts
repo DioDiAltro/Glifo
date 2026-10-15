@@ -25,6 +25,8 @@ export const SHAPES = [
   'arrow',
   'doubleArrow',
   'text',
+  // Un riquadro con il titolo in alto a sinistra che raccoglie altre forme, anche altri contenitori
+  'container',
   // I processi con le corsie (chi fa cosa): un riquadro diviso in corsie, una per chi lavora
   'lanes',
   // Basi di dati: diagrammi E-R (Chen e, con i pallini, Atzeni) e tabelle
@@ -42,6 +44,11 @@ export type ShapeKind = (typeof SHAPES)[number]
 export const DB_SHAPES: readonly ShapeKind[] = ['weakEntity', 'identifyingRelation', 'keyAttribute', 'multiAttribute', 'derivedAttribute', 'attribute', 'identifier', 'table']
 /** Gli attributi «a pallino»: il verso dice da che parte sta il nome (0 a destra, 2 a sinistra). */
 export const DOT_SHAPES: readonly ShapeKind[] = ['attribute', 'identifier']
+/**
+ * Le forme che raccolgono le altre (contenitori e corsie): stanno dietro, si prendono dal titolo (o
+ * dalla fascia dei nomi) e, spostandole, vengono con loro le forme che hanno sopra.
+ */
+export const FRAMES: readonly ShapeKind[] = ['container', 'lanes']
 /** Le forme che hanno un verso e si possono girare di un quarto di giro alla volta. */
 export const ROTATABLE: readonly ShapeKind[] = ['triangle', 'arrow', 'doubleArrow', ...DOT_SHAPES]
 /** Quarti di giro in senso orario: 0 è com'è nel pannello (freccia a destra, triangolo in su). */
@@ -116,6 +123,7 @@ export const SHAPE_SIZE: Record<ShapeKind, [number, number]> = {
   arrow: [130, 60],
   doubleArrow: [150, 60],
   text: [100, 40],
+  container: [320, 200],
   lanes: [660, 420],
   weakEntity: [130, 64],
   identifyingRelation: [140, 86],
@@ -226,6 +234,7 @@ export const SHAPE_NAMES: Readonly<Record<ShapeKind, string>> = texts({
   arrow: ['Freccia grande', 'Block arrow'],
   doubleArrow: ['Freccia doppia', 'Double arrow'],
   text: ['Testo', 'Text'],
+  container: ['Contenitore', 'Container'],
   lanes: ['Corsie', 'Swimlanes'],
   weakEntity: ['Entità debole', 'Weak entity'],
   identifyingRelation: ['Relazione identificante', 'Identifying relationship'],
@@ -361,6 +370,38 @@ export function insideLanes(lanes: Pick<SchemaNode, 'x' | 'y' | 'w' | 'h'>, box:
   const cx = box.x + box.w / 2
   const cy = box.y + box.h / 2
   return cx > lanes.x && cx < lanes.x + lanes.w && cy > lanes.y && cy < lanes.y + lanes.h
+}
+
+// ——— I contenitori ———
+// Un riquadro con il titolo in alto a sinistra, come gli insiemi uno dentro l'altro (il sistema
+// informatico dentro quello informativo, dentro quello organizzativo). Come le corsie, non ha figli:
+// le forme stanno sopra, e quello che c'è dentro si capisce dalle posizioni.
+
+type Frame = Pick<SchemaNode, 'shape' | 'x' | 'y' | 'w' | 'h'>
+
+/** L'altezza della fascia del titolo di un contenitore: una riga in più per ogni a capo del titolo. */
+export function containerHeadFor(fontSize: number, text: string): number {
+  return laneHeadFor(fontSize) + (text.split('\n').length - 1) * Math.round(fontSize * 1.3)
+}
+
+/**
+ * La forma `box` sta dentro il contenitore (o le corsie) `frame`: un'altra forma con il centro, un
+ * altro contenitore (o altre corsie) tutto intero, così due riquadri accavallati non si portano
+ * dietro l'un l'altro.
+ */
+export function insideFrame(frame: Pick<SchemaNode, 'x' | 'y' | 'w' | 'h'>, box: Frame): boolean {
+  if (!FRAMES.includes(box.shape)) return insideLanes(frame, box)
+  const whole = box.x >= frame.x && box.y >= frame.y && box.x + box.w <= frame.x + frame.w && box.y + box.h <= frame.y + frame.h
+  return whole && box.w * box.h < frame.w * frame.h
+}
+
+/**
+ * L'ordine in cui si disegnano le forme (le prime stanno dietro): contenitori e corsie per primi, dal
+ * più grande al più piccolo, così uno dentro l'altro si vedono tutti; poi le altre, nell'ordine che hanno.
+ */
+export function stackOrder<T extends Pick<SchemaNode, 'shape' | 'w' | 'h'>>(items: T[]): T[] {
+  const frames = items.filter((n) => FRAMES.includes(n.shape)).sort((a, b) => b.w * b.h - a.w * a.h)
+  return [...frames, ...items.filter((n) => !FRAMES.includes(n.shape))]
 }
 
 /**

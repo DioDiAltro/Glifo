@@ -42,8 +42,8 @@ const T = texts({
   ],
   schemiTitle: ['Gli schemi', 'Diagrams'],
   schemiText: [
-    'Il pulsante «Schema» apre un editor come draw.io: trascina le forme, collegale con le frecce e scrivici dentro, anche le formule. Ci sono le corsie per i processi e le tabelle delle basi di dati; lo schema si scarica come PNG o SVG.',
-    'The “Diagram” button opens an editor like draw.io: drag shapes, connect them with arrows and write inside them, formulas too. There are swimlanes for processes and database tables; the diagram downloads as PNG or SVG.',
+    'Il pulsante «Schema» apre un editor come draw.io: trascina le forme, collegale con le frecce e scrivici dentro, anche le formule. Ci sono i contenitori (anche uno dentro l\'altro), le corsie per i processi e le tabelle delle basi di dati; lo schema si scarica come PNG o SVG.',
+    'The “Diagram” button opens an editor like draw.io: drag shapes, connect them with arrows and write inside them, formulas too. There are containers (one inside another too), swimlanes for processes and database tables; the diagram downloads as PNG or SVG.',
   ],
   spiegamiTitle: ['Spiega con l\'AI', 'Explain with AI'],
   spiegamiText: [

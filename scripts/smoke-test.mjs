@@ -826,7 +826,7 @@ try {
   await s2.locator('.editor-toolbar button[aria-label^="Schema"]').click()
   await editor2.waitFor()
   const paletteCount = await s2.locator('.schema-shape[data-shape]').count()
-  check(paletteCount === 15, `nel pannello ci sono 15 forme, con cilindro, nuvola, frecce grandi, corsie… (${paletteCount})`)
+  check(paletteCount === 16, `nel pannello ci sono 16 forme, con cilindro, nuvola, frecce grandi, contenitore, corsie… (${paletteCount})`)
   const canvasTexts = () => s2.evaluate(() => [...document.querySelectorAll('.schema-canvas foreignObject')].map((f) => f.textContent))
   await s2.locator('.schema-templates button', { hasText: 'Diagramma di flusso' }).click()
   const flowTexts = await canvasTexts()
@@ -974,6 +974,93 @@ try {
       `nella nota le corsie vanno per prime (dietro), con la corsia aggiunta, e l'anteprima le disegna (${firstNode.slice(0, 120)})`,
     )
     await lp.close()
+  }
+
+  // I contenitori uno dentro l'altro (il modello «Contenitori»): si prendono dal titolo o dal bordo e si
+  // portano dietro quello che hanno dentro, anche gli altri contenitori; un clic dentro è come sul foglio
+  // vuoto e il doppio clic ci aggiunge una forma; il titolo si scrive dov'è. Nella nota il più grande va per primo.
+  {
+    const cp = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+    cp.on('pageerror', (e) => errors.push(e.message))
+    await cp.goto(url)
+    await cp.waitForSelector('.cm-editor')
+    await cp.locator('.notes-head button[aria-label="Nuova nota"]').click()
+    await cp.keyboard.press('Control+a')
+    await cp.keyboard.type('# Sistemi\n')
+    const boxEditor = cp.locator('dialog.schema-editor[open]')
+    await cp.locator('.editor-toolbar button[aria-label^="Schema"]').click()
+    await boxEditor.waitFor()
+    await cp.locator('.schema-templates button', { hasText: 'Contenitori' }).click()
+    const textBox = (text) => cp.locator('dialog.schema-editor .schema-canvas div', { hasText: new RegExp(`^${text}$`) }).last().boundingBox()
+    const headings = () => cp.locator('.schema-format h3').allInnerTexts()
+    const away = () => cp.mouse.click(1300, 850)
+    const inner = await textBox('Sistema informatico')
+    const outer = await textBox('Sistema organizzativo')
+    await cp.mouse.click(inner.x + 120, inner.y + 70)
+    const insideSelects = (await headings()).length
+    await cp.mouse.click(inner.x + inner.width / 2, inner.y + inner.height / 2)
+    const titleSelects = await headings()
+    await away()
+    // Doppio clic dentro il contenitore più piccolo: una forma nuova, lì dentro.
+    await cp.mouse.dblclick(inner.x + 120, inner.y + 70)
+    await cp.keyboard.type('Server')
+    await cp.keyboard.press('Escape')
+    await away()
+    const server = await textBox('Server')
+    // Il contenitore grande preso dal titolo: vengono tutti, con la forma nuova.
+    await cp.mouse.move(outer.x + outer.width / 2, outer.y + outer.height / 2)
+    await cp.mouse.down()
+    await cp.mouse.move(outer.x + outer.width / 2 + 80, outer.y + outer.height / 2 + 40, { steps: 8 })
+    await cp.mouse.up()
+    const after = { outer: await textBox('Sistema organizzativo'), inner: await textBox('Sistema informatico'), server: await textBox('Server') }
+    const dragged = [after.outer.x - outer.x, after.outer.y - outer.y, after.inner.x - inner.x, after.inner.y - inner.y, after.server.x - server.x, after.server.y - server.y].map(Math.round)
+    // Il contenitore piccolo preso dal bordo di sinistra: viene la forma che ha dentro, non quello che lo contiene.
+    await away()
+    const middle = await textBox('Sistema informativo')
+    const edge = { x: after.inner.x - 11, y: after.inner.y + 70 }
+    await cp.mouse.move(edge.x, edge.y)
+    await cp.mouse.down()
+    await cp.mouse.move(edge.x + 20, edge.y + 10, { steps: 6 })
+    await cp.mouse.up()
+    const byEdge = [
+      (await textBox('Sistema informatico')).x - after.inner.x,
+      (await textBox('Server')).x - after.server.x,
+      (await textBox('Sistema informativo')).x - middle.x,
+    ].map(Math.round)
+    check(
+      insideSelects === 0 && titleSelects[0] === 'CONTENITORE' && server.y > inner.y + inner.height && dragged.every((d, i) => d === (i % 2 ? 40 : 80)) && byEdge.join() === '20,20,0',
+      `i contenitori si prendono dal titolo o dal bordo e si portano dietro quello che hanno dentro; dentro, il clic non seleziona e il doppio clic aggiunge una forma (${JSON.stringify({ insideSelects, titleSelects, dragged, byEdge })})`,
+    )
+    // Il titolo si scrive dov'è: il riquadro del testo in alto a sinistra, scritto a sinistra.
+    const title = await textBox('Sistema informativo')
+    await cp.mouse.dblclick(title.x + 10, title.y + title.height / 2)
+    const input = cp.locator('dialog.schema-editor textarea.schema-text')
+    const inputBox = await input.boundingBox()
+    const inputAlign = await input.evaluate((el) => getComputedStyle(el).textAlign)
+    await input.fill('Sistema informativo aziendale')
+    await cp.keyboard.press('Escape')
+    check(
+      Math.abs(inputBox.x - (title.x - 10)) < 20 && Math.abs(inputBox.y - (title.y - 8)) < 20 && inputAlign === 'left',
+      `il titolo di un contenitore si scrive in alto a sinistra (${JSON.stringify({ inputBox, title, inputAlign })})`,
+    )
+    await cp.locator('dialog.schema-editor .btn-primary', { hasText: 'Fatto' }).click()
+    await boxEditor.waitFor({ state: 'detached' })
+    await cp.waitForFunction(() => [...Array(localStorage.length).keys()].some((i) => localStorage.getItem(localStorage.key(i))?.includes('Sistema informativo aziendale')), null, { timeout: 5000 }).catch(() => {})
+    const boxNote = await cp.evaluate(() => {
+      for (let i = 0; i < localStorage.length; i++) {
+        const value = localStorage.getItem(localStorage.key(i))
+        if (value?.startsWith('# Sistemi')) return value
+      }
+      return ''
+    })
+    const order = [...boxNote.matchAll(/"text":"([^"]*)"/g)].map((m) => m[1])
+    await cp.waitForSelector('.preview-pane .schema-block > svg')
+    const boxTexts = await cp.evaluate(() => [...document.querySelectorAll('.preview-pane .schema-block foreignObject')].map((f) => f.textContent).join('|'))
+    check(
+      order.join('|') === 'Sistema organizzativo|Sistema informativo aziendale|Sistema informatico|Server' && boxTexts === 'Sistema organizzativo|Sistema informativo aziendale|Sistema informatico|Server',
+      `nella nota e nell'anteprima i contenitori vanno dal più grande al più piccolo, poi la forma che hanno dentro (${order.join('|')})`,
+    )
+    await cp.close()
   }
 
   // Frecce curve e basi di dati: il gruppo «Basi di dati» (che si ricorda aperto), pallini, tabelle,

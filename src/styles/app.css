@@ -4144,6 +4144,11 @@ kbd {
   outline: none;
 }
 
+/* Il titolo di un contenitore, che sta in alto a sinistra. */
+.schema-text-title {
+  text-align: left;
+}
+
 /* La tabella mentre la si scrive, com'è disegnata: il nome nella fascia in alto, i campi sotto.
    Misure e colori (--table-…) li mette l'editor, per la tabella e lo zoom di adesso. */
 .schema-table-text {

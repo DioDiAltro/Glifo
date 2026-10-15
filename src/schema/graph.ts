@@ -10,6 +10,7 @@ import {
   Graph,
   HandleConfig,
   ImageExport,
+  InternalEvent,
   PanningHandler,
   Point,
   RubberBandHandler,
@@ -20,7 +21,7 @@ import {
   type CellStyle,
 } from '@maxgraph/core'
 import { labelHtml, lanesHtml, tableHtml } from './label'
-import { DEFAULT_EDGE, FONT_SIZE, INK, laneNames, PALETTE, type EdgeLook, type NodeLook, type Rotation, type Schema, type TextAt, type Theme } from './model'
+import { DEFAULT_EDGE, FONT_SIZE, FRAMES, INK, insideFrame, laneNames, PALETTE, stackOrder, type EdgeLook, type NodeLook, type Rotation, type Schema, type TextAt, type Theme } from './model'
 import { DOT_PERIMETER, registerShapes, SHAPE_STYLES, type LanesStyle } from './shapes'
 
 export interface Look {
@@ -124,6 +125,12 @@ export function nodeStyle(v: NodeLook, look: Look): CellStyle {
     case 'table':
       // Il nome in alto e i campi sotto li mette in fila tableHtml.
       return { ...base, shape: SHAPE_STYLES.table, verticalAlign: 'top', spacing: 0, overflow: 'fill' }
+    case 'container': {
+      // Il titolo in alto a sinistra, a metà della fascia da cui si prende il contenitore (containerHeadFor).
+      const size = FONT_SIZE[v.size]
+      const side = Math.round(size * 0.8)
+      return { ...base, verticalAlign: 'top', align: 'left', spacing: 0, spacingTop: Math.round(size * 0.6), spacingLeft: side, spacingRight: side }
+    }
     case 'lanes': {
       // I nomi nella fascia li mette lanesHtml; quante corsie e il verso servono al disegno (LanesShape).
       const lanes: LanesStyle = { glifoLanes: laneNames(v.text).length, glifoRows: v.rot === 1 }
@@ -198,6 +205,51 @@ function cellHtml(cell: Cell, mathml: boolean): string {
   return labelHtml(cellText(cell), mathml)
 }
 
+/** Contenitori e corsie: le forme che ne raccolgono altre (FRAMES). */
+export function isFrame(cell: Cell | null | undefined): boolean {
+  return !!cell?.isVertex() && FRAMES.includes(nodeLook(cell).shape)
+}
+
+/**
+ * Contenitori e corsie dietro a tutto, dal più grande al più piccolo (stackOrder): uno dentro l'altro
+ * si vedono tutti, comunque siano stati aggiunti, spostati, ingranditi o rimpiccioliti.
+ */
+function orderFrames(graph: Graph): void {
+  const children = graph.getDefaultParent().getChildren()
+  const frames = stackOrder(children.filter(isFrame).map((cell) => ({ cell, shape: nodeLook(cell).shape, w: cell.getGeometry()?.width ?? 0, h: cell.getGeometry()?.height ?? 0 }))).map((f) => f.cell)
+  if (frames.some((cell, i) => children[i] !== cell)) graph.orderCells(true, frames)
+}
+
+/**
+ * Le celle da spostare insieme: con contenitori e corsie anche le forme che stanno sopra di loro
+ * (insideFrame: con il centro dentro, gli altri contenitori tutti interi, con quello che hanno dentro)
+ * e le frecce tra quelle che si spostano, come in draw.io con i contenitori.
+ */
+export function withContents(graph: Graph, cells: Cell[]): Cell[] {
+  const pools = cells.filter(isFrame)
+  if (!pools.length) return cells
+  const moved = new Set(cells)
+  const all = graph.getDefaultParent().getChildren()
+  const box = (c: Cell) => {
+    const g = c.getGeometry()
+    return g ? { shape: nodeLook(c).shape, x: g.x, y: g.y, w: g.width, h: g.height } : null
+  }
+  for (const pool of pools) {
+    const area = box(pool)
+    if (!area) continue
+    for (const c of all) {
+      const b = c.isVertex() && c !== pool ? box(c) : null
+      if (b && insideFrame(area, b)) moved.add(c)
+    }
+  }
+  for (const c of all) {
+    const from = c.isEdge() ? c.getTerminal(true) : null
+    const to = c.isEdge() ? c.getTerminal(false) : null
+    if (from && to && moved.has(from) && moved.has(to)) moved.add(c)
+  }
+  return [...moved]
+}
+
 /** Una freccia nuova, come quelle che si disegnano trascinando. */
 export function createEdgeCell(value: EdgeLook, look: Look): Cell {
   const edge = new Cell(Object.freeze({ ...value }), undefined, edgeStyle(value, look))
@@ -244,6 +296,8 @@ export function createGraph(container: HTMLElement, editable: boolean): Graph {
   graph.setSplitEnabled(false)
   graph.edgeLabelsMovable = false
   graph.vertexLabelsMovable = false
+  // Prima che una modifica finisca (e vada tra quelle da annullare, tutta insieme): contenitori e corsie dietro.
+  graph.getDataModel().addListener(InternalEvent.BEFORE_UNDO, () => orderFrames(graph))
   if (!editable) {
     graph.setEnabled(false)
     return graph

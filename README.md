@@ -652,7 +652,7 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
 **Schemi stile draw.io**
 - Il pulsante con i due riquadri nella barra apre un editor a tutto schermo: forme a sinistra
   (rettangolo, arrotondato, ellisse, rombo, parallelogramma, esagono, triangolo, nuvola,
-  documento, cilindro, nota, freccia grande e doppia, testo, corsie), da trascinare sul foglio o da
+  documento, cilindro, nota, freccia grande e doppia, testo, contenitore, corsie), da trascinare sul foglio o da
   cliccare; passando sopra una forma compaiono le **frecce blu**: trascinandone una la colleghi
   a un'altra forma (o, nel vuoto, ne nasce una nuova), cliccandola aggiungi una forma collegata.
 - **Basi di dati** (gruppo da aprire nel pannello): entità ed entità debole, relazione e relazione
@@ -678,9 +678,16 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
   clic, il riquadro per scegliere più forme e il doppio clic sono come sul foglio vuoto. Il nome di
   una corsia si cambia con un doppio clic sul nome; nel pannello a destra si aggiungono e si tolgono
   corsie (le altre restano grandi com'erano) e si sceglie se sono in colonne o in righe.
+- **Contenitori**, anche uno dentro l'altro (il sistema informatico dentro quello informativo, dentro
+  quello organizzativo): la forma **Contenitore** è un riquadro con il titolo in alto a sinistra. Sta
+  dietro alle altre forme, e uno dentro l'altro si vedono tutti (il più grande dietro). Si prende dal
+  titolo o dal bordo e, spostandolo, vengono con lui le forme che ha dentro e i contenitori che ci
+  stanno interi; dentro, il clic, il riquadro per scegliere più forme e il doppio clic (che aggiunge una
+  forma lì dentro) sono come sul foglio vuoto. Il titolo si scrive con un doppio clic sul titolo.
 - **Modelli pronti** da cui partire, sul foglio vuoto o dal menu «Modelli»: diagramma di flusso,
   mappa concettuale, albero, ciclo, linea del tempo, processo con le corsie (l'ordine di un cliente,
-  dalle vendite al magazzino all'amministrazione), schema E-R e tabelle.
+  dalle vendite al magazzino all'amministrazione), contenitori (i tre sistemi uno dentro l'altro), schema
+  E-R e tabelle.
 - Con più forme selezionate (trascinando un riquadro sul foglio vuoto, o con Maiusc + clic):
   **allinea** (a sinistra, al centro, in alto…) e **distribuisci** con lo stesso spazio;
   triangolo e frecce grandi si **girano** di un quarto alla volta.
@@ -979,7 +986,7 @@ gli schemi e le tabelle. Ne scegli uno e Glifo te lo spiega lì sotto, senza met
 formula. Per un grafico il modello racconta cosa mostra (dove taglia gli assi, dove cresce, massimi e
 minimi, asintoti, l'area colorata) con i numeri dello studio di funzione di Glifo; per una formula o un
 teorema cosa dice, con un esempio; per uno schema cosa rappresenta (Glifo gli descrive le forme seguendo
-le frecce, le corsie, i collegamenti con il loro testo, e negli schemi E-R entità, relazioni, attributi e
+le frecce, le corsie, i contenitori, i collegamenti con il loro testo, e negli schemi E-R entità, relazioni, attributi e
 cardinalità); per una tabella cosa calcola (Glifo gli dà i valori calcolati, con le lettere delle colonne,
 e le formule). Glifo controlla le formule che il modello scrive (anche gli esempi con i numeri): ✓, ✗ o
 «non controllato»; le frasi le scrive il modello. Sotto la spiegazione c'è la **chat**: scrivi una domanda

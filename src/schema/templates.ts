@@ -20,6 +20,8 @@ const T = texts({
   timelineHint: ['Eventi in ordine, con il loro anno', 'Events in order, with their year'],
   lanesProcess: ['Processo con le corsie', 'Swimlane process'],
   lanesProcessHint: ['Chi fa cosa: i passi di un processo aziendale nelle corsie di chi li fa', 'Who does what: the steps of a business process in the lanes of whoever does them'],
+  nested: ['Contenitori', 'Containers'],
+  nestedHint: ['Insiemi uno dentro l\'altro, come il sistema informatico dentro quello informativo', 'Sets one inside the other, like the IT system inside the information system'],
   er: ['Schema E-R', 'E-R diagram'],
   erHint: ['Entità, relazione con le cardinalità e attributi (basi di dati)', 'Entities, a relationship with its cardinalities, and attributes (databases)'],
   tables: ['Tabelle', 'Tables'],
@@ -69,6 +71,9 @@ const T = texts({
   invoice: ['Emette la fattura', 'Issue the invoice'],
   pay: ['Riceve la merce e paga', 'Receive the goods and pay'],
   recordPayment: ['Registra l\'incasso', 'Record the payment'],
+  organization: ['Sistema organizzativo', 'Organizational system'],
+  informationSystem: ['Sistema informativo', 'Information system'],
+  itSystem: ['Sistema informatico', 'IT system'],
 })
 
 export interface Template {
@@ -256,6 +261,20 @@ const process = (): Schema => ({
   ],
 })
 
+/**
+ * Tre contenitori uno dentro l'altro, come nei libri di sistemi informativi: il sistema informatico
+ * (computer, programmi, reti) è una parte del sistema informativo, che è una parte dell'organizzazione.
+ * I più grandi stanno per primi, cioè dietro.
+ */
+const nested = (): Schema => ({
+  nodes: [
+    node('organizzativo', 'container', 0, 0, T.organization, { w: 420, h: 290 }),
+    node('informativo', 'container', 30, 50, T.informationSystem, { w: 360, h: 210 }),
+    node('informatico', 'container', 60, 100, T.itSystem, { w: 300, h: 130 }),
+  ],
+  edges: [],
+})
+
 export const TEMPLATES: Template[] = [
   { id: 'flusso', get name() { return T.flowchart }, get hint() { return T.flowchartHint }, get schema() { return flowchart() } },
   { id: 'mappa', get name() { return T.conceptMap }, get hint() { return T.conceptMapHint }, get schema() { return conceptMap() } },
@@ -263,6 +282,7 @@ export const TEMPLATES: Template[] = [
   { id: 'ciclo', get name() { return T.cycle }, get hint() { return T.cycleHint }, get schema() { return cycle() } },
   { id: 'linea', get name() { return T.timeline }, get hint() { return T.timelineHint }, get schema() { return timeline() } },
   { id: 'corsie', get name() { return T.lanesProcess }, get hint() { return T.lanesProcessHint }, get schema() { return process() } },
+  { id: 'contenitori', get name() { return T.nested }, get hint() { return T.nestedHint }, get schema() { return nested() } },
   { id: 'er', get name() { return T.er }, get hint() { return T.erHint }, get schema() { return er() } },
   { id: 'tabelle', get name() { return T.tables }, get hint() { return T.tablesHint }, get schema() { return tables() } },
 ]

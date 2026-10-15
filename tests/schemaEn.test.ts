@@ -93,6 +93,7 @@ describe('l\'editor degli schemi in inglese', () => {
     expect(preset('rhombus').textContent).toBe('Diamond')
     expect(preset('arrow').textContent).toBe('Block arrow')
     expect(preset('lanes').textContent).toBe('Swimlanes')
+    expect(preset('container').textContent).toBe('Container')
     expect(preset('entity').textContent).toBe('Entity')
     expect(preset('relation').textContent).toBe('Relationship')
     expect(preset('multiAttribute').textContent).toBe('Multivalued attribute')
@@ -104,7 +105,7 @@ describe('l\'editor degli schemi in inglese', () => {
     expect(empty.textContent).toContain('Drag a shape here from the panel on the left, or click it.')
     expect(empty.textContent).toContain('Then hover over a shape and drag a blue arrow to connect it to another one.')
     expect(empty.textContent).toContain('Or start from a template:')
-    expect(all(empty, 'button').map((b) => b.textContent)).toEqual(['Flowchart', 'Concept map', 'Tree', 'Cycle', 'Timeline', 'Swimlane process', 'E-R diagram', 'Tables'])
+    expect(all(empty, 'button').map((b) => b.textContent)).toEqual(['Flowchart', 'Concept map', 'Tree', 'Cycle', 'Timeline', 'Swimlane process', 'Containers', 'E-R diagram', 'Tables'])
     expect(byText('Flowchart', empty).title).toBe('The steps of a procedure, with the questions and the possible paths')
 
     // Senza niente di selezionato, il pannello dell'aspetto spiega come si usa (con i tasti inglesi).
@@ -214,6 +215,17 @@ describe('l\'editor degli schemi in inglese', () => {
 
     byText('Done').click()
     expect(saved[0].nodes.map((n) => n.text)).toEqual(['Table\nID\nName\nField'])
+  })
+
+  it('il contenitore: il titolo e, nel pannello, come si usa', () => {
+    const { saved, preset, format, byText } = open()
+    preset('container').click()
+    expect(format.querySelector('.schema-container-section h3')?.textContent).toBe('Container')
+    expect(format.querySelector('.schema-container-section .schema-format-hint')?.textContent).toBe(
+      'Put shapes inside the container, other containers too: moving it moves them as well. Grab the container by its title or its border; inside it, double-click to add a shape.',
+    )
+    byText('Done').click()
+    expect(saved[0].nodes.map((n) => [n.shape, n.text])).toEqual([['container', 'Container']])
   })
 
   it('le corsie: i nomi, una corsia in più e il verso', () => {
@@ -329,8 +341,9 @@ describe('l\'editor degli schemi in inglese', () => {
 
 describe('i modelli pronti in inglese', () => {
   it('nomi e suggerimenti, e il testo delle forme scelto quando si inseriscono', () => {
-    expect(TEMPLATES.map((t) => t.name)).toEqual(['Flowchart', 'Concept map', 'Tree', 'Cycle', 'Timeline', 'Swimlane process', 'E-R diagram', 'Tables'])
+    expect(TEMPLATES.map((t) => t.name)).toEqual(['Flowchart', 'Concept map', 'Tree', 'Cycle', 'Timeline', 'Swimlane process', 'Containers', 'E-R diagram', 'Tables'])
     expect(TEMPLATES.find((t) => t.id === 'corsie')!.hint).toBe('Who does what: the steps of a business process in the lanes of whoever does them')
+    expect(TEMPLATES.find((t) => t.id === 'contenitori')!.hint).toBe('Sets one inside the other, like the IT system inside the information system')
     const texts = (id: string) => {
       const { nodes, edges } = TEMPLATES.find((t) => t.id === id)!.schema
       return [...nodes.map((n) => n.text), ...edges.map((e) => e.text).filter(Boolean)]
@@ -355,6 +368,7 @@ describe('i modelli pronti in inglese', () => {
       'Yes',
       'No',
     ])
+    expect(texts('contenitori')).toEqual(['Organizational system', 'Information system', 'IT system'])
     expect(texts('tabelle')[0]).toBe('Student\nPK StudentID: CHAR(6)\nName: VARCHAR(50)\nSurname: VARCHAR(50)')
     // Gli stessi modelli, con Glifo in italiano, hanno i testi italiani; il disegno è lo stesso.
     const english = TEMPLATES.map((t) => t.schema)
