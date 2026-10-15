@@ -566,7 +566,7 @@ giorno: lo studente, «facciamo che per fare la derivata si deve per forza scriv
 la prima cosa che sta subito dopo al simbolo» (`\sum_{k=1}^{3} k \sin k` resta (Σk)·sin k). E anche per le
 derivate: «sì, se non c'è la parentesi si prende solo quello che sta subito dopo il simbolo»; e poi, vista la
 regola: «lo voglio stile fotomath; dopo d/dx (con il frac) si mettono SEMPRE le parentesi, cosi solo quello che
-sta nelle parentesi viene fatto la derivata». Così, sul ramo `prova`, dopo `\frac{d}{dx}` (e `\frac{d^2}{dx^2}`,
+sta nelle parentesi viene fatto la derivata». Così (sul sito dal 15 ottobre 2026) dopo `\frac{d}{dx}` (e `\frac{d^2}{dx^2}`,
 `\frac{\partial}{\partial x}`) la parentesi è obbligatoria: `\frac{d}{dx}(x^2) \sin x` è 2x·sin x e
 `\frac{d}{dx} x^2` non si legge (dal 15 ottobre 2026 la nota dice perché, vedi sotto). `\partial_x` senza parentesi
 prende solo quello che viene subito dopo, come le somme. Esempi, aiuto, modelli del catalogo e test hanno le parentesi.
@@ -574,12 +574,12 @@ prende solo quello che viene subito dopo, come le somme. Esempi, aiuto, modelli 
 Trovato guardando come il motore calcola le derivate (14 ottobre 2026, lo studente: «sì, correggi anche la
 derivata parziale con le lettere»): con `f(x, y) = x^2 y`, `\frac{\partial f}{\partial x}(a, b) =` dava 0 invece
 di 2ab, perché con le lettere nel punto Glifo derivava f(a, b), dove x non c'è più (lo stesso `\partial_x f(a, b)`
-e `\frac{df}{dx}(t^2)`, anche nei grafici). Corretto sul ramo `prova`: è la derivata di f calcolata nel punto,
+e `\frac{df}{dx}(t^2)`, anche nei grafici). Corretto (sul sito dal 15 ottobre 2026): è la derivata di f calcolata nel punto,
 con le lettere messe tutte insieme (`(y, x)` dà 2xy); `\frac{d}{dx}(f(x^2))` resta la derivata di tutta f(x²).
 
 **Il grafico di un integrale con le lettere (14 ottobre 2026, lo studente con una foto).** Con il cursore su
 `$$\int_{a}^{b} x^3 \, dx$$` il pulsante «Grafico» scriveva solo `y = `: un grafico con un nome senza valore
-non contava come formula da disegnare. Ora, sul ramo `prova`, il blocco ha l'integrale con prima gli slider delle
+non contava come formula da disegnare. Ora (sul sito dal 15 ottobre 2026) il blocco ha l'integrale con prima gli slider delle
 lettere che mancano, come «Aggiungi gli slider» nell'anteprima: per gli estremi di un integrale `a = 0` e
 `b = 1` (con 1 e 1 l'area non si vedrebbe), e l'area si vede subito (`tests/graphNote.test.ts`,
 `tests/graph.test.ts`).
@@ -587,7 +587,7 @@ lettere che mancano, come «Aggiungi gli slider» nell'anteprima: per gli estrem
 **L'esponente dopo la derivata, il ✗ senza parentesi, le catene con l'uguale in fondo e il dx davanti (15 ottobre
 2026).** Lo studente: «\frac{d}{dx}(x^2+1)^3 deve dare 8x^3», «se non si mettono le parentesi da un errore e dice
 che sono obbligatorie» e, sui due difetti trovati guardando il motore, «sì, sistema anche quei due difetti». Sul
-ramo `prova`: l'esponente dopo la parentesi è della derivata, `\frac{d}{dx}(x^2+1)^3 =` dà 8x³ cioè (2x)³ (anche
+sito dal 15 ottobre 2026 (lo studente: «va bene, portalo sul sito vero»): l'esponente dopo la parentesi è della derivata, `\frac{d}{dx}(x^2+1)^3 =` dà 8x³ cioè (2x)³ (anche
 con `\frac{\partial}{\partial x}` e `\partial_x`), e per derivare la potenza la si scrive dentro,
 `\frac{d}{dx}((x^2+1)^3)`; lo dicono anche le regole di Spiegami al modello. Senza la parentesi
 (`\frac{d}{dx} x^2 =`) dopo la formula c'è il ✗ «dopo d/dx le parentesi sono obbligatorie», con la derivata
@@ -721,11 +721,11 @@ scritti nel blocco: `titolo:`, `asse x:`). Restano, per il controllo e le immagi
 
 **Le righe separate da `\\` (14 ottobre 2026, lo studente con una foto).** In
 `$6^3 = 216 \\ 324 - 216 = 216 \\ 216 * 2 =$` Glifo proponeva 216 (il valore di `6^3`) invece di 432 e non
-segnava la seconda riga, sbagliata: leggeva tutto come una catena sola. Ora, sul ramo `prova`, ogni riga è una
+segnava la seconda riga, sbagliata: leggeva tutto come una catena sola. Ora (sul sito dal 15 ottobre 2026) ogni riga è una
 formula a sé: le prime si controllano (qui «✗ riga 2: fa 108») e l'ultima ha il risultato. Le righe dentro
 `\begin{cases}` e nelle matrici restano insieme, e anche le virgole di una funzione a pezzi, che prima non si
-definiva (`tests/math.test.ts`, `tests/check.test.ts`, `tests/graphNote.test.ts`). Resta: in una catena con
-l'uguale alla fine (`2 + 2 = 5 =`) le uguaglianze in mezzo non si controllano.
+definiva (`tests/math.test.ts`, `tests/check.test.ts`, `tests/graphNote.test.ts`). Dal 15 ottobre 2026 anche in una
+catena con l'uguale alla fine (`2 + 2 = 5 =`) le uguaglianze in mezzo si controllano.
 
 ### Matematica per i corsi: idee in più
 
