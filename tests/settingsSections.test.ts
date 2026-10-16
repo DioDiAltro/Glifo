@@ -258,11 +258,12 @@ describe('la sezione «Dati»', () => {
     vi.stubGlobal('navigator', { ...navigator, storage: { estimate: async () => ({ usage: 1_500_000_000, quota: 60_000_000_000 }) } })
     const { panel } = open({ boardsBytes: async () => 2_500_000 }, 'data')
     const rows = () => [...panel('data').querySelectorAll('.space-row')].map((row) => [row.querySelector('dt')?.textContent, row.querySelector('.space-size')?.textContent])
-    await vi.waitFor(() => expect(rows()).toHaveLength(4))
+    await vi.waitFor(() => expect(rows()).toHaveLength(5))
     expect(rows()).toEqual([
       ['Appunti, cartelle e impostazioni', '5 kB'],
       ['Lavagne', '2,5 MB'],
       ['Qwen3 0.6B, il modello di «Spiegami»', '400 MB'],
+      ['Lettore di «In LaTeX»', 'nessuno'],
       ['In tutto, con i file per usare Glifo offline', '1,5 GB'],
     ])
     expect(panel('data').textContent).toContain('Il browser può dare a Glifo fino a 60 GB.')
@@ -282,6 +283,32 @@ describe('la sezione «Dati»', () => {
     expect(removeModel).toHaveBeenCalledWith(['Qwen3-0.6B-q4f16_1-MLC'])
     await vi.waitFor(() => expect(panel('data').querySelector('.space-model')).toBeNull())
     expect(panel('data').textContent).toContain('Modelli di «Spiegami»nessuno')
+  })
+
+  it('il lettore di «In LaTeX»: quanto pesa e «Togli», che svuota la sua cache', async () => {
+    const hub = 'https://huggingface.co/breezedeus/pix2text-mfr-1.5/resolve/1cef9f0bdcd6a4c63df7de1311fb0894593340cc/'
+    const files = ['tokenizer.json', 'decoder_model.onnx', 'encoder_model.onnx'].map((f) => hub + f).concat('https://glifo.page/assets/ort-wasm-simd-threaded-x.wasm')
+    const deleted: string[] = []
+    const reader = { match: async (url: string) => (files.includes(url) || url.endsWith('.wasm') ? new Response('') : undefined), keys: async () => files.map((url) => ({ url })) }
+    const empty = { match: async () => undefined, keys: async () => [] }
+    vi.stubGlobal('caches', {
+      has: async (name: string) => name === 'glifo-lettore' && !deleted.length,
+      open: async (name: string) => (name === 'glifo-lettore' && !deleted.length ? reader : empty),
+      delete: async (name: string) => deleted.push(name) > 0,
+    })
+    const { panel } = open({}, 'data')
+    const remove = await vi.waitFor(() => {
+      const button = panel('data').querySelector<HTMLButtonElement>('.space-reader button')
+      if (!button) throw new Error('il pulsante non c\'è ancora')
+      return button
+    })
+    const readerRow = panel('data').querySelector('.space-reader')
+    expect([readerRow?.querySelector('dt')?.textContent, readerRow?.querySelector('.space-size')?.textContent]).toEqual(['Lettore di «In LaTeX»', '134 MB'])
+    expect(remove.getAttribute('aria-label')).toBe('Togli il lettore di «In LaTeX» da questo browser')
+    remove.click()
+    await vi.waitFor(() => expect(panel('data').querySelector('.space-reader .space-size')?.textContent).toBe('nessuno'))
+    expect(deleted).toEqual(['glifo-lettore'])
+    expect(panel('data').querySelector('.space-reader button')).toBeNull()
   })
 
   it('senza misure dal browser restano quelle di Glifo, senza totale', async () => {

@@ -6,6 +6,7 @@
  * dell'account in fondo alla barra laterale apre le impostazioni lì.
  */
 import { EXPLAIN_TONES } from '../ai/explain'
+import { readerBytes, readerInBrowser, removeReader } from '../ai/formulaReader'
 import { localLlm } from '../ai/local'
 import { downloadSize, gpuF16, LOCAL_MODELS, localModel, MODEL_LICENSES, modelsInBrowser, modelVariant, type DownloadedModel, type ModelGroup } from '../ai/localModels'
 import { AI_SERVICES, aiService } from '../ai/services'
@@ -187,14 +188,16 @@ const T = texts({
   spaceModels: ['Modelli di «Spiegami»', '“Explain” models'],
   spaceModel: (name: string) => [`${name}, il modello di «Spiegami»`, `${name}, the “Explain” model`],
   spacePartModel: (name: string) => [`${name}, scaricato a metà`, `${name}, partly downloaded`],
+  spaceReader: ['Lettore di «In LaTeX»', 'The “To LaTeX” reader'],
+  readerName: ['il lettore di «In LaTeX»', 'the “To LaTeX” reader'],
   spaceTotal: ['In tutto, con i file per usare Glifo offline', 'In total, with the files for using Glifo offline'],
   spaceNone: ['nessuno', 'none'],
   measuring: ['calcolo…', 'measuring…'],
   unknown: ['non si sa', 'unknown'],
   spaceQuota: (size: string) => [`Il browser può dare a Glifo fino a ${size}.`, `The browser can give Glifo up to ${size}.`],
   spaceHelp: [
-    'Un modello di «Spiegami» pesa molto più degli appunti: se non ti serve, toglilo. Si riscarica da solo la prossima volta che premi «Spiegami».',
-    'An “Explain” model takes up far more space than your notes: if you don\'t need it, remove it. It downloads again by itself the next time you press “Explain”.',
+    'Un modello di «Spiegami» e il lettore di «In LaTeX» pesano molto più degli appunti: se non ti servono, toglili. Si riscaricano la prossima volta che premi «Spiegami» o «In LaTeX» (il lettore prima lo chiede).',
+    'An “Explain” model and the “To LaTeX” reader take up far more space than your notes: if you don\'t need them, remove them. They download again the next time you press “Explain” or “To LaTeX” (the reader asks first).',
   ],
   remove: ['Togli', 'Remove'],
   removeLabel: (name: string) => [`Togli ${name} da questo browser`, `Remove ${name} from this browser`],
@@ -872,24 +875,27 @@ function modelGb(mb: number): string {
   return `${new Intl.NumberFormat(numberLocale(), { maximumFractionDigits: gb < 10 ? 1 : 0 }).format(gb)} GB`
 }
 
-/** «Togli» per un modello di «Spiegami» in questo browser (sezioni «AI» e «Dati»): `done` dopo, `failed` con l'errore. */
-function removeModelButton(model: DownloadedModel, done: () => void, failed: (message: string) => void): HTMLElement {
+/** «Togli» per quello che si è scaricato in questo browser (`name` nell'etichetta): `done` dopo, `failed` con l'errore. */
+function removeButton(name: string, remove: () => Promise<void>, done: () => void, failed: (message: string) => void): HTMLElement {
   const button = h(
     'button',
-    { class: 'btn btn-small', title: T.removeLabel(model.name), attrs: { type: 'button', 'aria-label': T.removeLabel(model.name) } },
+    { class: 'btn btn-small', title: T.removeLabel(name), attrs: { type: 'button', 'aria-label': T.removeLabel(name) } },
     icon(ICONS.trash, 14),
     T.remove,
   ) as HTMLButtonElement
   button.addEventListener('click', () => {
     button.disabled = true
-    localLlm()
-      .remove(model.webllm)
-      .then(done, (err: unknown) => {
-        failed(err instanceof Error ? err.message : String(err))
-        button.disabled = false
-      })
+    remove().then(done, (err: unknown) => {
+      failed(err instanceof Error ? err.message : String(err))
+      button.disabled = false
+    })
   })
   return button
+}
+
+/** «Togli» per un modello di «Spiegami» in questo browser (sezioni «AI» e «Dati»). */
+function removeModelButton(model: DownloadedModel, done: () => void, failed: (message: string) => void): HTMLElement {
+  return removeButton(model.name, () => localLlm().remove(model.webllm), done, failed)
 }
 
 /** «Backup»: scaricarlo e ripristinarlo; `accountLink` porta alla sezione «Account». */
@@ -914,9 +920,9 @@ function backupFieldset(deps: SettingsDialogDeps, accountLink: () => HTMLElement
 
 /**
  * «Spazio in questo browser»: gli appunti (localStorage), le lavagne (IndexedDB), i modelli di
- * «Spiegami» (la Cache Storage di WebLLM, ognuno con «Togli») e il totale che dice il browser, con i
- * file per usare Glifo offline. Si misura ogni volta che la sezione si mostra; `onRemoved` dice alla
- * sezione «AI» che un modello non c'è più.
+ * «Spiegami» (la Cache Storage di WebLLM, ognuno con «Togli»), il lettore di «In LaTeX» (la sua cache,
+ * con «Togli») e il totale che dice il browser, con i file per usare Glifo offline. Si misura ogni volta
+ * che la sezione si mostra; `onRemoved` dice alla sezione «AI» che un modello non c'è più.
  */
 function spaceFieldset(deps: SettingsDialogDeps, onRemoved: () => void): { el: HTMLElement; refresh(): void } {
   const list = h('dl', { class: 'space-list' })
@@ -929,10 +935,12 @@ function spaceFieldset(deps: SettingsDialogDeps, onRemoved: () => void): { el: H
   const refresh = async () => {
     const mine = ++run
     const notes = notesBytes()
-    list.replaceChildren(row(T.spaceNotes, formatBytes(notes)), row(T.spaceBoards, T.measuring), row(T.spaceModels, T.measuring))
-    const [boards, models, estimate] = await Promise.all([
+    list.replaceChildren(row(T.spaceNotes, formatBytes(notes)), row(T.spaceBoards, T.measuring), row(T.spaceModels, T.measuring), row(T.spaceReader, T.measuring))
+    const [boards, models, reader, readerWhole, estimate] = await Promise.all([
       deps.boardsBytes ? deps.boardsBytes().catch(() => null) : Promise.resolve(null),
       modelsInBrowser(),
+      readerBytes(),
+      readerInBrowser(),
       storageEstimate(),
     ])
     if (mine !== run) return
@@ -950,6 +958,11 @@ function spaceFieldset(deps: SettingsDialogDeps, onRemoved: () => void): { el: H
     for (const m of models) {
       rows.push(row(m.complete ? T.spaceModel(m.name) : T.spacePartModel(m.name), formatBytes(m.bytes), removeModelButton(m, removed, failed), 'space-model'))
     }
+    rows.push(
+      reader
+        ? row(readerWhole ? T.spaceReader : T.spacePartModel(T.spaceReader), formatBytes(reader), removeButton(T.readerName, removeReader, () => void refresh(), failed), 'space-reader')
+        : row(T.spaceReader, T.spaceNone, null, 'space-reader'),
+    )
     // Nel totale del browser gli appunti (localStorage) di solito non ci sono: si aggiungono.
     if (estimate) rows.push(row(T.spaceTotal, formatBytes(estimate.usage + notes), null, 'space-total'))
     list.replaceChildren(...rows)

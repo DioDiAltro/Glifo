@@ -48,8 +48,8 @@ Cose da sapere:
   Dati* c'è anche **Scarica backup**, con tutti gli appunti (e le loro lavagne) in un solo file.
   **Ripristina backup** lo rilegge senza doppioni: gli appunti che ci sono già restano come sono, e
   le lavagne tornano sulle loro note (anche su quelle arrivate con l'account). Lì si vede anche
-  quanto spazio occupano nel browser appunti, lavagne e modelli di «Spiegami» (un modello si toglie da
-  lì), e in tutto, con i file per usare Glifo offline.
+  quanto spazio occupano nel browser appunti, lavagne, modelli di «Spiegami» e il lettore di «In LaTeX»
+  (un modello e il lettore si tolgono da lì), e in tutto, con i file per usare Glifo offline.
   **Apri .md** apre anche i file di Excel (.xlsx) e .csv: diventano note con le tabelle.
 - Puoi tenere Glifo aperto in più schede, o nell'app installata e nel browser insieme: si
   aggiornano a vicenda e nessuna cancella gli appunti scritti nelle altre.

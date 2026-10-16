@@ -97,13 +97,12 @@ comincia dalla lavagna (punto 2), con la prova dei lettori sulle formule scritte
 
 Il 16 ottobre 2026 il punto 2 è fatto: «In LaTeX» nel menu della Selezione della lavagna, con pix2text-mfr nel
 browser (AI.md, punto 2), provato dallo studente sul sito di prova («funziona abbastanza bene, diciamo che
-possiamo metterlo sul ramo principale») e andato sul sito. Restano, per dopo:
-- il lettore tra i dati del browser nelle impostazioni («Dati», con «Togli», come i modelli di «Spiegami»);
+possiamo metterlo sul ramo principale») e andato sul sito. Il lettore è nelle impostazioni, in «Dati», con
+quanto pesa e «Togli» (16 ottobre 2026, sul ramo `prova`). Restano, per dopo:
 - una domanda frequente su «In LaTeX»;
-- decidere se resta gratis (il modello nel browser non costa niente a Glifo) o va nei piani a pagamento
-  (ABBONAMENTI.md, «La lavagna»);
-- il modello di frontiera con la propria chiave, se il lettore nel browser non basta (le immagini ai servizi
-  della propria chiave, che oggi mandano solo testo).
+- il modello migliore, di frontiera: nei piani a pagamento con l'AI di Glifo (deciso il 16 ottobre 2026: il
+  lettore nel browser, che sbaglia più spesso, resta gratis; ABBONAMENTI.md, punto 22), e prima con la
+  propria chiave (le immagini ai servizi della propria chiave, che oggi mandano solo testo).
 
 Il prossimo è il punto 3 di AI.md: da una foto alla nota.
 
@@ -349,7 +348,7 @@ lavagna». Se servirà:
 - con l'AI e nei piani a pagamento (deciso il 5 ottobre 2026), le formule scritte a mano prese con il
   laccio e convertite in LaTeX, da aggiungere alla nota se si vuole («Aggiungi alla nota»): se ne parla in
   [AI.md](AI.md), punto 2 (14 ottobre 2026); fatto e sul sito dal 16 ottobre 2026 («In LaTeX», con il lettore
-  nel browser; se resta gratis è da decidere);
+  nel browser, gratis; il modello migliore sarà nei piani a pagamento);
 - **una lavagna completa di tutto** (lo studente, 5 ottobre 2026: «deve essere una lavagna completa
   di tutto», come Microsoft Whiteboard). I primi cinque punti sono fatti e pubblicati (5 ottobre
   2026, «sì a tutto, comincia dagli strumenti della lavagna», poi «sì, parti con le linee e le

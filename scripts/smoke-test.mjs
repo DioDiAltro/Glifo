@@ -8,7 +8,7 @@
 import { chromium } from 'playwright-core'
 import { preview } from 'vite'
 import MarkdownIt from 'markdown-it'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { strFromU8, unzipSync } from 'fflate'
 
 const server = await preview({ preview: { port: 4174, strictPort: true }, logLevel: 'error' })
@@ -257,10 +257,11 @@ try {
     check(
       sections.names.join() === 'Generale,Scrittura,AI,Account,Dati,Informazioni' &&
         sections.sideBySide &&
-        sections.rows.length === 4 &&
+        sections.rows.length === 5 &&
         sections.rows[0][0] === 'Appunti, cartelle e impostazioni' && /^\d+ kB$/.test(sections.rows[0][1]) &&
         sections.rows[2].join() === 'Modelli di «Spiegami»,nessuno' &&
-        sections.rows[3][0].startsWith('In tutto') &&
+        sections.rows[3].join() === 'Lettore di «In LaTeX»,nessuno' &&
+        sections.rows[4][0].startsWith('In tutto') &&
         /^Versione (locale|[0-9a-f]{7}) del \d{1,2} \w+ \d{4}\.$/.test(about.version) &&
         about.licenses === 17 && license.ok() && (await license.text()).includes('MIT License') &&
         about.height === height,
@@ -4400,6 +4401,31 @@ try {
     await lx.waitForFunction(() => document.querySelector('.dialog-latex .latex-code')?.value)
     const again = { consent: await lx.locator('.dialog-latex .latex-consent').count(), lines: await lx.locator('.dialog-latex .latex-line').count() }
     check(again.consent === 0 && again.lines === 1, `la seconda volta «In LaTeX» legge subito, senza chiedere di scaricare (${JSON.stringify(again)})`)
+    await lx.locator('.dialog-latex .dialog-actions button', { hasText: 'Chiudi' }).click()
+    // Nelle impostazioni, in «Dati», il lettore con quanto pesa e «Togli» (qui la sua cache la riempie la prova:
+    // il worker finto non scarica niente); tolto, «In LaTeX» chiede di nuovo di scaricarlo.
+    const engine = readdirSync('dist/assets').find((f) => /^ort-wasm-simd-threaded.*\.wasm$/.test(f))
+    await lx.evaluate(async (engine) => {
+      const cache = await caches.open('glifo-lettore')
+      const hub = 'https://huggingface.co/breezedeus/pix2text-mfr-1.5/resolve/1cef9f0bdcd6a4c63df7de1311fb0894593340cc/'
+      for (const f of ['tokenizer.json', 'decoder_model.onnx', 'encoder_model.onnx']) await cache.put(hub + f, new Response('x'))
+      await cache.put(`${location.origin}/assets/${engine}`, new Response('x'))
+    }, engine)
+    const lsettings = await openSettings(lx, 'data')
+    await lsettings.locator('.space-reader button').waitFor({ timeout: 10000 })
+    const readerRow = await lsettings.locator('.space-reader').textContent()
+    await lsettings.locator('.space-reader button').click()
+    await lsettings.locator('.space-reader .space-size', { hasText: 'nessuno' }).waitFor({ timeout: 10000 })
+    const cacheLeft = await lx.evaluate(() => caches.has('glifo-lettore'))
+    await lx.keyboard.press('Escape')
+    await lstroke(around([[25, 62], [230, 62], [230, 160], [25, 160], [25, 64]]))
+    await lx.waitForSelector('.board-sel-item.is-latex')
+    await lx.locator('.board-sel-item.is-latex').click()
+    const askedAgain = await lx.locator('.dialog-latex .latex-consent').waitFor({ timeout: 5000 }).then(() => true, () => false)
+    check(
+      readerRow === 'Lettore di «In LaTeX»134 MBTogli' && !cacheLeft && askedAgain,
+      `in «Dati» il lettore di «In LaTeX» con quanto pesa; «Togli» lo toglie e poi «In LaTeX» chiede di nuovo di scaricarlo (${JSON.stringify({ readerRow, cacheLeft, askedAgain })})`,
+    )
     await lxContext.close()
   }
 

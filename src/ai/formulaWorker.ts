@@ -75,6 +75,13 @@ async function cached(url: string, onBytes: (n: number) => void): Promise<ArrayB
   return data.buffer
 }
 
+/** Toglie dalla cache i file che non servono più (la libreria di una versione vecchia di onnxruntime-web). */
+async function forgetOld(engine: string): Promise<void> {
+  const keep = new Set([new URL(engine, scope.location.href).href, ...READER_FILES.map((f) => readerFileUrl(f.name))])
+  const cache = await caches.open(READER_CACHE)
+  for (const request of await cache.keys()) if (!keep.has(request.url)) await cache.delete(request)
+}
+
 /** Scarica (la prima volta) e prepara il modello; l'avanzamento va alla pagina con `id`. */
 async function load(id: number, engine: string): Promise<Model> {
   let loaded = 0
@@ -91,6 +98,7 @@ async function load(id: number, engine: string): Promise<Model> {
     ...READER_FILES.map((f) => cached(readerFileUrl(f.name), count)),
   ])
   post({ id, type: 'progress', loaded: READER_DOWNLOAD, total: READER_DOWNLOAD })
+  await forgetOld(engine)
   ort.env.wasm.wasmBinary = wasm
   // Senza le intestazioni COOP/COEP il browser non dà la memoria condivisa: un thread solo.
   ort.env.wasm.numThreads = 1

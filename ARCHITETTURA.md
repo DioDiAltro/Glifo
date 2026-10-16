@@ -132,7 +132,10 @@ finita il 14 ottobre 2026, il file non c'è più e si legge nella storia del rep
   byte), i modelli dalla Cache Storage di WebLLM (`modelsInBrowser` in `src/ai/localModels.ts`: gli
   elenchi dei pezzi, tensor-cache.json, che ci sono nella cache, con i `nbytes`, senza leggere i pezzi;
   anche i modelli che non sono più nell'elenco, con il nome di WebLLM; «Togli» con `localLlm().remove` e i
-  nomi di WebLLM delle varianti, `removeModelButton`, lo stesso nella sezione «AI») e il totale da
+  nomi di WebLLM delle varianti, `removeModelButton`, lo stesso nella sezione «AI»), il lettore di «In LaTeX»
+  (`readerBytes` in `src/ai/formulaReader.ts`: le misure note dei file nella sua cache, «scaricato a metà» se
+  `readerInBrowser` dice di no; «Togli» con `removeReader`, che ferma il worker e cancella la cache; la riga c'è
+  sempre, con «nessuno»; `removeButton` è il «Togli» di tutti e due) e il totale da
   `navigator.storage.estimate`, con quanto il browser concede.
   I messaggi brevi in basso sono `toast.ts`; con un pulsante (per esempio «Ricarica») restano finché
   non lo si preme o non li si chiude. L'avviso lasciato prima di ricaricare la pagina (`notice.ts`)
@@ -552,7 +555,9 @@ finita il 14 ottobre 2026, il file non c'è più e si legge nella storia del rep
   tutto il decodificatore (il modello non ha la versione con la cache dei passi). `formulaTokens.ts` dai token
   al testo (BPE «ByteLevel») e il giro (`greedy`); `formulaTidy.ts` la pulizia (`tidyLatex`, dalla prova di
   scripts/prova-lettori.py, con i test sulle letture vere); `formulaReader.ts` il lato pagina (`formulaReader()`,
-  uno per pagina, e `readerInBrowser`, che guarda la cache senza scaricare). La finestra è
+  uno per pagina; `readerInBrowser`, che guarda la cache senza scaricare; `readerBytes` e `removeReader` per
+  «Dati» nelle impostazioni; `stop` ferma il worker). Il worker, finito di caricare, toglie dalla cache i file
+  che non servono più (`forgetOld`: la libreria di una versione vecchia di onnxruntime-web). La finestra è
   `src/ui/latexDialog.ts`, modale sul body: si vede anche a schermo intero e i tasti della casella non arrivano
   alla lavagna. La prima volta chiede di scaricare (dentro claude.ai dice che lì non si può), poi per ogni
   riga mostra la scrittura, la formula con KaTeX e il segno del motore (`sheetBefore` e `Sheet.read`, le righe

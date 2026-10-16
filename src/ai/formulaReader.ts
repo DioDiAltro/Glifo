@@ -4,7 +4,7 @@
  */
 import engineUrl from 'onnxruntime-web/ort-wasm-simd-threaded.wasm?url'
 import { texts } from '../i18n'
-import { READER_CACHE, READER_FILES, readerFileUrl, type FromReader, type ReaderErrorCode, type ToReader } from './formulaModel'
+import { ENGINE_BYTES, READER_CACHE, READER_FILES, readerFileUrl, type FromReader, type ReaderErrorCode, type ToReader } from './formulaModel'
 
 const T = texts({
   offline: [
@@ -13,6 +13,7 @@ const T = texts({
   ],
   noSpace: ['Nel browser non c\'è abbastanza spazio per il lettore: liberane un po\' e riprova.', 'There isn\'t enough space in the browser for the reader: free some up and try again.'],
   notReady: ['Il lettore non è ancora pronto.', 'The reader isn\'t ready yet.'],
+  removed: ['Il lettore è stato tolto da questo browser.', 'The reader was removed from this browser.'],
   stopped: (reason: string) => [`Il lettore si è fermato: ${reason}`, `The reader stopped: ${reason}`],
   workerFailed: ['il worker non è partito', 'the worker didn\'t start'],
 })
@@ -97,12 +98,44 @@ export class FormulaReader {
   read(pixels: Float32Array): Promise<{ text: string; ms: number }> {
     return this.request((id) => ({ type: 'read', id, pixels }), undefined, [pixels.buffer])
   }
+
+  /** Ferma il worker (il modello esce dalla memoria): le richieste in corso finiscono con un errore. */
+  stop(): void {
+    const err = new Error(T.removed)
+    for (const p of this.pending.values()) p.reject(err)
+    this.pending.clear()
+    this.worker?.terminate()
+    this.worker = null
+    this.ready = false
+  }
 }
 
 /** Uno solo per tutta la pagina: il modello resta pronto tra una lettura e l'altra. */
 let shared: FormulaReader | null = null
 export function formulaReader(): FormulaReader {
   return (shared ??= new FormulaReader())
+}
+
+/** Quanto pesa il lettore in questo browser, in byte (0 se non c'è): le misure note dei file nella sua cache. */
+export async function readerBytes(): Promise<number> {
+  try {
+    if (typeof caches === 'undefined' || !(await caches.has(READER_CACHE))) return 0
+    let bytes = 0
+    for (const request of await (await caches.open(READER_CACHE)).keys()) {
+      const name = new URL(request.url).pathname.split('/').pop() ?? ''
+      bytes += READER_FILES.find((f) => f.name === name)?.bytes ?? (name.endsWith('.wasm') ? ENGINE_BYTES : 0)
+    }
+    return bytes
+  } catch {
+    return 0
+  }
+}
+
+/** Toglie il lettore da questo browser (la sua cache e il worker): la prossima volta «In LaTeX» chiede di scaricarlo. */
+export async function removeReader(): Promise<void> {
+  shared?.stop()
+  shared = null
+  if (typeof caches !== 'undefined') await caches.delete(READER_CACHE)
 }
 
 /** Il lettore è già tutto in questo browser? Lo dice la sua cache, senza scaricare niente. */

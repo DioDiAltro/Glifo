@@ -268,10 +268,15 @@ nel browser il lettore è finto (`fakeFormulaWorker` in scripts/smoke-test.mjs);
 quello vero con una scrittura finta.
 
 **Sul sito** (16 ottobre 2026). Lo studente, provato sul sito di prova: «funziona abbastanza bene, diciamo che
-possiamo metterlo sul ramo principale». «In LaTeX» è andato sul sito. Restano, scritti in ROADMAP.md: il lettore
-tra i dati del browser nelle impostazioni (con «Togli»), una domanda frequente, se resta gratis o va nei piani a
-pagamento, e il modello di frontiera con la propria chiave se il lettore nel browser non basta. Il prossimo è il
-punto 3.
+possiamo metterlo sul ramo principale». «In LaTeX» è andato sul sito. Poi lo studente: «sistema prima il lettore
+nelle impostazioni»: in «Dati» c'è il lettore, con quanto pesa e «Togli» (sul ramo `prova`). Restano, scritti in
+ROADMAP.md: una domanda frequente e il modello di frontiera con la propria chiave se il lettore nel browser non
+basta. Il prossimo è il punto 3.
+
+**Gratis o a pagamento** (16 ottobre 2026). Lo studente: «se si usa quello nel browser, che sbaglia più spesso,
+allora è gratis; se poi si compra l'abbonamento, il modello migliore sarà nel piano». Deciso: «In LaTeX» con il
+lettore nel browser è gratis; il modello migliore (di frontiera) è nei piani a pagamento. Scritto in
+ABBONAMENTI.md (punto 22 della discussione, Classico e Relativistico).
 
 ## 3. Da una foto alla nota
 

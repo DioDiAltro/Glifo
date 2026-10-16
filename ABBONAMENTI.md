@@ -22,9 +22,10 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
 - **Le spiegazioni** (4 ottobre 2026): compaiono nel pannello della formula e decide chi scrive se
   inserirle nella nota; il tono (come il professore o più semplice) si sceglie nelle impostazioni.
   Vedi «Le spiegazioni, come funzionano».
-- **La lavagna** (5 ottobre 2026): una per ogni nota, e si salva; la lavagna è gratis (Classico), la
-  conversione in LaTeX è nei piani a pagamento. La lavagna base, senza AI, è fatta e pubblicata
-  (5 ottobre 2026). Vedi «La lavagna».
+- **La lavagna** (5 ottobre 2026): una per ogni nota, e si salva; la lavagna è gratis (Classico). La
+  lavagna base, senza AI, è fatta e pubblicata (5 ottobre 2026). La conversione in LaTeX («In LaTeX», sul
+  sito dal 16 ottobre 2026): con il lettore che gira nel browser, che sbaglia più spesso, è gratis; nei
+  piani a pagamento ci sarà il modello migliore (deciso il 16 ottobre 2026). Vedi «La lavagna».
 - **I modelli e le chiavi** (5 ottobre 2026): nei piani a pagamento l'AI è inclusa, la paga Glifo
   con la sua chiave, che resta sul server e non si dà a nessuno; la propria chiave è facoltativa e
   può essere di qualsiasi servizio (si parte da Anthropic e da quelli che parlano la «lingua» di
@@ -144,6 +145,14 @@ idee. Quando si comincia a costruire qualcosa diventa una voce della [ROADMAP](R
     server lo paga Glifo a ogni uso ed è a pagamento; l'eccezione sono le cose che non costano ma fanno il
     lavoro al posto di chi studia, come l'SQL. Lo studente decide di togliere già ora lo scaricamento
     dell'SQL, lasciando il pulsante spento con un avviso: fatto sul ramo principale (vedi «Deciso»).
+22. **La conversione della lavagna: gratis nel browser, il modello migliore nel piano** (16 ottobre 2026).
+    «In LaTeX» è andato sul sito con il lettore pix2text-mfr, che gira nel browser e a Glifo non costa niente
+    ([AI.md](AI.md), punto 2). Lo studente: «se si usa quello nel browser, che sbaglia più spesso, allora è
+    gratis; se poi si compra l'abbonamento, il modello migliore sarà nel piano». Deciso: il lettore nel
+    browser è in Classico; il modello migliore (di frontiera, che legge la scrittura sui server e costa a ogni
+    formula) è nei piani a pagamento. Cambia la decisione del 5 ottobre, che metteva tutta la conversione a
+    pagamento quando si pensava che la facesse solo l'AI dei server; segue la regola del 14 ottobre: è gratis
+    quello che lavora sul computer di chi scrive.
 
 ## La proposta dello studente (4 ottobre 2026)
 
@@ -270,9 +279,10 @@ mandato un link.
 | **L'assistente AI con la propria chiave** | A Glifo non costa niente |
 | **Un assaggio** dei piani a pagamento: 7 giorni di Relativistico, oppure poche domande al mese all'AI | Non si compra quello che non si è mai provato |
 | **La lavagna**: scrivere a mano accanto al testo, una per ogni nota, salvata sul dispositivo (deciso il 5 ottobre 2026) | Non costa niente, gira nel browser ed è scrivere |
+| **«In LaTeX» con il lettore nel browser**: le formule scritte sulla lavagna diventano LaTeX, con il controllo del motore (deciso il 16 ottobre 2026) | Il lettore gira sul computer di chi scrive e non costa niente; sbaglia più spesso del modello migliore, che è nei piani a pagamento |
 
-Fuori: spiegazioni, tutor, trascrizione e la conversione in LaTeX della lavagna (costano a ogni uso),
-l'SQL e il codice dagli schemi, le cartelle condivise, gli strumenti per la tesi.
+Fuori: spiegazioni, tutor, trascrizione e la conversione della lavagna con il modello migliore (costano a
+ogni uso), l'SQL e il codice dagli schemi, le cartelle condivise, gli strumenti per la tesi.
 
 **I grafici restano qui** (deciso il 4 ottobre 2026: lo studente non voleva toglierli). Sono la cosa
 che fa più effetto, e proprio per questo stanno nella vetrina. L'idea è far pagare solo la parte
@@ -304,7 +314,7 @@ fa al posto tuo.**
 | **Il tutor** (la voce «Aiuto con gli esercizi» della ROADMAP): chiede cosa hai provato, dà un indizio alla volta, controlla i tuoi passaggi; con un tetto al mese (per esempio 100 domande) | Ogni domanda costa a Glifo circa 2 centesimi: con il tetto il piano resta in attivo anche con chi lo usa molto. Un indizio alla volta è il «non semplificare troppo» |
 | **La trascrizione delle lezioni**: poche ore al mese (per esempio 3) e pacchetti di ore per chi ne vuole di più | Costa 20-40 centesimi per ora di lezione: chi registra tutte le lezioni (80 ore al mese) costerebbe 15-30 €. Se un giorno la trascrizione girerà nel browser (sul computer), quella non avrà tetto |
 | **L'SQL e il codice dagli schemi**: oggi l'SQL per più database; poi dallo schema E-R alle tabelle, dall'SQL allo schema, il codice dai diagrammi di flusso (C, C++, Java, Python, JavaScript) | Fa un lavoro al posto tuo, serve a un gruppo preciso con una scadenza (l'esame di basi di dati, di programmazione) e non è il motivo per scegliere Glifo; e, come dice lo studente, scrivere il codice a mano fa bene (deciso il 5 ottobre 2026). Nella proposta era già fuori dal gratuito. Gira nel browser, quindi si blocca solo sulla fiducia, e va bene così |
-| **La conversione della lavagna**: le formule scritte a mano diventano LaTeX, da aggiungere alla nota se si vuole (vedi «La lavagna») | Usa l'AI, che costa (poco) a ogni formula; la lavagna invece è gratis (deciso il 5 ottobre 2026) |
+| **La conversione della lavagna con il modello migliore**: le formule scritte a mano lette da un modello di frontiera, che sbaglia meno del lettore nel browser (vedi «La lavagna») | Usa l'AI dei server, che costa (poco) a ogni formula; la lavagna e «In LaTeX» con il lettore nel browser sono gratis (deciso il 5 e il 16 ottobre 2026) |
 | **Un gruppo di studio**: una cartella condivisa con pochi compagni (per esempio fino a 5), anche se loro hanno Classico | Chi è invitato entra gratis: ogni abbonato porta compagni su Glifo |
 | **Più spazio** (servirà con immagini e allegati) e la **cronologia delle versioni** di 30 giorni | Lo spazio costa |
 | **Senza la filigrana** sulle immagini e sui PDF | Chi paga non fa pubblicità a Glifo |
@@ -504,12 +514,12 @@ se si vuole, si aggiungono alla nota con un pulsante («Aggiungi alla nota»).
 
 ### Dopo
 
-- **La conversione in LaTeX**: si cerchia la formula e si preme «Converti»; Glifo la mostra disegnata
-  con KaTeX, con il codice da correggere se serve, e «Aggiungi alla nota» la mette dove c'è il
-  cursore. Se finisce con `=`, Glifo la calcola come le altre. La fa l'AI, che legge l'immagine della
-  formula (una frazione di centesimo a formula, e serve internet): i modelli che girano nel browser
-  sono pesanti e sbagliano di più. Con quale chiave (quella di chi scrive o quella di Glifo) si decide
-  con la discussione sulla chiave API; dal 14 ottobre 2026 se ne parla in [AI.md](AI.md), punto 2.
+- **La conversione in LaTeX**: fatta e sul sito dal 16 ottobre 2026, come «In LaTeX» nel menu della
+  Selezione ([AI.md](AI.md), punto 2): la legge un modello che gira nel browser (pix2text-mfr, circa
+  134 MB la prima volta), gratis; Glifo la mostra disegnata con KaTeX, con il controllo del motore e il
+  codice da correggere, e «Inserisci nella nota» la mette dove c'è il cursore. Il modello migliore, di
+  frontiera (una frazione di centesimo a formula, serve internet), sarà nei piani a pagamento (deciso il
+  16 ottobre 2026, punto 22 della discussione).
 - La lavagna anche sugli altri dispositivi, con l'account.
 - Riconoscere un simbolo senza internet (come Detexify, già tra le idee della ROADMAP), il testo
   scritto a mano, il tutor che guarda la lavagna e dice dove si è sbagliato.
