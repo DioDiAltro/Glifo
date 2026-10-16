@@ -463,7 +463,14 @@ finita il 14 ottobre 2026, il file non c'è più e si legge nella storia del rep
   passi, il tratto a mano e la figura con `pair`, così Annulla riporta il tratto), schermo intero (su iPad e iPhone
   senza quello del browser, `device.ts`: Safari ne usciva prendendo la penna per una tastiera; sotto,
   il resto dell'app è nascosto con `.board-full`). Sulla lavagna touchstart, touchmove e touchend
-  sono annullati: sull'iPad selezionavano le parole e facevano partire Scribble. In `main.ts`
+  sono annullati: sull'iPad selezionavano le parole e facevano partire Scribble. «In LaTeX» nel menu
+  della selezione (in prova, AI.md punto 2) c'è se c'è `BoardOptions.readLatex` e nella selezione c'è
+  scrittura: `readLatex` chiude il menu e passa i tratti presi a main.ts (la finestra è in src/ui/latexDialog.ts,
+  vedi `src/ai/`). `strokeImage.ts` le immagini per il lettore: `formulaLines` divide i tratti in righe (un tratto
+  resta nella riga sopra se lo spazio vuoto è meno di 0,8 volte la mediana delle altezze: frazioni, esponenti e
+  il segno di integrale restano insieme), `lineImage` disegna una riga nero su bianco in 384 × 384, stirata come
+  fa il TrOCR, con un margine di un sesto (`paddedBox`), `modelPixels` i valori per il modello, `linePreview`
+  la riga piccola per la finestra; senza evidenziatori. In `main.ts`
   la lavagna si toglie con la nota, segue la nota che cambia id con l'account (`replaced`,
   `adoptGuestNotes`) e uscendo dall'account si toglie, con l'avviso (con «Cambia account» resta, con le
   note dell'account). Per le prove nel browser lo stato
@@ -535,6 +542,26 @@ finita il 14 ottobre 2026, il file non c'è più e si legge nella storia del rep
   l'offline. Nelle prove nel browser il worker è sostituito da uno finto (`fakeLlmWorker` in
   `scripts/smoke-test.mjs`; per un grafico risponde con tre punti, uno sbagliato, per uno schema e una
   tabella con due punti se Glifo gli ha dato le frecce e i valori).
+  Il lettore delle formule della lavagna («In LaTeX», 16 ottobre 2026, sul ramo `prova`; AI.md punto 2):
+  pix2text-mfr 1.5 di BreezeDeus (un TrOCR, licenza MIT) con onnxruntime-web sul processore (WebAssembly, un
+  thread: senza COOP/COEP il browser non dà la memoria condivisa). `formulaModel.ts` il modello a una revisione
+  fissa di Hugging Face, i file con le misure (`READER_DOWNLOAD`, circa 134 MB), la cache `glifo-lettore` e i
+  messaggi; `formulaWorker.ts` il worker (onnxruntime-web sta solo lì): la prima volta scarica il modello e la
+  libreria `ort-wasm-simd-threaded.wasm` (14 MB, dal sito: la pagina gli passa l'indirizzo) e li tiene nella
+  cache, così dopo funziona offline; legge con il codificatore e poi un token alla volta, rifacendo ogni volta
+  tutto il decodificatore (il modello non ha la versione con la cache dei passi). `formulaTokens.ts` dai token
+  al testo (BPE «ByteLevel») e il giro (`greedy`); `formulaTidy.ts` la pulizia (`tidyLatex`, dalla prova di
+  scripts/prova-lettori.py, con i test sulle letture vere); `formulaReader.ts` il lato pagina (`formulaReader()`,
+  uno per pagina, e `readerInBrowser`, che guarda la cache senza scaricare). La finestra è
+  `src/ui/latexDialog.ts`, modale sul body: si vede anche a schermo intero e i tasti della casella non arrivano
+  alla lavagna. La prima volta chiede di scaricare (dentro claude.ai dice che lì non si può), poi per ogni
+  riga mostra la scrittura, la formula con KaTeX e il segno del motore (`sheetBefore` e `Sheet.read`, le righe
+  una dopo l'altra come nella nota), il codice da correggere e quanto ci ha messo; «Inserisci nella nota» con
+  `formulaInsertion` (src/editor/latexInsert.ts: una formula in una riga con del testo tra `$`, se no un
+  blocco `$$` per formula), «Copia». Nella PWA il worker è tra i file precaricati (è piccolo), la libreria e il
+  modello no. Nelle prove nel browser il worker è finto (`fakeFormulaWorker` in scripts/smoke-test.mjs: legge
+  un integrale e un conto sbagliato se nell'immagine c'è scrittura); `scripts/lettore-vero.mjs` prova quello
+  vero con una scrittura finta fatta di archi e linee.
   «Spiega con l'AI» (7 e 8 ottobre 2026, online dall'8): il pulsante ✨ dopo `$$` (`aiToggle` in main.ts,
   in fondo agli inserimenti di `toolbar.ts`) mostra nel pannello a destra, al posto dei simboli, la vista
   `ai` (`SidePanel.setView` e `setOpen`, `PanelView`; `data-panel` su `.app` dice quale pulsante è acceso;

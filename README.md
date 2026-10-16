@@ -825,6 +825,13 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
   Toccando un punto vuoto c'è **Incolla**, e nella barra **Tutto** e **Incolla**. Dalla tastiera
   Ctrl+A, Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+D, Canc, le frecce ed Esc. Ogni cosa si annulla con
   Annulla, e quello che si incolla va anche nella lavagna di un'altra nota.
+- **In LaTeX** (in prova sul sito di prova): nel menu della selezione, se c'è scrittura. Un lettore che
+  gira nel browser (pix2text-mfr) legge le formule prese, una per riga; la finestra mostra la
+  scrittura, la formula disegnata con il ✓ o il ✗ del motore (con le definizioni della nota prima del
+  cursore) e il codice LaTeX da correggere, poi **Inserisci nella nota** la mette dove c'è il cursore
+  (tra `$` in una riga con del testo, se no in un blocco `$$`) e **Copia** la copia. La prima volta
+  chiede di scaricare il lettore (circa 134 MB, il modello da Hugging Face); poi resta nel browser e
+  funziona anche senza connessione. La scrittura non esce dal dispositivo e resta sulla lavagna.
 - **Annulla** e **Ripeti** (anche Ctrl+Z e Ctrl+Y) e **Pulisci**, con la conferma.
 - **Spostarsi e ingrandire**: due dita, oppure la rotellina (con Ctrl ingrandisce), il tasto
   centrale o lo spazio tenuto premuto; il numero in basso a destra riporta alla vista di
@@ -1106,6 +1113,8 @@ src/
                           quanto spazio occupa Glifo nel browser (usage.ts)
   ai/assistant.ts         assistente AI: Anthropic con l'SDK, gli altri servizi nella «lingua» di OpenAI
   ai/services.ts          i servizi per la propria chiave: Anthropic, Gemini, OpenRouter, Ollama, altri
+  ai/formulaWorker.ts     il lettore delle formule della lavagna (pix2text-mfr con onnxruntime-web), in un worker
+  ai/formulaReader.ts     il lato pagina del lettore; formulaTidy.ts la pulizia del LaTeX letto
   account/
     sync.ts               sincronizzazione: manda e scarica le modifiche, nei conflitti tiene tutte e due le versioni
     controller.ts         quando sincronizzare (avvio, ritorno su Glifo, rete, dopo le modifiche)
@@ -1118,6 +1127,7 @@ src/
     shapes.ts             le figure precise: linee, frecce, poligoni ed ellissi riconosciuti nel tratto
     selection.ts          la selezione: il lazo, i tratti presi, spostare, ingrandire, copiare, colori
     ink.ts                il contorno dei tratti (perfect-freehand) e i colori dei due temi
+    strokeImage.ts        le righe dei tratti presi e le loro immagini per il lettore («In LaTeX»)
     store.ts              le lavagne in IndexedDB, un tratto per record, e le altre schede avvisate
     board.ts              penna, dita, mouse e palmo; strumenti, lazo, menu, annulla, spostare e ingrandire
     device.ts             iPad e iPhone, dove lo schermo intero del browser non va bene per scrivere
@@ -1278,6 +1288,10 @@ sua licenza).
 - gli schemi: [maxGraph](https://github.com/maxGraph/maxGraph) ([Apache 2.0](public/licenze/maxgraph.txt));
 - la lavagna: [perfect-freehand](https://github.com/steveruizok/perfect-freehand)
   ([MIT](public/licenze/perfect-freehand.txt));
+- il lettore delle formule della lavagna: [ONNX Runtime Web](https://github.com/microsoft/onnxruntime)
+  ([MIT](public/licenze/onnxruntime-web.txt)), con il modello
+  [Pix2Text-MFR](https://huggingface.co/breezedeus/pix2text-mfr-1.5) di BreezeDeus
+  ([MIT](public/licenze/pix2text-mfr.txt)), che si scarica da Hugging Face;
 - i file di Excel: [fflate](https://github.com/101arrowz/fflate) ([MIT](public/licenze/fflate.txt)), per lo zip;
 - il controllo ortografico: [Hunspell](https://github.com/hunspell/hunspell) (MPL 1.1 / GPL 2 / LGPL 2.1,
   in WebAssembly con `@farscrl/hunspell-wasm`, [MIT](public/licenze/hunspell.txt)), il dizionario italiano

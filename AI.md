@@ -19,7 +19,7 @@ insieme alla voce «L'AI» di [ROADMAP.md](ROADMAP.md) e alla riga che lo indica
 | Punto | Cosa | Stato |
 |---|---|---|
 | 1 | A cosa serve l'AI dei modelli di frontiera | deciso il 15 ottobre 2026 |
-| 2 | Dalla lavagna alla nota: la formula presa con il laccio diventa LaTeX | in corso: la prova dei lettori |
+| 2 | Dalla lavagna alla nota: la formula presa con il laccio diventa LaTeX | in prova sul sito di prova: «In LaTeX», con il lettore nel browser |
 | 3 | Da una foto alla nota | da discutere |
 | 4 | Dettare: la voce diventa testo nella nota | da discutere |
 | 5 | Registrare le lezioni e trascriverle | da discutere |
@@ -238,6 +238,34 @@ definizioni o equazioni, che nella nota non si giudicano. La scrittura a mano è
 **Risposte e decisioni.** 15 ottobre 2026, lo studente: «va bene il punto 1, partiamo dalla lavagna». Si parte
 dalla prova dei lettori; il progetto qui sopra, e se la conversione resta a pagamento quando basta il modello
 nel browser, si decidono con i risultati.
+
+**Le prime formule dello studente** (15 ottobre 2026, sulla lavagna del sito di prova, al computer, tema scuro).
+∫₀¹ x² dx = 1/3: giusta per tutti e due i lettori, con il ✓ del motore. La derivata di x² sin x, scritta con il −
+al posto del +: il motore mette il ✗ e dà quella giusta (2x sin x + x² cos x); il modello di frontiera la legge
+giusta (e nota che i tre 2 sono a forma di z), pix2text-mfr è da correggere poco (i tre 2 letti z). Conto
+provvisorio, su 2 formule: pix2text-mfr 1 giusta e 1 da correggere poco, il modello di frontiera 2 su 2.
+
+**«In LaTeX» sul ramo `prova`** (16 ottobre 2026). Lo studente: «dimmi cosa c'è sul ramo di prova che non sta sul
+principale; se non c'è nulla vorrei provare il lettore della lavagna nel sito di prova» (i due rami erano
+uguali). Fatto il progetto qui sopra, con il lettore nel browser, per provarlo con la propria scrittura:
+- nel menu della Selezione, se c'è scrittura, «In LaTeX»; la finestra (modale, così si vede anche a schermo
+  intero) mostra per ogni riga la scrittura, la formula con KaTeX e il ✓ o il ✗ del motore, il codice da
+  correggere e quanto ci ha messo il lettore; «Inserisci nella nota», «Copia», «Chiudi»;
+- la prima volta chiede di scaricare il lettore: circa 134 MB, il modello da Hugging Face (120 MB, a una
+  revisione fissa) e la libreria di onnxruntime-web dal sito di Glifo (14 MB); poi resta nel browser e
+  funziona anche senza rete; la scrittura non esce dal dispositivo (scritto nell'informativa);
+- legge sul processore, con WebAssembly e un thread solo: nella sessione da 1,5 a 6 secondi per formula
+  (sul computer dello studente di solito meno); sulle 20 formule stampate scrive le stesse cose del
+  programma in Python della prova;
+- la pulizia (`tidyLatex`) è quella della prova con qualche regola in più: il binomiale, \left e \right,
+  \mathrm e \! che chi scrive non mette, le graffe che non servono;
+- il modello di frontiera con la propria chiave non c'è ancora: è il passo dopo se il lettore nel browser
+  non basta (le immagini ai servizi della propria chiave, oggi solo testo).
+
+Nel codice: `src/ai/formulaModel.ts`, `formulaWorker.ts`, `formulaReader.ts`, `formulaTokens.ts`,
+`formulaTidy.ts`; `src/board/strokeImage.ts`; `src/ui/latexDialog.ts`; `src/editor/latexInsert.ts`. Nelle prove
+nel browser il lettore è finto (`fakeFormulaWorker` in scripts/smoke-test.mjs); `scripts/lettore-vero.mjs` prova
+quello vero con una scrittura finta. Da decidere: se va bene, e se resta gratis.
 
 ## 3. Da una foto alla nota
 

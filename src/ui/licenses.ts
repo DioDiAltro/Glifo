@@ -23,6 +23,8 @@ const T = texts({
     'i modelli Qwen3 e Qwen3.5 di «Spiegami», tra cui tutti i consigliati, del Qwen Team di Alibaba Cloud (la licenza degli altri modelli è nella sezione «AI», accanto a ognuno)',
     'the Qwen3 and Qwen3.5 “Explain” models, including all the recommended ones, by Alibaba Cloud\'s Qwen Team (the license of the other models is in the “AI” section, next to each one)',
   ],
+  reader: ['il lettore delle formule della lavagna, nel browser', 'the whiteboard formula reader, in the browser'],
+  readerModel: ['il modello che legge le formule scritte sulla lavagna, di BreezeDeus', 'the model that reads formulas written on the whiteboard, by BreezeDeus'],
   account: ['l\'account', 'the account'],
   assistant: ['l\'assistente AI con Claude', 'the AI assistant with Claude'],
 })
@@ -53,6 +55,8 @@ export const LICENSES: readonly License[] = [
   { name: 'dictionary-en', get what() { return T.english }, license: 'MIT, BSD', file: 'dizionario-inglese.txt', packages: ['dictionary-en'] },
   { name: 'WebLLM', get what() { return T.explain }, license: 'Apache 2.0', file: 'web-llm.txt', packages: ['@mlc-ai/web-llm'] },
   { name: 'Qwen3, Qwen3.5', get what() { return T.models }, license: 'Apache 2.0', file: 'qwen3.txt', packages: [] },
+  { name: 'ONNX Runtime Web', get what() { return T.reader }, license: 'MIT', file: 'onnxruntime-web.txt', packages: ['onnxruntime-web'] },
+  { name: 'Pix2Text-MFR', get what() { return T.readerModel }, license: 'MIT', file: 'pix2text-mfr.txt', packages: [] },
   { name: 'Supabase', get what() { return T.account }, license: 'MIT', file: 'supabase.txt', packages: ['@supabase/supabase-js'] },
   { name: 'Anthropic SDK', get what() { return T.assistant }, license: 'MIT', file: 'anthropic-sdk.txt', packages: ['@anthropic-ai/sdk'] },
 ]

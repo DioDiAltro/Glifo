@@ -99,6 +99,26 @@ function fakeLlmWorker(delay = 0) {
   })
 }
 
+/**
+ * Il worker finto del lettore delle formule della lavagna («In LaTeX», src/ai/formulaWorker.ts parla allo
+ * stesso modo): carica subito e, se nell'immagine c'è della scrittura (pixel scuri), legge la prima riga come
+ * un integrale e la seconda come un conto sbagliato, nel LaTeX a modo suo di pix2text-mfr.
+ */
+function fakeFormulaWorker() {
+  const readings = [String.raw`\int _ { 0 } ^ { 1 } x ^ { 2 } d x = \cfrac { 1 } { 3 }`, String.raw`2 + 2 = 5`]
+  let reads = 0
+  self.addEventListener('message', (ev) => {
+    const msg = ev.data
+    if (msg.type === 'load') {
+      self.postMessage({ id: msg.id, type: 'progress', loaded: 60_000_000, total: 120_000_000 })
+      setTimeout(() => self.postMessage({ id: msg.id, type: 'done' }), 100)
+    } else if (msg.type === 'read') {
+      const ink = msg.pixels.length === 3 * 384 * 384 && msg.pixels.some((v) => v < -0.5)
+      self.postMessage({ id: msg.id, type: 'done', text: ink ? readings[reads++ % 2] : '', ms: 1200 })
+    }
+  })
+}
+
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
   const errors = []
@@ -242,7 +262,7 @@ try {
         sections.rows[2].join() === 'Modelli di «Spiegami»,nessuno' &&
         sections.rows[3][0].startsWith('In tutto') &&
         /^Versione (locale|[0-9a-f]{7}) del \d{1,2} \w+ \d{4}\.$/.test(about.version) &&
-        about.licenses === 15 && license.ok() && (await license.text()).includes('MIT License') &&
+        about.licenses === 17 && license.ok() && (await license.text()).includes('MIT License') &&
         about.height === height,
       `le impostazioni a sezioni: l'elenco a sinistra, lo spazio in «Dati», la versione e le licenze in «Informazioni», e la finestra non cambia misura (${JSON.stringify({ sections, about })})`,
     )
@@ -2948,11 +2968,12 @@ try {
         inside: r.left >= 0 && r.right <= innerWidth,
         oneRow: items.every((b) => Math.abs(b.top - items[0].top) < 1),
         colorsBelow: colors.top >= items[0].bottom - 1,
+        latex: !!menu.querySelector('.board-sel-item.is-latex'),
       }
     })
     check(
-      phoneSelection.selected === '1' && phoneSelection.inside && phoneSelection.oneRow && phoneSelection.colorsBelow,
-      `sul telefono il lazo col dito prende la riga, e il menu della selezione sta nello schermo con i colori sotto (${JSON.stringify(phoneSelection)})`,
+      phoneSelection.selected === '1' && phoneSelection.inside && phoneSelection.oneRow && phoneSelection.colorsBelow && phoneSelection.latex,
+      `sul telefono il lazo col dito prende la riga, e il menu della selezione (con «In LaTeX») sta nello schermo con i colori sotto (${JSON.stringify(phoneSelection)})`,
     )
     await phoneBoard.close()
     // Gli strumenti: l'evidenziatore (trasparente, sempre sotto la scrittura), lo spessore della penna,
@@ -4290,6 +4311,97 @@ try {
     `dentro claude.ai Accedi e Condividi si vedono, ma l'accesso è spento e la finestra lo dice; i commenti non partono (${JSON.stringify({ viewerButtons, offMessage, stillEmail, viewerFeedbackOff })})`,
   )
   await viewer.close()
+
+  // «In LaTeX» (in prova, AI.md punto 2): la scrittura presa con la Selezione va al lettore nel browser, che qui è
+  // finto (il modello vero non si scarica: scripts/lettore-vero.mjs lo prova); la formula si vede con il segno del
+  // motore, si corregge e va nella nota dove c'è il cursore.
+  {
+    const lxContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block' })
+    const lx = await lxContext.newPage()
+    lx.on('pageerror', (e) => errors.push(e.message))
+    const hub = []
+    await lx.route('**/assets/formulaWorker-*.js', (route) => route.fulfill({ contentType: 'text/javascript', body: `(${fakeFormulaWorker})()` }))
+    await lx.route('https://huggingface.co/**', (route) => {
+      hub.push(route.request().url())
+      return route.abort()
+    })
+    await lx.goto(url)
+    await lx.waitForSelector('.cm-editor')
+    await lx.locator('.notes-head button[aria-label="Nuova nota"]').click()
+    await lx.keyboard.press('Control+a')
+    await lx.keyboard.type('# Lettore\n\nDue conti:\n')
+    await lx.locator('.view-button[aria-label="Lavagna"]').click()
+    await lx.waitForSelector('.board-pane[data-loaded="true"]')
+    const lcdp = await lxContext.newCDPSession(lx)
+    const lstage = await lx.locator('.board-stage').boundingBox()
+    const lstroke = async (points) => {
+      const send = (type, [x, y], pressed = true) =>
+        lcdp.send('Input.dispatchMouseEvent', { type, x: lstage.x + x, y: lstage.y + y, button: 'left', buttons: pressed ? 1 : 0, clickCount: 1, pointerType: 'pen', force: 0.5 })
+      await send('mousePressed', points[0])
+      for (const q of points.slice(1)) await send('mouseMoved', q)
+      await send('mouseReleased', points.at(-1), false)
+    }
+    /** Un giro chiuso di lati dritti, per il laccio. */
+    const around = (corners) => corners.slice(1).flatMap((q, i) => Array.from({ length: 10 }, (_, k) => [corners[i][0] + ((q[0] - corners[i][0]) * (k + 1)) / 10, corners[i][1] + ((q[1] - corners[i][1]) * (k + 1)) / 10]))
+    const zigzag = (x, y) => [[x, y], [x + 8, y + 30], [x + 16, y], [x + 24, y + 30]]
+    // Due righe di «scrittura», lontane tra loro: due formule.
+    for (const x of [60, 100, 140, 180]) await lstroke(zigzag(x, 100))
+    for (const x of [60, 100, 140]) await lstroke(zigzag(x, 260))
+    await lx.locator('.board-button[aria-label="Selezione"]').click()
+    await lstroke(around([[30, 60], [330, 60], [330, 330], [30, 330], [30, 62]]))
+    await lx.waitForSelector('.board-sel-item.is-latex')
+    const menuText = await lx.locator('.board-sel-menu').textContent()
+    await lx.locator('.board-sel-item.is-latex').click()
+    const latex = lx.locator('.dialog-latex')
+    await latex.waitFor()
+    await latex.locator('.latex-consent').waitFor()
+    const consent = await latex.locator('.latex-consent').textContent()
+    const previews = await latex.locator('.latex-writing canvas').count()
+    await latex.getByRole('button', { name: 'Scarica il lettore' }).click()
+    await lx.waitForFunction(() => [...document.querySelectorAll('.dialog-latex .latex-code')].every((c) => !c.disabled && c.value))
+    const readOut = await lx.$$eval('.dialog-latex .latex-line', (items) =>
+      items.map((li) => ({
+        tex: li.querySelector('.latex-code').value,
+        ok: !!li.querySelector('.calc-check.is-ok'),
+        wrong: li.querySelector('.calc-check.is-wrong')?.textContent ?? '',
+        drawn: !!li.querySelector('.latex-math .katex'),
+        note: li.querySelector('.latex-note').textContent,
+      })),
+    )
+    check(
+      menuText.includes('In LaTeX') && previews === 2 && consent.includes('134 MB') && consent.includes('Hugging Face') &&
+        readOut.length === 2 && readOut[0].tex === String.raw`\int_0^1 x^2 dx=\frac{1}{3}` && readOut[0].ok && readOut[0].drawn &&
+        readOut[1].tex === '2+2=5' && readOut[1].wrong.includes('4') && readOut[0].note.includes('1,2 s') && hub.length === 0,
+      `«In LaTeX» nel menu della selezione: due righe, il consenso prima di scaricare, il LaTeX pulito con il ✓ e il ✗ del motore (${JSON.stringify({ menuText, previews, consent, readOut, hub })})`,
+    )
+    // Il codice si corregge e la formula si ridisegna con il segno nuovo; poi va nella nota, sotto «Due conti:».
+    await latex.locator('.latex-code').nth(1).fill('2+2=4')
+    const fixed = await latex.locator('.latex-line').nth(1).locator('.calc-check.is-ok').count()
+    await latex.getByRole('button', { name: 'Inserisci nella nota' }).click()
+    await latex.waitFor({ state: 'detached' })
+    // Il testo delle righe dell'editor, senza i segni del motore (i widget non si scrivono).
+    const noteText = await lx.evaluate(() =>
+      [...document.querySelectorAll('.cm-line')]
+        .map((line) => {
+          const copy = line.cloneNode(true)
+          copy.querySelectorAll('[contenteditable="false"]').forEach((w) => w.remove())
+          return copy.textContent
+        })
+        .join('\n'),
+    )
+    check(
+      fixed === 1 && noteText.includes('Due conti:\n$$\n\\int_0^1 x^2 dx=\\frac{1}{3}\n$$\n\n$$\n2+2=4\n$$'),
+      `«Inserisci nella nota» mette le formule corrette nella nota, una per blocco, dove c'è il cursore (${JSON.stringify({ fixed, noteText })})`,
+    )
+    // La seconda volta il lettore è pronto: niente consenso, legge subito.
+    await lstroke(around([[25, 62], [230, 62], [230, 160], [25, 160], [25, 64]]))
+    await lx.waitForSelector('.board-sel-item.is-latex')
+    await lx.locator('.board-sel-item.is-latex').click()
+    await lx.waitForFunction(() => document.querySelector('.dialog-latex .latex-code')?.value)
+    const again = { consent: await lx.locator('.dialog-latex .latex-consent').count(), lines: await lx.locator('.dialog-latex .latex-line').count() }
+    check(again.consent === 0 && again.lines === 1, `la seconda volta «In LaTeX» legge subito, senza chiedere di scaricare (${JSON.stringify(again)})`)
+    await lxContext.close()
+  }
 
   check(errors.length === 0, `nessun errore nella pagina${errors.length ? ': ' + errors.join('; ') : ''}`)
 } finally {

@@ -105,6 +105,9 @@ import {
 import { leaveRelocationDone, relocationBanner, showRelocationDone, showRelocationPage, takeRelocationDone } from './ui/relocation'
 import { Board } from './board/board'
 import { BoardStore } from './board/store'
+import { formulaLines, lineImage, linePreview } from './board/strokeImage'
+import { formulaReader, readerInBrowser } from './ai/formulaReader'
+import { openLatexDialog } from './ui/latexDialog'
 import { newStrokeId } from './board/strokes'
 
 /** Quale Glifo è (src/site.ts): nella build per claude.ai e sul sito di prova l'account è spento. */
@@ -528,6 +531,9 @@ const board = new Board({
       danger: true,
     }),
   warn: (message) => toast(message, 'error'),
+  // «In LaTeX» (AI.md, punto 2): il lettore nel browser legge la scrittura presa, la formula va nella nota.
+  readLatex: (strokes) =>
+    openLatexDialog({ lines: formulaLines(strokes), view: editor.view, reader: formulaReader(), inBrowser: readerInBrowser, image: lineImage, preview: linePreview }),
 })
 
 const editor = new MarkdownEditor(editorHost, active.content, {

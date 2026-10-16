@@ -95,6 +95,13 @@ Glifo sono in [ABBONAMENTI.md](ABBONAMENTI.md), «La chiave, il server locale e 
 Il 15 ottobre 2026 lo studente ha approvato il punto 1 («va bene il punto 1, partiamo dalla lavagna»): si
 comincia dalla lavagna (punto 2), con la prova dei lettori sulle formule scritte da lui.
 
+Il 16 ottobre 2026 lo studente ha chiesto di provare il lettore sul sito di prova: sul ramo `prova` c'è
+«In LaTeX» nel menu della Selezione, con pix2text-mfr nel browser (AI.md, punto 2). Prima del sito vero:
+lo studente dice come va con la sua scrittura; il lettore va tra i dati del browser nelle impostazioni
+(«Dati», con «Togli», come i modelli di «Spiegami»); si decide se resta gratis (il modello nel browser
+non costa niente a Glifo) o va nei piani a pagamento (ABBONAMENTI.md, «La lavagna»); si aggiunge una
+domanda frequente.
+
 ### Account: i propri appunti su ogni dispositivo, anche da condividere
 
 **Cosa:** ognuno ha il suo account e ritrova gli stessi appunti su PC, tablet e telefono.
@@ -336,7 +343,8 @@ lavagna». Se servirà:
 
 - con l'AI e nei piani a pagamento (deciso il 5 ottobre 2026), le formule scritte a mano prese con il
   laccio e convertite in LaTeX, da aggiungere alla nota se si vuole («Aggiungi alla nota»): se ne parla in
-  [AI.md](AI.md), punto 2 (14 ottobre 2026);
+  [AI.md](AI.md), punto 2 (14 ottobre 2026); in prova dal 16 ottobre 2026 sul ramo `prova` («In LaTeX»,
+  con il lettore nel browser);
 - **una lavagna completa di tutto** (lo studente, 5 ottobre 2026: «deve essere una lavagna completa
   di tutto», come Microsoft Whiteboard). I primi cinque punti sono fatti e pubblicati (5 ottobre
   2026, «sì a tutto, comincia dagli strumenti della lavagna», poi «sì, parti con le linee e le

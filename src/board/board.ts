@@ -139,6 +139,8 @@ const T = texts({
   duplicateKeys: ['Duplica (Ctrl+D)', 'Duplicate (Ctrl+D)'],
   delete: ['Elimina', 'Delete'],
   deleteKeys: ['Elimina (Canc)', 'Delete (Del)'],
+  toLatex: ['In LaTeX', 'To LaTeX'],
+  toLatexTitle: ['Leggi la scrittura e scrivila in LaTeX', 'Read the handwriting and write it in LaTeX'],
   color: ['Colore', 'Color'],
   colorNamed: (name: string) => [`Colore: ${name.toLowerCase()}`, `Color: ${name.toLowerCase()}`],
   // Gli avvisi.
@@ -156,6 +158,8 @@ export interface BoardOptions {
   confirmClear(): Promise<boolean>
   /** Un problema da dire (per esempio: la lavagna non si salva). */
   warn(message: string): void
+  /** «In LaTeX» nel menu della selezione: legge i tratti presi (AI.md, punto 2). Senza, la voce non c'è. */
+  readLatex?(strokes: Stroke[]): void
 }
 
 type Tool = 'pen' | 'highlight' | 'eraser' | 'lasso'
@@ -1641,7 +1645,7 @@ export class Board {
     this.select(after, !!this.selMenu)
   }
 
-  /** Il menu della selezione, sopra i tratti presi: Taglia, Copia, Duplica, Elimina e i colori. */
+  /** Il menu della selezione, sopra i tratti presi: Taglia, Copia, Duplica, Elimina, In LaTeX e i colori. */
   private openSelMenu(): void {
     this.closeSelMenu()
     const list = this.selected()
@@ -1680,11 +1684,22 @@ export class Board {
       item(T.copy, T.copyKeys, () => this.copySelection()),
       item(T.duplicate, T.duplicateKeys, () => this.duplicate()),
       item(T.delete, T.deleteKeys, () => this.deleteSelection(), ' is-danger'),
+      // Solo se c'è scrittura: l'evidenziatore non si legge. Senza `run`: la finestra che si apre tiene il fuoco.
+      highlight || !this.opts.readLatex
+        ? null
+        : h('button', { class: 'board-sel-item is-latex', title: T.toLatexTitle, attrs: { type: 'button' }, on: { click: () => this.readLatex() } }, T.toLatex),
       h('div', { class: 'board-sel-colors', attrs: { role: 'group', 'aria-label': T.color } }, colors),
     )
     this.el.append(menu)
     this.selMenu = menu
     this.placeSelMenu()
+  }
+
+  /** «In LaTeX»: i tratti presi vanno al lettore delle formule; la selezione resta, il menu si chiude. */
+  private readLatex(): void {
+    const list = this.selected()
+    this.closeSelMenu()
+    this.opts.readLatex?.(list)
   }
 
   /** Toccando col lazo dove non c'è niente: «Incolla» lì, come in Note di Apple. */

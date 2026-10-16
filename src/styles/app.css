@@ -2205,7 +2205,8 @@ kbd {
 /* Il controllo del risultato scritto (src/render/check.ts): ✓ giusto, ✗ sbagliato con il valore giusto. */
 .cm-calc-check,
 .markdown-body .calc-check,
-.explain-box .calc-check {
+.explain-box .calc-check,
+.dialog-latex .calc-check {
   margin-left: 0.35em;
   padding: 0 0.4em;
   border-radius: 6px;
@@ -2218,21 +2219,24 @@ kbd {
 
 .cm-calc-check.is-ok,
 .markdown-body .calc-check.is-ok,
-.explain-box .calc-check.is-ok {
+.explain-box .calc-check.is-ok,
+.dialog-latex .calc-check.is-ok {
   color: var(--ok);
   background: color-mix(in srgb, var(--ok) 12%, transparent);
 }
 
 .cm-calc-check.is-wrong,
 .markdown-body .calc-check.is-wrong,
-.explain-box .calc-check.is-wrong {
+.explain-box .calc-check.is-wrong,
+.dialog-latex .calc-check.is-wrong {
   color: var(--danger);
   background: var(--danger-soft);
 }
 
 .cm-calc-check .katex,
 .markdown-body .calc-check .katex,
-.explain-box .calc-check .katex {
+.explain-box .calc-check .katex,
+.dialog-latex .calc-check .katex {
   font-size: 1.1em;
 }
 
@@ -3362,6 +3366,93 @@ kbd {
 
 .confirm-message {
   margin: 8px 0 16px;
+}
+
+/* «In LaTeX» (src/ui/latexDialog.ts): per ogni riga presa con la Selezione la scrittura, la formula disegnata
+   con il segno del motore, il suo codice da correggere e quanto ci ha messo il lettore. */
+.dialog-latex {
+  width: min(640px, calc(100vw - 32px));
+}
+
+.latex-status {
+  margin: 10px 0 4px;
+}
+
+.latex-status:empty {
+  display: none;
+}
+
+.latex-consent {
+  margin: 0 0 10px;
+}
+
+.latex-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.latex-line {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* La scrittura come la legge il lettore: nero su bianco anche nel tema scuro. */
+.latex-writing {
+  align-self: flex-start;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.latex-writing canvas {
+  display: block;
+}
+
+.latex-render {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+}
+
+.latex-render:empty {
+  display: none;
+}
+
+.latex-math {
+  min-width: 0;
+  font-size: 1.1em;
+}
+
+.latex-math .katex-display {
+  margin: 4px 0;
+}
+
+.latex-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.latex-note:empty {
+  display: none;
+}
+
+.latex-error {
+  margin: 0 0 8px;
+  color: var(--danger);
+}
+
+.latex-help {
+  margin: 14px 0 14px;
 }
 
 .dialog-actions {
@@ -5435,6 +5526,12 @@ kbd {
   color: var(--danger);
 }
 
+/* «In LaTeX»: porta la scrittura nella nota, con il colore delle azioni. */
+.board-sel-item.is-latex {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
 .board-sel-colors {
   display: flex;
   gap: 1px;
@@ -5482,10 +5579,10 @@ kbd {
     margin-left: 2px;
   }
 
-  /* Il menu della selezione su due righe: sopra le azioni, sotto i colori. */
+  /* Il menu della selezione su due righe: sopra le azioni (con «In LaTeX» cinque), sotto i colori. */
   .board-sel-menu {
     display: grid;
-    grid-template-columns: repeat(4, auto);
+    grid-template-columns: repeat(5, auto);
     justify-content: center;
   }
 

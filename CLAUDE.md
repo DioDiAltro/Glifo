@@ -60,6 +60,10 @@ prossimi passi sono in «In programma» nella ROADMAP.
   llama.cpp con lo stesso modello in GGUF e Glifo vero per tutto il resto (comando nell'intestazione dello
   script). llama.cpp (compilato dal pacchetto `llama-cpp-python` di PyPI) è codice scaricato da fuori:
   prima chiedi allo studente (il 14 ottobre 2026 ha detto sì).
+- `node scripts/lettore-vero.mjs`: «In LaTeX» con il lettore vero (pix2text-mfr con onnxruntime-web) sulla build
+  in `dist/` (le prove di sempre usano un lettore finto): scrive due formule sulla lavagna, le legge e le mette
+  nella nota. Dalle sessioni il browser non arriva a Hugging Face: con `MODELLO=cartella` i file del modello
+  vengono da lì (`python3 -I scripts/prova-lettori.py scarica cartella`). `FOTO=cartella` per le foto, `TEMA=scuro`.
 - `node scripts/relocation-test.mjs`: prova il trasloco su glifo.page con i due indirizzi veri
   (vecchio sito → nuovo): fa da sé una build con le date del trasloco accese e serve `CHROMIUM_PATH`;
   con `FOTO=cartella` salva le foto della fascia, della pagina finale e del messaggio sul sito nuovo.
@@ -98,7 +102,7 @@ documentazione, non codice: la regola di delegare all'esploratore vale per il co
 - `src/math/`: le espressioni delle formule: lettura, calcoli e il «foglio» della nota con i controlli.
 - `src/graph/`: i grafici nella nota (2D e 3D, zone, piano di Gauss, statistica, i dati delle tabelle, il Gantt e il reticolo) con gli slider.
 - `src/board/`: la lavagna per scrivere a mano accanto al testo.
-- `src/ai/`: assistente AI, con la chiave di chi lo usa, e «Spiegami» (in prova): un modello nel browser con WebLLM (Qwen3 o un altro dell'elenco ragionato), con il motore come strumenti.
+- `src/ai/`: assistente AI, con la chiave di chi lo usa, e «Spiegami» (in prova): un modello nel browser con WebLLM (Qwen3 o un altro dell'elenco ragionato), con il motore come strumenti; il lettore delle formule della lavagna («In LaTeX», sul ramo `prova`): pix2text-mfr con onnxruntime-web.
 - `src/i18n.ts`: le due lingue dell'interfaccia (la lingua della pagina e le tabelle dei testi).
 - `src/host.ts`: funzioni della demo dentro claude.ai.
 - `src/account/`: account e sincronizzazione con Supabase.
@@ -131,7 +135,9 @@ documentazione, non codice: la regola di delegare all'esploratore vale per il co
   CAPTCHA acceso in Supabase): nelle prove nel browser Turnstile è finto (`scripts/fake-supabase.mjs`),
   e se Glifo cambia indirizzo il nuovo dominio va aggiunto al widget in Cloudflare.
 - WebLLM (6 MB) sta solo nel worker `src/ai/llmWorker.ts`: la pagina non lo importa mai, parla con il
-  worker da `src/ai/local.ts`. Nelle prove nel browser il worker è finto (Qwen3 non si scarica).
+  worker da `src/ai/local.ts`. Nelle prove nel browser il worker è finto (Qwen3 non si scarica). Lo stesso
+  per onnxruntime-web, solo in `src/ai/formulaWorker.ts`: il modello del lettore (da Hugging Face) e la sua
+  libreria WebAssembly si scaricano solo dopo il sì di chi usa Glifo e restano nella cache `glifo-lettore`.
 - La prima volta Glifo prende la lingua dal browser: gli script con Playwright (prove, video del
   tutorial, foto) aprono il browser con `locale: 'it-IT'`, e le prove unitarie sono in italiano
   (`tests/support/lang.ts`; quelle in inglese nei file `*En*.test.ts`). Le parole che si scrivono nelle
