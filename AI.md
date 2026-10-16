@@ -19,7 +19,7 @@ insieme alla voce «L'AI» di [ROADMAP.md](ROADMAP.md) e alla riga che lo indica
 | Punto | Cosa | Stato |
 |---|---|---|
 | 1 | A cosa serve l'AI dei modelli di frontiera | deciso il 15 ottobre 2026 |
-| 2 | Dalla lavagna alla nota: la formula presa con il laccio diventa LaTeX | in prova sul sito di prova: «In LaTeX», con il lettore nel browser |
+| 2 | Dalla lavagna alla nota: la formula presa con il laccio diventa LaTeX | fatto: «In LaTeX», con il lettore nel browser, sul sito dal 16 ottobre 2026 |
 | 3 | Da una foto alla nota | da discutere |
 | 4 | Dettare: la voce diventa testo nella nota | da discutere |
 | 5 | Registrare le lezioni e trascriverle | da discutere |
@@ -265,7 +265,13 @@ uguali). Fatto il progetto qui sopra, con il lettore nel browser, per provarlo c
 Nel codice: `src/ai/formulaModel.ts`, `formulaWorker.ts`, `formulaReader.ts`, `formulaTokens.ts`,
 `formulaTidy.ts`; `src/board/strokeImage.ts`; `src/ui/latexDialog.ts`; `src/editor/latexInsert.ts`. Nelle prove
 nel browser il lettore è finto (`fakeFormulaWorker` in scripts/smoke-test.mjs); `scripts/lettore-vero.mjs` prova
-quello vero con una scrittura finta. Da decidere: se va bene, e se resta gratis.
+quello vero con una scrittura finta.
+
+**Sul sito** (16 ottobre 2026). Lo studente, provato sul sito di prova: «funziona abbastanza bene, diciamo che
+possiamo metterlo sul ramo principale». «In LaTeX» è andato sul sito. Restano, scritti in ROADMAP.md: il lettore
+tra i dati del browser nelle impostazioni (con «Togli»), una domanda frequente, se resta gratis o va nei piani a
+pagamento, e il modello di frontiera con la propria chiave se il lettore nel browser non basta. Il prossimo è il
+punto 3.
 
 ## 3. Da una foto alla nota
 

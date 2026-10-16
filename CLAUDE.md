@@ -102,7 +102,7 @@ documentazione, non codice: la regola di delegare all'esploratore vale per il co
 - `src/math/`: le espressioni delle formule: lettura, calcoli e il «foglio» della nota con i controlli.
 - `src/graph/`: i grafici nella nota (2D e 3D, zone, piano di Gauss, statistica, i dati delle tabelle, il Gantt e il reticolo) con gli slider.
 - `src/board/`: la lavagna per scrivere a mano accanto al testo.
-- `src/ai/`: assistente AI, con la chiave di chi lo usa, e «Spiegami» (in prova): un modello nel browser con WebLLM (Qwen3 o un altro dell'elenco ragionato), con il motore come strumenti; il lettore delle formule della lavagna («In LaTeX», sul ramo `prova`): pix2text-mfr con onnxruntime-web.
+- `src/ai/`: assistente AI, con la chiave di chi lo usa, e «Spiegami» (in prova): un modello nel browser con WebLLM (Qwen3 o un altro dell'elenco ragionato), con il motore come strumenti; il lettore delle formule della lavagna («In LaTeX»): pix2text-mfr con onnxruntime-web.
 - `src/i18n.ts`: le due lingue dell'interfaccia (la lingua della pagina e le tabelle dei testi).
 - `src/host.ts`: funzioni della demo dentro claude.ai.
 - `src/account/`: account e sincronizzazione con Supabase.

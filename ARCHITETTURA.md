@@ -542,7 +542,7 @@ finita il 14 ottobre 2026, il file non c'è più e si legge nella storia del rep
   l'offline. Nelle prove nel browser il worker è sostituito da uno finto (`fakeLlmWorker` in
   `scripts/smoke-test.mjs`; per un grafico risponde con tre punti, uno sbagliato, per uno schema e una
   tabella con due punti se Glifo gli ha dato le frecce e i valori).
-  Il lettore delle formule della lavagna («In LaTeX», 16 ottobre 2026, sul ramo `prova`; AI.md punto 2):
+  Il lettore delle formule della lavagna («In LaTeX», 16 ottobre 2026, in prova; AI.md punto 2):
   pix2text-mfr 1.5 di BreezeDeus (un TrOCR, licenza MIT) con onnxruntime-web sul processore (WebAssembly, un
   thread: senza COOP/COEP il browser non dà la memoria condivisa). `formulaModel.ts` il modello a una revisione
   fissa di Hugging Face, i file con le misure (`READER_DOWNLOAD`, circa 134 MB), la cache `glifo-lettore` e i

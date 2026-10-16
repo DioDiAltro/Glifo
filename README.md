@@ -825,7 +825,7 @@ Chi fa Glifo li legge tutti, anche quelli privati, nella dashboard di Supabase: 
   Toccando un punto vuoto c'è **Incolla**, e nella barra **Tutto** e **Incolla**. Dalla tastiera
   Ctrl+A, Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+D, Canc, le frecce ed Esc. Ogni cosa si annulla con
   Annulla, e quello che si incolla va anche nella lavagna di un'altra nota.
-- **In LaTeX** (in prova sul sito di prova): nel menu della selezione, se c'è scrittura. Un lettore che
+- **In LaTeX** (in prova): nel menu della selezione, se c'è scrittura. Un lettore che
   gira nel browser (pix2text-mfr) legge le formule prese, una per riga; la finestra mostra la
   scrittura, la formula disegnata con il ✓ o il ✗ del motore (con le definizioni della nota prima del
   cursore) e il codice LaTeX da correggere, poi **Inserisci nella nota** la mette dove c'è il cursore
