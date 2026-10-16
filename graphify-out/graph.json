@@ -55287,7 +55287,7 @@
       "node_kind": "heading",
       "norm_label": "3. da una foto alla nota",
       "source_file": "AI.md",
-      "source_location": "L270"
+      "source_location": "L276"
     },
     {
       "id": "ai_4_dettare_la_voce_diventa_testo_nella_nota",
@@ -55299,7 +55299,7 @@
       "node_kind": "heading",
       "norm_label": "4. dettare: la voce diventa testo nella nota",
       "source_file": "AI.md",
-      "source_location": "L331"
+      "source_location": "L337"
     },
     {
       "id": "ai_5_registrare_le_lezioni_e_trascriverle",
@@ -55311,7 +55311,7 @@
       "node_kind": "heading",
       "norm_label": "5. registrare le lezioni e trascriverle",
       "source_file": "AI.md",
-      "source_location": "L393"
+      "source_location": "L399"
     },
     {
       "id": "ai_da_sistemare_con_il_primo_punto_che_tocca_l_ai",
@@ -55323,7 +55323,7 @@
       "node_kind": "heading",
       "norm_label": "da sistemare con il primo punto che tocca l'ai",
       "source_file": "AI.md",
-      "source_location": "L469"
+      "source_location": "L475"
     },
     {
       "id": "ai_fonti_controllate_il_14_ottobre_2026",
@@ -55335,7 +55335,7 @@
       "node_kind": "heading",
       "norm_label": "fonti (controllate il 14 ottobre 2026)",
       "source_file": "AI.md",
-      "source_location": "L485"
+      "source_location": "L491"
     },
     {
       "id": "ai_in_che_ordine",
@@ -55347,7 +55347,7 @@
       "node_kind": "heading",
       "norm_label": "in che ordine",
       "source_file": "AI.md",
-      "source_location": "L477"
+      "source_location": "L483"
     },
     {
       "id": "ai_l_ai_a_cosa_serve_e_le_foto_la_lavagna_e_la_voce_nella_nota",
@@ -56175,7 +56175,7 @@
       "node_kind": "heading",
       "norm_label": "account: i propri appunti su ogni dispositivo, anche da condividere",
       "source_file": "ROADMAP.md",
-      "source_location": "L105"
+      "source_location": "L110"
     },
     {
       "id": "roadmap_commenti_di_chi_prova_glifo",
@@ -56187,7 +56187,7 @@
       "node_kind": "heading",
       "norm_label": "commenti di chi prova glifo",
       "source_file": "ROADMAP.md",
-      "source_location": "L291"
+      "source_location": "L296"
     },
     {
       "id": "roadmap_idee_per_il_futuro",
@@ -56235,7 +56235,7 @@
       "node_kind": "heading",
       "norm_label": "la lavagna: idee in piu",
       "source_file": "ROADMAP.md",
-      "source_location": "L332"
+      "source_location": "L337"
     },
     {
       "id": "roadmap_pi\u00f9_avanti",
@@ -56247,7 +56247,7 @@
       "node_kind": "heading",
       "norm_label": "piu avanti",
       "source_file": "ROADMAP.md",
-      "source_location": "L289"
+      "source_location": "L294"
     },
     {
       "id": "roadmap_schemi_idee_in_pi\u00f9",
@@ -56259,7 +56259,7 @@
       "node_kind": "heading",
       "norm_label": "schemi: idee in piu",
       "source_file": "ROADMAP.md",
-      "source_location": "L380"
+      "source_location": "L385"
     },
     {
       "id": "roadmap_trasloco_il_sito_su_cloudflare_con_un_dominio_tutto_di_glifo",
@@ -67846,6 +67846,18 @@
       "type": "external"
     },
     {
+      "id": "ref_node_http",
+      "label": "ref_node_http",
+      "_origin": "semantic",
+      "community": 28,
+      "community_name": "lettore-vero.mjs",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "ref_node_http",
+      "source_file": "",
+      "type": "external"
+    },
+    {
       "id": "ref_node_os",
       "label": "ref_node_os",
       "_origin": "semantic",
@@ -68010,17 +68022,6 @@
       "external": true,
       "file_type": "concept",
       "norm_label": "ref_node_crypto",
-      "source_file": "",
-      "type": "external"
-    },
-    {
-      "id": "ref_node_http",
-      "label": "ref_node_http",
-      "community": 28,
-      "community_name": "lettore-vero.mjs",
-      "external": true,
-      "file_type": "concept",
-      "norm_label": "ref_node_http",
       "source_file": "",
       "type": "external"
     }
@@ -250519,7 +250520,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AI.md",
-      "source_location": "L270",
+      "source_location": "L276",
       "weight": 1.0
     },
     {
@@ -250541,7 +250542,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AI.md",
-      "source_location": "L331",
+      "source_location": "L337",
       "weight": 1.0
     },
     {
@@ -250552,7 +250553,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AI.md",
-      "source_location": "L393",
+      "source_location": "L399",
       "weight": 1.0
     },
     {
@@ -250563,7 +250564,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AI.md",
-      "source_location": "L469",
+      "source_location": "L475",
       "weight": 1.0
     },
     {
@@ -250574,7 +250575,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AI.md",
-      "source_location": "L477",
+      "source_location": "L483",
       "weight": 1.0
     },
     {
@@ -250585,7 +250586,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AI.md",
-      "source_location": "L485",
+      "source_location": "L491",
       "weight": 1.0
     },
     {
@@ -251619,7 +251620,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ROADMAP.md",
-      "source_location": "L289",
+      "source_location": "L294",
       "weight": 1.0
     },
     {
@@ -251630,7 +251631,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ROADMAP.md",
-      "source_location": "L105",
+      "source_location": "L110",
       "weight": 1.0
     },
     {
@@ -251663,7 +251664,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ROADMAP.md",
-      "source_location": "L291",
+      "source_location": "L296",
       "weight": 1.0
     },
     {
@@ -251674,7 +251675,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ROADMAP.md",
-      "source_location": "L332",
+      "source_location": "L337",
       "weight": 1.0
     },
     {
@@ -251685,7 +251686,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ROADMAP.md",
-      "source_location": "L380",
+      "source_location": "L385",
       "weight": 1.0
     },
     {
@@ -304504,7 +304505,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "ROADMAP.md",
-      "source_location": "L121",
+      "source_location": "L126",
       "weight": 1.0
     },
     {
@@ -310530,6 +310531,18 @@
     },
     {
       "source": "architettura_dove_sono_le_cose",
+      "target": "src_ai_formulareader_formulareader",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "context": "formulaReader()",
+      "source_file": "ARCHITETTURA.md",
+      "source_location": "L554",
+      "weight": 1.0
+    },
+    {
+      "source": "architettura_dove_sono_le_cose",
       "target": "src_spreadsheet_formula_formularefs",
       "relation": "references",
       "_origin": "ast",
@@ -312097,7 +312110,7 @@
       "confidence_score": 0.95,
       "context": "reply",
       "source_file": "ROADMAP.md",
-      "source_location": "L308",
+      "source_location": "L313",
       "weight": 1.0
     },
     {
@@ -313345,7 +313358,7 @@
       "confidence_score": 0.95,
       "context": "visible",
       "source_file": "ROADMAP.md",
-      "source_location": "L308",
+      "source_location": "L313",
       "weight": 1.0
     },
     {
@@ -313518,5 +313531,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "70b6ed2b76b2933cf18aa492592e935dc224202b"
+  "built_at_commit": "d4f84814bf3d532406ad912a1f24b8ac45a75727"
 }
