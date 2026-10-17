@@ -195,10 +195,25 @@ export function faqGroups(): FaqGroup[] {
             ],
           },
           {
+            id: 'in-latex',
+            question: 'Come trasformo in LaTeX una formula scritta a mano sulla lavagna?',
+            answer: [
+              p(
+                'Sulla lavagna prendi la formula con la Selezione (il laccio, l\'ultimo strumento) e nel menu che si apre premi «In LaTeX». Glifo la legge con un modello che gira nel tuo browser e ti mostra la formula disegnata, con il ✓ o il ✗ se c\'è un «=», e il suo codice LaTeX, da correggere se ha sbagliato qualcosa. Poi «Inserisci nella nota» la mette dove c\'è il cursore.',
+              ),
+              p(
+                'Se prendi più formule insieme, scrivile su righe diverse, con un po\' di spazio tra una e l\'altra: diventano una formula per riga. Legge bene la scrittura chiara, ma può sbagliare qualche segno (un 2 che sembra una z, per esempio): per questo c\'è il codice da correggere.',
+              ),
+              p(
+                'La prima volta il lettore si scarica, solo se dici di sì (circa 134 MB); poi resta nel browser e funziona anche offline, e la tua scrittura non esce dal dispositivo. È gratis, e si toglie in Impostazioni → Dati.',
+              ),
+            ],
+          },
+          {
             id: 'ai-e-appunti',
             question: 'I miei appunti finiscono a un\'intelligenza artificiale?',
             answer: [
-              p('Con «Spiegami» no: il modello gira nel tuo browser e la nota resta sul tuo dispositivo.'),
+              p('Con «Spiegami» e con «In LaTeX» no: il modello gira nel tuo browser, e la nota e la scrittura della lavagna restano sul tuo dispositivo.'),
               p(
                 '«Chiedi all\'AI», nella ricerca dei simboli, funziona solo se metti una tua chiave in Impostazioni → AI: allora quello che scrivi nella ricerca va al servizio che hai scelto (per esempio Anthropic o Gemini). Senza chiave non parte niente.',
               ),
@@ -388,10 +403,25 @@ export function faqGroups(): FaqGroup[] {
             ],
           },
           {
+            id: 'in-latex',
+            question: 'How do I turn a formula handwritten on the whiteboard into LaTeX?',
+            answer: [
+              p(
+                'On the whiteboard, pick up the formula with Select (the lasso, the last tool) and press “To LaTeX” in the menu that opens. Glifo reads it with a model that runs in your browser and shows you the formula drawn out, with ✓ or ✗ if there\'s an “=”, and its LaTeX code, to fix if it got something wrong. Then “Insert into the note” puts it where the cursor is.',
+              ),
+              p(
+                'If you pick up several formulas together, write them on separate lines with some space between them: they become one formula per line. It reads clear handwriting well, but it can get a sign wrong (a 2 that looks like a z, for example): that\'s why the code is there to fix.',
+              ),
+              p(
+                'The first time, the reader downloads, only if you say yes (about 134 MB); then it stays in your browser and works offline too, and your handwriting never leaves the device. It\'s free, and you can remove it in Settings → Data.',
+              ),
+            ],
+          },
+          {
             id: 'ai-e-appunti',
             question: 'Do my notes end up with an AI?',
             answer: [
-              p('With “Explain”, no: the model runs in your browser and the note stays on your device.'),
+              p('With “Explain” and “To LaTeX”, no: the model runs in your browser, and the note and your whiteboard handwriting stay on your device.'),
               p(
                 '“Ask AI”, in the symbol search, works only if you add your own key in Settings → AI: then what you type in the search goes to the service you chose (for example Anthropic or Gemini). Without a key nothing is sent.',
               ),
