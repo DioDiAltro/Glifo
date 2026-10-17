@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Informativa sulla privacy – Glifo</title>
+    <meta name="description" content="Quali dati tiene Glifo, dove, per quanto tempo e come scaricarli o eliminarli." />
+    <meta name="theme-color" content="#4f46e5" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <script>
+      // Lo stesso tema scelto in Glifo (Impostazioni → Tema), se c'è.
+      try {
+        var theme = JSON.parse(localStorage.getItem('glifo.settings.v1') || '{}').theme
+        if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme
+      } catch (e) {}
+    </script>
+    <script>
+      // La lingua di Glifo (src/i18n.ts): quella dell'indirizzo (#it, #en), se no quella scelta in Glifo;
+      // la prima volta quella del browser (l'italiano se viene prima dell'inglese, se no l'inglese), ma chi
+      // ha già gli appunti di Glifo in questo browser resta in italiano.
+      var pageLang = (function () {
+        var hash = location.hash.slice(1)
+        if (hash === 'it' || hash === 'en') return hash
+        try {
+          var saved = JSON.parse(localStorage.getItem('glifo.settings.v1') || '{}').language
+          if (saved === 'it' || saved === 'en') return saved
+          for (var i = 0; i < localStorage.length; i++) {
+            var key = localStorage.key(i) || ''
+            if (key.indexOf('glifo.') === 0 || key.indexOf('matherdown.') === 0) return 'it'
+          }
+        } catch (e) {}
+        var list = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || '']
+        for (var j = 0; j < list.length; j++) {
+          var code = String(list[j]).slice(0, 2).toLowerCase()
+          if (code === 'it' || code === 'en') return code
+        }
+        return 'en'
+      })()
+      var TITLES = { it: 'Informativa sulla privacy – Glifo', en: 'Privacy policy – Glifo' }
+      function showLang(lang) {
+        pageLang = lang
+        document.documentElement.lang = lang
+        document.title = TITLES[lang]
+      }
+      showLang(pageLang)
+    </script>
+    <style>:root{--lightningcss-light:initial;--lightningcss-dark: ;color-scheme:light;--bg:#f5f6fa;--surface:#fff;--border:#e1e3ec;--text:#1c2030;--muted:#676d82;--heading:#10131f;--link:#4338ca;--accent-soft:#eceeff}@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--lightningcss-light: ;--lightningcss-dark:initial;color-scheme:dark;--bg:#0e1016;--surface:#151821;--border:#282d3c;--text:#e4e6ee;--muted:#9aa0b5;--heading:#f4f5fa;--link:#a5a6fb;--accent-soft:#8b8cf826}}:root[data-theme=dark]{--lightningcss-light: ;--lightningcss-dark:initial;color-scheme:dark;--bg:#0e1016;--surface:#151821;--border:#282d3c;--text:#e4e6ee;--muted:#9aa0b5;--heading:#f4f5fa;--link:#a5a6fb;--accent-soft:#8b8cf826}*{box-sizing:border-box}body{background:var(--bg);color:var(--text);margin:0;font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Helvetica Neue,Arial,sans-serif}main{max-width:720px;margin:0 auto;padding:24px 16px 64px}.back{margin-bottom:16px;display:inline-block}h1,h2{color:var(--heading);line-height:1.25}h1{margin:0 0 4px;font-size:1.9rem}h2{margin:32px 0 8px;font-size:1.2rem}a{color:var(--link)}.updated{color:var(--muted);margin:0 0 20px}.summary{border:1px solid var(--border);background:var(--accent-soft);border-radius:10px;padding:14px 18px}.summary p{margin:0}ul{padding-left:1.3em}li+li{margin-top:4px}html[lang=it] [data-lang=en],html[lang=en] [data-lang=it]{display:none}.langs{float:right;color:var(--muted);margin:0;font-size:.9rem}html[lang=it] .langs a[hreflang=it],html[lang=en] .langs a[hreflang=en]{color:var(--text);font-weight:600;text-decoration:none}footer{border-top:1px solid var(--border);color:var(--muted);margin-top:40px;padding-top:16px;font-size:.9rem}</style>
+  <link rel="manifest" href="./manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="./registerSW.js"></script></head>
+  <body>
+    <main>
+      <p class="langs">
+        <a href="#it" hreflang="it" lang="it">Italiano</a> · <a href="#en" hreflang="en" lang="en">English</a>
+      </p>
+      <article lang="it" data-lang="it">
+      <a class="back" href="./">← Torna a Glifo</a>
+      <h1>Informativa sulla privacy</h1>
+      <p class="updated">Aggiornata il 16 ottobre 2026.</p>
+
+      <div class="summary">
+        <p>
+          <strong>In breve.</strong> Senza account i tuoi appunti restano solo nel tuo browser. Con
+          l'account vengono salvati anche sui server di Supabase, in Europa, per ritrovarli su ogni
+          dispositivo. Una nota che condividi con un link la vede chi ha il link. Non li vendiamo e
+          non li usiamo per pubblicità o per altri scopi. Puoi scaricarli o eliminarli quando vuoi,
+          direttamente da Glifo. I commenti che ci mandi li legge chi fa Glifo e, se scegli di farli
+          vedere a tutti, chi apre la pagina dei commenti di Glifo: la tua email mai.
+        </p>
+      </div>
+
+      <h2>Chi gestisce i tuoi dati</h2>
+      <p>
+        Glifo è un progetto gratuito e personale, pubblicato su GitHub da
+        <a href="https://github.com/DioDiAltro">DioDiAltro</a>, che è il titolare del
+        trattamento: decide come vengono usati i dati e ne risponde.
+      </p>
+      <p>
+        Per qualsiasi richiesta sulla privacy scrivi a
+        <a href="mailto:privacy@glifo.page">privacy@glifo.page</a>. I tuoi dati puoi anche scaricarli
+        ed eliminarli da solo, da Glifo (vedi «I tuoi diritti»).
+      </p>
+
+      <h2>Senza account</h2>
+      <ul>
+        <li>
+          Appunti, lavagne (quello che scrivi a mano), cartelle, impostazioni e dizionario personale
+          restano nello spazio del tuo browser (localStorage e IndexedDB): Glifo non li riceve.
+        </li>
+        <li>
+          Glifo è all'indirizzo glifo.page, ospitato da Cloudflare Pages (Cloudflare, Inc.); fino al
+          trasloco del 18 ottobre 2026, e poi solo per portare via gli appunti, anche su GitHub Pages
+          (GitHub, Inc.), all'indirizzo diodialtro.github.io/Glifo. Come per ogni sito, per mandarti le
+          pagine Cloudflare e GitHub ricevono l'indirizzo IP e alcune informazioni tecniche sul browser:
+          vedi l'<a href="https://www.cloudflare.com/privacypolicy/">informativa di Cloudflare</a> e
+          quella <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">di GitHub</a>.
+          Con «Porta i miei appunti nel nuovo Glifo» gli appunti passano dal vecchio indirizzo al nuovo
+          dentro il tuo browser, senza passare da nessun server.
+        </li>
+        <li>
+          L'assistente AI, se lo usi, funziona con una tua chiave del servizio che scegli nelle
+          impostazioni: Anthropic, Google (Gemini), OpenRouter o un altro servizio compatibile con
+          OpenAI. La domanda che scrivi parte dal tuo browser e va direttamente a quel servizio (o
+          all'indirizzo che hai indicato), senza passare da Glifo, e lì vale l'informativa di chi lo
+          gestisce: per esempio Google può usare le domande fatte con il piano gratuito di Gemini per
+          migliorare i suoi modelli. Con Ollama la domanda resta sul tuo computer. Le chiavi restano
+          solo nel tuo browser.
+        </li>
+        <li>
+          «Spiegami» e «Spiega con l'AI» (in prova) usano un modello AI che gira nel tuo browser:
+          quello che gli fai spiegare (formule, grafici, schemi, tabelle, teoremi), le definizioni
+          della nota, le domande che fai sotto la spiegazione e le risposte restano sul tuo
+          dispositivo e non vanno a nessuno. La prima volta il browser scarica il modello da Hugging Face e il programma che lo fa
+          girare da GitHub (raw.githubusercontent.com), che come per ogni download ricevono
+          l'indirizzo IP e alcune informazioni tecniche; poi il modello resta nel browser, finché
+          non lo togli dalle impostazioni. Per dirti quanto pesa un modello che non hai ancora
+          scaricato, le impostazioni chiedono a Hugging Face l'elenco dei suoi file (un file piccolo),
+          con le stesse informazioni tecniche.
+        </li>
+        <li>
+          «In LaTeX» sulla lavagna (in prova) legge la scrittura presa con la Selezione con un modello
+          che gira nel tuo browser (pix2text-mfr): l'immagine della scrittura e la formula letta restano
+          sul tuo dispositivo e non vanno a nessuno. La prima volta, solo se dici di sì, il browser
+          scarica il modello da Hugging Face (circa 120 MB) e il programma che lo fa girare dal sito di
+          Glifo; Hugging Face, come per ogni download, riceve l'indirizzo IP e alcune informazioni
+          tecniche. Poi il modello resta nel browser e funziona anche senza connessione.
+        </li>
+        <li>
+          Se apri una nota condivisa con un link, il tuo browser la chiede a Supabase (vedi sotto),
+          che come per ogni richiesta riceve l'indirizzo IP e alcune informazioni tecniche. Chi ti
+          ha mandato il link non sa se e quando l'hai aperto. Se te ne salvi una copia, la copia sta
+          tra i tuoi appunti, come gli altri.
+        </li>
+      </ul>
+
+      <h2>Con l'account: cosa salviamo e perché</h2>
+      <ul>
+        <li>L'indirizzo email, per farti entrare.</li>
+        <li>
+          Se entri con Google: quello che Google ci comunica, cioè email, nome e link all'immagine
+          del profilo. Restano con i dati dell'accesso; Glifo usa solo l'email.
+        </li>
+        <li>
+          Note (titolo e testo) e cartelle, con le date di creazione e di modifica. Le lavagne no:
+          restano solo nel browser. «Esci dall'account» toglie da questo browser note, cartelle e
+          lavagne dell'account; con «Cambia account» restano lì, con le impostazioni dell'account,
+          per ritrovarle quando rientri.
+        </li>
+        <li>
+          Le note che condividi con un link: una copia del titolo e del testo com'erano quando le hai
+          condivise (la «fotografia»), con la data e con la tua scelta se chi apre il link può
+          salvarsene una copia.
+        </li>
+        <li>
+          Alcune impostazioni (lingua di Glifo, tema, dimensione del testo, a capo automatico, controllo
+          ortografico e lingue, modello dell'assistente) e il dizionario personale. La chiave API
+          dell'assistente non lascia mai il dispositivo.
+        </li>
+        <li>
+          Dati tecnici dell'accesso: data e ora degli accessi e, nei registri di Supabase,
+          l'indirizzo IP e il tipo di browser.
+        </li>
+      </ul>
+      <p>
+        Servono a darti quello che chiedi creando l'account, cioè ritrovare gli appunti su ogni
+        dispositivo (art. 6, par. 1, lett. b del GDPR). I dati tecnici servono anche a proteggere il
+        servizio da abusi (legittimo interesse, lett. f).
+      </p>
+
+      <h2>I commenti che ci mandi</h2>
+      <p>
+        Il fumetto in fondo alla barra laterale apre «Scrivi un commento», che c'è anche nella pagina
+        «Domande frequenti e commenti» (glifo.page/faq). Il messaggio viene salvato nel database di Glifo
+        su Supabase (vedi sotto) con il tipo che hai scelto (un problema, un'idea o altro), il tuo nome e
+        la tua email solo se li scrivi tu (sono facoltativi: l'email serve per risponderti), se hai scelto
+        di farlo vedere a tutti, da quale sito arriva (Glifo o il suo sito di prova, da cui i commenti
+        partono sempre privati), la versione di Glifo e il browser con la misura della finestra, per
+        capire i problemi. Non ci sono le tue note né il tuo account, anche se hai fatto l'accesso.
+      </p>
+      <p>
+        Chi gestisce Glifo li legge tutti, per migliorarlo e, se hai lasciato l'email, per risponderti.
+        Con la spunta su «Fallo vedere a tutti nella pagina dei commenti» (c'è già, la puoi togliere), il
+        commento compare nella pagina «Domande frequenti e commenti», che chiunque può aprire con il suo
+        indirizzo, anche senza usare Glifo: si vedono il tipo, il messaggio, il nome (o «Anonimo»), la
+        data e la risposta di chi gestisce Glifo, se c'è. La pagina chiede ai motori di ricerca di non
+        metterla tra i risultati. L'email, il sito, la versione e il browser non si vedono mai. Senza la
+        spunta lo legge solo chi gestisce Glifo. Farlo vedere a tutti è una tua scelta (consenso, art. 6, par. 1, lett. a del GDPR): per
+        questo, in un commento pubblico non scrivere dati personali tuoi o di altri. Chi gestisce Glifo
+        può nascondere o cancellare un commento, per esempio se è offensivo; dall'app nessun altro li
+        può cambiare o cancellare. Restano finché servono a migliorare Glifo: se vuoi che un tuo
+        commento venga nascosto o cancellato, scrivi al contatto indicato sopra o manda un commento solo
+        per chi gestisce Glifo (senza la spunta), con il testo o il nome per ritrovarlo.
+      </p>
+
+      <h2>Dove sono e chi li tratta</h2>
+      <ul>
+        <li>
+          <strong>Supabase</strong> (Supabase, Inc.) fornisce il database e l'accesso: i dati, e i
+          commenti, sono nei suoi server di Francoforte, in Germania. Supabase li tratta per conto di Glifo, secondo le
+          sue condizioni e la sua <a href="https://supabase.com/privacy">informativa</a>. Le email
+          per entrare le prepara Supabase e le consegna Resend (qui sotto).
+        </li>
+        <li>
+          <strong>Resend</strong> (Plus Five Five, Inc.), solo se entri con l'email: consegna l'email
+          con il link e il codice per entrare. Riceve il tuo indirizzo email e il testo di quell'email,
+          non le note, e li tratta per conto di Glifo. È un'azienda degli Stati Uniti che aderisce al
+          Data Privacy Framework tra Unione europea e Stati Uniti (vedi
+          l'<a href="https://resend.com/legal/privacy-policy">informativa di Resend</a>).
+        </li>
+        <li>
+          <strong>Cloudflare Turnstile</strong> (Cloudflare, Inc.), solo quando chiedi l'email per
+          entrare: controlla che a chiederla sia una persona e non un programma, così nessuno può usare
+          Glifo per mandare email a raffica. Il browser scarica il controllo da Cloudflare, che riceve
+          l'indirizzo IP e alcune informazioni tecniche sul browser, non l'email né le note (vedi
+          l'<a href="https://www.cloudflare.com/turnstile-privacy-policy/">informativa di Turnstile</a>).
+          Serve a proteggere il servizio dagli abusi (legittimo interesse, art. 6, par. 1, lett. f del
+          GDPR).
+        </li>
+        <li>
+          <strong>Google</strong>, solo se scegli «Continua con Google»: conferma chi sei e così sa
+          che hai usato il tuo account Google per entrare in Glifo (vedi
+          l'<a href="https://policies.google.com/privacy?hl=it">informativa di Google</a>). Le note
+          non passano da Google.
+        </li>
+        <li>
+          Nessun altro: i dati non vengono venduti né ceduti, e non vengono usati per pubblicità o per
+          addestrare modelli di intelligenza artificiale.
+        </li>
+      </ul>
+
+      <h2>Chi può vedere le tue note</h2>
+      <p>
+        Solo tu, dai dispositivi in cui fai l'accesso: le regole del database impediscono agli altri
+        account di vederle o di cambiarle.
+      </p>
+      <p>
+        Le note che condividi con un link sono l'eccezione: la loro fotografia la vede chiunque abbia
+        il link, anche senza account, e chi la riceve può inoltrarla ad altri. La pagina mostra
+        titolo, testo e data, non chi l'ha condivisa né la tua email. Il link contiene un codice
+        casuale che non si può indovinare; smette di funzionare quando lo togli («Condividi» →
+        «Con limitazioni»), quando elimini la nota o quando elimini l'account.
+      </p>
+      <p>
+        Le note però non sono cifrate «end-to-end»: tecnicamente
+        chi gestisce Glifo e Supabase potrebbero accedervi. Glifo non lo fa, se non quando glielo
+        chiedi tu per risolvere un problema. Per questo è meglio non salvare nelle note password o
+        dati molto delicati.
+      </p>
+
+      <h2>Per quanto tempo</h2>
+      <ul>
+        <li>
+          Finché hai l'account. Una nota che elimini resta per un po' come segno, senza titolo né
+          testo, perché la tolgano anche gli altri dispositivi.
+        </li>
+        <li>
+          La fotografia di una nota condivisa resta finché non togli il link, non elimini la nota o
+          non elimini l'account. Le copie che altri si sono salvati stanno nei loro appunti.
+        </li>
+        <li>
+          Quando elimini l'account, note, cartelle, impostazioni e dati di accesso vengono cancellati
+          subito dal database. I registri tecnici e le eventuali copie di sicurezza di Supabase si
+          cancellano da soli dopo poco tempo.
+        </li>
+      </ul>
+
+      <h2>I tuoi diritti</h2>
+      <ul>
+        <li>
+          <strong>Vedere e portare via i tuoi dati:</strong> in Glifo apri l'account (il pulsante in
+          fondo alla barra laterale) e premi «Scarica i miei dati». Ricevi un file con note, cartelle, impostazioni, link
+          condivisi e dati dell'accesso, che Glifo sa rileggere con «Ripristina backup».
+        </li>
+        <li><strong>Correggerli:</strong> modifica note, cartelle e impostazioni in Glifo.</li>
+        <li><strong>Cancellarli:</strong> apri l'account e premi «Elimina account».</li>
+        <li>
+          <strong>Opporti o chiedere di limitare il trattamento:</strong> scrivi al contatto indicato
+          sopra.
+        </li>
+        <li>
+          <strong>Reclamo:</strong> puoi rivolgerti al
+          <a href="https://www.garanteprivacy.it">Garante per la protezione dei dati personali</a>.
+        </li>
+      </ul>
+
+      <h2>Cookie e spazio nel browser</h2>
+      <p>
+        Glifo non usa cookie, statistiche o strumenti di tracciamento. Usa lo spazio del browser per
+        salvare appunti, lavagne e impostazioni, per funzionare senza connessione e, con l'account, per
+        ricordare l'accesso: servono al funzionamento, quindi non serve un consenso.
+      </p>
+
+      <h2>Età</h2>
+      <p>
+        Glifo è pensato per studenti universitari. Se hai meno di 14 anni, chiedi a un genitore prima
+        di creare un account.
+      </p>
+
+      <h2>Modifiche</h2>
+      <p>Se questa informativa cambia, cambia anche la data in alto.</p>
+
+      <footer>
+        <a href="./">← Torna a Glifo</a>
+      </footer>
+      </article>
+      <article lang="en" data-lang="en">
+      <a class="back" href="./">← Back to Glifo</a>
+      <h1>Privacy policy</h1>
+      <p class="updated">Updated October 16, 2026.</p>
+
+      <div class="summary">
+        <p>
+          <strong>In short.</strong> Without an account, your notes stay only in your browser. With an
+          account they are also saved on Supabase servers in Europe, so you can find them on every
+          device. A note you share with a link can be seen by anyone who has the link. We don't sell
+          your notes and we don't use them for advertising or for anything else. You can download or
+          delete them whenever you want, right from Glifo. The comments you send us are read by whoever
+          runs Glifo and, if you choose to show them to everyone, by anyone who opens Glifo's Feedback
+          page: never your email.
+        </p>
+      </div>
+
+      <h2>Who manages your data</h2>
+      <p>
+        Glifo is a free, personal project, published on GitHub by
+        <a href="https://github.com/DioDiAltro">DioDiAltro</a>, the data controller: the one who
+        decides how the data is used and is responsible for it.
+      </p>
+      <p>
+        For any privacy request, write to
+        <a href="mailto:privacy@glifo.page">privacy@glifo.page</a>. You can also download and delete
+        your data yourself, from Glifo (see “Your rights”).
+      </p>
+
+      <h2>Without an account</h2>
+      <ul>
+        <li>
+          Notes, whiteboards (what you write by hand), folders, settings and your personal dictionary
+          stay in your browser's storage (localStorage and IndexedDB): Glifo doesn't receive them.
+        </li>
+        <li>
+          Glifo lives at glifo.page, hosted by Cloudflare Pages (Cloudflare, Inc.); until the move on
+          October 18, 2026, and after that only to take your notes away, it is also on GitHub Pages
+          (GitHub, Inc.), at diodialtro.github.io/Glifo. As with any website, to send you the pages
+          Cloudflare and GitHub receive your IP address and some technical information about your
+          browser: see <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare's privacy policy</a>
+          and <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">GitHub's</a>.
+          With “Bring my notes to the new Glifo” your notes go from the old address to the new one inside
+          your browser, without passing through any server.
+        </li>
+        <li>
+          The AI assistant, if you use it, works with your own key for the service you choose in the
+          settings: Anthropic, Google (Gemini), OpenRouter or another OpenAI-compatible service. The
+          question you write goes from your browser directly to that service (or to the address you
+          entered), without passing through Glifo, and that service's privacy policy applies: for
+          example, Google may use questions asked with Gemini's free tier to improve its models. With
+          Ollama the question stays on your computer. Keys stay only in your browser.
+        </li>
+        <li>
+          “Explain” and “Explain with AI” (in beta) use an AI model that runs in your browser: what you
+          ask it to explain (formulas, graphs, diagrams, tables, theorems), the definitions in the note,
+          the questions you ask below the explanation and the answers stay on your device and go to no
+          one. The first time, the browser downloads the model from Hugging Face and the program that
+          runs it from GitHub (raw.githubusercontent.com), which, as with any download, receive your IP
+          address and some technical information; after that the model stays in your browser until you
+          remove it in the settings. To tell you how big a model you haven't downloaded yet is, the
+          settings ask Hugging Face for the list of its files (a small file), with the same technical
+          information.
+        </li>
+        <li>
+          “To LaTeX” on the whiteboard (in beta) reads the handwriting you pick up with Select using a
+          model that runs in your browser (pix2text-mfr): the image of the handwriting and the formula it
+          reads stay on your device and go to no one. The first time, only if you say yes, the browser
+          downloads the model from Hugging Face (about 120 MB) and the program that runs it from Glifo's
+          site; as with any download, Hugging Face receives your IP address and some technical
+          information. After that the model stays in your browser and works offline too.
+        </li>
+        <li>
+          If you open a note shared with a link, your browser requests it from Supabase (see below),
+          which, as with any request, receives your IP address and some technical information. The
+          person who sent you the link doesn't know whether or when you opened it. If you save a copy,
+          the copy is among your notes, like the others.
+        </li>
+      </ul>
+
+      <h2>With an account: what we save and why</h2>
+      <ul>
+        <li>Your email address, to let you sign in.</li>
+        <li>
+          If you sign in with Google: what Google tells us, that is your email, name and a link to your
+          profile picture. They stay with the sign-in data; Glifo only uses the email.
+        </li>
+        <li>
+          Notes (title and text) and folders, with their creation and modification dates. Not
+          whiteboards: they stay only in the browser. “Sign out” removes the account's notes, folders
+          and whiteboards from this browser; with “Switch account” they stay there, with the account's
+          settings, so you find them again when you sign back in.
+        </li>
+        <li>
+          The notes you share with a link: a copy of the title and text as they were when you shared
+          them (the “snapshot”), with the date and your choice of whether whoever opens the link can save
+          a copy.
+        </li>
+        <li>
+          Some settings (Glifo's language, theme, text size, line wrapping, spell check and its
+          languages, the assistant's model) and your personal dictionary. The assistant's API key never
+          leaves the device.
+        </li>
+        <li>
+          Technical sign-in data: date and time of your sign-ins and, in Supabase's logs, your IP
+          address and type of browser.
+        </li>
+      </ul>
+      <p>
+        We need them to give you what you ask for by creating the account, that is, finding your notes
+        on every device (Art. 6(1)(b) GDPR). The technical data also serves to protect the service from
+        abuse (legitimate interest, Art. 6(1)(f)).
+      </p>
+
+      <h2>The comments you send us</h2>
+      <p>
+        The speech bubble at the bottom of the sidebar opens “Write a comment”, which is also on the
+        “FAQ and feedback” page (glifo.page/faq). The message is saved in Glifo's database on Supabase
+        (see below) with the type you chose (a problem, an idea or something else), your name and your
+        email only if you write them (they're optional: the email lets us reply to you), whether you
+        chose to show it to everyone, which site it comes from (Glifo or its test site, from which
+        comments are always sent privately), Glifo's version and your browser with the window size, to
+        understand problems. Your notes and your account aren't included, even
+        if you're signed in.
+      </p>
+      <p>
+        Whoever runs Glifo reads them all, to improve it and, if you left your email, to reply to you.
+        With the check on “Show it to everyone on the feedback page” (it's already checked, and you can
+        uncheck it), the comment appears on the “FAQ and feedback” page, which anyone can open with its
+        address, even without using Glifo: it shows the type, the message, the name (or “Anonymous”),
+        the date and the reply from whoever runs Glifo, if there is one. The page asks search engines
+        not to list it in their results. The email, site, version and browser are never shown. Without the check,
+        only whoever runs Glifo reads it. Showing it to everyone is your choice (consent, Art. 6(1)(a)
+        GDPR): so in a public comment don't write personal data about yourself or others. Whoever runs
+        Glifo can hide or delete a comment, for example if it's offensive; no one else can change or
+        delete comments from the app. They're kept as long as they help improve Glifo: if you want one of
+        your comments hidden or deleted, write to the contact above or send a comment just for whoever
+        runs Glifo (without the check), with the text or the name to find it.
+      </p>
+
+      <h2>Where your data is and who processes it</h2>
+      <ul>
+        <li>
+          <strong>Supabase</strong> (Supabase, Inc.) provides the database and sign-in: the data, and the
+          comments, are on its servers in Frankfurt, Germany. Supabase processes them on behalf of Glifo,
+          under its terms and its <a href="https://supabase.com/privacy">privacy policy</a>. Sign-in
+          emails are prepared by Supabase and delivered by Resend (below).
+        </li>
+        <li>
+          <strong>Resend</strong> (Plus Five Five, Inc.), only if you sign in with email: it delivers the
+          email with the link and the code to sign in. It receives your email address and the text of that
+          email, not your notes, and processes them on behalf of Glifo. It's a US company that takes part
+          in the EU-U.S. Data Privacy Framework (see
+          <a href="https://resend.com/legal/privacy-policy">Resend's privacy policy</a>).
+        </li>
+        <li>
+          <strong>Cloudflare Turnstile</strong> (Cloudflare, Inc.), only when you ask for the sign-in
+          email: it checks that a person, not a program, is asking for it, so no one can use Glifo to send
+          floods of emails. The browser downloads the check from Cloudflare, which receives your IP address
+          and some technical information about the browser, not your email or your notes (see
+          <a href="https://www.cloudflare.com/turnstile-privacy-policy/">Turnstile's privacy policy</a>).
+          It serves to protect the service from abuse (legitimate interest, Art. 6(1)(f) GDPR).
+        </li>
+        <li>
+          <strong>Google</strong>, only if you choose “Continue with Google”: it confirms who you are, and
+          so it knows you used your Google account to sign in to Glifo (see
+          <a href="https://policies.google.com/privacy?hl=en">Google's privacy policy</a>). Notes don't
+          pass through Google.
+        </li>
+        <li>
+          No one else: the data isn't sold or handed over, and it isn't used for advertising or to train
+          artificial intelligence models.
+        </li>
+      </ul>
+
+      <h2>Who can see your notes</h2>
+      <p>
+        Only you, from the devices where you sign in: the database rules prevent other accounts from
+        seeing or changing them.
+      </p>
+      <p>
+        Notes you share with a link are the exception: their snapshot can be seen by anyone who has the
+        link, even without an account, and whoever receives it can forward it to others. The page shows
+        the title, text and date, not who shared it or your email. The link contains a random code that
+        can't be guessed; it stops working when you remove it (“Share” → “Restricted”), when you delete
+        the note or when you delete the account.
+      </p>
+      <p>
+        However, notes aren't end-to-end encrypted: technically, whoever runs Glifo and Supabase could
+        access them. Glifo doesn't, unless you ask it to, to solve a problem. So it's better not to keep
+        passwords or very sensitive data in your notes.
+      </p>
+
+      <h2>For how long</h2>
+      <ul>
+        <li>
+          As long as you have the account. A note you delete stays for a while as a marker, without title
+          or text, so that the other devices remove it too.
+        </li>
+        <li>
+          The snapshot of a shared note stays until you remove the link, delete the note or delete the
+          account. Copies that others saved are in their notes.
+        </li>
+        <li>
+          When you delete the account, notes, folders, settings and sign-in data are deleted from the
+          database right away. Supabase's technical logs and any backups are deleted automatically after
+          a short time.
+        </li>
+      </ul>
+
+      <h2>Your rights</h2>
+      <ul>
+        <li>
+          <strong>See your data and take it with you:</strong> in Glifo, open the account (the button at
+          the bottom of the sidebar) and press “Download my data”. You get a file with notes, folders,
+          settings, shared links and sign-in data, which Glifo can read back with “Restore backup”.
+        </li>
+        <li><strong>Correct it:</strong> edit notes, folders and settings in Glifo.</li>
+        <li><strong>Delete it:</strong> open the account and press “Delete account”.</li>
+        <li>
+          <strong>Object to or ask to restrict the processing:</strong> write to the contact above.
+        </li>
+        <li>
+          <strong>Complaint:</strong> you can contact the Italian data protection authority, the
+          <a href="https://www.garanteprivacy.it">Garante per la protezione dei dati personali</a>.
+        </li>
+      </ul>
+
+      <h2>Cookies and browser storage</h2>
+      <p>
+        Glifo doesn't use cookies, analytics or tracking tools. It uses the browser's storage to save
+        notes, whiteboards and settings, to work offline and, with an account, to remember that you're
+        signed in: these are needed for it to work, so no consent is required.
+      </p>
+
+      <h2>Age</h2>
+      <p>
+        Glifo is designed for university students. If you're under 14, ask a parent before creating an
+        account.
+      </p>
+
+      <h2>Changes</h2>
+      <p>If this policy changes, the date at the top changes too.</p>
+
+      <footer>
+        <a href="./">← Back to Glifo</a>
+      </footer>
+      </article>
+    </main>
+    <script>
+      // I due link in alto cambiano lingua senza ricaricare (e l'indirizzo, per mandarlo a qualcuno).
+      document.querySelectorAll('.langs a').forEach(function (link) {
+        link.addEventListener('click', function (ev) {
+          ev.preventDefault()
+          var lang = link.getAttribute('hreflang')
+          showLang(lang)
+          history.replaceState(null, '', '#' + lang)
+        })
+      })
+    </script>
+  </body>
+</html>
