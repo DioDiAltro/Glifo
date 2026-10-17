@@ -106,8 +106,9 @@ finita il 14 ottobre 2026, il file non c'è più e si legge nella storia del rep
   pagine (12 ottobre 2026: anche grafici, tabelle, schemi, «Spiega con l'AI» e la condivisione), con i
   testi nelle due lingue in quattro righe al massimo (lo controlla `tests/tutorial.test.ts`, così i
   pulsanti non si spostano) e i video che `scripts/tutorial.mjs` registra con il browser in italiano (la
-  scena di «Spiega con l'AI» con un modello finto, `tutorialModel`; i video in inglese quando tutto è
-  tradotto);
+  scena di «Spiega con l'AI» con un modello finto, `tutorialModel`, e quella della lavagna, che finisce con
+  «In LaTeX», con un lettore finto, `tutorialReader`, e la sua cache già piena; i video in inglese quando
+  tutto è tradotto);
   chiuso quello della prima volta, o lasciato per le scorciatoie, `showTutorialHint` mostra un
   fumetto che punta al «?» (o al logo, se la barra è chiusa) e se ne va da solo dopo 8 secondi.
   Le impostazioni (`settings.ts`, 13 ottobre 2026, GRAFICA.md punto 3) sono una finestra con le sezioni

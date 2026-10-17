@@ -235,6 +235,33 @@ function tutorialModel(lang) {
   })
 }
 
+/**
+ * Il worker finto del lettore di «In LaTeX» per la pagina della lavagna (parla come src/ai/formulaWorker.ts,
+ * vedi anche quello di scripts/smoke-test.mjs): si prepara e legge «y = x²» nel LaTeX a modo suo di
+ * pix2text-mfr, nel tempo di una lettura vera.
+ */
+function tutorialReader() {
+  self.addEventListener('message', (ev) => {
+    const msg = ev.data
+    if (msg.type === 'load') setTimeout(() => self.postMessage({ id: msg.id, type: 'done' }), 150)
+    else if (msg.type === 'read') setTimeout(() => self.postMessage({ id: msg.id, type: 'done', text: 'y = x ^ { 2 }', ms: 900 }), 900)
+  })
+}
+
+/**
+ * Il lettore di «In LaTeX» già nel browser, come dopo il primo sì: la sua cache con i nomi dei file veri
+ * (il worker finto non li legge), così la finestra legge subito, senza chiedere di scaricarlo.
+ */
+async function readerInCache(page) {
+  const engine = readdirSync(new URL('../dist/assets/', import.meta.url)).find((f) => /^ort-wasm-simd-threaded.*\.wasm$/.test(f))
+  await page.evaluate(async (engine) => {
+    const cache = await caches.open('glifo-lettore')
+    const hub = 'https://huggingface.co/breezedeus/pix2text-mfr-1.5/resolve/1cef9f0bdcd6a4c63df7de1311fb0894593340cc/'
+    for (const f of ['tokenizer.json', 'decoder_model.onnx', 'encoder_model.onnx']) await cache.put(hub + f, new Response('x'))
+    await cache.put(`${location.origin}/assets/${engine}`, new Response('x'))
+  }, engine)
+}
+
 /** Il centro di una forma dello schema, dal suo testo. */
 async function schemaShape(page, text) {
   return page.evaluate((t) => {
@@ -487,18 +514,20 @@ const SCENES = {
   },
   // La lavagna: si apre accanto al testo e ci si scrive a mano con una penna (simulata, con la
   // pressione): gli assi (frecce storte che, tenendo ferma la penna, diventano precise), la parabola
-  // in blu, «y = x²» con l'evidenziatore e il vertice cerchiato in rosso; alla fine il lazo prende
-  // «y = x²» e la penna lo sposta accanto alla parabola.
+  // in blu, «y = x²» con l'evidenziatore e il vertice cerchiato in rosso; poi il lazo prende «y = x²» e
+  // «In LaTeX» (con un lettore finto, vedi tutorialReader) ne fa la formula, che va nella nota.
   lavagna: {
     settings: { view: 'editor', notesOpen: false },
+    reader: tutorialReader,
     async setup(page) {
+      await readerInCache(page)
       await startNote(page, L.note)
       await page.mouse.move(470, 330)
     },
     async play(page) {
       await clickOn(page, `.view-button[aria-label="${L.whiteboard}"]`)
       await page.waitForSelector('.board-pane[data-loaded="true"]')
-      await page.waitForTimeout(700)
+      await page.waitForTimeout(500)
       const stage = await page.locator('.board-stage').boundingBox()
       const cdp = await page.context().newCDPSession(page)
       const send = (type, [x, y], force) =>
@@ -540,8 +569,8 @@ const SCENES = {
         await send('mouseReleased', dense.at(-1), 0)
         await page.waitForTimeout(60)
       }
-      /** Si sceglie il colore (o lo strumento) con la penna, come sul tablet. */
-      const color = async (name, selector = `.board-color[data-color="${name}"]`) => {
+      /** Si tocca un pulsante con la penna, come sul tablet. */
+      const tap = async (selector) => {
         const box = await page.locator(selector).boundingBox()
         const at = [box.x + box.width / 2 - stage.x, box.y + box.height / 2 - stage.y]
         await send('mouseMoved', at, 0)
@@ -550,9 +579,10 @@ const SCENES = {
         await send('mouseReleased', at, 0)
         await page.waitForTimeout(250)
       }
+      const color = (name) => tap(`.board-color[data-color="${name}"]`)
       // Gli assi: frecce in un tratto solo, un po' storte; la penna ferma alla fine le fa precise.
-      await pen([[40, 333], [440, 327], [426, 319], [440, 327], [426, 337]], () => 0.5, 3, 900, 2.5)
-      await pen([[202, 410], [198, 105], [190, 119], [198, 105], [206, 119]], () => 0.5, 3, 900, 2.5)
+      await pen([[40, 333], [440, 327], [426, 319], [440, 327], [426, 337]], () => 0.5, 3, 800, 2.5)
+      await pen([[202, 410], [198, 105], [190, 119], [198, 105], [206, 119]], () => 0.5, 3, 800, 2.5)
       // La parabola, in blu: la pressione cresce un po' verso la fine.
       await color('blue')
       const parabola = Array.from({ length: 41 }, (_, i) => {
@@ -570,29 +600,43 @@ const SCENES = {
       await pen([[380, 145], [358, 170]], (t) => 0.4 + 0.3 * t)
       await pen([[386, 133], [389, 128], [394, 126], [399, 129], [398, 134], [387, 145], [400, 145]], () => 0.45)
       // L'evidenziatore giallo su «y = x²»: passato dopo, resta sotto la scrittura.
-      await color('highlight', `.board-button[aria-label="${L.highlighter}"]`)
+      await tap(`.board-button[aria-label="${L.highlighter}"]`)
       await pen([[284, 160], [344, 158], [406, 159]], () => 0.5, 8)
       // Il vertice cerchiato in rosso: prima si torna alla penna (con l'evidenziatore si vedono i suoi colori).
-      await color('pen', `.board-button[aria-label="${L.pen}"]`)
+      await tap(`.board-button[aria-label="${L.pen}"]`)
       await color('red')
       const circle = Array.from({ length: 33 }, (_, i) => {
         const a = (i / 30) * 2 * Math.PI - 0.6
         return [200 + 22 * Math.cos(a), 330 + 18 * Math.sin(a)]
       })
       await pen(circle, () => 0.55, 6)
-      // Il lazo intorno a «y = x²» (con l'evidenziatore), poi trascinato più in basso; la penna, scelta
-      // di nuovo, toglie la selezione.
-      await color('lasso', `.board-button[aria-label="${L.select}"]`)
+      // Il lazo intorno a «y = x²» (con l'evidenziatore): si apre il menu della selezione.
+      await tap(`.board-button[aria-label="${L.select}"]`)
       const loop = Array.from({ length: 37 }, (_, i) => {
         const a = (i / 34) * 2 * Math.PI + 0.4
         return [345 + 78 * Math.cos(a), 160 + 44 * Math.sin(a)]
       })
       await pen(loop, () => 0.5, 8)
-      await page.waitForTimeout(700)
-      await pen([[345, 160], [350, 172], [357, 190], [362, 205], [365, 214]], () => 0.5, 40)
-      await page.waitForTimeout(900)
-      await color('pen', `.board-button[aria-label="${L.pen}"]`)
-      await page.mouse.move(stage.x + 330, stage.y + 470, { steps: 20 })
+      await page.waitForTimeout(600)
+      // «In LaTeX», nel menu della selezione: si vedono la formula letta e il suo codice, e «Inserisci nella
+      // nota» la mette in fondo alla nota, dov'è il cursore; la penna, scelta di nuovo, toglie la selezione.
+      await tap('.board-sel-item.is-latex')
+      await page.waitForFunction(() => document.querySelector('.dialog-latex .latex-code')?.value)
+      await page.waitForTimeout(1300)
+      await tap('.dialog-latex .dialog-actions .btn-primary')
+      await page.waitForTimeout(400)
+      await tap(`.board-button[aria-label="${L.pen}"]`)
+      // Il puntatore va subito dopo la formula arrivata nella nota.
+      const formula = await page
+        .locator('.cm-line', { hasText: 'x^2' })
+        .last()
+        .evaluate((line) => {
+          const range = document.createRange()
+          range.selectNodeContents(line)
+          const r = range.getBoundingClientRect()
+          return { x: r.right, y: r.y + r.height / 2 }
+        })
+      await page.mouse.move(formula.x + 10, formula.y + 4, { steps: 15 })
     },
   },
   // Le viste e la barra laterale.
@@ -664,7 +708,8 @@ try {
     ]) {
       const dir = join(work, `${id}-${theme}`)
       // Glifo nella lingua dei video (la prende dal browser e dalle impostazioni, src/i18n.ts); senza
-      // service worker il modello finto di «Spiega con l'AI» prende il posto di quello vero.
+      // service worker il modello finto di «Spiega con l'AI» e il lettore finto di «In LaTeX» prendono il
+      // posto di quelli veri.
       const context = await browser.newContext({
         viewport: SIZE,
         colorScheme: scheme,
@@ -673,6 +718,7 @@ try {
         recordVideo: { dir, size: SIZE },
       })
       if (scene.model) await context.route('**/assets/llmWorker-*.js', (route) => route.fulfill({ contentType: 'text/javascript', body: `(${scene.model})(${JSON.stringify(LANG)})` }))
+      if (scene.reader) await context.route('**/assets/formulaWorker-*.js', (route) => route.fulfill({ contentType: 'text/javascript', body: `(${scene.reader})()` }))
       const started = Date.now()
       await context.addInitScript(fakeCursor)
       await context.addInitScript((settings) => {

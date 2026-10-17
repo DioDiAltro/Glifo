@@ -270,9 +270,12 @@ quello vero con una scrittura finta.
 **Sul sito** (16 ottobre 2026). Lo studente, provato sul sito di prova: «funziona abbastanza bene, diciamo che
 possiamo metterlo sul ramo principale». «In LaTeX» è andato sul sito. Poi lo studente: «sistema prima il lettore
 nelle impostazioni»: in «Dati» c'è il lettore, con quanto pesa e «Togli»; poi (17 ottobre) «fai la domanda
-frequente»: faq.html#in-latex, che dice anche che la scrittura non esce dal dispositivo (tutti e due sul ramo
-`prova`). Resta, scritto in ROADMAP.md, il modello di frontiera con la propria chiave se il lettore nel browser
-non basta. Il prossimo è il punto 3.
+frequente»: faq.html#in-latex, che dice anche che la scrittura non esce dal dispositivo; poi «rifai il video
+tutorial solo della lavagna; fai veder che sta il Latex»: il video della lavagna finisce con il lazo intorno a
+«y = x²», «In LaTeX» che la legge (nel video con un lettore finto, come il modello di «Spiega con l'AI») e
+«Inserisci nella nota», e il testo della pagina dice «In LaTeX». Tutti e tre sul sito dal 17 ottobre 2026.
+Resta, scritto in ROADMAP.md, il modello di frontiera con la propria chiave se il lettore nel browser non basta.
+Il prossimo è il punto 3.
 
 **Gratis o a pagamento** (16 ottobre 2026). Lo studente: «se si usa quello nel browser, che sbaglia più spesso,
 allora è gratis; se poi si compra l'abbonamento, il modello migliore sarà nel piano». Deciso: «In LaTeX» con il

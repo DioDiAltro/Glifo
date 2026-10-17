@@ -99,8 +99,8 @@ Il 16 ottobre 2026 il punto 2 è fatto: «In LaTeX» nel menu della Selezione de
 browser (AI.md, punto 2), provato dallo studente sul sito di prova («funziona abbastanza bene, diciamo che
 possiamo metterlo sul ramo principale») e andato sul sito. Il lettore è nelle impostazioni, in «Dati», con
 quanto pesa e «Togli» (16 ottobre 2026), e c'è la domanda frequente «Come trasformo in LaTeX una formula
-scritta a mano sulla lavagna?» (faq.html#in-latex, 17 ottobre 2026): tutti e due sul ramo `prova`. Resta, per
-dopo:
+scritta a mano sulla lavagna?» (faq.html#in-latex, 17 ottobre 2026); il video del tutorial della lavagna finisce
+con «In LaTeX» (17 ottobre 2026). Tutto sul sito dal 17 ottobre 2026. Resta, per dopo:
 - il modello migliore, di frontiera: nei piani a pagamento con l'AI di Glifo (deciso il 16 ottobre 2026: il
   lettore nel browser, che sbaglia più spesso, resta gratis; ABBONAMENTI.md, punto 22), e prima con la
   propria chiave (le immagini ai servizi della propria chiave, che oggi mandano solo testo).

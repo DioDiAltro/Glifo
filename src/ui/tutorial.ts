@@ -52,8 +52,8 @@ const T = texts({
   ],
   lavagnaTitle: ['La lavagna', 'The whiteboard'],
   lavagnaText: [
-    'Con «Lavagna», in alto, scrivi a mano accanto al testo, con la penna (che sente la pressione), il dito o il mouse. Tieni ferma la penna alla fine del tratto e linee e figure diventano precise; il lazo prende quello che hai scritto per spostarlo o ingrandirlo. Due dita spostano e ingrandiscono; ogni nota ha la sua lavagna.',
-    'With “Whiteboard”, at the top, you write by hand next to your text, with a pen (which senses pressure), your finger or the mouse. Hold the pen still at the end of a stroke and lines and shapes become precise; the lasso picks up what you wrote to move or resize it. Two fingers pan and zoom; each note has its own whiteboard.',
+    'Con «Lavagna», in alto, scrivi a mano accanto al testo, con la penna, il dito o il mouse; ogni nota ha la sua lavagna. Tieni ferma la penna alla fine del tratto e linee e figure diventano precise. Il lazo prende quello che hai scritto: lo sposti, lo ingrandisci o, con «In LaTeX», ne fai una formula da mettere nella nota.',
+    'With “Whiteboard”, at the top, you write by hand next to your text, with a pen, your finger or the mouse; each note has its own whiteboard. Hold the pen still at the end of a stroke and lines and shapes become precise. The lasso picks up what you wrote: move it, resize it or, with “To LaTeX”, turn it into a formula for your note.',
   ],
   barraTitle: ['Viste e appunti', 'Views and notes'],
   barraText: [
